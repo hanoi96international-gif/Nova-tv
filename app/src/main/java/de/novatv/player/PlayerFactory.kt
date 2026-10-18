@@ -24,6 +24,7 @@ import de.novatv.data.AppSettings
 import de.novatv.data.BufferProfile
 import okhttp3.OkHttpClient
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 /**
@@ -35,15 +36,19 @@ import kotlin.math.abs
  */
 object PlayerFactory {
 
-    class Built(val player: ExoPlayer, val headers: HeaderProvider)
+    class Built(val player: ExoPlayer, val headers: HeaderProvider, val trackSelector: DefaultTrackSelector)
 
     /** Der User-Agent kann sich pro Sender unterscheiden (#EXTVLCOPT), ohne den Player neu zu bauen. */
     class HeaderProvider(var userAgent: String)
 
-    fun create(context: Context, http: OkHttpClient, settings: AppSettings): Built {
+    /** [subtitleLanguage]: bei Filmen die gewünschte Untertitelsprache, null = Untertitel aus (Live: nur erzwungene). */
+    fun create(context: Context, http: OkHttpClient, settings: AppSettings, subtitleLanguage: String?, live: Boolean): Built {
         val headers = HeaderProvider(settings.userAgent)
 
-        val httpFactory = OkHttpDataSource.Factory(http)
+        // Eigener, kurzer Lese-Timeout für Streams: Ein hängender Server wird nach 12 s erkannt
+        // (statt 30 s), dann greift die automatische Wiederverbindung.
+        val streamClient = http.newBuilder().readTimeout(12, TimeUnit.SECONDS).build()
+        val httpFactory = OkHttpDataSource.Factory(streamClient)
         val resolving = ResolvingDataSource.Factory(httpFactory) { spec ->
             spec.withAdditionalHeaders(mapOf("User-Agent" to headers.userAgent))
         }
@@ -65,6 +70,13 @@ object PlayerFactory {
                 buildUponParameters()
                     .setTunnelingEnabled(settings.tunneling)
                     .setPreferredAudioLanguage(Locale.getDefault().language)
+                    .apply {
+                        when {
+                            live -> Unit
+                            subtitleLanguage != null -> setPreferredTextLanguage(subtitleLanguage)
+                            else -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                        }
+                    }
                     // Kein Herunterskalieren auf die UI-Auflösung: Fire OS meldet bei 4K oft nur 1080p für die UI.
                     .setViewportSizeToPhysicalDisplaySize(context, true)
             )
@@ -96,7 +108,7 @@ object PlayerFactory {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
-        return Built(player, headers)
+        return Built(player, headers, trackSelector)
     }
 }
 

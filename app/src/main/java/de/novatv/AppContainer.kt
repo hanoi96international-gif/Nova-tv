@@ -5,6 +5,7 @@ import de.novatv.data.SettingsStore
 import de.novatv.data.db.NovaDatabase
 import de.novatv.data.repo.ContentRepository
 import de.novatv.data.repo.PlaylistRepository
+import de.novatv.data.repo.SubtitleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,4 +29,6 @@ class AppContainer(context: Context) {
 
     val playlists = PlaylistRepository(db, http)
     val content = ContentRepository(db, http)
+    // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
+    val subtitles = SubtitleRepository(http, context.filesDir)
 }

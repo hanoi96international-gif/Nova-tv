@@ -4,6 +4,7 @@ package de.novatv.player
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -14,6 +15,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,11 +26,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import de.novatv.NovaApp
 import de.novatv.data.AppSettings
 import de.novatv.data.LiveFormat
@@ -41,9 +45,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.Locale
 
-enum class Overlay { NONE, INFO, CHANNELS, CONTROLS }
+enum class Overlay { NONE, INFO, CHANNELS, CONTROLS, TRACKS }
 
 class PlayerActivity : ComponentActivity() {
 
@@ -52,6 +57,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var frameRateMatcher: FrameRateMatcher
     private lateinit var settings: AppSettings
     private var headers: PlayerFactory.HeaderProvider? = null
+    private var trackSelector: DefaultTrackSelector? = null
 
     // Zustand, den die Compose-Oberfläche liest
     var player by mutableStateOf<ExoPlayer?>(null); private set
@@ -71,6 +77,11 @@ class PlayerActivity : ComponentActivity() {
     var positionMs by mutableLongStateOf(0L); private set
     var durationMs by mutableLongStateOf(0L); private set
     var isFavorite by mutableStateOf(false); private set
+    var tracks by mutableStateOf(Tracks.EMPTY); private set
+    var textDisabled by mutableStateOf(false); private set
+    var subtitleScale by mutableFloatStateOf(1f); private set
+    var subtitleStatus by mutableStateOf<String?>(null); private set
+    val onlineSubtitlesAvailable: Boolean get() = !isLive && ::settings.isInitialized && settings.onlineSubtitlesEnabled
 
     private var vod: VodRequest? = null
     private var previousChannel: ChannelEntity? = null
@@ -79,6 +90,9 @@ class PlayerActivity : ComponentActivity() {
     private var zapStartedAt = 0L
     private var progressJob: Job? = null
     private var numberJob: Job? = null
+    private var watchdogJob: Job? = null
+    private var subtitleFile: File? = null
+    private var subtitleSearchStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,11 +105,21 @@ class PlayerActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             settings = container.settings.current()
-            val built = PlayerFactory.create(this@PlayerActivity, container.http, settings)
+            subtitleScale = settings.subtitleSize.scale
+            textDisabled = vod != null && settings.subtitleLanguage.code == null
+            val built = PlayerFactory.create(
+                this@PlayerActivity,
+                container.http,
+                settings,
+                subtitleLanguage = settings.subtitleLanguage.code,
+                live = vod == null,
+            )
             headers = built.headers
+            trackSelector = built.trackSelector
             built.player.addListener(playerListener)
             built.player.addAnalyticsListener(analyticsListener)
             player = built.player
+            startWatchdog()
 
             val request = vod
             if (request != null) {
@@ -117,6 +141,47 @@ class PlayerActivity : ComponentActivity() {
                 playChannel(start)
             }
         }
+    }
+
+    // ---------------------------------------------------------------- Stabilität
+
+    /**
+     * IPTV-Streams frieren oft ein, ohne dass ein Fehler kommt: Der Player puffert endlos
+     * oder die Position steht still. Der Watchdog erkennt das und verbindet neu.
+     */
+    private fun startWatchdog() {
+        watchdogJob?.cancel()
+        watchdogJob = lifecycleScope.launch {
+            var lastPosition = -1L
+            var stalledSeconds = 0
+            var lastReconnect = 0L
+            while (isActive) {
+                delay(1_000)
+                val p = player ?: continue
+                val active = p.playWhenReady && p.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
+                val waiting = active && p.playbackState == Player.STATE_BUFFERING
+                val frozen = active && p.playbackState == Player.STATE_READY && p.currentPosition == lastPosition
+                lastPosition = p.currentPosition
+                stalledSeconds = if (waiting || frozen) stalledSeconds + 1 else 0
+                val limit = if (isLive) LIVE_STALL_SECONDS else VOD_STALL_SECONDS
+                val now = SystemClock.elapsedRealtime()
+                if (stalledSeconds >= limit && now - lastReconnect > 20_000) {
+                    stalledSeconds = 0
+                    lastReconnect = now
+                    reconnect("Stream hängt, verbinde neu …")
+                }
+            }
+        }
+    }
+
+    private fun reconnect(reason: String) {
+        val p = player ?: return
+        message = reason
+        val position = p.currentPosition
+        p.stop()
+        if (isLive) p.seekToDefaultPosition() else p.seekTo(position)
+        p.prepare()
+        p.playWhenReady = true
     }
 
     // ---------------------------------------------------------------- Live
@@ -188,7 +253,9 @@ class PlayerActivity : ComponentActivity() {
     private fun startVod(request: VodRequest, resumeMs: Long) {
         val p = player ?: return
         headers?.userAgent = settings.userAgent
-        p.setMediaItem(mediaItem(request.url, guessMime(request.url)), resumeMs.coerceAtLeast(0))
+        // Schon einmal geladene Untertitel direkt mitgeben, dann gibt es kein erneutes Puffern.
+        subtitleFile = settings.subtitleLanguage.code?.let { container.subtitles.cached(request.key, it) }
+        p.setMediaItem(mediaItem(request.url, guessMime(request.url), subtitleFile), resumeMs.coerceAtLeast(0))
         p.prepare()
         p.playWhenReady = true
         showOverlay(Overlay.CONTROLS)
@@ -202,6 +269,79 @@ class PlayerActivity : ComponentActivity() {
                 delay(1_000)
             }
         }
+    }
+
+    /**
+     * Hat der Film keine eingebettete Spur in der gewünschten Sprache, wird online gesucht.
+     * Ein Fund wird nahtlos an der aktuellen Position eingehängt und für das nächste Mal gespeichert.
+     */
+    private fun maybeFetchSubtitles(force: Boolean = false) {
+        val request = vod ?: return
+        val language = settings.subtitleLanguage.code ?: return
+        if (!settings.onlineSubtitlesEnabled || subtitleFile != null) return
+        if (!force && (subtitleSearchStarted || hasTextTrack(language))) return
+        subtitleSearchStarted = true
+        lifecycleScope.launch {
+            subtitleStatus = "Untertitel (${settings.subtitleLanguage.label}) werden gesucht …"
+            runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings) }
+                .onSuccess { result ->
+                    if (result == null) {
+                        subtitleStatus = "Keine passenden Untertitel gefunden"
+                    } else {
+                        attachSubtitle(request, result.file)
+                        subtitleStatus = if (result.hashMatch) "Untertitel geladen (passend zur Datei)" else "Untertitel geladen (nach Titel gefunden)"
+                    }
+                }
+                .onFailure { subtitleStatus = "Untertitel: ${it.message}" }
+        }
+    }
+
+    private fun hasTextTrack(language: String): Boolean = player?.currentTracks?.groups.orEmpty().any { group ->
+        group.type == C.TRACK_TYPE_TEXT &&
+            (0 until group.length).any { group.getTrackFormat(it).language?.startsWith(language, ignoreCase = true) == true }
+    }
+
+    private fun attachSubtitle(request: VodRequest, file: File) {
+        val p = player ?: return
+        subtitleFile = file
+        val position = p.currentPosition
+        val playing = p.playWhenReady
+        p.setMediaItem(mediaItem(request.url, guessMime(request.url), file), position)
+        p.prepare()
+        p.playWhenReady = playing
+        setTextEnabled(true)
+    }
+
+    fun searchSubtitlesOnline() {
+        subtitleFile = null
+        maybeFetchSubtitles(force = true)
+        closeOverlay()
+    }
+
+    // ---------------------------------------------------------------- Spuren (Audio/Untertitel)
+
+    fun selectTrack(group: Tracks.Group, index: Int) {
+        val p = player ?: return
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(group.type, false)
+            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index))
+            .build()
+        if (group.type == C.TRACK_TYPE_TEXT) textDisabled = false
+    }
+
+    fun setTextEnabled(enabled: Boolean) {
+        val p = player ?: return
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
+            .apply { if (!enabled) clearOverridesOfType(C.TRACK_TYPE_TEXT) }
+            .build()
+        textDisabled = !enabled
+    }
+
+    fun openTracks() = showOverlay(Overlay.TRACKS)
+
+    fun clearSubtitleStatus(shown: String) {
+        if (subtitleStatus == shown) subtitleStatus = null
     }
 
     private fun saveProgress() {
@@ -238,8 +378,22 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Gemeinsam
 
-    private fun mediaItem(url: String, mime: String?): MediaItem =
-        MediaItem.Builder().setUri(url).apply { if (mime != null) setMimeType(mime) }.build()
+    private fun mediaItem(url: String, mime: String?, subtitle: File? = null): MediaItem =
+        MediaItem.Builder().setUri(url).apply {
+            if (mime != null) setMimeType(mime)
+            if (subtitle != null) {
+                setSubtitleConfigurations(
+                    listOf(
+                        MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(subtitle))
+                            .setMimeType(MimeTypes.APPLICATION_SUBRIP)
+                            .setLanguage(settings.subtitleLanguage.code)
+                            .setLabel("${settings.subtitleLanguage.label} (OpenSubtitles)")
+                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                            .build()
+                    )
+                )
+            }
+        }.build()
 
     private fun guessMime(url: String): String? {
         val path = url.substringBefore('?').lowercase(Locale.ROOT)
@@ -261,6 +415,7 @@ class PlayerActivity : ComponentActivity() {
             if (state == Player.STATE_READY) {
                 retries = 0
                 message = null
+                if (!isLive) maybeFetchSubtitles()
             }
             if (state == Player.STATE_ENDED && !isLive) finish()
         }
@@ -272,7 +427,10 @@ class PlayerActivity : ComponentActivity() {
             }
         }
 
-        override fun onTracksChanged(tracks: Tracks) = updateFormats()
+        override fun onTracksChanged(tracks: Tracks) {
+            this@PlayerActivity.tracks = tracks
+            updateFormats()
+        }
 
         override fun onVideoSizeChanged(videoSize: VideoSize) = updateFormats()
 
@@ -291,6 +449,12 @@ class PlayerActivity : ComponentActivity() {
                     triedHls = true
                     val uri = p.currentMediaItem?.localConfiguration?.uri?.toString() ?: return
                     p.setMediaItem(mediaItem(uri, MimeTypes.APPLICATION_M3U8))
+                    p.prepare()
+                }
+                // Tunneling ist auf manchen Geräten/Streams instabil: einmalig ohne Tunneling neu starten.
+                trackSelector?.parameters?.tunnelingEnabled == true && error.isDecoderOrAudioError() -> {
+                    trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
+                    message = "Tunneling für diesen Stream deaktiviert, starte neu …"
                     p.prepare()
                 }
                 retries < MAX_RETRIES -> {
@@ -362,8 +526,8 @@ class PlayerActivity : ComponentActivity() {
         }
         // Noch nicht bereit (Einstellungen/Player werden geladen).
         if (player == null) return super.dispatchKeyEvent(event)
-        // In der Senderliste übernimmt Compose die Navigation.
-        if (overlay == Overlay.CHANNELS) {
+        // In Senderliste und Spurmenü übernimmt Compose die Navigation.
+        if (overlay == Overlay.CHANNELS || overlay == Overlay.TRACKS) {
             if (event.action == KeyEvent.ACTION_DOWN) overlayToken++
             return super.dispatchKeyEvent(event)
         }
@@ -387,7 +551,8 @@ class PlayerActivity : ComponentActivity() {
             }
             // "Zurück zum letzten Sender", wie beim Fernseher.
             KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> previousChannel?.let(::playChannel)
-            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_PROG_RED -> {
+            KeyEvent.KEYCODE_MENU -> openTracks()
+            KeyEvent.KEYCODE_PROG_RED -> {
                 toggleFavorite()
                 showOverlay(Overlay.INFO)
             }
@@ -412,6 +577,7 @@ class PlayerActivity : ComponentActivity() {
                 if (overlay == Overlay.CONTROLS || !p.playWhenReady) p.playWhenReady = !p.playWhenReady
                 showOverlay(Overlay.CONTROLS)
             }
+            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_CAPTIONS -> openTracks()
             KeyEvent.KEYCODE_MEDIA_PLAY -> p.playWhenReady = true
             KeyEvent.KEYCODE_MEDIA_PAUSE -> p.playWhenReady = false
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-(if (step > 0) step else 10_000L))
@@ -444,6 +610,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        watchdogJob?.cancel()
         handler.removeCallbacksAndMessages(null)
         frameRateMatcher.reset()
         player?.release()
@@ -452,6 +619,8 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val MAX_RETRIES = 3
+        private const val LIVE_STALL_SECONDS = 10
+        private const val VOD_STALL_SECONDS = 20
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"
         private const val EXTRA_FAVORITES = "favorites"
@@ -469,6 +638,7 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_PROG_RED, KeyEvent.KEYCODE_PROG_BLUE, KeyEvent.KEYCODE_LAST_CHANNEL,
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY,
             KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+            KeyEvent.KEYCODE_CAPTIONS,
         )
 
         fun startLive(context: Context, channelKey: String, group: String?, favoritesOnly: Boolean = false) {
@@ -539,3 +709,12 @@ data class StreamStats(
             else -> ""
         }
 }
+
+private fun PlaybackException.isDecoderOrAudioError(): Boolean = errorCode in setOf(
+    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+    PlaybackException.ERROR_CODE_DECODING_FAILED,
+    PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED,
+    PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
+    PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED,
+)
+

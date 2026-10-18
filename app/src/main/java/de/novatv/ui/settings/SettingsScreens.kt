@@ -42,6 +42,8 @@ import de.novatv.BuildConfig
 import de.novatv.data.AppSettings
 import de.novatv.data.BufferProfile
 import de.novatv.data.LiveFormat
+import de.novatv.data.SubtitleLanguage
+import de.novatv.data.SubtitleSize
 import de.novatv.data.db.PlaylistEntity
 import de.novatv.data.db.PlaylistType
 import de.novatv.ui.LocalContainer
@@ -144,6 +146,36 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             UserAgentRow(settings.userAgent) { ua -> update { it.copy(userAgent = ua) } }
         }
 
+        item { SectionTitle("Untertitel (Filme & Serien)", Modifier.padding(top = 20.dp)) }
+        item {
+            SettingRow(
+                "Sprache",
+                settings.subtitleLanguage.label,
+                "Wird automatisch eingeschaltet. Hat der Film keine passende Spur, sucht NovaTV online (siehe unten).",
+            ) { update { it.copy(subtitleLanguage = it.subtitleLanguage.next()) } }
+        }
+        item {
+            SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung: weiße Schrift mit schwarzem Rand.") {
+                update { it.copy(subtitleSize = it.subtitleSize.next()) }
+            }
+        }
+        item {
+            CredentialField(
+                current = settings.openSubtitlesKey,
+                label = "OpenSubtitles API-Key (kostenlos auf opensubtitles.com → Konto → API-Consumer)",
+            ) { key -> update { it.copy(openSubtitlesKey = key) } }
+        }
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                CredentialField(settings.openSubtitlesUser, "Benutzername (optional, mehr Downloads pro Tag)", Modifier.width(320.dp)) { user ->
+                    update { it.copy(openSubtitlesUser = user) }
+                }
+                CredentialField(settings.openSubtitlesPassword, "Passwort (optional)", Modifier.width(260.dp), password = true) { pw ->
+                    update { it.copy(openSubtitlesPassword = pw) }
+                }
+            }
+        }
+
         item { SectionTitle("Daten", Modifier.padding(top = 20.dp)) }
         item {
             SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
@@ -161,6 +193,33 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
 private fun onOff(value: Boolean) = if (value) "An" else "Aus"
 
 private fun BufferProfile.next(): BufferProfile = BufferProfile.entries[(ordinal + 1) % BufferProfile.entries.size]
+private fun SubtitleLanguage.next(): SubtitleLanguage = SubtitleLanguage.entries[(ordinal + 1) % SubtitleLanguage.entries.size]
+private fun SubtitleSize.next(): SubtitleSize = SubtitleSize.entries[(ordinal + 1) % SubtitleSize.entries.size]
+
+/** Speichert bei jeder Eingabe: Auf Fire TV schließt man die Tastatur oft mit "Zurück" statt "Fertig". */
+@Composable
+private fun CredentialField(
+    current: String,
+    label: String,
+    modifier: Modifier = Modifier.fillMaxWidth(0.8f),
+    password: Boolean = false,
+    onSave: (String) -> Unit,
+) {
+    // Bis zur ersten Eingabe den gespeicherten Wert zeigen, danach nur noch die eigene Eingabe.
+    var edited by remember { mutableStateOf<String?>(null) }
+    val value = edited ?: current
+    TvTextField(
+        value = value,
+        onValueChange = {
+            edited = it
+            onSave(it)
+        },
+        label = label,
+        password = password,
+        imeAction = ImeAction.Done,
+        modifier = modifier.padding(vertical = 6.dp),
+    )
+}
 
 @Composable
 private fun PlaylistRow(

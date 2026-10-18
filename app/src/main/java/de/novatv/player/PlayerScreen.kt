@@ -43,9 +43,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.Tracks
 import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
+import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.PlayerView
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import de.novatv.ui.components.ChannelListItem
 import de.novatv.ui.components.ChannelLogo
@@ -55,6 +63,7 @@ import de.novatv.ui.components.formatTime
 import de.novatv.ui.components.progress
 import de.novatv.ui.theme.NovaColors
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 fun PlayerScreen(activity: PlayerActivity) {
@@ -71,10 +80,28 @@ fun PlayerScreen(activity: PlayerActivity) {
                         // Beim Umschalten das letzte Bild stehen lassen statt schwarz zu blenden.
                         setKeepContentOnPlayerReset(true)
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        // Untertitel für den Fernseher: weiße Schrift mit schwarzem Rand, ohne Kasten.
+                        subtitleView?.apply {
+                            setStyle(
+                                CaptionStyleCompat(
+                                    AndroidColor.WHITE,
+                                    AndroidColor.TRANSPARENT,
+                                    AndroidColor.TRANSPARENT,
+                                    CaptionStyleCompat.EDGE_TYPE_OUTLINE,
+                                    AndroidColor.BLACK,
+                                    null,
+                                )
+                            )
+                            setApplyEmbeddedFontSizes(false)
+                            setBottomPaddingFraction(0.07f)
+                        }
                         this.player = player
                     }
                 },
-                update = { it.player = player },
+                update = {
+                    it.player = player
+                    it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
+                },
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -125,6 +152,29 @@ fun PlayerScreen(activity: PlayerActivity) {
             VodControls(activity)
         }
 
+        activity.subtitleStatus?.let { status ->
+            Text(
+                status,
+                modifier = Modifier.align(Alignment.TopEnd).padding(28.dp)
+                    .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
+                color = Color.White,
+                fontSize = 14.sp,
+            )
+            LaunchedEffect(status) {
+                delay(5_000)
+                activity.clearSubtitleStatus(status)
+            }
+        }
+
+        AnimatedVisibility(
+            visible = activity.overlay == Overlay.TRACKS,
+            enter = slideInHorizontally { it } + fadeIn(),
+            exit = slideOutHorizontally { it } + fadeOut(),
+            modifier = Modifier.align(Alignment.CenterEnd),
+        ) {
+            TracksOverlay(activity)
+        }
+
         AnimatedVisibility(
             visible = activity.overlay == Overlay.CHANNELS,
             enter = slideInHorizontally { -it } + fadeIn(),
@@ -140,7 +190,7 @@ fun PlayerScreen(activity: PlayerActivity) {
             Overlay.NONE -> return@LaunchedEffect
             Overlay.INFO -> if (activity.showTech) 10_000L else 5_000L
             Overlay.CONTROLS -> if (activity.player?.isPlaying == false) Long.MAX_VALUE else 4_000L
-            Overlay.CHANNELS -> 15_000L
+            Overlay.CHANNELS, Overlay.TRACKS -> 15_000L
         }
         delay(timeout)
         activity.closeOverlay()
@@ -197,7 +247,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ☰ Favorit",
+            "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ☰ Ton/Untertitel/Favorit",
             color = NovaColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 12.sp,
         )
@@ -232,7 +282,7 @@ private fun VodControls(activity: PlayerActivity) {
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            (if (activity.player?.playWhenReady == false) "Pausiert  ·  " else "") + "OK Pause   ◀ −10 s   ▶ +30 s (halten = schneller)   ▲ Stream-Info",
+            (if (activity.player?.playWhenReady == false) "Pausiert  ·  " else "") + "OK Pause   ◀ −10 s   ▶ +30 s (halten = schneller)   ▲ Stream-Info   ☰ Ton/Untertitel",
             color = NovaColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 12.sp,
         )
@@ -304,6 +354,126 @@ private fun ChannelListOverlay(activity: PlayerActivity) {
         repeat(5) {
             if (runCatching { focusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
             delay(16)
+        }
+    }
+}
+
+/** Spurmenü: Audiospur, Untertitel, Online-Suche und (bei Live) Favorit. Rechts eingeblendet. */
+@Composable
+private fun TracksOverlay(activity: PlayerActivity) {
+    val tracks = activity.tracks
+    val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO) }
+    val text = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_TEXT) }
+    val firstItem = remember { FocusRequester() }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight().width(400.dp).background(Color.Black.copy(alpha = 0.9f)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 28.dp, horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (activity.isLive) {
+            item {
+                OptionRow(
+                    if (activity.isFavorite) "★ Aus Favoriten entfernen" else "☆ Zu Favoriten hinzufügen",
+                    selected = false,
+                    modifier = Modifier.focusRequester(firstItem),
+                ) { activity.toggleFavorite() }
+            }
+        }
+        item { MenuHeader("Ton") }
+        if (audio.isEmpty()) item { MenuHint("Keine Auswahl verfügbar") }
+        audio.forEachIndexed { index, option ->
+            item {
+                OptionRow(
+                    option.label,
+                    option.selected,
+                    if (!activity.isLive && index == 0) Modifier.focusRequester(firstItem) else Modifier,
+                ) { activity.selectTrack(option.group, option.index) }
+            }
+        }
+        item { MenuHeader("Untertitel") }
+        item { OptionRow("Aus", activity.textDisabled || text.none { it.selected }) { activity.setTextEnabled(false) } }
+        text.forEach { option ->
+            item { OptionRow(option.label, option.selected && !activity.textDisabled) { activity.selectTrack(option.group, option.index) } }
+        }
+        if (activity.onlineSubtitlesAvailable) {
+            item { OptionRow("Online suchen (OpenSubtitles)", selected = false) { activity.searchSubtitlesOnline() } }
+        } else if (!activity.isLive) {
+            item { MenuHint("Online-Untertitel: OpenSubtitles-API-Key in den Einstellungen eintragen") }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        repeat(5) {
+            if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
+}
+
+private class TrackOption(val group: Tracks.Group, val index: Int, val label: String, val selected: Boolean)
+
+private fun trackOptions(tracks: Tracks, type: Int): List<TrackOption> = buildList {
+    for (group in tracks.groups) {
+        if (group.type != type) continue
+        for (i in 0 until group.length) {
+            if (!group.isTrackSupported(i)) continue
+            add(TrackOption(group, i, describe(group.getTrackFormat(i), type, size + 1), group.isTrackSelected(i)))
+        }
+    }
+}
+
+private fun describe(format: Format, type: Int, number: Int): String {
+    val language = format.language?.takeIf { it.isNotBlank() && it != "und" }?.let {
+        Locale.forLanguageTag(it).getDisplayLanguage(Locale.GERMAN).replaceFirstChar(Char::uppercase)
+    }
+    val parts = mutableListOf(format.label ?: language ?: "Spur $number")
+    if (format.label != null && language != null && language !in format.label!!) parts += language
+    if (type == C.TRACK_TYPE_AUDIO) {
+        when (format.sampleMimeType) {
+            MimeTypes.AUDIO_E_AC3_JOC -> parts += "Dolby Atmos"
+            MimeTypes.AUDIO_E_AC3 -> parts += "Dolby Digital Plus"
+            MimeTypes.AUDIO_AC3 -> parts += "Dolby Digital"
+            MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD -> parts += "DTS"
+            MimeTypes.AUDIO_AAC -> parts += "AAC"
+        }
+        when (format.channelCount) {
+            6 -> parts += "5.1"
+            8 -> parts += "7.1"
+            2 -> parts += "Stereo"
+        }
+    } else if (format.selectionFlags and C.SELECTION_FLAG_FORCED != 0) {
+        parts += "erzwungen"
+    }
+    return parts.joinToString(" · ")
+}
+
+@Composable
+private fun MenuHeader(text: String) {
+    Text(text, color = NovaColors.Accent, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, top = 14.dp, bottom = 4.dp))
+}
+
+@Composable
+private fun MenuHint(text: String) {
+    Text(text, color = NovaColors.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+}
+
+@Composable
+private fun OptionRow(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = NovaColors.AccentSoft,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (selected) "●" else "○", color = if (selected) NovaColors.Accent else NovaColors.TextSecondary, fontSize = 14.sp)
+            Spacer(Modifier.width(12.dp))
+            Text(label, color = Color.White, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
