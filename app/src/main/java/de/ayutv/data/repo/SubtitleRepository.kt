@@ -53,6 +53,8 @@ class SubtitleRepository(
         title: String,
         language: String,
         settings: AppSettings,
+        /** false: nur echte Untertitel in der Zielsprache, keine Übersetzung. */
+        translate: Boolean = true,
         progress: (String) -> Unit = {},
     ): Result? = withContext(Dispatchers.IO) {
         cached(key, language)?.let { return@withContext Result(it, Source.CACHE) }
@@ -62,6 +64,7 @@ class SubtitleRepository(
             download(key, videoUrl, title, language, settings)?.let { return@withContext it }
         }
 
+        if (!translate) return@withContext null
         val translator = Translators.from(http, settings) ?: return@withContext null
         if (!translator.supports(language)) throw IOException("${translator.name} unterstützt ${Languages.label(language)} nicht")
 
@@ -89,7 +92,7 @@ class SubtitleRepository(
 
     /** Lädt von OpenSubtitles in [language] (null = beliebige Sprache) und speichert unter der echten Sprache. */
     private suspend fun download(key: String, videoUrl: String, title: String, language: String?, settings: AppSettings): Result? {
-        val apiKey = settings.openSubtitlesKey.trim().ifEmpty { return null }
+        val apiKey = settings.openSubtitlesApiKey.ifEmpty { return null }
         // ConcurrentHashMap erlaubt kein null: "" steht für "kein Hash möglich".
         val hash = hashCache.getOrPut(videoUrl) {
             runCatching { movieHash(videoUrl, settings.userAgent) }

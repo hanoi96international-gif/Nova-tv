@@ -210,6 +210,20 @@ class DeviceTourTest {
                 Thread.sleep(4_000)
                 log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
                 shot("21_vod_subtitles")
+                // Wie auf dem Fire TV: Indonesisch wählen, obwohl der Film nur englische Untertitel hat
+                // und kein Zugang eingerichtet ist. Erwartet: Live-Übersetzung auf dem Gerät.
+                scenario.onActivity { it.loadSubtitles("id") }
+                val translated = waitFor(180_000) { scenario.read { it.translatedCue } != null }
+                log(
+                    "translate_id: ok=$translated target=${scenario.read { it.liveTranslateTarget }} " +
+                        "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} status=${scenario.read { it.subtitleStatus }}"
+                )
+                shot("23_vod_translated_id")
+                scenario.onActivity { it.loadSubtitles("de") }
+                Thread.sleep(2_000)
+                waitFor(120_000) { scenario.read { it.translatedCue } != null && scenario.read { it.liveTranslateTarget } == "de" }
+                log("translate_de: target=${scenario.read { it.liveTranslateTarget }} cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')}")
+                shot("24_vod_translated_de")
                 key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(1_500)
                 log("vod after_seek position_ms=${scenario.read { it.player?.currentPosition }} message=${scenario.read { it.message }}")
                 shot("22_vod_seek")

@@ -1,6 +1,7 @@
 package de.ayutv.data
 
 import android.content.Context
+import de.ayutv.BuildConfig
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -30,6 +31,7 @@ enum class AudioOutput(val label: String) {
 }
 
 enum class TranslationProvider(val label: String) {
+    ON_DEVICE("Auf dem Gerät (kostenlos)"),
     NONE("Aus"),
     DEEPL("DeepL"),
     LIBRE("LibreTranslate"),
@@ -63,14 +65,17 @@ data class AppSettings(
     val openSubtitlesKey: String = "",
     val openSubtitlesUser: String = "",
     val openSubtitlesPassword: String = "",
-    val translationProvider: TranslationProvider = TranslationProvider.NONE,
+    val translationProvider: TranslationProvider = TranslationProvider.ON_DEVICE,
     val deeplKey: String = "",
     val libreUrl: String = "",
     val libreKey: String = "",
 ) {
-    val onlineSubtitlesEnabled: Boolean get() = openSubtitlesKey.isNotBlank()
+    /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
+    val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
+    val onlineSubtitlesEnabled: Boolean get() = openSubtitlesApiKey.isNotBlank()
     val translationEnabled: Boolean
         get() = when (translationProvider) {
+            TranslationProvider.ON_DEVICE -> true
             TranslationProvider.NONE -> false
             TranslationProvider.DEEPL -> deeplKey.isNotBlank()
             TranslationProvider.LIBRE -> libreUrl.isNotBlank()
@@ -150,7 +155,7 @@ class SettingsStore(private val context: Context) {
         showGuide = this[Keys.showGuide] ?: true,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
-        translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.NONE),
+        translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),
         deeplKey = this[Keys.deepl].orEmpty(),
         libreUrl = this[Keys.libreUrl].orEmpty(),
         libreKey = this[Keys.libreKey].orEmpty(),

@@ -59,6 +59,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - name: Tests und APKs bauen
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
 
       - name: APK umbenennen
@@ -122,14 +124,17 @@ jobs:
           nohup python3 ci/test_server.py ci-media > http.log 2>&1 &
 
       - name: APKs bauen
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest assembleRelease
 
       - name: Rundgang im Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
-          target: android-tv
-          arch: x86
+          # AOSP ohne Google-Play-Dienste: verhält sich wie Fire OS (Amazon hat keine Google-Dienste).
+          target: default
+          arch: x86_64
           profile: tv_1080p
           ram-size: 3072M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim

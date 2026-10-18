@@ -18,6 +18,9 @@ android {
         versionCode = 8
         versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // App-Schlüssel für OpenSubtitles (GitHub-Secret OPENSUBTITLES_API_KEY). Damit funktionieren
+        // Online-Untertitel auf jedem Gerät ohne Einrichtung; ein eigener Schlüssel hat Vorrang.
+        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${System.getenv("OPENSUBTITLES_API_KEY").orEmpty().trim()}\"")
     }
 
     buildTypes {
@@ -84,6 +87,9 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
+    // Untertitel-Übersetzung auf dem Gerät: kostenlos, ohne Konto, Sprachpakete werden einmalig geladen.
+    implementation("com.google.mlkit:translate:17.0.3")
+    implementation("com.google.mlkit:language-id:17.0.6")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 

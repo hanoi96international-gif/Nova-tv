@@ -471,11 +471,8 @@ private fun LanguagePicker(activity: PlayerActivity) {
         item { MenuHeader("Sprache wählen") }
         item {
             MenuHint(
-                if (embeddedSelected && activity.translationAvailable) {
-                    "OK = Untertitel laden bzw. übersetzen. Lange OK = gewählte Spur live übersetzen."
-                } else {
-                    "Zuerst werden echte Untertitel gesucht, sonst wird automatisch übersetzt."
-                }
+                "Ayu-TV nimmt eine passende Spur oder lädt Untertitel. Gibt es keine, " +
+                    "werden vorhandene Untertitel automatisch auf dem Gerät übersetzt (kostenlos, ohne Konto)."
             )
         }
         Languages.all.forEachIndexed { index, language ->

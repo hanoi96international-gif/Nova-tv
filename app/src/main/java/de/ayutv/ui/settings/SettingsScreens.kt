@@ -256,7 +256,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             SettingRow(
                 "Automatische Übersetzung",
                 settings.translationProvider.label,
-                "Gibt es keine Untertitel in der Wunschsprache, wird eine vorhandene Datei übersetzt. Auch eingebettete Spuren lassen sich live übersetzen.",
+                "Gibt es keine Untertitel in der Wunschsprache, werden vorhandene automatisch übersetzt. „Auf dem Gerät“ ist kostenlos und braucht kein Konto (Sprachpaket wird einmalig geladen, ca. 30 MB).",
             ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
         }
         if (settings.translationProvider == TranslationProvider.DEEPL) {

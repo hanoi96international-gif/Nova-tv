@@ -118,6 +118,7 @@ class PlayerActivity : ComponentActivity() {
 
     /** Live-Übersetzung eingebetteter Untertitel: Zielsprache, oder null wenn aus. */
     var liveTranslateTarget by mutableStateOf<String?>(null); private set
+    private var liveSourceLanguage: String? = null
     var translatedCue by mutableStateOf<String?>(null); private set
     var languagePicker by mutableStateOf(false); private set
     val preferredSubtitleLanguage: String get() = if (::settings.isInitialized) settings.subtitleLanguage else "en"
@@ -134,6 +135,11 @@ class PlayerActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             settings = container.settings.current()
+            Translators.onDevice.onModelDownload = { languages ->
+                runOnUiThread {
+                    subtitleStatus = "Lade Sprachpaket ${languages.split(", ").joinToString(", ") { Languages.label(it) }} (einmalig, ca. 30 MB) …"
+                }
+            }
             subtitleScale = settings.subtitleSize.scale
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
@@ -427,8 +433,14 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Untertitel in [language] besorgen und einschalten. Bereits vorhandene Spuren werden direkt gewählt. */
+    /**
+     * Untertitel in [language] einschalten, ohne dass etwas eingerichtet sein muss. Reihenfolge:
+     * 1. eingebettete Spur in der Sprache, 2. echte Untertitel online (mit OpenSubtitles-Zugang),
+     * 3. eine andere eingebettete Textspur live auf dem Gerät übersetzen, 4. eine Online-Vorlage
+     * übersetzen, 5. ehrlich sagen, dass der Film keinen übersetzbaren Text hat.
+     */
     fun loadSubtitles(language: String) {
-        val request = vod ?: return
+        val request = vod
         languagePicker = false
         closeOverlay()
         stopLiveTranslation()
@@ -437,31 +449,66 @@ class PlayerActivity : ComponentActivity() {
             subtitleStatus = "Untertitel: ${Languages.label(language)}"
             return
         }
-        if (!settings.onlineSubtitlesEnabled && !settings.translationEnabled) {
-            subtitleStatus = "Keine ${Languages.label(language)}-Spur. Für mehr: OpenSubtitles bzw. Übersetzer in den Einstellungen eintragen"
-            return
-        }
+        val label = Languages.label(language)
         subtitleJob?.cancel()
         subtitleJob = lifecycleScope.launch {
-            subtitleStatus = "Suche Untertitel (${Languages.label(language)}) …"
-            runCatching {
-                container.subtitles.find(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
-            }.onSuccess { result ->
-                if (result == null) {
-                    subtitleStatus = "Keine Untertitel (${Languages.label(language)}) gefunden"
-                } else {
-                    subtitleFiles[language] = result.file
-                    reloadWithSubtitles(request)
-                    selectTextLanguage(language)
-                    subtitleStatus = when (result.source) {
-                        SubtitleRepository.Source.HASH -> "Untertitel geladen, passend zur Datei"
-                        SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden)"
-                        SubtitleRepository.Source.TRANSLATED -> "Untertitel übersetzt mit ${result.translator}"
-                        SubtitleRepository.Source.CACHE -> "Untertitel: ${Languages.label(language)}"
-                    }
+            // 2. Von Menschen erstellte Untertitel in der Zielsprache
+            if (request != null && settings.onlineSubtitlesEnabled) {
+                subtitleStatus = "Suche Untertitel ($label) …"
+                val found = runCatching {
+                    container.subtitles.find(request.key, request.url, request.title, language, settings, translate = false) { subtitleStatus = it }
+                }.getOrNull()
+                if (found != null) {
+                    attachLoaded(request, language, found)
+                    return@launch
                 }
-            }.onFailure { subtitleStatus = "Untertitel: ${it.message}" }
+            }
+            // 3. Eingebettete Textspur einer anderen Sprache live übersetzen
+            val source = bestTranslationSource()
+            if (source != null && settings.translationEnabled) {
+                startLiveTranslation(language, source)
+                return@launch
+            }
+            // 4. Online-Vorlage laden und übersetzen
+            if (request != null && settings.onlineSubtitlesEnabled && settings.translationEnabled) {
+                val translated = runCatching {
+                    container.subtitles.find(request.key, request.url, request.title, language, settings, translate = true) { subtitleStatus = it }
+                }.onFailure { subtitleStatus = "Untertitel: ${it.message}" }.getOrNull()
+                if (translated != null) {
+                    attachLoaded(request, language, translated)
+                    return@launch
+                }
+            }
+            // 5. Nichts da, was sich übersetzen ließe
+            subtitleStatus = when {
+                !settings.translationEnabled -> "Übersetzung ist in den Einstellungen ausgeschaltet"
+                request == null -> "Dieser Sender hat keine Untertitel, die übersetzt werden könnten"
+                settings.onlineSubtitlesEnabled -> "Für diesen Film gibt es weder eingebettete noch Online-Untertitel"
+                else -> "Dieser Film enthält keine Untertitel zum Übersetzen. Mit einem OpenSubtitles-Zugang (Einstellungen) holt Ayu-TV welche aus dem Internet"
+            }
         }
+    }
+
+    private fun attachLoaded(request: VodRequest, language: String, result: SubtitleRepository.Result) {
+        subtitleFiles[language] = result.file
+        reloadWithSubtitles(request)
+        selectTextLanguage(language)
+        subtitleStatus = when (result.source) {
+            SubtitleRepository.Source.HASH -> "Untertitel geladen, passend zur Datei"
+            SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden)"
+            SubtitleRepository.Source.TRANSLATED -> "Untertitel übersetzt (${result.translator})"
+            SubtitleRepository.Source.CACHE -> "Untertitel: ${Languages.label(language)}"
+        }
+    }
+
+    /** Eingebettete Untertitel, die Text enthalten (keine Bild-Untertitel), bevorzugt Englisch. */
+    private fun bestTranslationSource(): Pair<Tracks.Group, Int>? {
+        val candidates = player?.currentTracks?.groups.orEmpty()
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+            .flatMap { group -> (0 until group.length).filter(group::isTrackSupported).map { group to it } }
+            .filter { (group, index) -> !group.getTrackFormat(index).isBitmapSubtitle() }
+        return candidates.firstOrNull { (g, i) -> g.getTrackFormat(i).language?.startsWith("en") == true }
+            ?: candidates.firstOrNull()
     }
 
     private fun hasTextTrack(language: String): Boolean = player?.currentTracks?.groups.orEmpty().any { group ->
@@ -503,17 +550,27 @@ class PlayerActivity : ComponentActivity() {
      * Übersetzt die gerade gewählte eingebettete Spur live in [target]. Jede Zeile wird beim Erscheinen
      * übersetzt und zwischengespeichert. Dafür werden die Originaluntertitel ausgeblendet.
      */
-    fun startLiveTranslation(target: String) {
+    /**
+     * Übersetzt eine eingebettete Spur live in [target]: Jede Zeile wird beim Erscheinen übersetzt
+     * und zwischengespeichert; die Originalzeilen werden dafür ausgeblendet.
+     */
+    fun startLiveTranslation(target: String, source: Pair<Tracks.Group, Int>? = bestTranslationSource()) {
         languagePicker = false
         closeOverlay()
         if (!settings.translationEnabled) {
-            subtitleStatus = "Für Live-Übersetzung DeepL oder LibreTranslate in den Einstellungen eintragen"
+            subtitleStatus = "Übersetzung ist in den Einstellungen ausgeschaltet"
             return
         }
-        if (textDisabled) setTextEnabled(true)
+        if (source == null) {
+            subtitleStatus = "Keine Text-Untertitel zum Übersetzen vorhanden"
+            return
+        }
+        val (group, index) = source
+        selectTrack(group, index)
+        liveSourceLanguage = group.getTrackFormat(index).language?.takeIf { it.isNotBlank() && it != "und" }
         cueTranslations.clear()
         liveTranslateTarget = target
-        subtitleStatus = "Live-Übersetzung: ${Languages.label(target)}"
+        subtitleStatus = "Übersetze ${liveSourceLanguage?.let { Languages.label(it) + " " }.orEmpty()}→ ${Languages.label(target)} auf dem Gerät"
     }
 
     fun stopLiveTranslation() {
@@ -536,7 +593,7 @@ class PlayerActivity : ComponentActivity() {
         cueJob?.cancel()
         cueJob = lifecycleScope.launch {
             val translator = Translators.from(container.http, settings) ?: return@launch
-            runCatching { translator.translate(listOf(text), target).first() }
+            runCatching { translator.translate(listOf(text), target, liveSourceLanguage).first() }
                 .onSuccess {
                     cueTranslations[text] = it
                     translatedCue = it
@@ -997,6 +1054,13 @@ private fun PlaybackException.isFormatError(): Boolean = errorCode in setOf(
     PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
     PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
 )
+
+/** Bild-Untertitel (PGS, DVB, VobSub) enthalten keinen Text und lassen sich nicht übersetzen. */
+private fun androidx.media3.common.Format.isBitmapSubtitle(): Boolean {
+    val bitmapTypes = setOf(MimeTypes.APPLICATION_PGS, MimeTypes.APPLICATION_DVBSUBS, MimeTypes.APPLICATION_VOBSUB)
+    // Seit Media3 1.4 werden Untertitel beim Einlesen umgewandelt; der ursprüngliche Typ steht dann in codecs.
+    return sampleMimeType in bitmapTypes || codecs in bitmapTypes
+}
 
 private fun PlaybackException.isAudioOutputError(): Boolean = errorCode in setOf(
     PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
