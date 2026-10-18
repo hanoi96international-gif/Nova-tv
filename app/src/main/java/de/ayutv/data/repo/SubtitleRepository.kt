@@ -128,6 +128,17 @@ class SubtitleRepository(
         download(key, videoUrl, title, null, settings)
     }
 
+    /** Anzahl der Treffer bei OpenSubtitles für einen Titel (Selbsttest, lädt nichts herunter). */
+    suspend fun countResults(title: String, language: String, settings: AppSettings): Int = withContext(Dispatchers.IO) {
+        val apiKey = settings.openSubtitlesApiKey.ifEmpty { return@withContext 0 }
+        val (cleanTitle, year) = OpenSubtitlesParsing.cleanTitle(title)
+        search(apiKey, buildMap {
+            put("query", cleanTitle)
+            put("languages", language)
+            if (year != null) put("year", year.toString())
+        }).size
+    }
+
     /** Fertig übersetzte Untertitel speichern: Beim nächsten Mal stehen sie sofort bereit. */
     fun saveTranslation(key: String, language: String, cues: List<SrtCue>): File {
         val target = cacheFile(key, language)

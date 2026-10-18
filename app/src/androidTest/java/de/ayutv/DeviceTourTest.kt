@@ -203,6 +203,23 @@ class DeviceTourTest {
 
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
+        // OpenSubtitles (eingebauter Schlüssel): Zugang gültig, Suche nach einem bekannten Film liefert Treffer.
+        // Danach aus, damit die Übersetzungstests nicht von zufälligen Online-Treffern abhängen.
+        section("opensubtitles") {
+            val settings = runBlocking { container.settings.current() }
+            if (settings.openSubtitlesApiKey.isBlank()) {
+                log("opensubtitles: kein eingebauter Schlüssel (GitHub-Secret fehlt)")
+            } else {
+                val check = runBlocking { de.ayutv.data.setup.KeyCheck.run(container.http, settings) }
+                val german = runBlocking { container.subtitles.countResults("Inception (2010)", "de", settings) }
+                val english = runBlocking { container.subtitles.countResults("The Matrix (1999)", "en", settings) }
+                log("opensubtitles: check=${check.map { "${it.ok}:${it.text}" }} inception_de=$german matrix_en=$english")
+                assertTrue("OpenSubtitles-Schlüssel ungültig: $check", check.all { it.ok })
+                assertTrue("OpenSubtitles findet nichts", german > 0 && english > 0)
+            }
+        }
+        runBlocking { container.settings.update { it.copy(onlineSubtitles = false) } }
+
         if (movie != null) section("vod") {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
             launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->

@@ -142,12 +142,12 @@ class PhoneSetupServer(private val container: AppContainer) {
             <h1>DnA-TV einrichten</h1>
             $result
             <form method=post>
-            <h2>Untertitel aus dem Internet (optional): OpenSubtitles ${status(settings.openSubtitlesKey.isNotBlank())}</h2>
+            <h2>Untertitel aus dem Internet (optional): OpenSubtitles ${status(settings.openSubtitlesApiKey.isNotBlank())}</h2>
             <p>Untertitel für fast jeden Film in fast jeder Sprache (auch automatisch übersetzte).
             Kostenloses Konto auf <a href="https://www.opensubtitles.com" target=_blank>opensubtitles.com</a> anlegen,
             dann <a href="https://www.opensubtitles.com/consumers" target=_blank>opensubtitles.com/consumers</a> →
             „New consumer“ → Name z. B. „DnA-TV“ → API-Key kopieren.</p>
-            <label>API-Key<input name=os_key autocomplete=off placeholder="${if (settings.openSubtitlesKey.isNotBlank()) "gespeichert – nur zum Ändern ausfüllen" else "API-Key einfügen"}"></label>
+            <label>API-Key<input name=os_key autocomplete=off placeholder="${if (settings.openSubtitlesApiKey.isNotBlank()) "eingebaut – nur für einen eigenen Schlüssel ausfüllen" else "API-Key einfügen"}"></label>
             <label>Benutzername (empfohlen: 20 statt 5 Downloads pro Tag)<input name=os_user autocomplete=username value="${esc(settings.openSubtitlesUser)}"></label>
             <label>Passwort<input name=os_password type=password autocomplete=current-password placeholder="${if (settings.openSubtitlesPassword.isNotEmpty()) "gespeichert" else ""}"></label>
 

@@ -67,6 +67,8 @@ data class AppSettings(
     /** Untertitel sind optional: standardmäßig aus, einschalten im Player über die Menütaste. */
     val subtitlesAutoOn: Boolean = false,
     val subtitleSize: SubtitleSize = SubtitleSize.LARGE,
+    /** Untertitel bei OpenSubtitles suchen, wenn der Film selbst keine passenden hat. */
+    val onlineSubtitles: Boolean = true,
     val openSubtitlesKey: String = "",
     val openSubtitlesUser: String = "",
     val openSubtitlesPassword: String = "",
@@ -74,7 +76,7 @@ data class AppSettings(
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
-    val onlineSubtitlesEnabled: Boolean get() = openSubtitlesApiKey.isNotBlank()
+    val onlineSubtitlesEnabled: Boolean get() = onlineSubtitles && openSubtitlesApiKey.isNotBlank()
     val translationEnabled: Boolean get() = translationProvider != TranslationProvider.NONE
 
     companion object {
@@ -101,6 +103,7 @@ class SettingsStore(private val context: Context) {
         val provider = stringPreferencesKey("translation_provider")
         val subSize = stringPreferencesKey("subtitle_size")
         val osKey = stringPreferencesKey("opensubtitles_key")
+        val osOn = booleanPreferencesKey("opensubtitles_on")
         val osUser = stringPreferencesKey("opensubtitles_user")
         val osPassword = stringPreferencesKey("opensubtitles_password")
     }
@@ -127,6 +130,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.provider] = next.translationProvider.name
             prefs[Keys.subSize] = next.subtitleSize.name
             prefs[Keys.osKey] = next.openSubtitlesKey.trim()
+            prefs[Keys.osOn] = next.onlineSubtitles
             prefs[Keys.osUser] = next.openSubtitlesUser.trim()
             prefs[Keys.osPassword] = next.openSubtitlesPassword
         }
@@ -148,6 +152,7 @@ class SettingsStore(private val context: Context) {
         translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),
         subtitleSize = enumOrDefault(this[Keys.subSize], SubtitleSize.LARGE),
         openSubtitlesKey = this[Keys.osKey].orEmpty(),
+        onlineSubtitles = this[Keys.osOn] ?: true,
         openSubtitlesUser = this[Keys.osUser].orEmpty(),
         openSubtitlesPassword = this[Keys.osPassword].orEmpty(),
     )
