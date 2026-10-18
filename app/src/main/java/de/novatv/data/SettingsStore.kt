@@ -51,7 +51,7 @@ data class AppSettings(
     val onlineSubtitlesEnabled: Boolean get() = openSubtitlesKey.isNotBlank() && subtitleLanguage.code != null
 
     companion object {
-        const val DEFAULT_USER_AGENT = "NovaTV/0.1 (Linux; Android) ExoPlayer"
+        const val DEFAULT_USER_AGENT = "NovaTV/0.3 (Linux; Android) ExoPlayer"
     }
 }
 
