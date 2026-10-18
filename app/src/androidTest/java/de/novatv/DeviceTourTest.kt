@@ -11,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import de.novatv.data.db.HistoryKind
 import de.novatv.data.db.PlaylistEntity
 import de.novatv.data.db.PlaylistType
+import de.novatv.data.repo.XtreamClient
 import de.novatv.player.PlayerActivity
 import de.novatv.player.VodRequest
 import kotlinx.coroutines.flow.first
@@ -87,6 +88,26 @@ class DeviceTourTest {
         log("import_ms=${System.currentTimeMillis() - started} channels=${channels.size} programmes=$programmes sync=${container.playlists.state.value}")
         assertTrue("Keine Sender importiert", channels.isNotEmpty())
 
+        // 1b. Xtream-Codes-Anbieter (simuliert): Login, Import, Serien-Episoden
+        val wrongLogin = runBlocking { container.playlists.verifyXtream(base, "nova", "falsch") }
+        val login = runBlocking { container.playlists.verifyXtream(base, "nova", "test") }
+        val xtreamStarted = System.currentTimeMillis()
+        runBlocking {
+            val id = container.playlists.add(
+                PlaylistEntity(name = "Xtream-Test", type = PlaylistType.XTREAM, url = XtreamClient.normalizeServer(base), username = "nova", password = "test")
+            )
+            container.playlists.sync(id)
+        }
+        val allChannels = runBlocking { container.content.zapList(null, false) }
+        val movies = runBlocking { container.db.vod().search("", 50) }
+        val seriesList = runBlocking { container.db.series().search("", 50) }
+        val episodes = seriesList.firstOrNull()?.let { runBlocking { container.content.episodes(it) } }.orEmpty()
+        log(
+            "xtream: wrong_login_rejected=${wrongLogin != null} login=${login ?: "ok"} import_ms=${System.currentTimeMillis() - xtreamStarted} " +
+                "channels_total=${allChannels.size} movies=${movies.size} series=${seriesList.size} episodes=${episodes.size} " +
+                "sync=${container.playlists.state.value}"
+        )
+
         // 2. Oberfläche per Fernbedienung durchgehen
         ActivityScenario.launch(MainActivity::class.java).use {
             Thread.sleep(4_000)
@@ -160,6 +181,17 @@ class DeviceTourTest {
             }
         } else {
             log("vod: kein Film gefunden")
+        }
+        // 5. Serienfolge über Xtream abspielen
+        episodes.firstOrNull()?.let { (episode, url) ->
+            val series = seriesList.first()
+            val request = VodRequest("${series.key}:e:${episode.id}", HistoryKind.EPISODE, "${series.name} S1E1", episode.title, null, url)
+            ActivityScenario.launch<PlayerActivity>(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                Thread.sleep(2_000)
+                log("episode ${episode.title}: ready=$ready message=${scenario.read { it.message }}")
+                shot("30_episode")
+            }
         }
         log("done")
     }
