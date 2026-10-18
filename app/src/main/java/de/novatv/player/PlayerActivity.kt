@@ -747,26 +747,25 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_CAPTIONS,
         )
 
-        fun startLive(context: Context, channelKey: String, group: String?, favoritesOnly: Boolean = false) {
-            context.startActivity(
-                Intent(context, PlayerActivity::class.java)
-                    .putExtra(EXTRA_CHANNEL_KEY, channelKey)
-                    .putExtra(EXTRA_GROUP, group)
-                    .putExtra(EXTRA_FAVORITES, favoritesOnly)
-            )
-        }
+        fun liveIntent(context: Context, channelKey: String, group: String?, favoritesOnly: Boolean = false): Intent =
+            Intent(context, PlayerActivity::class.java)
+                .putExtra(EXTRA_CHANNEL_KEY, channelKey)
+                .putExtra(EXTRA_GROUP, group)
+                .putExtra(EXTRA_FAVORITES, favoritesOnly)
 
-        fun startVod(context: Context, request: VodRequest) {
-            context.startActivity(
-                Intent(context, PlayerActivity::class.java)
-                    .putExtra(EXTRA_VOD_KEY, request.key)
-                    .putExtra(EXTRA_VOD_KIND, request.kind.name)
-                    .putExtra(EXTRA_VOD_TITLE, request.title)
-                    .putExtra(EXTRA_VOD_SUBTITLE, request.subtitle)
-                    .putExtra(EXTRA_VOD_IMAGE, request.image)
-                    .putExtra(EXTRA_VOD_URL, request.url)
-            )
-        }
+        fun vodIntent(context: Context, request: VodRequest): Intent =
+            Intent(context, PlayerActivity::class.java)
+                .putExtra(EXTRA_VOD_KEY, request.key)
+                .putExtra(EXTRA_VOD_KIND, request.kind.name)
+                .putExtra(EXTRA_VOD_TITLE, request.title)
+                .putExtra(EXTRA_VOD_SUBTITLE, request.subtitle)
+                .putExtra(EXTRA_VOD_IMAGE, request.image)
+                .putExtra(EXTRA_VOD_URL, request.url)
+
+        fun startLive(context: Context, channelKey: String, group: String?, favoritesOnly: Boolean = false) =
+            context.startActivity(liveIntent(context, channelKey, group, favoritesOnly))
+
+        fun startVod(context: Context, request: VodRequest) = context.startActivity(vodIntent(context, request))
 
         private fun Intent.getVodRequest(): VodRequest? {
             val key = getStringExtra(EXTRA_VOD_KEY) ?: return null

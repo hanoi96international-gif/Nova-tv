@@ -17,6 +17,7 @@ android {
         targetSdk = 35
         versionCode = 3
         versionName = "0.3.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -86,5 +87,8 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-network-okhttp:$coil")
 
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test:core:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
     testImplementation("net.sf.kxml:kxml2:2.3.0")
 }
