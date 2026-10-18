@@ -30,7 +30,8 @@ import java.io.File
 class DeviceTourTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val app = ApplicationProvider.getApplicationContext<NovaApp>()
-    private val out = File(app.getExternalFilesDir(null), "ci").apply { deleteRecursively(); mkdirs() }
+    // Interner Speicher: die CI holt ihn per "run-as" ab (zuverlässiger als Android/data unter Scoped Storage).
+    private val out = File(app.filesDir, "ci").apply { deleteRecursively(); mkdirs() }
     private val results = StringBuilder()
 
     private fun log(line: String) {
@@ -49,6 +50,14 @@ class DeviceTourTest {
     private fun key(code: Int, times: Int = 1) = repeat(times) {
         instrumentation.sendKeyDownUpSync(code)
         Thread.sleep(350)
+    }
+
+    /** Player und Activity-Zustand nur auf dem Main-Thread lesen (ExoPlayer prüft das). */
+    private fun <T> ActivityScenario<PlayerActivity>.read(block: (PlayerActivity) -> T): T {
+        var value: T? = null
+        onActivity { value = block(it) }
+        @Suppress("UNCHECKED_CAST")
+        return value as T
     }
 
     private fun waitFor(timeoutMs: Long, condition: () -> Boolean): Boolean {
@@ -102,23 +111,23 @@ class DeviceTourTest {
         val live = channels.filter { "/movie/" !in it.url }
         live.forEachIndexed { index, channel ->
             ActivityScenario.launch<PlayerActivity>(PlayerActivity.liveIntent(app, channel.key, null)).use { scenario ->
-                var activity: PlayerActivity? = null
-                scenario.onActivity { activity = it }
-                val ready = waitFor(25_000) { activity?.player?.playbackState == Player.STATE_READY }
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(8_000)
-                val stats = activity!!.stats
+                val stats = scenario.read { it.stats }
                 log(
                     "live[$index] ${channel.name}: ready=$ready startup_ms=${stats.startupMs} ${stats.width}x${stats.height} " +
                         "fps=${stats.frameRate} codec=${stats.videoCodec} decoder=${stats.decoder} dropped=${stats.droppedFrames} " +
-                        "hdr=${stats.hdr} message=${activity!!.message}"
+                        "hdr=${stats.hdr} message=${scenario.read { it.message }}"
                 )
                 shot("1${index}_live_${channel.name.filter(Char::isLetterOrDigit)}")
                 if (index == 0) {
                     key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(500); key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(800)
                     shot("1${index}_live_info_tech")
                     key(KeyEvent.KEYCODE_DPAD_UP)
-                    val zapReady = waitFor(15_000) { activity?.player?.playbackState == Player.STATE_READY && (activity?.stats?.startupMs ?: 0) > 0 }
-                    log("zap: ready=$zapReady startup_ms=${activity!!.stats.startupMs} now=${activity!!.current?.name}")
+                    val zapReady = waitFor(15_000) {
+                        scenario.read { it.player?.playbackState == Player.STATE_READY && it.stats.startupMs > 0 }
+                    }
+                    log("zap: ready=$zapReady startup_ms=${scenario.read { it.stats.startupMs }} now=${scenario.read { it.current?.name }}")
                     key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_200)
                     shot("1${index}_live_channel_list")
                     key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)
@@ -134,21 +143,19 @@ class DeviceTourTest {
         if (movie != null) {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
             ActivityScenario.launch<PlayerActivity>(PlayerActivity.vodIntent(app, request)).use { scenario ->
-                var activity: PlayerActivity? = null
-                scenario.onActivity { activity = it }
-                val ready = waitFor(25_000) { activity?.player?.playbackState == Player.STATE_READY }
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(3_000)
-                val textGroups = activity!!.tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
-                log("vod ${movie.name}: ready=$ready text_tracks=${textGroups.size} subtitles_off_by_default=${activity!!.textDisabled}")
+                val textGroups = scenario.read { a -> a.tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT } }
+                log("vod ${movie.name}: ready=$ready text_tracks=${textGroups.size} subtitles_off_by_default=${scenario.read { it.textDisabled }}")
                 key(KeyEvent.KEYCODE_MENU); Thread.sleep(1_200)
                 shot("20_vod_menu")
                 key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)
                 textGroups.firstOrNull()?.let { group -> scenario.onActivity { it.selectTrack(group, 0) } }
                 Thread.sleep(4_000)
-                log("vod subtitle_enabled=${!activity!!.textDisabled} dropped=${activity!!.stats.droppedFrames}")
+                log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
                 shot("21_vod_subtitles")
                 key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(1_500)
-                log("vod after_seek position_ms=${activity!!.positionMs} message=${activity!!.message}")
+                log("vod after_seek position_ms=${scenario.read { it.player?.currentPosition }} message=${scenario.read { it.message }}")
                 shot("22_vod_seek")
             }
         } else {

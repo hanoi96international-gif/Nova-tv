@@ -65,6 +65,9 @@ import de.novatv.ui.vod.SeriesScreen
 
 val LocalContainer = staticCompositionLocalOf<AppContainer> { error("AppContainer fehlt") }
 
+private val NAV_COLLAPSED = 72.dp
+private val NAV_EXPANDED = 220.dp
+
 enum class Section(val label: String, val icon: ImageVector) {
     HOME("Start", Icons.Filled.Home),
     LIVE("Live TV", Icons.Filled.List),
@@ -95,9 +98,9 @@ fun NovaRoot() {
             managingGroups != null -> GroupManagerScreen(managingGroups!!, onBack = { managingGroups = null })
             else -> {
                 BackHandler(enabled = section != Section.HOME) { section = Section.HOME }
-                Row(Modifier.fillMaxSize()) {
-                    SideNav(selected = section, onSelect = { section = it })
-                    Box(Modifier.weight(1f).fillMaxHeight()) {
+                // Die Navigation liegt über dem Inhalt: Aufklappen verschiebt nichts und löst kein Neu-Layout aus.
+                Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().padding(start = NAV_COLLAPSED)) {
                         when (section) {
                             Section.HOME -> HomeScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.LIVE -> LiveScreen()
@@ -111,6 +114,7 @@ fun NovaRoot() {
                             )
                         }
                     }
+                    SideNav(selected = section, onSelect = { section = it })
                 }
             }
         }
@@ -122,9 +126,13 @@ fun NovaRoot() {
 @Composable
 private fun SideNav(selected: Section, onSelect: (Section) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val width by animateDpAsState(if (expanded) 210.dp else 72.dp, label = "nav")
+    val width by animateDpAsState(if (expanded) NAV_EXPANDED else NAV_COLLAPSED, label = "nav")
     val initialFocus = remember { FocusRequester() }
 
+    if (expanded) {
+        // Abdunkeln des Inhalts hinter der aufgeklappten Navigation
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
+    }
     Column(
         Modifier
             .fillMaxHeight()

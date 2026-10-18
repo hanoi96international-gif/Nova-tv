@@ -1,7 +1,9 @@
 package de.novatv.ui.theme
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 
@@ -32,6 +34,8 @@ fun NovaTheme(content: @Composable () -> Unit) {
             onSurfaceVariant = NovaColors.TextSecondary,
             border = NovaColors.Accent,
         ),
-        content = content,
-    )
+    ) {
+        // Ohne umgebende Surface wäre Text sonst schwarz auf dunklem Hintergrund.
+        CompositionLocalProvider(LocalContentColor provides NovaColors.TextPrimary, content = content)
+    }
 }

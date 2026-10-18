@@ -140,7 +140,7 @@ fun LiveScreen() {
             }
         }
 
-        ChannelDetails(focused, upcoming, Modifier.width(330.dp).fillMaxHeight())
+        ChannelDetails(focused, upcoming, Modifier.width(290.dp).fillMaxHeight())
     }
     notice?.let { NoticeBar(it) }
 }
