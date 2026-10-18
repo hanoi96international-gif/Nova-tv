@@ -16,7 +16,7 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.3)
+## Funktionen (Version 0.4)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`, auch aus `url-tvg` im Playlist-Header), Xtream Codes API (Live, Filme, Serien, EPG)
 - **Gruppen ein- und ausblenden:** pro Playlist, getrennt für Live TV, Filme und Serien (*Einstellungen → Playlist → Gruppen*), mit Filter und „Alle ein/aus“. Schneller geht es mit langem Druck auf OK auf einer Gruppe in der Liste. Ausgeblendete Gruppen verschwinden überall: in Listen, TV-Guide, Suche, Startseite und beim Zappen. Sie bleiben auch nach dem Aktualisieren ausgeblendet.
@@ -33,6 +33,24 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Stabilität:** Ein Watchdog erkennt eingefrorene Streams (Dauer-Puffern, stehendes Bild) und verbindet automatisch neu. Stürzt der Decoder bei aktivem Tunneling ab, wird Tunneling für diesen Stream abgeschaltet und neu gestartet. Kurzer Lese-Timeout (12 s), damit tote Verbindungen schnell auffallen. Bei Fehlern gibt es bis zu drei Wiederholungen, HLS ohne Endung wird automatisch erkannt.
 - **Filme und Serien:** Kategorien, Poster-Raster, Staffeln und Episoden (Xtream), Fortsetzen an der letzten Position
 - **Automatische Aktualisierung:** Playlists alle 12 Stunden, EPG alle 8 Stunden
+
+- **Weitere:** EPG-Zeitverschiebung (−12 bis +12 Std.), gemessene Bildrate für TS-Streams ohne Angabe (damit greift die 50-Hz-Anpassung auch bei Live-TV), verständliche Fehlermeldungen („Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen“), Textfelder öffnen die Tastatur erst nach OK.
+
+## Automatisch geprüft bei jedem Build
+
+Jeder Push läuft durch einen Rundgang auf einem Android-TV-Emulator (API 30, wie Fire OS 8), mit selbst erzeugten Testinhalten (1080p50 TS, 4K HEVC 10 Bit, HLS, MKV mit Untertiteln) und einem simulierten Xtream-Anbieter. Letzte Messwerte:
+
+| Prüfung | Ergebnis |
+|---|---|
+| Umschalten (Zappen) | ca. 0,35–0,45 s |
+| Start 1080p50-TS / HLS | ca. 0,45–0,9 s / ca. 0,45–0,5 s |
+| Import großer Anbieter: 3.000 Sender + 34.600 EPG-Einträge (gzip) | 4,1 s |
+| „Jetzt läuft“ für 3.000 Sender | 68 ms |
+| Xtream: Login, falsches Passwort, Live/Filme/Serien, Episoden | ✓ |
+| Film: Untertitel standardmäßig aus, einschaltbar, Spulen | ✓ |
+| Release-APK (R8): Kaltstart / Abstürze | ca. 0,5 s / 0 |
+
+Screenshots, Logs und Ruckler-Statistik liegen nach jedem Lauf im Branch `ci-results`.
 
 ## Installation auf dem Fire TV Stick
 

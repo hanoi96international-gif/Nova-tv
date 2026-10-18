@@ -66,7 +66,7 @@ data class AppSettings(
         }
 
     companion object {
-        const val DEFAULT_USER_AGENT = "NovaTV/0.3 (Linux; Android) ExoPlayer"
+        const val DEFAULT_USER_AGENT = "NovaTV/0.4 (Linux; Android) ExoPlayer"
     }
 }
 

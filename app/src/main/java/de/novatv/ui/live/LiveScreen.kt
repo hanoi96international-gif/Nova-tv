@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,19 +76,15 @@ fun LiveScreen() {
     var nowMap by remember { mutableStateOf<Map<String, ProgrammeEntity>>(emptyMap()) }
     LaunchedEffect(channels, minute) { nowMap = content.nowPlaying(channels) }
 
-    var focused by remember { mutableStateOf<ChannelEntity?>(null) }
+    // Fokussierter Sender als State-Objekt: nur die Detailspalte liest ihn. So wird beim Scrollen
+    // nicht bei jedem Tastendruck der ganze Bildschirm neu berechnet.
+    val focusedState = remember { mutableStateOf<ChannelEntity?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(notice) {
         if (notice != null) {
             delay(5_000)
             notice = null
         }
-    }
-    var upcoming by remember { mutableStateOf<List<ProgrammeEntity>>(emptyList()) }
-    LaunchedEffect(focused) {
-        val channel = focused ?: return@LaunchedEffect
-        delay(150)
-        upcoming = content.upcoming(channel, 6)
     }
 
     val entries = remember(groups, total, favoriteKeys.size) {
@@ -129,7 +126,7 @@ fun LiveScreen() {
                         channel = channel,
                         now = channel.epgId?.let { nowMap[it] },
                         favorite = channel.key in favoriteSet,
-                        onFocused = { focused = channel },
+                        onFocused = { focusedState.value = channel },
                         onClick = {
                             val favoritesOnly = selectedGroup == FAVORITES_GROUP
                             PlayerActivity.startLive(context, channel.key, selectedGroup.takeUnless { favoritesOnly }, favoritesOnly)
@@ -140,13 +137,21 @@ fun LiveScreen() {
             }
         }
 
-        ChannelDetails(focused, upcoming, Modifier.width(290.dp).fillMaxHeight())
+        ChannelDetails(focusedState, Modifier.width(290.dp).fillMaxHeight())
     }
     notice?.let { NoticeBar(it) }
 }
 
 @Composable
-private fun ChannelDetails(channel: ChannelEntity?, programmes: List<ProgrammeEntity>, modifier: Modifier) {
+private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifier) {
+    val content = LocalContainer.current.content
+    val channel = focusedState.value
+    var programmes by remember { mutableStateOf<List<ProgrammeEntity>>(emptyList()) }
+    LaunchedEffect(channel) {
+        val target = channel ?: return@LaunchedEffect
+        delay(150) // schnelles Durchscrollen löst keine Abfragen aus
+        programmes = content.upcoming(target, 6)
+    }
     Column(modifier.background(NovaColors.Surface).padding(24.dp)) {
         if (channel == null) return@Column
         ChannelLogo(channel.logo, channel.name, Modifier.size(width = 120.dp, height = 72.dp))
