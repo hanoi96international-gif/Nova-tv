@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: pip install -q onnxruntime numpy
-      - run: python3 ci/explore/mt_probe.py explore-out || true
+      - run: python3 ci/explore/mt_probe2.py explore-out || true
       - name: Ergebnisse veröffentlichen
         if: always()
         run: |
