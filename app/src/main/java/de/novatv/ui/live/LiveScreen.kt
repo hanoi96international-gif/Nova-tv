@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import de.novatv.data.db.ChannelEntity
+import de.novatv.data.db.GroupKind
 import de.novatv.data.db.ProgrammeEntity
 import de.novatv.player.PlayerActivity
 import de.novatv.ui.LocalContainer
@@ -41,6 +42,7 @@ import de.novatv.ui.components.CategoryEntry
 import de.novatv.ui.components.ChannelListItem
 import de.novatv.ui.components.ChannelLogo
 import de.novatv.ui.components.EmptyHint
+import de.novatv.ui.components.NoticeBar
 import de.novatv.ui.components.ProgressLine
 import de.novatv.ui.components.formatTime
 import de.novatv.ui.components.progress
@@ -74,6 +76,13 @@ fun LiveScreen() {
     LaunchedEffect(channels, minute) { nowMap = content.nowPlaying(channels) }
 
     var focused by remember { mutableStateOf<ChannelEntity?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(notice) {
+        if (notice != null) {
+            delay(5_000)
+            notice = null
+        }
+    }
     var upcoming by remember { mutableStateOf<List<ProgrammeEntity>>(emptyList()) }
     LaunchedEffect(focused) {
         val channel = focused ?: return@LaunchedEffect
@@ -83,14 +92,25 @@ fun LiveScreen() {
 
     val entries = remember(groups, total, favoriteKeys.size) {
         buildList {
-            add(CategoryEntry(FAVORITES_GROUP, "★ Favoriten", favoriteKeys.size))
+            add(CategoryEntry(FAVORITES_GROUP, "★ Favoriten", favoriteKeys.size, removable = false))
             add(CategoryEntry(null, "Alle Sender", total))
             groups.forEach { add(CategoryEntry(it.name, it.name, it.count)) }
         }
     }
 
     Row(Modifier.fillMaxSize()) {
-        CategoryColumn(entries, selectedGroup, onSelect = { selectedGroup = it })
+        CategoryColumn(
+            entries,
+            selectedGroup,
+            onSelect = { selectedGroup = it },
+            onLongClick = { name ->
+                scope.launch {
+                    content.hideGroupEverywhere(GroupKind.LIVE, name)
+                    if (selectedGroup == name) selectedGroup = null
+                    notice = "„$name“ ausgeblendet. Wieder einblenden: Einstellungen → Playlist → Gruppen"
+                }
+            },
+        )
 
         if (channels.isEmpty()) {
             EmptyHint(
@@ -122,6 +142,7 @@ fun LiveScreen() {
 
         ChannelDetails(focused, upcoming, Modifier.width(330.dp).fillMaxHeight())
     }
+    notice?.let { NoticeBar(it) }
 }
 
 @Composable
@@ -160,5 +181,6 @@ private fun ChannelDetails(channel: ChannelEntity?, programmes: List<ProgrammeEn
         }
         Spacer(Modifier.weight(1f))
         Text("OK abspielen  ·  OK halten = Favorit", fontSize = 12.sp, color = NovaColors.TextSecondary)
+        Text("OK halten auf Gruppe = ausblenden", fontSize = 12.sp, color = NovaColors.TextSecondary)
     }
 }

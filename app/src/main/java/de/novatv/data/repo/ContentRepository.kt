@@ -2,6 +2,9 @@ package de.novatv.data.repo
 
 import de.novatv.data.db.ChannelEntity
 import de.novatv.data.db.FavoriteEntity
+import de.novatv.data.db.GroupKind
+import de.novatv.data.db.GroupToggle
+import de.novatv.data.db.HiddenGroupEntity
 import de.novatv.data.db.HistoryEntity
 import de.novatv.data.db.HistoryKind
 import de.novatv.data.db.NovaDatabase
@@ -13,6 +16,7 @@ import de.novatv.data.parse.XtreamEpisode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 
@@ -144,6 +148,33 @@ class ContentRepository(
     suspend fun resumePosition(key: String): Long = db.history().byKey(key)?.positionMs ?: 0L
 
     suspend fun clearHistory() = db.history().clear()
+
+    // ---------------------------------------------------------------- Gruppen ein-/ausblenden
+
+    fun groupToggles(playlistId: Long, kind: GroupKind): Flow<List<GroupToggle>> = when (kind) {
+        GroupKind.LIVE -> db.hiddenGroups().observeLive(playlistId)
+        GroupKind.VOD -> db.hiddenGroups().observeVod(playlistId)
+        GroupKind.SERIES -> db.hiddenGroups().observeSeries(playlistId)
+    }
+
+    val hiddenGroupCount = db.hiddenGroups().observeHiddenCount()
+
+    suspend fun setGroupsHidden(playlistId: Long, kind: GroupKind, names: List<String>, hidden: Boolean) {
+        names.chunked(SQL_CHUNK).forEach { chunk ->
+            if (hidden) {
+                db.hiddenGroups().hide(chunk.map { HiddenGroupEntity(playlistId, kind, it) })
+            } else {
+                db.hiddenGroups().show(playlistId, kind, chunk)
+            }
+        }
+    }
+
+    /** Schnellaktion aus den Listen: Gruppe in allen Playlists ausblenden, die sie enthalten. */
+    suspend fun hideGroupEverywhere(kind: GroupKind, name: String) = when (kind) {
+        GroupKind.LIVE -> db.hiddenGroups().hideLiveEverywhere(name)
+        GroupKind.VOD -> db.hiddenGroups().hideVodEverywhere(name)
+        GroupKind.SERIES -> db.hiddenGroups().hideSeriesEverywhere(name)
+    }
 
     suspend fun episodes(series: SeriesEntity): List<Pair<XtreamEpisode, String>> = withContext(Dispatchers.IO) {
         val playlist = db.playlists().byId(series.playlistId) ?: return@withContext emptyList()

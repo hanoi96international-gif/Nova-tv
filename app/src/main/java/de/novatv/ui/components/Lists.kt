@@ -1,11 +1,14 @@
 package de.novatv.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -93,7 +96,7 @@ fun ChannelListItem(
     }
 }
 
-data class CategoryEntry(val id: String?, val label: String, val count: Int?)
+data class CategoryEntry(val id: String?, val label: String, val count: Int?, val removable: Boolean = true)
 
 /**
  * Linke Kategorienspalte. Die Auswahl folgt dem Fokus (wie bei TiviMate), leicht verzögert,
@@ -107,6 +110,8 @@ fun CategoryColumn(
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
     width: Dp = 260.dp,
+    /** Langes Drücken auf eine echte Gruppe (nicht "Alle"/"Favoriten"), z. B. zum Ausblenden. */
+    onLongClick: ((String) -> Unit)? = null,
 ) {
     var focusedId by remember { mutableStateOf<Any?>(Unset) }
     LaunchedEffect(focusedId) {
@@ -121,8 +126,10 @@ fun CategoryColumn(
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         items(entries, key = { it.id ?: "\u0000all" }) { entry ->
+            val id = entry.id
             Surface(
                 onClick = { onSelect(entry.id) },
+                onLongClick = if (onLongClick != null && id != null && entry.removable) ({ onLongClick(id) }) else null,
                 modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) focusedId = entry.id },
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
@@ -165,5 +172,20 @@ fun rememberMinuteTicker(): State<Long> = produceState(System.currentTimeMillis(
     while (true) {
         delay(60_000 - System.currentTimeMillis() % 60_000)
         value = System.currentTimeMillis()
+    }
+}
+
+/** Kurzer Hinweis am unteren Bildrand, z. B. nach dem Ausblenden einer Gruppe. */
+@Composable
+fun NoticeBar(text: String) {
+    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.BottomCenter) {
+        Text(
+            text,
+            color = NovaColors.TextPrimary,
+            fontSize = 14.sp,
+            modifier = Modifier
+                .background(NovaColors.SurfaceRaised, RoundedCornerShape(10.dp))
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        )
     }
 }

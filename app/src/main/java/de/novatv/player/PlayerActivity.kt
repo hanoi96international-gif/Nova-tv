@@ -73,6 +73,7 @@ class PlayerActivity : ComponentActivity() {
     var isFavorite by mutableStateOf(false); private set
 
     private var vod: VodRequest? = null
+    private var previousChannel: ChannelEntity? = null
     private var retries = 0
     private var triedHls = false
     private var zapStartedAt = 0L
@@ -122,6 +123,7 @@ class PlayerActivity : ComponentActivity() {
 
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
+        current?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         current = channel
         retries = 0
         triedHls = false
@@ -337,6 +339,13 @@ class PlayerActivity : ComponentActivity() {
             videoBitrate = video?.bitrate ?: 0,
             audioCodec = audio?.sampleMimeType?.substringAfter('/') ?: "",
             audioChannels = audio?.channelCount ?: 0,
+            hdr = when {
+                video == null -> ""
+                video.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION -> "Dolby Vision"
+                video.colorInfo?.colorTransfer == C.COLOR_TRANSFER_ST2084 -> "HDR10"
+                video.colorInfo?.colorTransfer == C.COLOR_TRANSFER_HLG -> "HLG"
+                else -> ""
+            },
         )
         if (settings.matchFrameRate) video?.frameRate?.let(frameRateMatcher::match)
     }
@@ -376,6 +385,8 @@ class PlayerActivity : ComponentActivity() {
                 if (overlay == Overlay.INFO) showTech = !showTech
                 showOverlay(Overlay.INFO)
             }
+            // "Zurück zum letzten Sender", wie beim Fernseher.
+            KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> previousChannel?.let(::playChannel)
             KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_PROG_RED -> {
                 toggleFavorite()
                 showOverlay(Overlay.INFO)
@@ -455,7 +466,8 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_CHANNEL_DOWN,
             KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_MENU,
-            KeyEvent.KEYCODE_PROG_RED, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY,
+            KeyEvent.KEYCODE_PROG_RED, KeyEvent.KEYCODE_PROG_BLUE, KeyEvent.KEYCODE_LAST_CHANNEL,
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY,
             KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
         )
 
@@ -516,6 +528,7 @@ data class StreamStats(
     val droppedFrames: Int = 0,
     val bandwidth: Long = 0,
     val startupMs: Long = 0,
+    val hdr: String = "",
 ) {
     val resolutionLabel: String
         get() = when {

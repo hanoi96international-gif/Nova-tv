@@ -10,17 +10,19 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 |---|---|
 | 4K ruckelt oder startet langsam | Hardware-Decoder mit Fallback, Pufferprofile (Schnell, Ausgewogen, Stabil 4K), optionaler Tunneling-Modus, Anpassung der Bildwiederholrate (50 Hz / 23,976 Hz) |
 | Langsames Umschalten | Der TS-Stream startet ohne auf einen Keyframe zu warten, Verbindungen bleiben offen, das letzte Bild bleibt beim Zappen stehen. Die Umschaltzeit wird gemessen und im Stream-Info angezeigt |
+| Lange Gruppenlisten mit Ländern, die man nie schaut | Gruppen pro Playlist ausblenden. Die Auswahl bleibt auch nach dem Aktualisieren erhalten |
 | Große Playlists machen die App träge | Streaming-Parser für M3U, XMLTV und Xtream. Nichts wird komplett in den Speicher geladen. Der Import läuft in einer Transaktion im Hintergrund |
 | Premium-Abo für Grundfunktionen | Alles ist frei: mehrere Playlists, Favoriten, EPG, Suche, Weiter schauen |
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.1)
+## Funktionen (Version 0.2)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`, auch aus `url-tvg` im Playlist-Header), Xtream Codes API (Live, Filme, Serien, EPG)
+- **Gruppen ein- und ausblenden:** pro Playlist, getrennt für Live TV, Filme und Serien (*Einstellungen → Playlist → Gruppen*), mit Filter und „Alle ein/aus“. Schneller geht es mit langem Druck auf OK auf einer Gruppe in der Liste. Ausgeblendete Gruppen verschwinden überall: in Listen, TV-Guide, Suche, Startseite und beim Zappen. Sie bleiben auch nach dem Aktualisieren ausgeblendet.
 - **Live TV:** Gruppen, Senderliste mit aktuellem Programm und Fortschritt, Detailspalte mit den nächsten Sendungen, Favoriten (OK lange drücken)
 - **TV-Guide:** EPG-Raster pro Gruppe, 2-Stunden-Fenster, das sich mit links/rechts verschieben lässt
-- **Player:** Hoch/Runter schaltet um, OK oder links öffnet die Senderliste, rechts zeigt das Stream-Info (Auflösung, fps, Codec, Decoder, verworfene Frames, Leitung, Startzeit), Zifferntasten wählen direkt einen Sender, Menü-Taste setzt einen Favoriten
+- **Player:** Hoch/Runter schaltet um, OK oder links öffnet die Senderliste, rechts zeigt das Stream-Info (Auflösung, fps, Codec, Decoder, verworfene Frames, Leitung, Startzeit), Zifferntasten wählen direkt einen Sender, die „Letzter Sender“-Taste bzw. die blaue Taste springt zurück, Menü-Taste setzt einen Favoriten. Erkennt 4K, HDR10, HLG und Dolby Vision
 - **Filme und Serien:** Kategorien, Poster-Raster, Staffeln und Episoden (Xtream), Fortsetzen an der letzten Position
 - **Automatische Aktualisierung:** Playlists alle 12 Stunden, EPG alle 8 Stunden
 
@@ -47,7 +49,9 @@ Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose is
 ./gradlew assembleRelease        # optimierte APK (mit Debug-Schlüssel signiert, zum Sideloaden)
 ```
 
-Voraussetzungen: JDK 17 und Android SDK (compileSdk 35). Die GitHub-Action baut bei jedem Push automatisch beide APKs.
+Voraussetzungen: JDK 17 und Android SDK (compileSdk 36). Unterstützt werden Fire OS 6 und neuer (minSdk 23), also alle Fire TV Sticks ab 2018.
+
+Technikstand (Oktober 2026): Kotlin 2.3, AGP 8.13, Media3 1.11.1 (mit dynamischem Scheduling der Wiedergabeschleife standardmäßig an, besserer Bildraten-Schätzung, Dolby Vision Profil 10), Compose 1.12, Compose for TV Material 1.1, Room 2.8, Coil 3, OkHttp 5. Die GitHub-Action baut bei jedem Push automatisch beide APKs.
 Ein Tag `v*` (z. B. `v0.1.0`) erstellt ein Release mit der APK.
 
 ### Aufbau

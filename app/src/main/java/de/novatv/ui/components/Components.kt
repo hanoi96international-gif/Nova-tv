@@ -46,7 +46,7 @@ import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import de.novatv.data.db.ChannelEntity
 import de.novatv.data.db.ProgrammeEntity
 import de.novatv.ui.theme.NovaColors

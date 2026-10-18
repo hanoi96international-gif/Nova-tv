@@ -38,25 +38,25 @@ interface ChannelDao {
     @Query("DELETE FROM channels WHERE playlistId = :playlistId")
     fun deleteForPlaylist(playlistId: Long)
 
-    @Query("SELECT groupTitle AS name, COUNT(*) AS count FROM channels GROUP BY groupTitle ORDER BY MIN(id)")
+    @Query("SELECT groupTitle AS name, COUNT(*) AS count FROM visible_channels GROUP BY groupTitle ORDER BY MIN(id)")
     fun observeGroups(): Flow<List<GroupCount>>
 
-    @Query("SELECT * FROM channels WHERE groupTitle = :group ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY number, id")
     fun observeInGroup(group: String): Flow<List<ChannelEntity>>
 
-    @Query("SELECT * FROM channels ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels ORDER BY number, id")
     fun observeAll(): Flow<List<ChannelEntity>>
 
-    @Query("SELECT * FROM channels WHERE groupTitle = :group ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY number, id")
     suspend fun inGroup(group: String): List<ChannelEntity>
 
-    @Query("SELECT * FROM channels ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels ORDER BY number, id")
     suspend fun all(): List<ChannelEntity>
 
     @Query("SELECT * FROM channels WHERE `key` = :key")
     suspend fun byKey(key: String): ChannelEntity?
 
-    @Query("SELECT * FROM channels WHERE number = :number ORDER BY id LIMIT 1")
+    @Query("SELECT * FROM visible_channels WHERE number = :number ORDER BY id LIMIT 1")
     suspend fun byNumber(number: Int): ChannelEntity?
 
     @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
@@ -66,16 +66,16 @@ interface ChannelDao {
     suspend fun favorites(): List<ChannelEntity>
 
     @Query(
-        """SELECT * FROM channels WHERE name LIKE '%' || :query || '%'
+        """SELECT * FROM visible_channels WHERE name LIKE '%' || :query || '%'
            ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, length(name), number
            LIMIT :limit"""
     )
     suspend fun search(query: String, limit: Int): List<ChannelEntity>
 
-    @Query("SELECT * FROM channels WHERE groupTitle IN (:groups) AND `key` NOT IN (:exclude) ORDER BY number, id LIMIT :limit")
+    @Query("SELECT * FROM visible_channels WHERE groupTitle IN (:groups) AND `key` NOT IN (:exclude) ORDER BY number, id LIMIT :limit")
     suspend fun inGroupsExcluding(groups: List<String>, exclude: List<String>, limit: Int): List<ChannelEntity>
 
-    @Query("SELECT * FROM channels WHERE epgId IN (:epgIds) GROUP BY epgId")
+    @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds) GROUP BY epgId")
     suspend fun byEpgIds(epgIds: List<String>): List<ChannelEntity>
 
     @Query("SELECT * FROM channels WHERE playlistId = :playlistId AND (epgId IS NULL OR epgId = '')")
@@ -87,7 +87,7 @@ interface ChannelDao {
     @Query("SELECT DISTINCT epgId FROM channels WHERE playlistId = :playlistId AND epgId IS NOT NULL AND epgId != ''")
     suspend fun epgIds(playlistId: Long): List<String>
 
-    @Query("SELECT COUNT(*) FROM channels")
+    @Query("SELECT COUNT(*) FROM visible_channels")
     fun observeCount(): Flow<Int>
 }
 
@@ -123,17 +123,17 @@ interface VodDao {
     @Query("DELETE FROM vod WHERE playlistId = :playlistId")
     fun deleteForPlaylist(playlistId: Long)
 
-    @Query("SELECT category AS name, COUNT(*) AS count FROM vod GROUP BY category ORDER BY MIN(id)")
+    @Query("SELECT category AS name, COUNT(*) AS count FROM visible_vod GROUP BY category ORDER BY MIN(id)")
     fun observeCategories(): Flow<List<GroupCount>>
 
-    @Query("SELECT * FROM vod WHERE category = :category ORDER BY id")
+    @Query("SELECT * FROM visible_vod WHERE category = :category ORDER BY id")
     fun observeInCategory(category: String): Flow<List<VodEntity>>
 
-    @Query("SELECT * FROM vod ORDER BY added DESC, id DESC LIMIT :limit")
+    @Query("SELECT * FROM visible_vod ORDER BY added DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<VodEntity>>
 
     @Query(
-        """SELECT * FROM vod WHERE name LIKE '%' || :query || '%'
+        """SELECT * FROM visible_vod WHERE name LIKE '%' || :query || '%'
            ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, added DESC LIMIT :limit"""
     )
     suspend fun search(query: String, limit: Int): List<VodEntity>
@@ -147,20 +147,20 @@ interface SeriesDao {
     @Query("DELETE FROM series WHERE playlistId = :playlistId")
     fun deleteForPlaylist(playlistId: Long)
 
-    @Query("SELECT category AS name, COUNT(*) AS count FROM series GROUP BY category ORDER BY MIN(id)")
+    @Query("SELECT category AS name, COUNT(*) AS count FROM visible_series GROUP BY category ORDER BY MIN(id)")
     fun observeCategories(): Flow<List<GroupCount>>
 
-    @Query("SELECT * FROM series WHERE category = :category ORDER BY id")
+    @Query("SELECT * FROM visible_series WHERE category = :category ORDER BY id")
     fun observeInCategory(category: String): Flow<List<SeriesEntity>>
 
-    @Query("SELECT * FROM series ORDER BY added DESC, id DESC LIMIT :limit")
+    @Query("SELECT * FROM visible_series ORDER BY added DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<SeriesEntity>>
 
     @Query("SELECT * FROM series WHERE `key` = :key")
     suspend fun byKey(key: String): SeriesEntity?
 
     @Query(
-        """SELECT * FROM series WHERE name LIKE '%' || :query || '%'
+        """SELECT * FROM visible_series WHERE name LIKE '%' || :query || '%'
            ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, added DESC LIMIT :limit"""
     )
     suspend fun search(query: String, limit: Int): List<SeriesEntity>
@@ -211,4 +211,59 @@ interface HistoryDao {
 
     @Query("DELETE FROM history")
     suspend fun clear()
+}
+
+@Dao
+interface HiddenGroupDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun hide(groups: List<HiddenGroupEntity>)
+
+    @Query("DELETE FROM hidden_groups WHERE playlistId = :playlistId AND kind = :kind AND name IN (:names)")
+    suspend fun show(playlistId: Long, kind: GroupKind, names: List<String>)
+
+    @Query("DELETE FROM hidden_groups WHERE playlistId = :playlistId")
+    fun deleteForPlaylist(playlistId: Long)
+
+    /** Blendet eine Gruppe in allen Playlists aus, die sie enthalten (Schnellaktion in den Listen). */
+    @Query(
+        """INSERT OR IGNORE INTO hidden_groups (playlistId, kind, name)
+           SELECT DISTINCT playlistId, 'LIVE', groupTitle FROM channels WHERE groupTitle = :name"""
+    )
+    suspend fun hideLiveEverywhere(name: String)
+
+    @Query(
+        """INSERT OR IGNORE INTO hidden_groups (playlistId, kind, name)
+           SELECT DISTINCT playlistId, 'VOD', category FROM vod WHERE category = :name"""
+    )
+    suspend fun hideVodEverywhere(name: String)
+
+    @Query(
+        """INSERT OR IGNORE INTO hidden_groups (playlistId, kind, name)
+           SELECT DISTINCT playlistId, 'SERIES', category FROM series WHERE category = :name"""
+    )
+    suspend fun hideSeriesEverywhere(name: String)
+
+    @Query(
+        """SELECT c.groupTitle AS name, COUNT(*) AS count,
+           EXISTS(SELECT 1 FROM hidden_groups h WHERE h.playlistId = :playlistId AND h.kind = 'LIVE' AND h.name = c.groupTitle) AS hidden
+           FROM channels c WHERE c.playlistId = :playlistId GROUP BY c.groupTitle ORDER BY MIN(c.id)"""
+    )
+    fun observeLive(playlistId: Long): Flow<List<GroupToggle>>
+
+    @Query(
+        """SELECT v.category AS name, COUNT(*) AS count,
+           EXISTS(SELECT 1 FROM hidden_groups h WHERE h.playlistId = :playlistId AND h.kind = 'VOD' AND h.name = v.category) AS hidden
+           FROM vod v WHERE v.playlistId = :playlistId GROUP BY v.category ORDER BY MIN(v.id)"""
+    )
+    fun observeVod(playlistId: Long): Flow<List<GroupToggle>>
+
+    @Query(
+        """SELECT s.category AS name, COUNT(*) AS count,
+           EXISTS(SELECT 1 FROM hidden_groups h WHERE h.playlistId = :playlistId AND h.kind = 'SERIES' AND h.name = s.category) AS hidden
+           FROM series s WHERE s.playlistId = :playlistId GROUP BY s.category ORDER BY MIN(s.id)"""
+    )
+    fun observeSeries(playlistId: Long): Flow<List<GroupToggle>>
+
+    @Query("SELECT COUNT(*) FROM hidden_groups")
+    fun observeHiddenCount(): Flow<Int>
 }

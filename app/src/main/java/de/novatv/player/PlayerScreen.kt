@@ -165,6 +165,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
                     Text("${channel.number}  ${channel.name}", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                     if (activity.isFavorite) Text("  ★", color = NovaColors.Accent, fontSize = 22.sp)
                     activity.stats.resolutionLabel.takeIf { it.isNotEmpty() }?.let { Badge(it) }
+                    activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
                 }
                 Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = NovaColors.TextSecondary)
             }
@@ -213,6 +214,7 @@ private fun VodControls(activity: PlayerActivity) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(activity.vodTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, modifier = Modifier.weight(1f))
             activity.stats.resolutionLabel.takeIf { it.isNotEmpty() }?.let { Badge(it) }
+            activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
         }
         Spacer(Modifier.height(16.dp))
         ProgressLine(if (duration > 0) position.toFloat() / duration else 0f)

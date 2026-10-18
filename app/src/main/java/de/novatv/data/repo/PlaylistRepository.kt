@@ -1,5 +1,6 @@
 package de.novatv.data.repo
 
+import android.os.Process
 import android.util.Log
 import android.util.Xml
 import de.novatv.data.LiveFormat
@@ -13,6 +14,7 @@ import de.novatv.data.db.VodEntity
 import de.novatv.data.parse.M3uParser
 import de.novatv.data.parse.XmltvParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +26,7 @@ import okhttp3.Request
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.util.concurrent.Executors
 import java.util.zip.GZIPInputStream
 
 sealed interface SyncState {
@@ -42,6 +45,17 @@ class PlaylistRepository(
     private val http: OkHttpClient,
 ) {
     private val mutex = Mutex()
+
+    /**
+     * Eigener Thread mit Hintergrund-Priorität: Ein großer EPG-Import soll der laufenden
+     * Wiedergabe auf dem schwachen Fire-TV-Prozessor keine Rechenzeit wegnehmen.
+     */
+    private val importDispatcher = Executors.newSingleThreadExecutor { task ->
+        Thread({
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            task.run()
+        }, "nova-import")
+    }.asCoroutineDispatcher()
     private val _state = MutableStateFlow<SyncState>(SyncState.Idle)
     val state: StateFlow<SyncState> = _state.asStateFlow()
 
@@ -56,6 +70,7 @@ class PlaylistRepository(
                 db.programmes().deleteForPlaylist(id)
                 db.vod().deleteForPlaylist(id)
                 db.series().deleteForPlaylist(id)
+                db.hiddenGroups().deleteForPlaylist(id)
                 db.playlists().delete(id)
             })
         }
@@ -91,7 +106,7 @@ class PlaylistRepository(
         val ok = mutex.withLock {
             _state.value = SyncState.Running("${playlist.name}: Sender werden geladen …")
             try {
-                val updated = withContext(Dispatchers.IO) {
+                val updated = withContext(importDispatcher) {
                     when (playlist.type) {
                         PlaylistType.M3U -> importM3u(playlist)
                         PlaylistType.XTREAM -> importXtream(playlist)
@@ -242,7 +257,7 @@ class PlaylistRepository(
             try {
                 val known = db.channels().epgIds(playlist.id).toHashSet()
                 val withoutId = db.channels().withoutEpgId(playlist.id)
-                withContext(Dispatchers.IO) { importEpg(playlist, epgUrl, known, withoutId) }
+                withContext(importDispatcher) { importEpg(playlist, epgUrl, known, withoutId) }
                 db.playlists().update(playlist.copy(lastEpgSync = System.currentTimeMillis()))
                 _state.value = SyncState.Idle
             } catch (e: Exception) {

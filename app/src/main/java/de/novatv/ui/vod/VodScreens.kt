@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,7 +44,8 @@ import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
+import de.novatv.data.db.GroupKind
 import de.novatv.data.db.HistoryKind
 import de.novatv.data.db.SeriesEntity
 import de.novatv.data.parse.XtreamEpisode
@@ -55,6 +57,7 @@ import de.novatv.ui.components.CategoryEntry
 import de.novatv.ui.components.EmptyHint
 import de.novatv.ui.components.PosterCard
 import de.novatv.ui.theme.NovaColors
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -70,12 +73,17 @@ fun MoviesScreen() {
         return
     }
     val movies by remember(active) { content.moviesIn(active.orEmpty()) }.collectAsStateWithLifecycle(emptyList())
+    val scope = rememberCoroutineScope()
 
     Row(Modifier.fillMaxSize()) {
         CategoryColumn(
             entries = remember(categories) { categories.map { CategoryEntry(it.name, it.name, it.count) } },
             selected = active,
             onSelect = { selected = it },
+            onLongClick = { name ->
+                scope.launch { content.hideGroupEverywhere(GroupKind.VOD, name) }
+                if (selected == name) selected = null
+            },
         )
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
@@ -120,12 +128,17 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
         return
     }
     val series by remember(active) { content.seriesIn(active.orEmpty()) }.collectAsStateWithLifecycle(emptyList())
+    val scope = rememberCoroutineScope()
 
     Row(Modifier.fillMaxSize()) {
         CategoryColumn(
             entries = remember(categories) { categories.map { CategoryEntry(it.name, it.name, it.count) } },
             selected = active,
             onSelect = { selected = it },
+            onLongClick = { name ->
+                scope.launch { content.hideGroupEverywhere(GroupKind.SERIES, name) }
+                if (selected == name) selected = null
+            },
         )
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),

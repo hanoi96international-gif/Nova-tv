@@ -54,7 +54,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun SettingsScreen(onAddPlaylist: () -> Unit) {
+fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit) {
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
     val playlists by container.playlists.playlists.collectAsStateWithLifecycle(emptyList())
@@ -83,6 +83,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit) {
             PlaylistRow(
                 playlist = playlist,
                 confirmingDelete = confirmDelete == playlist.id,
+                onGroups = { onManageGroups(playlist) },
                 onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
                 onDelete = {
                     if (confirmDelete == playlist.id) {
@@ -162,7 +163,13 @@ private fun onOff(value: Boolean) = if (value) "An" else "Aus"
 private fun BufferProfile.next(): BufferProfile = BufferProfile.entries[(ordinal + 1) % BufferProfile.entries.size]
 
 @Composable
-private fun PlaylistRow(playlist: PlaylistEntity, confirmingDelete: Boolean, onRefresh: () -> Unit, onDelete: () -> Unit) {
+private fun PlaylistRow(
+    playlist: PlaylistEntity,
+    confirmingDelete: Boolean,
+    onGroups: () -> Unit,
+    onRefresh: () -> Unit,
+    onDelete: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -177,6 +184,8 @@ private fun PlaylistRow(playlist: PlaylistEntity, confirmingDelete: Boolean, onR
             }
             Text("$type · $synced", color = NovaColors.TextSecondary, fontSize = 13.sp)
         }
+        OutlinedButton(onClick = onGroups) { Text("Gruppen") }
+        Spacer(Modifier.width(10.dp))
         OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
         Spacer(Modifier.width(10.dp))
         OutlinedButton(

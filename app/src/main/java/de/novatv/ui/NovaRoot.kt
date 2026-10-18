@@ -50,12 +50,14 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import de.novatv.AppContainer
+import de.novatv.data.db.PlaylistEntity
 import de.novatv.data.db.SeriesEntity
 import de.novatv.ui.guide.GuideScreen
 import de.novatv.ui.home.HomeScreen
 import de.novatv.ui.live.LiveScreen
 import de.novatv.ui.search.SearchScreen
 import de.novatv.ui.settings.AddPlaylistScreen
+import de.novatv.ui.settings.GroupManagerScreen
 import de.novatv.ui.settings.SettingsScreen
 import de.novatv.ui.theme.NovaColors
 import de.novatv.ui.vod.MoviesScreen
@@ -80,6 +82,7 @@ fun NovaRoot() {
     var section by rememberSaveable { mutableStateOf(Section.HOME) }
     var addingPlaylist by remember { mutableStateOf(false) }
     var openSeries by remember { mutableStateOf<SeriesEntity?>(null) }
+    var managingGroups by remember { mutableStateOf<PlaylistEntity?>(null) }
 
     Box(Modifier.fillMaxSize().background(NovaColors.Background)) {
         val list = playlists
@@ -89,6 +92,7 @@ fun NovaRoot() {
                 onDone = { addingPlaylist = false },
                 onCancel = if (list.isEmpty()) null else ({ addingPlaylist = false }),
             )
+            managingGroups != null -> GroupManagerScreen(managingGroups!!, onBack = { managingGroups = null })
             else -> {
                 BackHandler(enabled = section != Section.HOME) { section = Section.HOME }
                 Row(Modifier.fillMaxSize()) {
@@ -101,7 +105,10 @@ fun NovaRoot() {
                             Section.MOVIES -> MoviesScreen()
                             Section.SERIES -> SeriesScreen(openSeries = openSeries, onOpenSeries = { openSeries = it })
                             Section.SEARCH -> SearchScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
-                            Section.SETTINGS -> SettingsScreen(onAddPlaylist = { addingPlaylist = true })
+                            Section.SETTINGS -> SettingsScreen(
+                                onAddPlaylist = { addingPlaylist = true },
+                                onManageGroups = { managingGroups = it },
+                            )
                         }
                     }
                 }

@@ -14,7 +14,9 @@ import androidx.room.RoomDatabase
         SeriesEntity::class,
         FavoriteEntity::class,
         HistoryEntity::class,
+        HiddenGroupEntity::class,
     ],
+    views = [VisibleChannelView::class, VisibleVodView::class, VisibleSeriesView::class],
     version = 1,
     exportSchema = true,
 )
@@ -26,6 +28,7 @@ abstract class NovaDatabase : RoomDatabase() {
     abstract fun series(): SeriesDao
     abstract fun favorites(): FavoriteDao
     abstract fun history(): HistoryDao
+    abstract fun hiddenGroups(): HiddenGroupDao
 
     companion object {
         fun build(context: Context): NovaDatabase =
@@ -33,7 +36,7 @@ abstract class NovaDatabase : RoomDatabase() {
                 // WAL erzwingen: Die Oberfläche kann lesen, während im Hintergrund EPG geschrieben wird.
                 // Fire TV Sticks melden sich oft als "low RAM", dann würde Room sonst TRUNCATE wählen.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
     }
 }
