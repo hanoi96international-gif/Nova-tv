@@ -15,8 +15,8 @@ android {
         // Media3 und Compose verlangen API 23 (Fire OS 6+, alle Fire TV Sticks ab 2018).
         minSdk = 23
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.5.2"
+        versionCode = 8
+        versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -71,6 +71,11 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:$media3")
     implementation("androidx.media3:media3-datasource-okhttp:$media3")
     implementation("androidx.media3:media3-ui:$media3")
+    // FFmpeg-Tondecoder (in der CI aus dem Media3-Quellcode gebaut, siehe ci/build-ffmpeg.sh).
+    // Ohne die Datei baut die App trotzdem, dann nur mit den Decodern des Geräts.
+    implementation("androidx.media3:media3-decoder:$media3")
+    val ffmpegAar = file("libs/lib-decoder-ffmpeg-release.aar")
+    if (ffmpegAar.exists()) implementation(files(ffmpegAar))
 
     val room = "2.8.5"
     implementation("androidx.room:room-runtime:$room")

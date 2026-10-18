@@ -167,7 +167,8 @@ class DeviceTourTest {
                 log(
                     "live[$index] ${channel.name}: ready=$ready startup_ms=${stats.startupMs} ${stats.width}x${stats.height} " +
                         "fps=${stats.frameRate} codec=${stats.videoCodec} decoder=${stats.decoder} dropped=${stats.droppedFrames} " +
-                        "hdr=${stats.hdr} message=${scenario.read { it.message }}"
+                        "hdr=${stats.hdr} audio=${stats.audioCodec}/${stats.audioChannels}ch audio_decoder=${stats.audioDecoder} " +
+                        "message=${scenario.read { it.message }}"
                 )
                 shot("1${index}_live_${channel.name.filter(Char::isLetterOrDigit)}")
                 if (index == 0) {
@@ -226,6 +227,19 @@ class DeviceTourTest {
                 shot("30_episode")
             }
         } }
+        // 5b. Dolby TrueHD im Film: kann nur FFmpeg dekodieren
+        section("truehd") {
+            val truehd = runBlocking { container.db.vod().search("TrueHD", 5) }.firstOrNull()
+                ?: error("TrueHD-Film nicht importiert")
+            val request = VodRequest(truehd.key, HistoryKind.VOD, truehd.name, truehd.category, null, truehd.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                Thread.sleep(4_000)
+                val stats = scenario.read { it.stats }
+                log("truehd: ready=$ready audio=${stats.audioCodec}/${stats.audioChannels}ch audio_decoder=${stats.audioDecoder} message=${scenario.read { it.message }}")
+            }
+        }
+
         // 6. Belastung: großer Anbieter (3000 Sender, 36.000 EPG-Einträge als .xml.gz)
         section("big") {
             val bigStart = System.currentTimeMillis()

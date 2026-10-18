@@ -11,10 +11,45 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  # FFmpeg-Tondecoder (DTS, TrueHD, AC-3/E-AC-3 …) für Media3 bauen. Dauert beim ersten Mal einige
+  # Minuten, danach kommt das Ergebnis aus dem Cache (Schlüssel: Bauskript + Media3-Version).
+  ffmpeg:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: Cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ffmpeg-aar
+          key: media3-ffmpeg-${{ hashFiles('ci/build-ffmpeg.sh') }}
+
+      - uses: actions/setup-java@v5
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: FFmpeg-Erweiterung bauen
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ci/build-ffmpeg.sh ffmpeg-aar /tmp/ffmpeg-build
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: ffmpeg-aar/*.aar
+
+  build:
+    needs: ffmpeg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: app/libs
 
       - uses: actions/setup-java@v5
         with:
@@ -61,6 +96,11 @@ jobs:
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: app/libs
 
       - uses: actions/setup-java@v5
         with:

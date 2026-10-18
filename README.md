@@ -16,7 +16,7 @@ Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.5)
+## Funktionen (Version 0.6)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`, auch aus `url-tvg` im Playlist-Header), Xtream Codes API (Live, Filme, Serien, EPG)
 - **Gruppen ein- und ausblenden:** pro Playlist, getrennt für Live TV, Filme und Serien (*Einstellungen → Playlist → Gruppen*), mit Filter und „Alle ein/aus“. Schneller geht es mit langem Druck auf OK auf einer Gruppe in der Liste. Ausgeblendete Gruppen verschwinden überall: in Listen, TV-Guide, Suche, Startseite und beim Zappen. Sie bleiben auch nach dem Aktualisieren ausgeblendet.
@@ -35,6 +35,8 @@ Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Automatische Aktualisierung:** Playlists alle 12 Stunden, EPG alle 8 Stunden
 
 - **4K und Stabilität:** asynchrone Ansteuerung der Hardware-Decoder (mehr Reserven bei 4K, automatischer Rückfall bei Problemen), Speicher-Obergrenze für den Puffer (kein Absturz nach langem 4K-Schauen auf Sticks mit wenig RAM), Watchdog, Tunneling-Rückfall, Erkennung von HDR10/HLG/Dolby Vision.
+- **Alle Tonformate, auch ohne AV-Receiver:** eingebaute FFmpeg-Tondecoder (in der CI aus dem Media3-Quellcode gebaut) für DTS, Dolby TrueHD, Dolby Digital (Plus), FLAC, ALAC, Opus, Vorbis, MP3. Was das Gerät selbst kann oder an den Receiver durchreicht, bleibt beim Gerät. Meldet eine Soundbar Formate, die sie nicht abspielt, schaltet Ayu-TV automatisch auf Dekodierung im Gerät um (auch fest einstellbar). Die Stream-Info zeigt den aktiven Ton-Decoder.
+- **Weitere Absicherungen:** Bildwiederholrate wird beim Zappen nicht mehr zurückgesetzt (kein doppeltes Schwarzbild), Hinweis bei nicht abspielbarer Tonspur statt stiller Wiedergabe, Empfehlung für den 4K-Puffer bei schwankender Leitung.
 - **TV-Guide optional:** Das Programm-Raster lässt sich in den Einstellungen ausblenden. Die Programmdaten bleiben für „Jetzt läuft“, Fortschritt, Suche und Empfehlungen aktiv.
 - **Weitere:** EPG-Zeitverschiebung (−12 bis +12 Std.), gemessene Bildrate für TS-Streams ohne Angabe (damit greift die 50-Hz-Anpassung auch bei Live-TV), verständliche Fehlermeldungen („Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen“), Textfelder öffnen die Tastatur erst nach OK.
 

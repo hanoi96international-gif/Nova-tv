@@ -324,6 +324,7 @@ private fun TechLine(stats: StreamStats) {
         if (stats.videoCodec.isNotEmpty()) add(stats.videoCodec)
         if (stats.videoBitrate > 0) add("%.1f Mbit/s".format(stats.videoBitrate / 1_000_000f))
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")
+        if (stats.audioDecoder.isNotEmpty()) add("Ton: " + if ("ffmpeg" in stats.audioDecoder.lowercase()) "FFmpeg" else stats.audioDecoder)
         if (stats.decoder.isNotEmpty()) add(stats.decoder)
         if (stats.bandwidth > 0) add("Leitung %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
         add("Verworfene Frames: ${stats.droppedFrames}")

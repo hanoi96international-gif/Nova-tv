@@ -41,6 +41,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import de.ayutv.BuildConfig
 import de.ayutv.data.AppSettings
+import de.ayutv.data.AudioOutput
+import de.ayutv.player.AudioDecoders
 import de.ayutv.data.BufferProfile
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.Languages
@@ -156,6 +158,25 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 onOff(settings.asyncDecoding),
                 "Steuert den Hardware-Decoder asynchron an: mehr Reserven bei 4K. Wird bei Problemen automatisch abgeschaltet.",
             ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
+        }
+        item {
+            SettingRow(
+                "Tonausgabe",
+                settings.audioOutput.label,
+                "Automatisch: Dolby/DTS gehen an Soundbar oder Receiver. Bei Stille oder Aussetzern auf „Immer im Gerät dekodieren“ stellen.",
+            ) {
+                update {
+                    it.copy(audioOutput = if (it.audioOutput == AudioOutput.AUTO) AudioOutput.PCM else AudioOutput.AUTO)
+                }
+            }
+        }
+        item {
+            SettingRow(
+                "Zusätzliche Tondecoder (FFmpeg)",
+                if (AudioDecoders.ffmpegAvailable) "Aktiv" else "Nicht enthalten",
+                "Spielt DTS, Dolby TrueHD, Dolby Digital (Plus) u. a. auch ohne AV-Receiver ab." +
+                    (AudioDecoders.ffmpegVersion?.let { " FFmpeg $it." } ?: ""),
+            ) {}
         }
         item {
             SettingRow(

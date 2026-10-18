@@ -15,12 +15,16 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioCapabilities
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import de.ayutv.data.AppSettings
+import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
 import okhttp3.OkHttpClient
 import java.util.Locale
@@ -49,6 +53,7 @@ object PlayerFactory {
         settings: AppSettings,
         live: Boolean,
         asyncDecoding: Boolean = settings.asyncDecoding,
+        forcePcm: Boolean = settings.audioOutput == AudioOutput.PCM,
     ): Built {
         val headers = HeaderProvider(settings.userAgent)
 
@@ -68,9 +73,14 @@ object PlayerFactory {
             )
             .setConstantBitrateSeekingEnabled(true)
 
-        val renderers = DefaultRenderersFactory(context)
+        val renderers = AyuRenderersFactory(context, forcePcm)
             .setEnableDecoderFallback(true)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+            // FFmpeg nur als Ergänzung: Was das Gerät selbst kann (oder an den Receiver durchreicht),
+            // bleibt beim Gerät; DTS, TrueHD & Co. ohne Receiver übernimmt FFmpeg.
+            .setExtensionRendererMode(
+                if (AudioDecoders.ffmpegAvailable) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
+            )
             .apply {
                 // Fire OS 6–8 entspricht Android 9–11: dort ist asynchrones Queueing nicht Standard,
                 // bringt aber bei 4K mehr Decoder-Durchsatz. Bei Problemen schaltet der Player es selbst ab.
@@ -130,6 +140,26 @@ object PlayerFactory {
             .build()
         return Built(player, headers, trackSelector)
     }
+}
+
+/**
+ * Mit [forcePcm] meldet die Tonausgabe nur Stereo-PCM als unterstützt: Dann wird jedes Format im
+ * Gerät dekodiert (MediaCodec oder FFmpeg) statt an Soundbar/Receiver durchgereicht. Hilft bei
+ * Geräten, die Dolby/DTS ankündigen, aber nicht wiedergeben.
+ */
+private class AyuRenderersFactory(context: Context, private val forcePcm: Boolean) : DefaultRenderersFactory(context) {
+    @Suppress("DEPRECATION")
+    override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink? =
+        if (!forcePcm) {
+            super.buildAudioSink(context, enableFloatOutput, enableAudioTrackPlaybackParams)
+        } else {
+            // Bewusst ohne Context: Nur dann gelten feste Fähigkeiten "kein Durchreichen".
+            // Mit Context fragt Media3 das Gerät ab und würde setAudioCapabilities ignorieren.
+            DefaultAudioSink.Builder()
+                .setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
+                .setEnableFloatOutput(enableFloatOutput)
+                .build()
+        }
 }
 
 /**

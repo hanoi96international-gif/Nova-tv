@@ -36,6 +36,8 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import de.ayutv.AyuApp
 import de.ayutv.data.AppSettings
+import de.ayutv.data.AudioOutput
+import de.ayutv.data.BufferProfile
 import de.ayutv.data.Languages
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.db.ChannelEntity
@@ -64,6 +66,10 @@ class PlayerActivity : ComponentActivity() {
     private var headers: PlayerFactory.HeaderProvider? = null
     private var trackSelector: DefaultTrackSelector? = null
     private var asyncDecodingActive = false
+    private var forcePcmActive = false
+    private val rebufferTimes = ArrayDeque<Long>()
+    private var bufferAdviceShown = false
+    private var lastAudioHintFor: String? = null
 
     // Zustand, den die Compose-Oberfläche liest
     var player by mutableStateOf<ExoPlayer?>(null); private set
@@ -130,7 +136,7 @@ class PlayerActivity : ComponentActivity() {
             settings = container.settings.current()
             subtitleScale = settings.subtitleSize.scale
             textDisabled = vod != null && !settings.subtitlesAutoOn
-            installPlayer(settings.asyncDecoding)
+            installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
 
             val request = vod
@@ -162,18 +168,19 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Stabilität
 
-    private fun installPlayer(asyncDecoding: Boolean) {
-        val built = PlayerFactory.create(this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding)
+    private fun installPlayer(asyncDecoding: Boolean, forcePcm: Boolean) {
+        val built = PlayerFactory.create(this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm)
         headers = built.headers
         trackSelector = built.trackSelector
         asyncDecodingActive = asyncDecoding
+        forcePcmActive = forcePcm
         built.player.addListener(playerListener)
         built.player.addAnalyticsListener(analyticsListener)
         player = built.player
     }
 
     /** Player mit anderer Decoder-Konfiguration neu aufbauen und an derselben Stelle weiterspielen. */
-    private fun rebuildPlayer(asyncDecoding: Boolean) {
+    private fun rebuildPlayer(asyncDecoding: Boolean = asyncDecodingActive, forcePcm: Boolean = forcePcmActive) {
         val old = player ?: return
         val item = old.currentMediaItem
         val position = old.currentPosition
@@ -181,7 +188,7 @@ class PlayerActivity : ComponentActivity() {
         val userAgent = headers?.userAgent
         old.removeListener(playerListener)
         old.release()
-        installPlayer(asyncDecoding)
+        installPlayer(asyncDecoding, forcePcm)
         val p = player ?: return
         userAgent?.let { headers?.userAgent = it }
         p.trackSelectionParameters = parameters
@@ -259,6 +266,35 @@ class PlayerActivity : ComponentActivity() {
         if (settings.matchFrameRate) frameRateMatcher.match(snapped)
     }
 
+    /** Mehrfaches Nachladen in kurzer Zeit: größeren Puffer empfehlen (einmal pro Sitzung). */
+    private fun onRebuffer() {
+        val now = SystemClock.elapsedRealtime()
+        rebufferTimes.addLast(now)
+        while (rebufferTimes.isNotEmpty() && now - rebufferTimes.first() > 120_000) rebufferTimes.removeFirst()
+        if (rebufferTimes.size >= 3 && !bufferAdviceShown && settings.bufferProfile != BufferProfile.STABLE) {
+            bufferAdviceShown = true
+            subtitleStatus = "Leitung schwankt: in den Einstellungen Puffer auf „Stabil (4K)“ stellen"
+        }
+    }
+
+    /** Gibt es Ton, aber keine abspielbare Spur, wird das gesagt statt stumm zu bleiben. */
+    private fun checkAudioSupport(tracks: Tracks) {
+        val audio = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+        if (audio.isEmpty() || audio.any { group -> (0 until group.length).any(group::isTrackSupported) }) return
+        val mime = audio.first().getTrackFormat(0).sampleMimeType
+        val key = (current?.key ?: vod?.key) + mime
+        if (key == lastAudioHintFor) return
+        lastAudioHintFor = key
+        val name = when (mime) {
+            MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS -> "DTS"
+            MimeTypes.AUDIO_TRUEHD -> "Dolby TrueHD"
+            MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC -> "Dolby Digital Plus"
+            MimeTypes.AUDIO_AC3 -> "Dolby Digital"
+            else -> mime?.substringAfter('/') ?: "unbekannt"
+        }
+        subtitleStatus = "Tonformat $name wird von diesem Gerät nicht unterstützt"
+    }
+
     private fun unsupportedFormatMessage(): String {
         val format = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO }
             ?.let { group -> (0 until group.length).map(group::getTrackFormat).maxByOrNull { it.height } }
@@ -300,7 +336,8 @@ class PlayerActivity : ComponentActivity() {
         zapStartedAt = SystemClock.elapsedRealtime()
         stats = StreamStats()
         headers?.userAgent = channel.userAgent ?: settings.userAgent
-        frameRateMatcher.reset()
+        // Bildwiederholrate NICHT zurücksetzen: Sonst schaltet der Fernseher bei jedem Zappen zweimal
+        // um (zurück auf Standard, dann wieder auf 50 Hz) und wird jedes Mal kurz schwarz.
 
         val url = adaptLiveUrl(channel.url)
         p.setMediaItem(mediaItem(url, guessMime(url)))
@@ -616,6 +653,7 @@ class PlayerActivity : ComponentActivity() {
                 if (!isLive) maybeAutoSubtitles()
             }
             if (state == Player.STATE_ENDED && !isLive) finish()
+            if (state == Player.STATE_BUFFERING && everReady) onRebuffer()
         }
 
         override fun onRenderedFirstFrame() {
@@ -629,6 +667,7 @@ class PlayerActivity : ComponentActivity() {
 
         override fun onTracksChanged(tracks: Tracks) {
             this@PlayerActivity.tracks = tracks
+            checkAudioSupport(tracks)
             updateFormats()
         }
 
@@ -652,8 +691,14 @@ class PlayerActivity : ComponentActivity() {
                     p.prepare()
                 }
                 // Tunneling ist auf manchen Geräten/Streams instabil: einmalig ohne Tunneling neu starten.
+                // Soundbar/Receiver kündigt ein Format an, spielt es aber nicht: Ton im Gerät dekodieren.
+                !forcePcmActive && error.isAudioOutputError() -> {
+                    message = "Ton wird jetzt im Gerät dekodiert, starte neu …"
+                    forcePcmActive = true
+                    handler.post { rebuildPlayer(forcePcm = true) }
+                }
                 // Asynchrones Dekodieren mag nicht jeder Decoder: einmalig ohne neu aufbauen.
-                asyncDecodingActive && error.isDecoderOrAudioError() -> {
+                asyncDecodingActive && error.isVideoDecoderError() -> {
                     message = "Dekoder-Modus angepasst, starte neu …"
                     asyncDecodingActive = false
                     // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
@@ -695,6 +740,15 @@ class PlayerActivity : ComponentActivity() {
             initializationDurationMs: Long,
         ) {
             stats = stats.copy(decoder = decoderName)
+        }
+
+        override fun onAudioDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long,
+        ) {
+            stats = stats.copy(audioDecoder = decoderName)
         }
 
         override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
@@ -925,6 +979,7 @@ data class StreamStats(
     val startupMs: Long = 0,
     val hdr: String = "",
     val frameRateMeasured: Boolean = false,
+    val audioDecoder: String = "",
 ) {
     val resolutionLabel: String
         get() = when {
@@ -941,6 +996,16 @@ private fun PlaybackException.isFormatError(): Boolean = errorCode in setOf(
     PlaybackException.ERROR_CODE_DECODING_FAILED,
     PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
     PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+)
+
+private fun PlaybackException.isAudioOutputError(): Boolean = errorCode in setOf(
+    PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,
+    PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED,
+)
+
+private fun PlaybackException.isVideoDecoderError(): Boolean = errorCode in setOf(
+    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+    PlaybackException.ERROR_CODE_DECODING_FAILED,
 )
 
 private fun PlaybackException.isDecoderOrAudioError(): Boolean = errorCode in setOf(

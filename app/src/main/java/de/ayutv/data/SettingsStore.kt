@@ -23,6 +23,12 @@ enum class LiveFormat(val label: String, val extension: String) {
     HLS("HLS (m3u8)", "m3u8"),
 }
 
+/** Tonausgabe: Formate an den AV-Receiver durchreichen oder immer im Gerät dekodieren (Stereo/PCM). */
+enum class AudioOutput(val label: String) {
+    AUTO("Automatisch (Durchreichen an Receiver)"),
+    PCM("Immer im Gerät dekodieren"),
+}
+
 enum class TranslationProvider(val label: String) {
     NONE("Aus"),
     DEEPL("DeepL"),
@@ -44,6 +50,7 @@ data class AppSettings(
     val zapWithUpDown: Boolean = true,
     /** Hardware-Decoder asynchron ansteuern: mehr Durchsatz bei 4K (ab Android 12 ohnehin Standard). */
     val asyncDecoding: Boolean = true,
+    val audioOutput: AudioOutput = AudioOutput.AUTO,
     /** Raster-TV-Guide im Menü. Die EPG-Daten werden unabhängig davon für "Jetzt läuft" genutzt. */
     val showGuide: Boolean = true,
     /** Korrektur für EPGs mit falscher Zeitzone, in Stunden. */
@@ -70,7 +77,7 @@ data class AppSettings(
         }
 
     companion object {
-        const val DEFAULT_USER_AGENT = "AyuTV/0.5 (Linux; Android) ExoPlayer"
+        const val DEFAULT_USER_AGENT = "AyuTV/0.6 (Linux; Android) ExoPlayer"
     }
 }
 
@@ -86,6 +93,7 @@ class SettingsStore(private val context: Context) {
         val zap = booleanPreferencesKey("zap_up_down")
         val epgShift = intPreferencesKey("epg_shift_hours")
         val asyncDecoding = booleanPreferencesKey("async_decoding")
+        val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
         val subLang = stringPreferencesKey("subtitle_language_code")
         val subAuto = booleanPreferencesKey("subtitles_auto_on")
@@ -114,6 +122,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.zap] = next.zapWithUpDown
             prefs[Keys.epgShift] = next.epgShiftHours
             prefs[Keys.asyncDecoding] = next.asyncDecoding
+            prefs[Keys.audioOutput] = next.audioOutput.name
             prefs[Keys.showGuide] = next.showGuide
             prefs[Keys.subLang] = next.subtitleLanguage
             prefs[Keys.subAuto] = next.subtitlesAutoOn
@@ -137,6 +146,7 @@ class SettingsStore(private val context: Context) {
         zapWithUpDown = this[Keys.zap] ?: true,
         epgShiftHours = this[Keys.epgShift] ?: 0,
         asyncDecoding = this[Keys.asyncDecoding] ?: true,
+        audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
