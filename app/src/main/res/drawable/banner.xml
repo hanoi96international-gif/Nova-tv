@@ -5,8 +5,8 @@
     android:viewportHeight="180">
     <path android:fillColor="#0B0F14" android:pathData="M0,0h320v180h-320z" />
     <path android:fillColor="#1B4A6E" android:pathData="M0,150h320v30h-320z" />
-    <!-- "A" -->
-    <path android:fillColor="#3DA9FC" android:fillType="evenOdd" android:pathData="M96,42L132,135H117L109,114H83L75,135H60ZM88,101H104L96,80Z" />
+    <!-- Schriftzug "Ayu" (Inter ExtraBold, SIL Open Font License) -->
+    <path android:fillColor="#3DA9FC" android:pathData="M34 105.25H48.92L52.61 93.18H71.49L75.33 105.25H90.41L70.92 48.54H52.92ZM55.77 82.91 56.53 80.47C58.4 74.04 60.07 66.88 61.78 59.23C63.61 66.84 65.48 74 67.46 80.47L68.22 82.91ZM95.7 120.17C97.68 120.93 100.87 121.46 104.15 121.46C113.7 121.46 118.34 116.63 120.93 109.74L138.78 62.7H124.93L118.12 83.52C116.97 87.13 116.02 90.75 115.15 94.59C114.42 90.75 113.74 87.17 112.63 83.52L106.28 62.7H92.27L108.14 105.32L108.18 107.11C108.37 110.58 105.14 112.21 100.34 110.92L98.67 110.46ZM158 105.78C164.86 105.78 169.04 101.98 171.33 96.04L171.52 105.25H184V62.7H170.72V86.98C170.72 91.93 167.79 94.86 163.45 94.86C159.11 94.86 156.52 92 156.52 87.21V62.7H143.24V89.8C143.24 99.43 149.06 105.78 158 105.78Z" />
     <!-- Play-Symbol -->
-    <path android:fillColor="#F2F5F8" android:pathData="M180,52l80,38l-80,38z" />
+    <path android:fillColor="#F2F5F8" android:pathData="M210,58l64,32l-64,32z" />
 </vector>
