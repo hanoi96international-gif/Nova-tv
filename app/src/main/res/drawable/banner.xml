@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#0B0F14" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#1B4A6E" android:pathData="M0,150h320v30h-320z" />
+    <!-- "N" -->
+    <path android:fillColor="#3DA9FC" android:pathData="M60,45h16l40,56v-56h16v90h-16l-40,-56v56h-16z" />
+    <!-- Play-Symbol -->
+    <path android:fillColor="#F2F5F8" android:pathData="M180,52l80,38l-80,38z" />
+</vector>

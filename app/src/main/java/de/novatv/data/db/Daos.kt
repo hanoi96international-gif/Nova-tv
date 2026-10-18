@@ -1,0 +1,214 @@
+package de.novatv.data.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
+import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface PlaylistDao {
+    @Query("SELECT * FROM playlists ORDER BY id")
+    fun observeAll(): Flow<List<PlaylistEntity>>
+
+    @Query("SELECT * FROM playlists ORDER BY id")
+    suspend fun all(): List<PlaylistEntity>
+
+    @Query("SELECT * FROM playlists WHERE id = :id")
+    suspend fun byId(id: Long): PlaylistEntity?
+
+    @Insert
+    suspend fun insert(playlist: PlaylistEntity): Long
+
+    @Update
+    suspend fun update(playlist: PlaylistEntity)
+
+    @Query("DELETE FROM playlists WHERE id = :id")
+    fun delete(id: Long)
+}
+
+@Dao
+interface ChannelDao {
+    // Blockierende Varianten für den Import, der komplett in runInTransaction läuft.
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertAll(channels: List<ChannelEntity>)
+
+    @Query("DELETE FROM channels WHERE playlistId = :playlistId")
+    fun deleteForPlaylist(playlistId: Long)
+
+    @Query("SELECT groupTitle AS name, COUNT(*) AS count FROM channels GROUP BY groupTitle ORDER BY MIN(id)")
+    fun observeGroups(): Flow<List<GroupCount>>
+
+    @Query("SELECT * FROM channels WHERE groupTitle = :group ORDER BY number, id")
+    fun observeInGroup(group: String): Flow<List<ChannelEntity>>
+
+    @Query("SELECT * FROM channels ORDER BY number, id")
+    fun observeAll(): Flow<List<ChannelEntity>>
+
+    @Query("SELECT * FROM channels WHERE groupTitle = :group ORDER BY number, id")
+    suspend fun inGroup(group: String): List<ChannelEntity>
+
+    @Query("SELECT * FROM channels ORDER BY number, id")
+    suspend fun all(): List<ChannelEntity>
+
+    @Query("SELECT * FROM channels WHERE `key` = :key")
+    suspend fun byKey(key: String): ChannelEntity?
+
+    @Query("SELECT * FROM channels WHERE number = :number ORDER BY id LIMIT 1")
+    suspend fun byNumber(number: Int): ChannelEntity?
+
+    @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
+    fun observeFavorites(): Flow<List<ChannelEntity>>
+
+    @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
+    suspend fun favorites(): List<ChannelEntity>
+
+    @Query(
+        """SELECT * FROM channels WHERE name LIKE '%' || :query || '%'
+           ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, length(name), number
+           LIMIT :limit"""
+    )
+    suspend fun search(query: String, limit: Int): List<ChannelEntity>
+
+    @Query("SELECT * FROM channels WHERE groupTitle IN (:groups) AND `key` NOT IN (:exclude) ORDER BY number, id LIMIT :limit")
+    suspend fun inGroupsExcluding(groups: List<String>, exclude: List<String>, limit: Int): List<ChannelEntity>
+
+    @Query("SELECT * FROM channels WHERE epgId IN (:epgIds) GROUP BY epgId")
+    suspend fun byEpgIds(epgIds: List<String>): List<ChannelEntity>
+
+    @Query("SELECT * FROM channels WHERE playlistId = :playlistId AND (epgId IS NULL OR epgId = '')")
+    suspend fun withoutEpgId(playlistId: Long): List<ChannelEntity>
+
+    @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
+    fun setEpgId(id: Long, epgId: String)
+
+    @Query("SELECT DISTINCT epgId FROM channels WHERE playlistId = :playlistId AND epgId IS NOT NULL AND epgId != ''")
+    suspend fun epgIds(playlistId: Long): List<String>
+
+    @Query("SELECT COUNT(*) FROM channels")
+    fun observeCount(): Flow<Int>
+}
+
+@Dao
+interface ProgrammeDao {
+    @Insert
+    fun insertAll(programmes: List<ProgrammeEntity>)
+
+    @Query("DELETE FROM programmes WHERE playlistId = :playlistId")
+    fun deleteForPlaylist(playlistId: Long)
+
+    @Query("DELETE FROM programmes WHERE stop < :before")
+    suspend fun deleteEndedBefore(before: Long)
+
+    @Query("SELECT * FROM programmes WHERE channelEpgId IN (:epgIds) AND stop > :from AND start < :to ORDER BY start")
+    suspend fun inRange(epgIds: List<String>, from: Long, to: Long): List<ProgrammeEntity>
+
+    @Query("SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from ORDER BY start LIMIT :limit")
+    suspend fun upcoming(epgId: String, from: Long, limit: Int): List<ProgrammeEntity>
+
+    @Query("SELECT * FROM programmes WHERE title LIKE '%' || :query || '%' AND stop > :now ORDER BY start LIMIT :limit")
+    suspend fun search(query: String, now: Long, limit: Int): List<ProgrammeEntity>
+
+    @Query("SELECT COUNT(*) FROM programmes")
+    fun observeCount(): Flow<Int>
+}
+
+@Dao
+interface VodDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertAll(items: List<VodEntity>)
+
+    @Query("DELETE FROM vod WHERE playlistId = :playlistId")
+    fun deleteForPlaylist(playlistId: Long)
+
+    @Query("SELECT category AS name, COUNT(*) AS count FROM vod GROUP BY category ORDER BY MIN(id)")
+    fun observeCategories(): Flow<List<GroupCount>>
+
+    @Query("SELECT * FROM vod WHERE category = :category ORDER BY id")
+    fun observeInCategory(category: String): Flow<List<VodEntity>>
+
+    @Query("SELECT * FROM vod ORDER BY added DESC, id DESC LIMIT :limit")
+    fun observeRecent(limit: Int): Flow<List<VodEntity>>
+
+    @Query(
+        """SELECT * FROM vod WHERE name LIKE '%' || :query || '%'
+           ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, added DESC LIMIT :limit"""
+    )
+    suspend fun search(query: String, limit: Int): List<VodEntity>
+}
+
+@Dao
+interface SeriesDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertAll(items: List<SeriesEntity>)
+
+    @Query("DELETE FROM series WHERE playlistId = :playlistId")
+    fun deleteForPlaylist(playlistId: Long)
+
+    @Query("SELECT category AS name, COUNT(*) AS count FROM series GROUP BY category ORDER BY MIN(id)")
+    fun observeCategories(): Flow<List<GroupCount>>
+
+    @Query("SELECT * FROM series WHERE category = :category ORDER BY id")
+    fun observeInCategory(category: String): Flow<List<SeriesEntity>>
+
+    @Query("SELECT * FROM series ORDER BY added DESC, id DESC LIMIT :limit")
+    fun observeRecent(limit: Int): Flow<List<SeriesEntity>>
+
+    @Query("SELECT * FROM series WHERE `key` = :key")
+    suspend fun byKey(key: String): SeriesEntity?
+
+    @Query(
+        """SELECT * FROM series WHERE name LIKE '%' || :query || '%'
+           ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, added DESC LIMIT :limit"""
+    )
+    suspend fun search(query: String, limit: Int): List<SeriesEntity>
+}
+
+@Dao
+interface FavoriteDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun add(favorite: FavoriteEntity)
+
+    @Query("DELETE FROM favorites WHERE `key` = :key")
+    suspend fun remove(key: String)
+
+    @Query("SELECT `key` FROM favorites")
+    fun observeKeys(): Flow<List<String>>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE `key` = :key)")
+    suspend fun isFavorite(key: String): Boolean
+}
+
+@Dao
+interface HistoryDao {
+    @Upsert
+    suspend fun upsert(entry: HistoryEntity)
+
+    @Query("SELECT * FROM history WHERE `key` = :key")
+    suspend fun byKey(key: String): HistoryEntity?
+
+    @Query("SELECT * FROM history WHERE kind = 'LIVE' ORDER BY watchedAt DESC LIMIT :limit")
+    fun observeRecentLive(limit: Int): Flow<List<HistoryEntity>>
+
+    /** Angefangen, aber nicht zu Ende geschaut (weniger als 95 %). */
+    @Query(
+        """SELECT * FROM history WHERE kind != 'LIVE' AND positionMs > 60000
+           AND (durationMs = 0 OR positionMs < durationMs * 0.95)
+           ORDER BY watchedAt DESC LIMIT :limit"""
+    )
+    fun observeContinueWatching(limit: Int): Flow<List<HistoryEntity>>
+
+    @Query(
+        """SELECT groupTitle FROM history WHERE kind = 'LIVE' AND groupTitle IS NOT NULL AND groupTitle != ''
+           GROUP BY groupTitle ORDER BY SUM(playCount) DESC LIMIT :limit"""
+    )
+    suspend fun topLiveGroups(limit: Int): List<String>
+
+    @Query("SELECT `key` FROM history WHERE kind = 'LIVE' ORDER BY watchedAt DESC LIMIT :limit")
+    suspend fun recentLiveKeys(limit: Int): List<String>
+
+    @Query("DELETE FROM history")
+    suspend fun clear()
+}
