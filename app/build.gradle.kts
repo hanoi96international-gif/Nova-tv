@@ -111,7 +111,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
     // Untertitel-Übersetzung auf dem Gerät: kostenlos, ohne Konto, Sprachpakete werden einmalig geladen.
     // QR-Code für die Einrichtung per Handy
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
     // Übersetzung auf dem Gerät (OPUS-MT als ONNX)
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
