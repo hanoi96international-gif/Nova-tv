@@ -30,12 +30,12 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi
 
 # Tonformate, die das Gerät (und der Emulator) nicht selbst dekodiert: Prüfstein für FFmpeg
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=500:sample_rate=48000" \
-  -t 60 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -ac 2 -c:a dca -strict -2 -b:a 768k -f mpegts dts.ts
+  -t 60 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" -c:a dca -strict -2 -b:a 1509k dts.mkv
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=600:sample_rate=48000" \
   -t 60 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" \
   -c:a eac3 -b:a 384k -f mpegts eac3.ts
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi -i "sine=frequency=700:sample_rate=48000" \
-  -t 90 -c:v libx264 -preset veryfast -g 48 -pix_fmt yuv420p -c:a truehd -strict -2 movie/test/test/1002.mkv
+  -t 90 -c:v libx264 -preset veryfast -g 48 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" -c:a truehd -strict -2 movie/test/test/1002.mkv
 
 cat > playlist.m3u <<'M3U'
 #EXTM3U url-tvg="http://10.0.2.2:8000/epg.xml"
@@ -46,7 +46,7 @@ http://10.0.2.2:8000/uhd.ts
 #EXTINF:-1 tvg-id="hls.test" tvg-chno="3" group-title="Test HD",HLS Test
 http://10.0.2.2:8000/hls/index.m3u8
 #EXTINF:-1 tvg-chno="4" group-title="Test Ton",DTS Ton Test
-http://10.0.2.2:8000/dts.ts
+http://10.0.2.2:8000/dts.mkv
 #EXTINF:-1 tvg-chno="5" group-title="Test Ton",EAC3 Ton Test
 http://10.0.2.2:8000/eac3.ts
 #EXTINF:-1 group-title="Filme Test",Testfilm (2024)

@@ -88,7 +88,7 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         if (results.channels.isNotEmpty()) {
             item {
-                ResultRow("Sender") {
+                ResultRow("Sender", results.channels.size) {
                     items(results.channels, key = { it.key }) { channel ->
                         ChannelCard(channel, now = null, onClick = { PlayerActivity.startLive(context, channel.key, channel.groupTitle) })
                     }
@@ -98,7 +98,7 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         if (results.programmes.isNotEmpty()) {
             item {
-                ResultRow("Im TV") {
+                ResultRow("Im TV", results.programmes.size) {
                     items(results.programmes, key = { it.first.id }) { (programme, channel) ->
                         ProgrammeResult(programme, channel?.name) {
                             if (channel != null) PlayerActivity.startLive(context, channel.key, channel.groupTitle)
@@ -110,7 +110,7 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         if (results.movies.isNotEmpty()) {
             item {
-                ResultRow("Filme") {
+                ResultRow("Filme", results.movies.size) {
                     items(results.movies, key = { it.key }) { movie ->
                         PosterCard(movie.name, movie.poster, onClick = {
                             PlayerActivity.startVod(
@@ -125,7 +125,7 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         if (results.series.isNotEmpty()) {
             item {
-                ResultRow("Serien") {
+                ResultRow("Serien", results.series.size) {
                     items(results.series, key = { it.key }) { series ->
                         PosterCard(series.name, series.cover, onClick = { onOpenSeries(series) })
                     }
@@ -137,9 +137,9 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun ResultRow(title: String, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
+private fun ResultRow(title: String, count: Int, content: androidx.compose.foundation.lazy.LazyListScope.() -> Unit) {
     Column {
-        SectionTitle(title)
+        SectionTitle("$title · $count Treffer")
         LazyRow(
             modifier = Modifier.focusRestorer(),
             horizontalArrangement = Arrangement.spacedBy(16.dp),

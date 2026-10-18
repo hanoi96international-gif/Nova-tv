@@ -65,6 +65,12 @@ class PlaylistRepository(
 
     suspend fun add(playlist: PlaylistEntity): Long = db.playlists().insert(playlist)
 
+    /** Playlist ein- oder ausschalten. Daten bleiben erhalten; eine nie geladene Playlist wird jetzt geladen. */
+    suspend fun setEnabled(id: Long, enabled: Boolean) {
+        db.playlists().setEnabled(id, enabled)
+        if (enabled && db.playlists().byId(id)?.lastSync == 0L) sync(id)
+    }
+
     suspend fun delete(id: Long) = mutex.withLock {
         withContext(Dispatchers.IO) {
             db.runInTransaction(Runnable {
@@ -95,12 +101,14 @@ class PlaylistRepository(
 
     /** Nach Änderung der Zeitverschiebung: alle TV-Guides neu laden. */
     suspend fun reloadAllEpg() {
-        for (playlist in db.playlists().all()) syncEpg(playlist.id)
+        for (playlist in db.playlists().all()) if (playlist.enabled) syncEpg(playlist.id)
     }
 
     suspend fun syncAll(force: Boolean = false) {
         val now = System.currentTimeMillis()
         for (playlist in db.playlists().all()) {
+            // Ausgeschaltete Playlists kosten keine Zeit und keine Verbindung beim Anbieter.
+            if (!playlist.enabled) continue
             if (force || now - playlist.lastSync > CONTENT_MAX_AGE) sync(playlist.id, withEpg = false)
             val fresh = db.playlists().byId(playlist.id) ?: continue
             if (force || now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
@@ -119,7 +127,9 @@ class PlaylistRepository(
                         PlaylistType.XTREAM -> importXtream(playlist)
                     }
                 }
-                db.playlists().update(updated)
+                // Während des Imports umgeschaltet? Den aktuellen Schalterstand behalten.
+                val enabled = db.playlists().byId(playlistId)?.enabled ?: updated.enabled
+                db.playlists().update(updated.copy(enabled = enabled))
                 _state.value = SyncState.Idle
                 true
             } catch (e: Exception) {

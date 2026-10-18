@@ -104,6 +104,14 @@ class DeviceTourTest {
         val container = app.container
         val base = "http://10.0.2.2:8000"
 
+        // 0. Nach dem Upgrade von der Vorversion: Datenbank muss migriert sein (nicht gelöscht/abgestürzt)
+        section("upgrade") {
+            val version = container.db.openHelper.readableDatabase.version
+            val existing = runBlocking { container.db.playlists().all() }
+            log("db_version=$version playlists_before=${existing.size}")
+            assertTrue("Datenbank nicht auf Version 2", version == 2)
+        }
+
         // 1. Playlist + EPG importieren
         val started = System.currentTimeMillis()
         runBlocking {
@@ -271,6 +279,26 @@ class DeviceTourTest {
                 "big: import_ms=${nowStart - bigStart} channels_total=$total programmes_total=$epgCount " +
                     "now_playing_all_ms=${System.currentTimeMillis() - nowStart} now_found=${now.size} sync=${container.playlists.state.value}"
             )
+        }
+        // Suche zeigt alle Treffer (früher fest maximal 40)
+        section("search_all") {
+            val startedSearch = System.currentTimeMillis()
+            val results = runBlocking { container.content.search("Sender") }
+            log("search_all: channels=${results.channels.size} programmes=${results.programmes.size} ms=${System.currentTimeMillis() - startedSearch}")
+            assertTrue("Suche begrenzt: ${results.channels.size}", results.channels.size >= 3000)
+        }
+
+        // Playlist ausschalten: verschwindet überall, Daten bleiben; wieder einschalten: alles wieder da
+        section("playlist_toggle") {
+            val big = runBlocking { container.db.playlists().all() }.first { it.name == "Groß" }
+            val before = runBlocking { container.content.zapList(null, false) }.size
+            runBlocking { container.playlists.setEnabled(big.id, false) }
+            val off = runBlocking { container.content.zapList(null, false) }.size
+            val searchOff = runBlocking { container.content.search("Sender") }.channels.size
+            runBlocking { container.playlists.setEnabled(big.id, true) }
+            val on = runBlocking { container.content.zapList(null, false) }.size
+            log("playlist_toggle: before=$before off=$off search_off=$searchOff on=$on")
+            assertTrue("Ausschalten wirkt nicht", off < before && searchOff == 0 && on == before)
         }
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)

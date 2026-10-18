@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -97,9 +98,11 @@ class PlayerActivity : ComponentActivity() {
     var tracks by mutableStateOf(Tracks.EMPTY); private set
     var textDisabled by mutableStateOf(false); private set
     var subtitleScale by mutableFloatStateOf(1f); private set
-    var subtitleStatus by mutableStateOf<String?>(null)
-        private set(value) {
-            field = value
+    private var subtitleStatusState by mutableStateOf<String?>(null)
+    var subtitleStatus: String?
+        get() = subtitleStatusState
+        set(value) {
+            subtitleStatusState = value
             if (value != null) {
                 statusHistory += value
                 Log.i(SUBTITLE_TAG, value)
@@ -116,6 +119,10 @@ class PlayerActivity : ComponentActivity() {
     private var zapStartedAt = 0L
     private var everReady = false
     private var fpsSample: Pair<Long, Long>? = null
+    /** Bis hierhin gelten Fehler als Folge des HDMI-Moduswechsels (Bildwiederholrate), nicht des Streams. */
+    private var displaySwitchGraceUntil = 0L
+    private var displaySwitchErrors = 0
+    private var resumeAfterSwitch = false
     private var progressJob: Job? = null
     private var numberJob: Job? = null
     private var watchdogJob: Job? = null
@@ -138,6 +145,7 @@ class PlayerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         frameRateMatcher = FrameRateMatcher(this)
+        frameRateMatcher.onSwitch = ::onDisplaySwitch
         vod = intent.getVodRequest()
         isLive = vod == null
 
@@ -225,14 +233,27 @@ class PlayerActivity : ComponentActivity() {
             var lastPosition = -1L
             var stalledSeconds = 0
             var lastReconnect = 0L
+            var lastFrames = -1L
+            var framesAdvancing = false
+            var frozenVideoSeconds = 0
             while (isActive) {
                 delay(1_000)
                 val p = player ?: continue
+                if (displaySwitching()) {
+                    stalledSeconds = 0
+                    continue
+                }
                 val active = p.playWhenReady && p.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
                 val waiting = active && p.playbackState == Player.STATE_BUFFERING
                 val frozen = active && p.playbackState == Player.STATE_READY && p.currentPosition == lastPosition
                 lastPosition = p.currentPosition
                 stalledSeconds = if (waiting || frozen) stalledSeconds + 1 else 0
+                // Bild steht, Ton läuft weiter (Decoder hängt): an den Decoder-Zählern erkennen.
+                // Nur wenn die Zähler auf diesem Gerät überhaupt laufen (sonst nie eingreifen).
+                val frames = if (p.videoFormat != null) p.videoDecoderCounters?.run { ensureUpdated(); renderedOutputBufferCount.toLong() } else null
+                if (frames != null && lastFrames in 0 until frames) framesAdvancing = true
+                frozenVideoSeconds = if (frames != null && frames == lastFrames && framesAdvancing && p.isPlaying) frozenVideoSeconds + 1 else 0
+                lastFrames = frames ?: -1
                 val limit = if (isLive) LIVE_STALL_SECONDS else VOD_STALL_SECONDS
                 estimateFrameRate(p)
                 val now = SystemClock.elapsedRealtime()
@@ -240,10 +261,38 @@ class PlayerActivity : ComponentActivity() {
                     stalledSeconds = 0
                     lastReconnect = now
                     reconnect("Stream hängt, verbinde neu …")
+                } else if (frozenVideoSeconds >= VIDEO_FREEZE_SECONDS && now - lastReconnect > 20_000) {
+                    frozenVideoSeconds = 0
+                    lastReconnect = now
+                    reconnect("Bild hängt, verbinde neu …")
                 }
             }
         }
     }
+
+    /**
+     * Der Fernseher wechselt die Bildwiederholrate: HDMI synchronisiert neu, Bild und Ton fallen
+     * kurz aus. In dieser Zeit pausieren (wie Kodi), statt Ton- und Bildfehler als Stream- oder
+     * Decoder-Problem zu behandeln und den Player umzubauen.
+     */
+    private fun onDisplaySwitch(active: Boolean) {
+        val p = player
+        if (active) {
+            displaySwitchGraceUntil = SystemClock.elapsedRealtime() + DISPLAY_SWITCH_GRACE_MS
+            displaySwitchErrors = 0
+            resumeAfterSwitch = p?.playWhenReady == true
+            p?.playWhenReady = false
+        } else {
+            displaySwitchGraceUntil = SystemClock.elapsedRealtime() + DISPLAY_SWITCH_GRACE_MS
+            if (p != null && (resumeAfterSwitch || isLive) && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                if (p.playbackState == Player.STATE_IDLE) p.prepare()
+                p.playWhenReady = true
+            }
+            resumeAfterSwitch = false
+        }
+    }
+
+    private fun displaySwitching() = frameRateMatcher.switching || SystemClock.elapsedRealtime() < displaySwitchGraceUntil
 
     private fun resetStreamState() {
         everReady = false
@@ -301,6 +350,16 @@ class PlayerActivity : ComponentActivity() {
         val key = (current?.key ?: vod?.key) + mime
         if (key == lastAudioHintFor) return
         lastAudioHintFor = key
+        subtitleStatus = unsupportedAudioMessage(mime)
+    }
+
+    /** Im Ton-Menü eine nicht abspielbare Spur gewählt: erklären statt nichts zu tun. */
+    fun explainUnsupportedAudio(format: androidx.media3.common.Format) {
+        closeOverlay()
+        subtitleStatus = unsupportedAudioMessage(format.sampleMimeType)
+    }
+
+    private fun unsupportedAudioMessage(mime: String?): String {
         val name = when (mime) {
             MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS -> "DTS"
             MimeTypes.AUDIO_TRUEHD -> "Dolby TrueHD"
@@ -308,7 +367,8 @@ class PlayerActivity : ComponentActivity() {
             MimeTypes.AUDIO_AC3 -> "Dolby Digital"
             else -> mime?.substringAfter('/') ?: "unbekannt"
         }
-        subtitleStatus = "Tonformat $name wird von diesem Gerät nicht unterstützt"
+        val hint = if (AudioDecoders.ffmpegAvailable) "" else " (in dieser Version fehlt der FFmpeg-Tondecoder)"
+        return "Tonformat $name kann dieses Gerät nicht wiedergeben$hint"
     }
 
     private fun unsupportedFormatMessage(): String {
@@ -744,7 +804,19 @@ class PlayerActivity : ComponentActivity() {
 
         override fun onPlayerError(error: PlaybackException) {
             val p = player ?: return
+            Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
             when {
+                // Fehler während des HDMI-Moduswechsels: einfach weiterspielen, nichts umbauen.
+                displaySwitching() && displaySwitchErrors < 3 -> {
+                    displaySwitchErrors++
+                    handler.postDelayed({
+                        player?.let {
+                            if (isLive) it.seekToDefaultPosition()
+                            it.prepare()
+                            if (!frameRateMatcher.switching) it.playWhenReady = true
+                        }
+                    }, 1_000)
+                }
                 error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> {
                     p.seekToDefaultPosition()
                     p.prepare()
@@ -766,10 +838,12 @@ class PlayerActivity : ComponentActivity() {
                     forcePcmActive = true
                     handler.post { rebuildPlayer(forcePcm = true) }
                 }
-                // Asynchrones Dekodieren mag nicht jeder Decoder: einmalig ohne neu aufbauen.
+                // Asynchrones Dekodieren mag nicht jeder Decoder: ohne neu aufbauen und für die
+                // Zukunft merken, damit der Neustart nicht bei jedem Sender wieder passiert.
                 asyncDecodingActive && error.isVideoDecoderError() -> {
-                    message = "Dekoder-Modus angepasst, starte neu …"
+                    message = "Verbinde neu …"
                     asyncDecodingActive = false
+                    container.scope.launch { container.settings.update { it.copy(asyncDecoding = false) } }
                     // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
                     handler.post { rebuildPlayer(asyncDecoding = false) }
                 }
@@ -967,9 +1041,12 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val MAX_RETRIES = 3
+        private const val TAG = "AyuPlayer"
+        private const val DISPLAY_SWITCH_GRACE_MS = 6_000L
         const val SUBTITLE_TAG = "AyuSubtitles"
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
-        private const val LIVE_STALL_SECONDS = 10
+        private const val LIVE_STALL_SECONDS = 8
+        private const val VIDEO_FREEZE_SECONDS = 6
         private const val VOD_STALL_SECONDS = 20
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"

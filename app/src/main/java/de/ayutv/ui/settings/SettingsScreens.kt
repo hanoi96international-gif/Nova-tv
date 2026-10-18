@@ -25,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
@@ -102,6 +103,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             PlaylistRow(
                 playlist = playlist,
                 confirmingDelete = confirmDelete == playlist.id,
+                onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
                 onGroups = { onManageGroups(playlist) },
                 onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
                 onDelete = {
@@ -154,9 +156,9 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         }
         item {
             SettingRow(
-                "Schnelles Dekodieren",
+                "Schnelles Dekodieren (experimentell)",
                 onOff(settings.asyncDecoding),
-                "Steuert den Hardware-Decoder asynchron an: mehr Reserven bei 4K. Wird bei Problemen automatisch abgeschaltet.",
+                "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
             ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
         }
         item {
@@ -349,6 +351,7 @@ private fun CredentialField(
 private fun PlaylistRow(
     playlist: PlaylistEntity,
     confirmingDelete: Boolean,
+    onToggle: () -> Unit,
     onGroups: () -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
@@ -357,15 +360,26 @@ private fun PlaylistRow(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Schalter vorne: Welche Playlists aktiv sind, entscheidet der Nutzer selbst.
+        OutlinedButton(
+            onClick = onToggle,
+            colors = if (playlist.enabled) ButtonDefaults.colors(containerColor = AyuColors.AccentSoft) else ButtonDefaults.colors(),
+        ) { Text(if (playlist.enabled) "● Aktiv" else "○ Aus") }
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(playlist.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                playlist.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (playlist.enabled) Color.Unspecified else AyuColors.TextSecondary,
+            )
             val type = if (playlist.type == PlaylistType.XTREAM) "Xtream Codes" else "M3U"
             val synced = if (playlist.lastSync > 0) {
                 "aktualisiert " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(playlist.lastSync))
             } else {
                 "noch nicht geladen"
             }
-            Text("$type · $synced", color = AyuColors.TextSecondary, fontSize = 13.sp)
+            val state = if (playlist.enabled) "" else " · ausgeschaltet, erscheint nirgends"
+            Text("$type · $synced$state", color = AyuColors.TextSecondary, fontSize = 13.sp)
         }
         OutlinedButton(onClick = onGroups) { Text("Gruppen") }
         Spacer(Modifier.width(10.dp))

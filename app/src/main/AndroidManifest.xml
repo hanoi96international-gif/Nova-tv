@@ -21,7 +21,7 @@
 
         <activity
             android:name=".MainActivity"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
+            android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
             android:screenOrientation="landscape">
@@ -32,9 +32,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Alle Konfigurationswechsel selbst behandeln: Schaltet der Fernseher die Bildwiederholrate,
+             HDR oder die Auflösung um, darf der Player nicht neu starten (sonst Endlosschleife). -->
         <activity
             android:name=".player.PlayerActivity"
-            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
+            android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="false"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AyuTV.Player" />

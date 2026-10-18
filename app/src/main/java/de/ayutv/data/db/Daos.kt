@@ -25,6 +25,9 @@ interface PlaylistDao {
     @Update
     suspend fun update(playlist: PlaylistEntity)
 
+    @Query("UPDATE playlists SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+
     @Query("DELETE FROM playlists WHERE id = :id")
     fun delete(id: Long)
 }
@@ -59,10 +62,10 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE number = :number ORDER BY id LIMIT 1")
     suspend fun byNumber(number: Int): ChannelEntity?
 
-    @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
+    @Query("SELECT c.* FROM visible_channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
     fun observeFavorites(): Flow<List<ChannelEntity>>
 
-    @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
+    @Query("SELECT c.* FROM visible_channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
     suspend fun favorites(): List<ChannelEntity>
 
     @Query(
@@ -112,7 +115,8 @@ interface ProgrammeDao {
     @Query("SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from ORDER BY start LIMIT :limit")
     suspend fun upcoming(epgId: String, from: Long, limit: Int): List<ProgrammeEntity>
 
-    @Query("SELECT * FROM programmes WHERE title LIKE '%' || :query || '%' AND stop > :now ORDER BY start LIMIT :limit")
+    @Query("""SELECT * FROM programmes WHERE title LIKE '%' || :query || '%' AND stop > :now
+           AND playlistId IN (SELECT id FROM playlists WHERE enabled = 1) ORDER BY start LIMIT :limit""")
     suspend fun search(query: String, now: Long, limit: Int): List<ProgrammeEntity>
 
     @Query("SELECT COUNT(*) FROM programmes")

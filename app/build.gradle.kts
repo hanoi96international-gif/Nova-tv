@@ -15,12 +15,24 @@ android {
         // Media3 und Compose verlangen API 23 (Fire OS 6+, alle Fire TV Sticks ab 2018).
         minSdk = 23
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.6.0"
+        versionCode = 9
+        versionName = "0.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // App-Schlüssel für OpenSubtitles (GitHub-Secret OPENSUBTITLES_API_KEY). Damit funktionieren
         // Online-Untertitel auf jedem Gerät ohne Einrichtung; ein eigener Schlüssel hat Vorrang.
         buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${System.getenv("OPENSUBTITLES_API_KEY").orEmpty().trim()}\"")
+    }
+
+    // Fester Schlüssel für alle Builds (Debug, Release, CI): Jede neue Version lässt sich über die
+    // alte installieren, Playlists und Einstellungen bleiben erhalten. Zum Sideloaden gedacht;
+    // für einen Store einen eigenen, geheimen Schlüssel verwenden.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("signing/ayutv.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -28,7 +40,6 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Zum Sideloaden mit dem Debug-Schlüssel signiert. Für den Store eigenen Schlüssel eintragen.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

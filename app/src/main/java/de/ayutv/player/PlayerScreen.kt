@@ -395,7 +395,8 @@ private fun TracksOverlay(activity: PlayerActivity) {
         return
     }
     val tracks = activity.tracks
-    val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO) }
+    // Ton: auch Spuren zeigen, die das Gerät nicht abspielen kann, damit klar ist, warum es still bleibt.
+    val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO, includeUnsupported = true) }
     val text = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_TEXT) }
     val firstItem = remember { FocusRequester() }
     val preferred = activity.preferredSubtitleLanguage
@@ -445,9 +446,17 @@ private fun TracksOverlay(activity: PlayerActivity) {
             item { MenuHint("Für Untertitel aus dem Internet und Übersetzungen: OpenSubtitles bzw. DeepL in den Einstellungen eintragen") }
         }
         item { MenuHeader("Ton") }
-        if (audio.isEmpty()) item { MenuHint("Keine Auswahl verfügbar") }
+        if (audio.isEmpty()) item { MenuHint("Dieser Stream hat keine Tonspur") }
         audio.forEach { option ->
-            item { OptionRow(option.label, option.selected) { activity.selectTrack(option.group, option.index) } }
+            item {
+                OptionRow(option.label, option.selected) {
+                    if (option.supported) activity.selectTrack(option.group, option.index)
+                    else activity.explainUnsupportedAudio(option.group.getTrackFormat(option.index))
+                }
+            }
+        }
+        if (audio.isNotEmpty() && audio.none { it.supported }) {
+            item { MenuHint("Keine dieser Tonspuren kann das Gerät wiedergeben. Abhilfe: AV-Receiver/Soundbar per HDMI oder einen anderen Stream wählen.") }
         }
     }
 
@@ -495,14 +504,16 @@ private fun LanguagePicker(activity: PlayerActivity) {
     }
 }
 
-private class TrackOption(val group: Tracks.Group, val index: Int, val label: String, val selected: Boolean)
+private class TrackOption(val group: Tracks.Group, val index: Int, val label: String, val selected: Boolean, val supported: Boolean)
 
-private fun trackOptions(tracks: Tracks, type: Int): List<TrackOption> = buildList {
+private fun trackOptions(tracks: Tracks, type: Int, includeUnsupported: Boolean = false): List<TrackOption> = buildList {
     for (group in tracks.groups) {
         if (group.type != type) continue
         for (i in 0 until group.length) {
-            if (!group.isTrackSupported(i)) continue
-            add(TrackOption(group, i, describe(group.getTrackFormat(i), type, size + 1), group.isTrackSelected(i)))
+            val supported = group.isTrackSupported(i)
+            if (!supported && !includeUnsupported) continue
+            val label = describe(group.getTrackFormat(i), type, size + 1) + if (supported) "" else " · nicht abspielbar"
+            add(TrackOption(group, i, label, group.isTrackSelected(i), supported))
         }
     }
 }
@@ -518,8 +529,14 @@ private fun describe(format: Format, type: Int, number: Int): String {
             MimeTypes.AUDIO_E_AC3_JOC -> parts += "Dolby Atmos"
             MimeTypes.AUDIO_E_AC3 -> parts += "Dolby Digital Plus"
             MimeTypes.AUDIO_AC3 -> parts += "Dolby Digital"
-            MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD -> parts += "DTS"
+            MimeTypes.AUDIO_TRUEHD -> parts += "Dolby TrueHD"
+            MimeTypes.AUDIO_DTS -> parts += "DTS"
+            MimeTypes.AUDIO_DTS_HD -> parts += "DTS-HD"
+            MimeTypes.AUDIO_DTS_EXPRESS -> parts += "DTS Express"
             MimeTypes.AUDIO_AAC -> parts += "AAC"
+            MimeTypes.AUDIO_OPUS -> parts += "Opus"
+            MimeTypes.AUDIO_FLAC -> parts += "FLAC"
+            MimeTypes.AUDIO_MPEG -> parts += "MP3"
         }
         when (format.channelCount) {
             6 -> parts += "5.1"

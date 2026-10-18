@@ -3,6 +3,13 @@
 set -x
 mkdir -p ci-out
 adb wait-for-device
+if [ -f previous-debug.apk ]; then
+  # Vorversion starten, damit sie ihre Datenbank anlegt; dann die neue Version darüber installieren.
+  adb install previous-debug.apk
+  adb shell am start -W -n de.ayutv/.MainActivity
+  sleep 10
+  adb shell am force-stop de.ayutv
+fi
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell dumpsys gfxinfo de.ayutv reset >/dev/null 2>&1 || true

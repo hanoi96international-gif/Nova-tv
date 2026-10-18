@@ -50,8 +50,11 @@ data class AppSettings(
     val liveFormat: LiveFormat = LiveFormat.TS,
     val userAgent: String = DEFAULT_USER_AGENT,
     val zapWithUpDown: Boolean = true,
-    /** Hardware-Decoder asynchron ansteuern: mehr Durchsatz bei 4K (ab Android 12 ohnehin Standard). */
-    val asyncDecoding: Boolean = true,
+    /**
+     * Hardware-Decoder asynchron ansteuern. Auf Fire OS (Android 9–11) nicht Standard und mit manchen
+     * Decodern instabil, daher aus; ab Android 12 nutzt Media3 es ohnehin automatisch.
+     */
+    val asyncDecoding: Boolean = false,
     val audioOutput: AudioOutput = AudioOutput.AUTO,
     /** Raster-TV-Guide im Menü. Die EPG-Daten werden unabhängig davon für "Jetzt läuft" genutzt. */
     val showGuide: Boolean = true,
@@ -82,7 +85,7 @@ data class AppSettings(
         }
 
     companion object {
-        const val DEFAULT_USER_AGENT = "AyuTV/0.6 (Linux; Android) ExoPlayer"
+        const val DEFAULT_USER_AGENT = "AyuTV/0.7 (Linux; Android) ExoPlayer"
     }
 }
 
@@ -97,7 +100,7 @@ class SettingsStore(private val context: Context) {
         val userAgent = stringPreferencesKey("user_agent")
         val zap = booleanPreferencesKey("zap_up_down")
         val epgShift = intPreferencesKey("epg_shift_hours")
-        val asyncDecoding = booleanPreferencesKey("async_decoding")
+        val asyncDecoding = booleanPreferencesKey("async_decoding_v2")
         val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
         val subLang = stringPreferencesKey("subtitle_language_code")
@@ -150,7 +153,7 @@ class SettingsStore(private val context: Context) {
         userAgent = this[Keys.userAgent]?.takeIf { it.isNotBlank() } ?: AppSettings.DEFAULT_USER_AGENT,
         zapWithUpDown = this[Keys.zap] ?: true,
         epgShiftHours = this[Keys.epgShift] ?: 0,
-        asyncDecoding = this[Keys.asyncDecoding] ?: true,
+        asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
