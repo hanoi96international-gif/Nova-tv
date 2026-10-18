@@ -1,12 +1,12 @@
-# NovaTV
+# Ayu-TV
 
 Schneller, moderner IPTV-Player für **Fire TV** und Android TV. Gebaut mit Kotlin, Jetpack Compose for TV und Media3/ExoPlayer.
 
-NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen Zugang (M3U oder Xtream Codes).
+Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen Zugang (M3U oder Xtream Codes).
 
-## Was NovaTV besser machen will
+## Was Ayu-TV besser machen will
 
-| Problem bei anderen Playern | NovaTV |
+| Problem bei anderen Playern | Ayu-TV |
 |---|---|
 | 4K ruckelt oder startet langsam | Hardware-Decoder mit Fallback, Pufferprofile (Schnell, Ausgewogen, Stabil 4K), optionaler Tunneling-Modus, Anpassung der Bildwiederholrate (50 Hz / 23,976 Hz) |
 | Langsames Umschalten | Der TS-Stream startet ohne auf einen Keyframe zu warten, Verbindungen bleiben offen, das letzte Bild bleibt beim Zappen stehen. Die Umschaltzeit wird gemessen und im Stream-Info angezeigt |
@@ -16,7 +16,7 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.4)
+## Funktionen (Version 0.5)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`, auch aus `url-tvg` im Playlist-Header), Xtream Codes API (Live, Filme, Serien, EPG)
 - **Gruppen ein- und ausblenden:** pro Playlist, getrennt für Live TV, Filme und Serien (*Einstellungen → Playlist → Gruppen*), mit Filter und „Alle ein/aus“. Schneller geht es mit langem Druck auf OK auf einer Gruppe in der Liste. Ausgeblendete Gruppen verschwinden überall: in Listen, TV-Guide, Suche, Startseite und beim Zappen. Sie bleiben auch nach dem Aktualisieren ausgeblendet.
@@ -34,6 +34,8 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Filme und Serien:** Kategorien, Poster-Raster, Staffeln und Episoden (Xtream), Fortsetzen an der letzten Position
 - **Automatische Aktualisierung:** Playlists alle 12 Stunden, EPG alle 8 Stunden
 
+- **4K und Stabilität:** asynchrone Ansteuerung der Hardware-Decoder (mehr Reserven bei 4K, automatischer Rückfall bei Problemen), Speicher-Obergrenze für den Puffer (kein Absturz nach langem 4K-Schauen auf Sticks mit wenig RAM), Watchdog, Tunneling-Rückfall, Erkennung von HDR10/HLG/Dolby Vision.
+- **TV-Guide optional:** Das Programm-Raster lässt sich in den Einstellungen ausblenden. Die Programmdaten bleiben für „Jetzt läuft“, Fortschritt, Suche und Empfehlungen aktiv.
 - **Weitere:** EPG-Zeitverschiebung (−12 bis +12 Std.), gemessene Bildrate für TS-Streams ohne Angabe (damit greift die 50-Hz-Anpassung auch bei Live-TV), verständliche Fehlermeldungen („Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen“), Textfelder öffnen die Tastatur erst nach OK.
 
 ## Automatisch geprüft bei jedem Build
@@ -55,9 +57,9 @@ Screenshots, Logs und Ruckler-Statistik liegen nach jedem Lauf im Branch `ci-res
 ## Installation auf dem Fire TV Stick
 
 1. Auf dem Fire TV unter *Einstellungen → Mein Fire TV → Entwickleroptionen* „Apps unbekannter Herkunft“ für die App **Downloader** erlauben.
-2. Die Datei `NovaTV.apk` aus dem neuesten [Release](../../releases/latest) herunterladen. Jeder grüne Build aktualisiert es automatisch.
+2. Die Datei `AyuTV.apk` aus dem neuesten [Release](../../releases/latest) herunterladen. Jeder grüne Build aktualisiert es automatisch.
 3. In Downloader die APK-URL eingeben und installieren.
-   Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install NovaTV-xxxx.apk`.
+   Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install Ayu-TV-xxxx.apk`.
 
 Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose ist im Debug-Build deutlich langsamer.
 
@@ -65,7 +67,7 @@ Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose is
 
 1. Auf [opensubtitles.com](https://www.opensubtitles.com) ein Konto anlegen.
 2. Unter *Profil → API-Consumer* einen API-Key erzeugen.
-3. In NovaTV unter *Einstellungen → Untertitel* den API-Key eintragen. Benutzername und Passwort sind optional, ergeben aber mehr Downloads pro Tag.
+3. In Ayu-TV unter *Einstellungen → Untertitel* den API-Key eintragen. Benutzername und Passwort sind optional, ergeben aber mehr Downloads pro Tag.
 
 4. Für automatische Übersetzung: *Einstellungen → Untertitel → Automatische Übersetzung* auf **DeepL** stellen und den kostenlosen DeepL-API-Key eintragen ([deepl.com/pro-api](https://www.deepl.com/pro-api), 500.000 Zeichen pro Monat, reicht für etwa 10 Filme). Alternativ **LibreTranslate** mit eigener Server-Adresse.
 
@@ -87,13 +89,13 @@ Ohne Zugänge funktionieren eingebettete Untertitel trotzdem.
 
 Voraussetzungen: JDK 17 und Android SDK (compileSdk 37). Unterstützt werden Fire OS 6 und neuer (minSdk 23), also alle Fire TV Sticks ab 2018.
 
-Technikstand (Oktober 2026): Kotlin 2.3, AGP 9.4 (mit eingebautem Kotlin), Gradle 9.8, compileSdk 37, Media3 1.11.1 (mit dynamischem Scheduling der Wiedergabeschleife standardmäßig an, besserer Bildraten-Schätzung, Dolby Vision Profil 10), Compose 1.12, Compose for TV Material 1.1, Room 2.8, Coil 3, OkHttp 5. Die GitHub-Action baut bei jedem Push automatisch beide APKs.
+Technikstand (Oktober 2026): Kotlin 2.4, AGP 9.4 (mit eingebautem Kotlin), Gradle 9.8, compileSdk 37, Media3 1.11.1 (mit dynamischem Scheduling der Wiedergabeschleife standardmäßig an, besserer Bildraten-Schätzung, Dolby Vision Profil 10), Compose 1.12, Compose for TV Material 1.1, Room 2.8, Coil 3, OkHttp 5. Die GitHub-Action baut bei jedem Push automatisch beide APKs.
 Ein Tag `v*` (z. B. `v0.1.0`) erstellt ein Release mit der APK.
 
 ### Aufbau
 
 ```
-app/src/main/java/de/novatv/
+app/src/main/java/de/ayutv/
 ├── data/parse/   Streaming-Parser (M3U, XMLTV, Xtream-JSON), ohne Android-Abhängigkeiten und getestet
 ├── data/db/      Room-Datenbank (Sender, EPG, Filme, Serien, Favoriten, Verlauf)
 ├── data/repo/    Synchronisierung (PlaylistRepository) und Abfragen (ContentRepository)

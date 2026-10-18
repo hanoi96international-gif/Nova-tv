@@ -7,16 +7,16 @@ plugins {
 }
 
 android {
-    namespace = "de.novatv"
+    namespace = "de.ayutv"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "de.novatv"
+        applicationId = "de.ayutv"
         // Media3 und Compose verlangen API 23 (Fire OS 6+, alle Fire TV Sticks ab 2018).
         minSdk = 23
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -79,8 +79,8 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     val coil = "3.6.3"
     implementation("io.coil-kt.coil3:coil-compose:$coil")

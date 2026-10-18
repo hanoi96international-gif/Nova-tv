@@ -12,7 +12,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "ci-media")
-USER, PASSWORD = "nova", "test"
+USER, PASSWORD = "ayu", "test"
 
 LIVE = [
     {"num": 1, "name": "DE | Xtream HD", "stream_id": 101, "stream_icon": "", "epg_channel_id": "hd.test", "category_id": "10", "tv_archive": 0},
