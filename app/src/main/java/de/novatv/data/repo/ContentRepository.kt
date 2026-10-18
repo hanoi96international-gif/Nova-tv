@@ -71,6 +71,12 @@ class ContentRepository(
         val ids = channels.mapNotNull { it.epgId?.takeIf(String::isNotEmpty) }.distinct()
         if (ids.isEmpty()) return emptyMap()
         val result = HashMap<String, ProgrammeEntity>()
+        if (ids.size > SQL_CHUNK) {
+            // Große Listen: einmal alles Laufende holen (Index auf stop) und im Speicher zuordnen.
+            val wanted = ids.toHashSet()
+            db.programmes().airingAt(at).forEach { if (it.channelEpgId in wanted) result.putIfAbsent(it.channelEpgId, it) }
+            return result
+        }
         ids.chunked(SQL_CHUNK).forEach { chunk ->
             db.programmes().inRange(chunk, at, at + 1).forEach { result.putIfAbsent(it.channelEpgId, it) }
         }

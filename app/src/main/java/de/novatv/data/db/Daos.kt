@@ -105,6 +105,10 @@ interface ProgrammeDao {
     @Query("SELECT * FROM programmes WHERE channelEpgId IN (:epgIds) AND stop > :from AND start < :to ORDER BY start")
     suspend fun inRange(epgIds: List<String>, from: Long, to: Long): List<ProgrammeEntity>
 
+    /** Alles, was gerade läuft: eine Abfrage statt vieler IN-Listen bei großen Senderlisten. */
+    @Query("SELECT * FROM programmes WHERE stop > :now AND start <= :now")
+    suspend fun airingAt(now: Long): List<ProgrammeEntity>
+
     @Query("SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from ORDER BY start LIMIT :limit")
     suspend fun upcoming(epgId: String, from: Long, limit: Int): List<ProgrammeEntity>
 

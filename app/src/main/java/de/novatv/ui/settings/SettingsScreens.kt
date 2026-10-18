@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -64,9 +65,19 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     val settings by container.settings.settings.collectAsStateWithLifecycle(AppSettings())
     val sync by container.playlists.state.collectAsStateWithLifecycle()
     var confirmDelete by remember { mutableStateOf<Long?>(null) }
+    var pickingLanguage by remember { mutableStateOf(false) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settings.update(transform) }
+    }
+
+    if (pickingLanguage) {
+        BackHandler { pickingLanguage = false }
+        LanguageList(selected = settings.subtitleLanguage) { code ->
+            update { it.copy(subtitleLanguage = code) }
+            pickingLanguage = false
+        }
+        return
     }
 
     LazyColumn(
@@ -160,7 +171,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 "Bevorzugte Sprache",
                 Languages.label(settings.subtitleLanguage),
                 "Wird beim Einschalten zuerst gewählt. Jede andere Sprache geht im Film über ☰ → Andere Sprache.",
-            ) { update { it.copy(subtitleLanguage = nextLanguage(it.subtitleLanguage)) } }
+            ) { pickingLanguage = true }
         }
         item {
             SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung: weiße Schrift mit schwarzem Rand.") {
@@ -230,9 +241,25 @@ private fun onOff(value: Boolean) = if (value) "An" else "Aus"
 private fun BufferProfile.next(): BufferProfile = BufferProfile.entries[(ordinal + 1) % BufferProfile.entries.size]
 private fun TranslationProvider.next(): TranslationProvider = TranslationProvider.entries[(ordinal + 1) % TranslationProvider.entries.size]
 
-private fun nextLanguage(code: String): String {
-    val index = Languages.all.indexOfFirst { it.code == code }
-    return Languages.all[(index + 1) % Languages.all.size].code
+@Composable
+private fun LanguageList(selected: String, onSelect: (String) -> Unit) {
+    val focus = remember { FocusRequester() }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        item { Text("Bevorzugte Untertitelsprache", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 12.dp)) }
+        items(Languages.all, key = { it.code }) { language ->
+            SettingRow(
+                language.label,
+                if (language.code == selected) "✓" else "",
+                if (language.deepl == null) "Übersetzung nur mit LibreTranslate" else "",
+                modifier = if (language.code == selected) Modifier.focusRequester(focus) else Modifier,
+            ) { onSelect(language.code) }
+        }
+    }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 }
 private fun SubtitleSize.next(): SubtitleSize = SubtitleSize.entries[(ordinal + 1) % SubtitleSize.entries.size]
 
@@ -295,10 +322,10 @@ private fun PlaylistRow(
 }
 
 @Composable
-private fun SettingRow(title: String, value: String, description: String, onClick: () -> Unit) {
+private fun SettingRow(title: String, value: String, description: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
         colors = ClickableSurfaceDefaults.colors(containerColor = NovaColors.Surface, focusedContainerColor = NovaColors.AccentSoft),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f),
@@ -306,7 +333,7 @@ private fun SettingRow(title: String, value: String, description: String, onClic
         Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 16.sp)
-                Text(description, color = NovaColors.TextSecondary, fontSize = 12.sp)
+                if (description.isNotEmpty()) Text(description, color = NovaColors.TextSecondary, fontSize = 12.sp)
             }
             if (value.isNotEmpty()) {
                 Spacer(Modifier.width(16.dp))
