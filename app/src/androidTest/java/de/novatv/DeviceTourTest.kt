@@ -74,6 +74,22 @@ class DeviceTourTest {
         }
     }
 
+    /**
+     * Startet den Player. Beendet das Testframework gerade noch die vorige Activity, kann der neue
+     * Start in derselben Task mit abgeräumt werden; dann einmal sauber neu starten.
+     */
+    private fun launchPlayer(intent: android.content.Intent): ActivityScenario<PlayerActivity> {
+        Thread.sleep(1_500)
+        repeat(2) {
+            val scenario = ActivityScenario.launch<PlayerActivity>(intent)
+            if (scenario.state == androidx.lifecycle.Lifecycle.State.RESUMED) return scenario
+            log("player start state=${scenario.state}, neuer Versuch")
+            scenario.close()
+            Thread.sleep(2_000)
+        }
+        return ActivityScenario.launch(intent)
+    }
+
     private fun waitFor(timeoutMs: Long, condition: () -> Boolean): Boolean {
         val end = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < end) {
@@ -144,7 +160,7 @@ class DeviceTourTest {
         // 3. Live: Start, Zappen, Senderliste, Menü
         val live = channels.filter { "/movie/" !in it.url }
         live.forEachIndexed { index, channel -> section("live[$index]") {
-            ActivityScenario.launch<PlayerActivity>(PlayerActivity.liveIntent(app, channel.key, null)).use { scenario ->
+            launchPlayer(PlayerActivity.liveIntent(app, channel.key, null)).use { scenario ->
                 val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(8_000)
                 val stats = scenario.read { it.stats }
@@ -157,6 +173,10 @@ class DeviceTourTest {
                 if (index == 0) {
                     key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(500); key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(800)
                     shot("1${index}_live_info_tech")
+                    // Zweimal umschalten: über den 4K-Sender (im Emulator nicht dekodierbar) zum nächsten.
+                    // Prüft auch, dass sich der Player nach einem Formatfehler wieder fängt.
+                    key(KeyEvent.KEYCODE_DPAD_UP); Thread.sleep(3_000)
+                    log("zap1 now=${scenario.read { it.current?.name }} message=${scenario.read { it.message }}")
                     key(KeyEvent.KEYCODE_DPAD_UP)
                     val zapReady = waitFor(15_000) {
                         scenario.read { it.player?.playbackState == Player.STATE_READY && it.stats.startupMs > 0 }
@@ -176,7 +196,7 @@ class DeviceTourTest {
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
         if (movie != null) section("vod") {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
-            ActivityScenario.launch<PlayerActivity>(PlayerActivity.vodIntent(app, request)).use { scenario ->
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
                 log("vod launched state=${scenario.state}")
                 val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(3_000)
@@ -199,7 +219,7 @@ class DeviceTourTest {
         episodes.firstOrNull()?.let { (episode, url) -> section("episode") {
             val series = seriesList.first()
             val request = VodRequest("${series.key}:e:${episode.id}", HistoryKind.EPISODE, "${series.name} S1E1", episode.title, null, url)
-            ActivityScenario.launch<PlayerActivity>(PlayerActivity.vodIntent(app, request)).use { scenario ->
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
                 val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(2_000)
                 log("episode ${episode.title}: ready=$ready message=${scenario.read { it.message }}")
