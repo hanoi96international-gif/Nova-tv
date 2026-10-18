@@ -69,6 +69,8 @@ http://10.0.2.2:8000/hls/index.m3u8
 http://10.0.2.2:8000/atmos.ts
 #EXTINF:-1 tvg-chno="5" group-title="Test Ton",EAC3 Ton Test
 http://10.0.2.2:8000/eac3.ts
+#EXTINF:-1 tvg-chno="6" group-title="Test HD",Wackelige Leitung
+http://10.0.2.2:8000/flaky.ts
 #EXTINF:-1 group-title="Filme Test",Testfilm (2024)
 http://10.0.2.2:8000/movie/test/test/1001.mkv
 #EXTINF:-1 group-title="Tontest",Tontest TrueHD 5.1 (2025)

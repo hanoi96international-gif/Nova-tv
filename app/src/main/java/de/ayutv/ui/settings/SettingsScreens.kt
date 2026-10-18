@@ -65,11 +65,19 @@ import de.ayutv.ui.components.QrCode
 import de.ayutv.data.repo.Translators
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.tv.material3.Border
+import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit) {
     val container = LocalContainer.current
@@ -88,6 +96,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         onDispose { phoneSetup.stop() }
     }
     var keyReport by remember { mutableStateOf<String?>(null) }
+    var page by rememberSaveable { mutableStateOf(SettingsPage.PLAYLISTS) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settings.update(transform) }
@@ -102,232 +111,271 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         return
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            Column {
-                Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
-                SyncBanner(sync, Modifier.padding(top = 4.dp))
-                Spacer(Modifier.height(16.dp))
-                SectionTitle("Playlists")
+    Row(Modifier.fillMaxSize()) {
+        // Links die Bereiche: Fokus genügt zum Umschalten, rechts stehen die Einstellungen dazu.
+        Column(
+            // focusRestorer: Von rechts zurück landet der Fokus auf dem gewählten Bereich, nicht auf dem
+            // gerade daneben liegenden (der sonst sofort umschalten würde).
+            Modifier.width(250.dp).fillMaxHeight().focusRestorer()
+                .background(AyuColors.Surface.copy(alpha = 0.5f)).padding(vertical = 32.dp, horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text("Einstellungen", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 10.dp, bottom = 18.dp))
+            SettingsPage.entries.forEach { entry ->
+                PageButton(entry, selected = page == entry) { page = entry }
             }
+            Spacer(Modifier.weight(1f))
+            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp))
         }
-        items(playlists, key = { it.id }) { playlist ->
-            PlaylistRow(
-                playlist = playlist,
-                confirmingDelete = confirmDelete == playlist.id,
-                onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
-                onGroups = { onManageGroups(playlist) },
-                onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
-                onDelete = {
-                    if (confirmDelete == playlist.id) {
-                        confirmDelete = null
-                        container.scope.launch { container.playlists.delete(playlist.id) }
-                    } else {
-                        confirmDelete = playlist.id
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            item(key = "title-${page.name}") {
+                Column(Modifier.padding(bottom = 8.dp)) {
+                    Text(page.title, style = MaterialTheme.typography.headlineMedium)
+                    Text(page.description, color = AyuColors.TextSecondary, fontSize = 14.sp)
+                    SyncBanner(sync, Modifier.padding(top = 4.dp))
+                }
+            }
+            when (page) {
+                SettingsPage.PLAYLISTS -> {
+                    items(playlists, key = { it.id }) { playlist ->
+                        PlaylistRow(
+                            playlist = playlist,
+                            confirmingDelete = confirmDelete == playlist.id,
+                            onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
+                            onGroups = { onManageGroups(playlist) },
+                            onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
+                            onDelete = {
+                                if (confirmDelete == playlist.id) {
+                                    confirmDelete = null
+                                    container.scope.launch { container.playlists.delete(playlist.id) }
+                                } else {
+                                    confirmDelete = playlist.id
+                                }
+                            },
+                        )
                     }
-                },
-            )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                Button(onClick = onAddPlaylist) { Text("+ Playlist hinzufügen") }
-                OutlinedButton(onClick = { container.scope.launch { container.playlists.syncAll(force = true) } }) {
-                    Text("Alles aktualisieren")
-                }
-            }
-        }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+                            Button(onClick = onAddPlaylist) { Text("+ Playlist hinzufügen") }
+                            OutlinedButton(onClick = { container.scope.launch { container.playlists.syncAll(force = true) } }) {
+                                Text("Alles aktualisieren")
+                            }
+                        }
+                    }
 
-        item { SectionTitle("Wiedergabe", Modifier.padding(top = 20.dp)) }
-        item {
-            SettingRow(
-                "Puffer",
-                settings.bufferProfile.label,
-                "Schnell = kürzeste Umschaltzeit. Stabil = für 4K und schwankende Leitungen.",
-            ) { update { it.copy(bufferProfile = it.bufferProfile.next()) } }
-        }
-        item {
-            SettingRow(
-                "Tunneling-Modus",
-                onOff(settings.tunneling),
-                "Video geht direkt vom Decoder zum Display. Hilft oft gegen Ruckeln bei 4K auf Fire TV. Bei Tonaussetzern wieder ausschalten.",
-            ) { update { it.copy(tunneling = !it.tunneling) } }
-        }
-        item {
-            SettingRow(
-                "Bildwiederholrate anpassen",
-                onOff(settings.matchFrameRate),
-                "Schaltet den Fernseher auf 50 Hz bzw. 23,976 Hz passend zum Video. Beseitigt Ruckeln bei Kameraschwenks.",
-            ) { update { it.copy(matchFrameRate = !it.matchFrameRate) } }
-        }
-        item {
-            SettingRow(
-                "Live-Format (Xtream)",
-                settings.liveFormat.label,
-                "MPEG-TS startet schneller. HLS ist robuster, falls der Anbieter TS drosselt.",
-            ) { update { it.copy(liveFormat = if (it.liveFormat == LiveFormat.TS) LiveFormat.HLS else LiveFormat.TS) } }
-        }
-        item {
-            SettingRow(
-                "Schnelles Dekodieren (experimentell)",
-                onOff(settings.asyncDecoding),
-                "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
-            ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
-        }
-        item {
-            SettingRow(
-                "Tonausgabe",
-                settings.audioOutput.label,
-                "Automatisch: Dolby/DTS gehen an Soundbar oder Receiver. Bei Stille oder Aussetzern auf „Immer im Gerät dekodieren“ stellen.",
-            ) {
-                update {
-                    it.copy(audioOutput = if (it.audioOutput == AudioOutput.AUTO) AudioOutput.PCM else AudioOutput.AUTO)
+                    item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
                 }
-            }
-        }
-        item {
-            SettingRow(
-                "Zusätzliche Tondecoder (FFmpeg)",
-                if (AudioDecoders.ffmpegAvailable) "Aktiv" else "Nicht enthalten",
-                "Spielt DTS, Dolby TrueHD, Dolby Digital (Plus) u. a. auch ohne AV-Receiver ab." +
-                    (AudioDecoders.ffmpegVersion?.let { " FFmpeg $it." } ?: ""),
-            ) {}
-        }
-        item {
-            SettingRow(
-                "TV-Guide im Menü",
-                onOff(settings.showGuide),
-                "Das Programm-Raster. Die Programmdaten (Jetzt läuft, Suche, Empfehlungen) bleiben auch ausgeblendet aktiv.",
-            ) { update { it.copy(showGuide = !it.showGuide) } }
-        }
-        item {
-            SettingRow(
-                "Hoch/Runter schaltet um",
-                onOff(settings.zapWithUpDown),
-                "Aus: Hoch/Runter öffnet stattdessen die Senderliste.",
-            ) { update { it.copy(zapWithUpDown = !it.zapWithUpDown) } }
-        }
-        item {
-            UserAgentRow(settings.userAgent) { ua -> update { it.copy(userAgent = ua) } }
-        }
-        item {
-            val shift = settings.epgShiftHours
-            SettingRow(
-                "TV-Guide-Zeitverschiebung",
-                if (shift == 0) "Keine" else "%+d Std.".format(shift),
-                "Falls „Jetzt läuft“ nicht stimmt: Zeiten des Anbieters korrigieren. Der Guide wird danach neu geladen.",
-            ) {
-                // Zyklus 0, +1 … +12, −12 … −1
-                val next = if (shift >= 12) -12 else shift + 1
-                scope.launch {
-                    container.settings.update { it.copy(epgShiftHours = next) }
-                    epgReloadJob?.cancel()
-                    epgReloadJob = container.scope.launch {
-                        delay(2_500) // mehrere Klicks abwarten, dann einmal neu laden
-                        container.playlists.reloadAllEpg()
+                SettingsPage.PLAYBACK -> {
+                    item {
+                        SettingRow(
+                            "Puffer",
+                            settings.bufferProfile.label,
+                            "Schnell = kürzeste Umschaltzeit. Stabil = für 4K und schwankende Leitungen.",
+                        ) { update { it.copy(bufferProfile = it.bufferProfile.next()) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Tunneling-Modus",
+                            onOff(settings.tunneling),
+                            "Video geht direkt vom Decoder zum Display. Hilft oft gegen Ruckeln bei 4K auf Fire TV. Bei Tonaussetzern wieder ausschalten.",
+                        ) { update { it.copy(tunneling = !it.tunneling) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Bildwiederholrate anpassen",
+                            onOff(settings.matchFrameRate),
+                            "Schaltet den Fernseher auf 50 Hz bzw. 23,976 Hz passend zum Video. Beseitigt Ruckeln bei Kameraschwenks.",
+                        ) { update { it.copy(matchFrameRate = !it.matchFrameRate) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Live-Format (Xtream)",
+                            settings.liveFormat.label,
+                            "MPEG-TS startet schneller. HLS ist robuster, falls der Anbieter TS drosselt.",
+                        ) { update { it.copy(liveFormat = if (it.liveFormat == LiveFormat.TS) LiveFormat.HLS else LiveFormat.TS) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Schnelles Dekodieren (experimentell)",
+                            onOff(settings.asyncDecoding),
+                            "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
+                        ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Tonausgabe",
+                            settings.audioOutput.label,
+                            "Automatisch: Dolby/DTS gehen an Soundbar oder Receiver. Bei Stille oder Aussetzern auf „Immer im Gerät dekodieren“ stellen.",
+                        ) {
+                            update {
+                                it.copy(audioOutput = if (it.audioOutput == AudioOutput.AUTO) AudioOutput.PCM else AudioOutput.AUTO)
+                            }
+                        }
+                    }
+                    item {
+                        SettingRow(
+                            "Zusätzliche Tondecoder (FFmpeg)",
+                            if (AudioDecoders.ffmpegAvailable) "Aktiv" else "Nicht enthalten",
+                            "Spielt DTS, Dolby TrueHD, Dolby Digital (Plus) u. a. auch ohne AV-Receiver ab." +
+                                (AudioDecoders.ffmpegVersion?.let { " FFmpeg $it." } ?: ""),
+                        ) {}
+                    }
+                    item {
+                        UserAgentRow(settings.userAgent) { ua -> update { it.copy(userAgent = ua) } }
+                    }
+
+                }
+                SettingsPage.SUBTITLES -> {
+                    item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
+                    item {
+                        SettingRow(
+                            "Zugänge prüfen",
+                            "",
+                            "Testet den OpenSubtitles-Zugang sofort.",
+                        ) {
+                            keyReport = "Prüfe …"
+                            scope.launch {
+                                keyReport = KeyCheck.run(container.http, container.settings.current())
+                                    .joinToString("\n") { (if (it.ok) "✓ " else "✗ ") + it.text }
+                            }
+                        }
+                    }
+                    item {
+                        SettingRow(
+                            "Automatisch einschalten",
+                            onOff(settings.subtitlesAutoOn),
+                            "Aus: Untertitel nur bei Bedarf im Film über die Menütaste ☰. An: bevorzugte Sprache startet mit.",
+                        ) { update { it.copy(subtitlesAutoOn = !it.subtitlesAutoOn) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Bevorzugte Sprache",
+                            Languages.label(settings.subtitleLanguage),
+                            "Wird beim Einschalten zuerst gewählt. Jede andere Sprache geht im Film über ☰ → Andere Sprache.",
+                        ) { pickingLanguage = true }
+                    }
+                    item {
+                        SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung: weiße Schrift mit schwarzem Rand.") {
+                            update { it.copy(subtitleSize = it.subtitleSize.next()) }
+                        }
+                    }
+                    item {
+                        val builtIn = BuildConfig.OPENSUBTITLES_API_KEY.isNotBlank()
+                        SettingRow(
+                            "Untertitel aus dem Internet",
+                            onOff(settings.onlineSubtitles),
+                            if (builtIn) "OpenSubtitles ist eingebaut, kein Konto nötig. Sucht Untertitel, wenn ein Film keine passenden hat."
+                            else "Sucht bei OpenSubtitles, wenn ein Film keine passenden Untertitel hat (API-Key per Handy eintragen).",
+                        ) { update { it.copy(onlineSubtitles = !it.onlineSubtitles) } }
+                    }
+                    item {
+                        CredentialField(
+                            current = settings.openSubtitlesKey,
+                            label = "Eigener OpenSubtitles API-Key (optional, ersetzt den eingebauten)",
+                        ) { key -> update { it.copy(openSubtitlesKey = key) } }
+                    }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CredentialField(settings.openSubtitlesUser, "Benutzername (optional, mehr Downloads pro Tag)", Modifier.width(320.dp)) { user ->
+                                update { it.copy(openSubtitlesUser = user) }
+                            }
+                            CredentialField(settings.openSubtitlesPassword, "Passwort (optional)", Modifier.width(260.dp), password = true) { pw ->
+                                update { it.copy(openSubtitlesPassword = pw) }
+                            }
+                        }
+                    }
+
+                    item {
+                        SettingRow(
+                            "Automatische Übersetzung",
+                            settings.translationProvider.label,
+                            "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene direkt auf dem Fire TV übersetzt: " +
+                                "ohne Konto und ohne Grenze. Pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen.",
+                        ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
+                    }
+                    item {
+                        var modelInfo by remember { mutableStateOf("") }
+                        LaunchedEffect(Unit) {
+                            modelInfo = withContext(Dispatchers.IO) {
+                                val pairs = Translators.onDevice.installedPairs()
+                                if (pairs.isEmpty()) "noch keine geladen" else "${pairs.size} · ${Translators.onDevice.installedBytes() / 1_000_000} MB"
+                            }
+                        }
+                        SettingRow(
+                            "Sprachmodelle auf dem Gerät",
+                            modelInfo,
+                            "Auswählen löscht alle geladenen Modelle (werden bei Bedarf neu geladen). Übersetzung: OPUS-MT, Universität Helsinki, CC BY 4.0.",
+                        ) {
+                            scope.launch {
+                                Translators.onDevice.deleteAll()
+                                modelInfo = "noch keine geladen"
+                            }
+                        }
+                    }
+
+                }
+                SettingsPage.DISPLAY -> {
+                    item {
+                        SettingRow(
+                            "TV-Guide im Menü",
+                            onOff(settings.showGuide),
+                            "Das Programm-Raster. Die Programmdaten (Jetzt läuft, Suche, Empfehlungen) bleiben auch ausgeblendet aktiv.",
+                        ) { update { it.copy(showGuide = !it.showGuide) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Hoch/Runter schaltet um",
+                            onOff(settings.zapWithUpDown),
+                            "Aus: Hoch/Runter öffnet stattdessen die Senderliste.",
+                        ) { update { it.copy(zapWithUpDown = !it.zapWithUpDown) } }
+                    }
+                    item {
+                        val shift = settings.epgShiftHours
+                        SettingRow(
+                            "TV-Guide-Zeitverschiebung",
+                            if (shift == 0) "Keine" else "%+d Std.".format(shift),
+                            "Falls „Jetzt läuft“ nicht stimmt: Zeiten des Anbieters korrigieren. Der Guide wird danach neu geladen.",
+                        ) {
+                            // Zyklus 0, +1 … +12, −12 … −1
+                            val next = if (shift >= 12) -12 else shift + 1
+                            scope.launch {
+                                container.settings.update { it.copy(epgShiftHours = next) }
+                                epgReloadJob?.cancel()
+                                epgReloadJob = container.scope.launch {
+                                    delay(2_500) // mehrere Klicks abwarten, dann einmal neu laden
+                                    container.playlists.reloadAllEpg()
+                                }
+                            }
+                        }
+                    }
+
+                }
+                SettingsPage.DATA -> {
+                    item {
+                        SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
+                            scope.launch { container.content.clearHistory() }
+                        }
+                    }
+                    item {
+                        SettingRow("Suchverlauf löschen", "", "Entfernt die „Letzten Suchen“ in der Suche.") {
+                            scope.launch { container.settings.clearSearchHistory() }
+                        }
+                    }
+                    item {
+                        Text(
+                            "DnA-TV ${BuildConfig.VERSION_NAME} · Übersetzung: OPUS-MT (Universität Helsinki, CC BY 4.0) · " +
+                                "Untertitel: OpenSubtitles.com · Wiedergabe: AndroidX Media3, FFmpeg",
+                            color = AyuColors.TextSecondary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(top = 20.dp),
+                        )
                     }
                 }
             }
-        }
-
-        item { SectionTitle("Untertitel (Filme & Serien)", Modifier.padding(top = 20.dp)) }
-        item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
-        item {
-            SettingRow(
-                "Zugänge prüfen",
-                "",
-                "Testet den OpenSubtitles-Zugang sofort.",
-            ) {
-                keyReport = "Prüfe …"
-                scope.launch {
-                    keyReport = KeyCheck.run(container.http, container.settings.current())
-                        .joinToString("\n") { (if (it.ok) "✓ " else "✗ ") + it.text }
-                }
-            }
-        }
-        item {
-            SettingRow(
-                "Automatisch einschalten",
-                onOff(settings.subtitlesAutoOn),
-                "Aus: Untertitel nur bei Bedarf im Film über die Menütaste ☰. An: bevorzugte Sprache startet mit.",
-            ) { update { it.copy(subtitlesAutoOn = !it.subtitlesAutoOn) } }
-        }
-        item {
-            SettingRow(
-                "Bevorzugte Sprache",
-                Languages.label(settings.subtitleLanguage),
-                "Wird beim Einschalten zuerst gewählt. Jede andere Sprache geht im Film über ☰ → Andere Sprache.",
-            ) { pickingLanguage = true }
-        }
-        item {
-            SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung: weiße Schrift mit schwarzem Rand.") {
-                update { it.copy(subtitleSize = it.subtitleSize.next()) }
-            }
-        }
-        item {
-            val builtIn = BuildConfig.OPENSUBTITLES_API_KEY.isNotBlank()
-            SettingRow(
-                "Untertitel aus dem Internet",
-                onOff(settings.onlineSubtitles),
-                if (builtIn) "OpenSubtitles ist eingebaut, kein Konto nötig. Sucht Untertitel, wenn ein Film keine passenden hat."
-                else "Sucht bei OpenSubtitles, wenn ein Film keine passenden Untertitel hat (API-Key per Handy eintragen).",
-            ) { update { it.copy(onlineSubtitles = !it.onlineSubtitles) } }
-        }
-        item {
-            CredentialField(
-                current = settings.openSubtitlesKey,
-                label = "Eigener OpenSubtitles API-Key (optional, ersetzt den eingebauten)",
-            ) { key -> update { it.copy(openSubtitlesKey = key) } }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                CredentialField(settings.openSubtitlesUser, "Benutzername (optional, mehr Downloads pro Tag)", Modifier.width(320.dp)) { user ->
-                    update { it.copy(openSubtitlesUser = user) }
-                }
-                CredentialField(settings.openSubtitlesPassword, "Passwort (optional)", Modifier.width(260.dp), password = true) { pw ->
-                    update { it.copy(openSubtitlesPassword = pw) }
-                }
-            }
-        }
-
-        item {
-            SettingRow(
-                "Automatische Übersetzung",
-                settings.translationProvider.label,
-                "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene direkt auf dem Fire TV übersetzt: " +
-                    "ohne Konto und ohne Grenze. Pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen.",
-            ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
-        }
-        item {
-            var modelInfo by remember { mutableStateOf("") }
-            LaunchedEffect(Unit) {
-                modelInfo = withContext(Dispatchers.IO) {
-                    val pairs = Translators.onDevice.installedPairs()
-                    if (pairs.isEmpty()) "noch keine geladen" else "${pairs.size} · ${Translators.onDevice.installedBytes() / 1_000_000} MB"
-                }
-            }
-            SettingRow(
-                "Sprachmodelle auf dem Gerät",
-                modelInfo,
-                "Auswählen löscht alle geladenen Modelle (werden bei Bedarf neu geladen). Übersetzung: OPUS-MT, Universität Helsinki, CC BY 4.0.",
-            ) {
-                scope.launch {
-                    Translators.onDevice.deleteAll()
-                    modelInfo = "noch keine geladen"
-                }
-            }
-        }
-        item { SectionTitle("Daten", Modifier.padding(top = 20.dp)) }
-        item {
-            SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
-                scope.launch { container.content.clearHistory() }
-            }
-        }
-        item {
-            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp))
         }
     }
 
@@ -523,39 +571,91 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
         }
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 96.dp, vertical = 40.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    // Zugangsdaten lassen sich auch vom Handy einfügen (QR-Code rechts), statt sie zu tippen.
+    val phoneSetup = remember { PhoneSetupServer(container) }
+    val phone by phoneSetup.state.collectAsStateWithLifecycle()
+    DisposableEffect(Unit) {
+        phoneSetup.start()
+        onDispose { phoneSetup.stop() }
+    }
+
+    Row(
+        Modifier.fillMaxSize().padding(horizontal = 56.dp, vertical = 36.dp),
+        horizontalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        Text("Playlist hinzufügen", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "DnA-TV ist ein Player: Du brauchst einen Zugang von deinem IPTV-Anbieter.",
-            color = AyuColors.TextSecondary,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TypeButton("Xtream Codes", type == PlaylistType.XTREAM) { type = PlaylistType.XTREAM }
-            TypeButton("M3U-Link", type == PlaylistType.M3U) { type = PlaylistType.M3U }
+        Column(
+            Modifier.weight(1.4f).fillMaxHeight()
+                .background(AyuColors.Surface, RoundedCornerShape(16.dp))
+                .verticalScroll(rememberScrollState())
+                .padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text("Playlist hinzufügen", style = MaterialTheme.typography.headlineMedium)
+            Text("Zugang deines IPTV-Anbieters eintragen – DnA-TV ist ein reiner Player.", color = AyuColors.TextSecondary, fontSize = 14.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                TypeCard(
+                    "Xtream Codes",
+                    "Server, Benutzername und Passwort. Filme, Serien und TV-Guide kommen automatisch.",
+                    type == PlaylistType.XTREAM,
+                    Modifier.weight(1f),
+                ) { type = PlaylistType.XTREAM }
+                TypeCard(
+                    "M3U-Link",
+                    "Eine Adresse (.m3u / .m3u8 / get.php). TV-Guide optional per XMLTV-Link.",
+                    type == PlaylistType.M3U,
+                    Modifier.weight(1f),
+                ) { type = PlaylistType.M3U }
+            }
+            TvTextField(name, { name = it }, "Name (optional), z. B. „Mein Anbieter“", focusRequester = firstField)
+            if (type == PlaylistType.XTREAM) {
+                TvTextField(url, { url = it }, "Server, z. B. http://anbieter.tv:8080", keyboardType = KeyboardType.Uri)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TvTextField(username, { username = it }, "Benutzername", Modifier.weight(1f))
+                    TvTextField(password, { password = it }, "Passwort", Modifier.weight(1f), password = true)
+                }
+            } else {
+                TvTextField(url, { url = it }, "Playlist-Link (M3U/M3U8)", keyboardType = KeyboardType.Uri)
+            }
+            TvTextField(
+                epgUrl,
+                { epgUrl = it },
+                if (type == PlaylistType.XTREAM) "EPG-Link (optional, sonst vom Anbieter)" else "EPG-Link XMLTV (optional, sonst aus der Playlist)",
+                keyboardType = KeyboardType.Uri,
+                imeAction = ImeAction.Done,
+                onImeAction = { save() },
+            )
+            error?.let {
+                Text(
+                    "⚠ $it",
+                    color = Color.White,
+                    modifier = Modifier.fillMaxWidth().background(AyuColors.Live.copy(alpha = 0.35f), RoundedCornerShape(8.dp)).padding(12.dp),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
+                Button(onClick = { if (!busy) save() }) { Text(if (busy) "Wird geprüft …" else "Speichern und laden") }
+                if (onCancel != null) OutlinedButton(onClick = onCancel) { Text("Abbrechen") }
+            }
         }
-        TvTextField(name, { name = it }, "Name (optional)", focusRequester = firstField)
-        if (type == PlaylistType.XTREAM) {
-            TvTextField(url, { url = it }, "Server, z. B. http://anbieter.tv:8080", keyboardType = KeyboardType.Uri)
-            TvTextField(username, { username = it }, "Benutzername")
-            TvTextField(password, { password = it }, "Passwort", password = true)
-        } else {
-            TvTextField(url, { url = it }, "Playlist-Link (M3U/M3U8)", keyboardType = KeyboardType.Uri)
-        }
-        TvTextField(
-            epgUrl,
-            { epgUrl = it },
-            if (type == PlaylistType.XTREAM) "EPG-Link (optional, sonst vom Anbieter)" else "EPG-Link XMLTV (optional, sonst aus der Playlist)",
-            keyboardType = KeyboardType.Uri,
-            imeAction = ImeAction.Done,
-            onImeAction = { save() },
-        )
-        error?.let { Text(it, color = AyuColors.Live) }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { if (!busy) save() }) { Text(if (busy) "Wird geprüft …" else "Speichern und laden") }
-            if (onCancel != null) OutlinedButton(onClick = onCancel) { Text("Abbrechen") }
+        Column(
+            Modifier.weight(1f).fillMaxHeight()
+                .background(AyuColors.Surface.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+                .padding(28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("Bequemer per Handy", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "QR-Code scannen (gleiches WLAN) und Adresse, Benutzername und Passwort einfach einfügen. " +
+                    "Die Playlist erscheint danach sofort hier.",
+                color = AyuColors.TextSecondary,
+                fontSize = 14.sp,
+            )
+            phone.url?.let { url ->
+                QrCode(url, size = 190.dp, modifier = Modifier.padding(top = 8.dp))
+                Text(url, color = AyuColors.Accent, fontSize = 16.sp)
+            }
+            phone.error?.let { Text(it, color = AyuColors.Live, fontSize = 13.sp) }
+            phone.lastSaved?.let { Text(it, fontSize = 13.sp) }
         }
     }
 
@@ -563,11 +663,24 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
 }
 
 @Composable
-private fun TypeButton(label: String, selected: Boolean, onClick: () -> Unit) {
-    if (selected) {
-        Button(onClick = onClick) { Text(label) }
-    } else {
-        OutlinedButton(onClick = onClick) { Text(label) }
+private fun TypeCard(title: String, description: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(12.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) AyuColors.AccentSoft.copy(alpha = 0.55f) else AyuColors.Background.copy(alpha = 0.6f),
+            focusedContainerColor = AyuColors.AccentSoft,
+        ),
+        border = ClickableSurfaceDefaults.border(
+            border = Border(BorderStroke(2.dp, if (selected) AyuColors.Accent else Color.Transparent), shape = RoundedCornerShape(12.dp)),
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.03f),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text((if (selected) "● " else "○ ") + title, fontSize = 17.sp, color = Color.White)
+            Text(description, fontSize = 12.sp, color = AyuColors.TextSecondary, modifier = Modifier.padding(top = 4.dp))
+        }
     }
 }
 
@@ -590,6 +703,34 @@ private fun PhoneSetupCard(state: PhoneSetupServer.State, report: String?) {
             state.url?.let { Text(it, color = AyuColors.Accent, fontSize = 18.sp, modifier = Modifier.padding(top = 8.dp)) }
             state.error?.let { Text(it, color = AyuColors.Live, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
             report?.let { Text(it, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+        }
+    }
+}
+
+/** Bereiche der Einstellungen (linke Spalte). */
+private enum class SettingsPage(val title: String, val description: String, val icon: String) {
+    PLAYLISTS("Playlists", "Anbieter hinzufügen, ein- und ausschalten, Gruppen wählen", "☰"),
+    PLAYBACK("Wiedergabe", "Puffer, Bild, Ton und Stabilität", "▶"),
+    SUBTITLES("Untertitel", "Sprachen, Größe, Übersetzung auf dem Gerät", "💬"),
+    DISPLAY("Bedienung & TV-Guide", "Umschalten, Programmführer, Zeitverschiebung", "📺"),
+    DATA("Daten & Info", "Verlauf, Speicher, Version", "ⓘ"),
+}
+
+@Composable
+private fun PageButton(page: SettingsPage, selected: Boolean, onSelect: () -> Unit) {
+    Surface(
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onSelect() },
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) AyuColors.AccentSoft.copy(alpha = 0.45f) else Color.Transparent,
+            focusedContainerColor = AyuColors.AccentSoft,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(page.icon, fontSize = 16.sp, modifier = Modifier.width(30.dp))
+            Text(page.title, fontSize = 16.sp, color = if (selected) Color.White else AyuColors.TextSecondary)
         }
     }
 }

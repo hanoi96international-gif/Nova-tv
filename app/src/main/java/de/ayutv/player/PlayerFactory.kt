@@ -32,7 +32,11 @@ import de.ayutv.data.AppSettings
 import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
 import okhttp3.OkHttpClient
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.Locale
+import javax.net.SocketFactory
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
@@ -67,6 +71,8 @@ object PlayerFactory {
         val streamClient = http.newBuilder()
             .readTimeout(if (live) 8L else 12L, TimeUnit.SECONDS)
             .connectTimeout(8, TimeUnit.SECONDS)
+            // Großer Empfangspuffer: WLAN-Aussetzer werden schon im Netzwerk abgefedert.
+            .socketFactory(LargeBufferSocketFactory)
             .build()
         val httpFactory = OkHttpDataSource.Factory(streamClient)
         val resolving = ResolvingDataSource.Factory(httpFactory) { spec ->
@@ -112,9 +118,10 @@ object PlayerFactory {
         }
 
         val (minBuffer, maxBuffer, startBuffer, rebuffer) = when (settings.bufferProfile) {
-            BufferProfile.FAST -> listOf(2_000, 30_000, 500, 1_500)
-            BufferProfile.BALANCED -> listOf(6_000, 40_000, 1_000, 2_500)
-            BufferProfile.STABLE -> listOf(15_000, 60_000, 2_500, 5_000)
+            // Nach einem Hänger erst mit etwas Vorrat weiterspielen: verhindert Serien kurzer Ruckler.
+            BufferProfile.FAST -> listOf(3_000, 30_000, 600, 2_500)
+            BufferProfile.BALANCED -> listOf(8_000, 45_000, 1_200, 4_000)
+            BufferProfile.STABLE -> listOf(15_000, 60_000, 2_500, 6_000)
         }
         // Speicher-Obergrenze: Ein 4K-Stream mit 25 Mbit/s bräuchte für 60 s rund 190 MB Heap.
         // Auf Sticks mit 1,5–2 GB RAM führt das nach längerem Schauen zu Abstürzen. Das Limit gilt
@@ -148,12 +155,37 @@ object PlayerFactory {
                 true,
             )
             .setHandleAudioBecomingNoisy(true)
+            // WLAN während der Wiedergabe wach halten: Fire TV schaltet es sonst in den Stromsparmodus,
+            // eine häufige Ursache für kurze Hänger bei Live-TV.
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         // Mit eigener Bildwiederholraten-Anpassung keine zweite Stelle, die per Surface.setFrameRate
         // mitredet: Sonst können sich beide Anforderungen gegenseitig umschalten.
         if (settings.matchFrameRate) player.setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
         return Built(player, headers, trackSelector)
     }
+}
+
+/** Sockets mit 2 MB Empfangspuffer (vor dem Verbinden gesetzt, damit TCP ein großes Fenster aushandelt). */
+private object LargeBufferSocketFactory : SocketFactory() {
+    private const val RECEIVE_BUFFER = 2 * 1024 * 1024
+    private val base: SocketFactory = getDefault()
+
+    private fun Socket.tuned() = apply { runCatching { receiveBufferSize = RECEIVE_BUFFER } }
+
+    override fun createSocket(): Socket = base.createSocket().tuned()
+    override fun createSocket(host: String?, port: Int): Socket = createSocket().apply { connect(InetSocketAddress(host, port)) }
+    override fun createSocket(host: String?, port: Int, localHost: InetAddress?, localPort: Int): Socket =
+        createSocket().apply {
+            bind(InetSocketAddress(localHost, localPort))
+            connect(InetSocketAddress(host, port))
+        }
+    override fun createSocket(host: InetAddress?, port: Int): Socket = createSocket().apply { connect(InetSocketAddress(host, port)) }
+    override fun createSocket(address: InetAddress?, port: Int, localAddress: InetAddress?, localPort: Int): Socket =
+        createSocket().apply {
+            bind(InetSocketAddress(localAddress, localPort))
+            connect(InetSocketAddress(address, port))
+        }
 }
 
 /**
