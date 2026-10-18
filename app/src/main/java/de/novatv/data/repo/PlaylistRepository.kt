@@ -4,6 +4,7 @@ import android.os.Process
 import android.util.Log
 import android.util.Xml
 import de.novatv.data.LiveFormat
+import de.novatv.data.SettingsStore
 import de.novatv.data.db.ChannelEntity
 import de.novatv.data.db.NovaDatabase
 import de.novatv.data.db.PlaylistEntity
@@ -43,6 +44,7 @@ sealed interface SyncState {
 class PlaylistRepository(
     private val db: NovaDatabase,
     private val http: OkHttpClient,
+    private val settings: SettingsStore,
 ) {
     private val mutex = Mutex()
 
@@ -89,6 +91,11 @@ class PlaylistRepository(
         } catch (e: Exception) {
             "Server nicht erreichbar: ${e.message}"
         }
+    }
+
+    /** Nach Änderung der Zeitverschiebung: alle TV-Guides neu laden. */
+    suspend fun reloadAllEpg() {
+        for (playlist in db.playlists().all()) syncEpg(playlist.id)
     }
 
     suspend fun syncAll(force: Boolean = false) {
@@ -257,7 +264,8 @@ class PlaylistRepository(
             try {
                 val known = db.channels().epgIds(playlist.id).toHashSet()
                 val withoutId = db.channels().withoutEpgId(playlist.id)
-                withContext(importDispatcher) { importEpg(playlist, epgUrl, known, withoutId) }
+                val shift = settings.current().epgShiftHours * HOUR
+                withContext(importDispatcher) { importEpg(playlist, epgUrl, known, withoutId, shift) }
                 db.playlists().update(playlist.copy(lastEpgSync = System.currentTimeMillis()))
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
@@ -267,7 +275,13 @@ class PlaylistRepository(
         }
     }
 
-    private fun importEpg(playlist: PlaylistEntity, epgUrl: String, known: Set<String>, withoutId: List<ChannelEntity>) {
+    private fun importEpg(
+        playlist: PlaylistEntity,
+        epgUrl: String,
+        known: Set<String>,
+        withoutId: List<ChannelEntity>,
+        shift: Long,
+    ) {
         val now = System.currentTimeMillis()
         val from = now - 2 * HOUR
         val until = now + EPG_DAYS * 24 * HOUR
@@ -288,14 +302,14 @@ class PlaylistRepository(
                 parser.parse(
                     input,
                     wanted = { id, start, stop ->
-                        stop > from && start < until && (id in known || (wantedNames.isNotEmpty() && id in nameMatchedIds))
+                        stop + shift > from && start + shift < until && (id in known || (wantedNames.isNotEmpty() && id in nameMatchedIds))
                     },
                 ) { p ->
                     batch += ProgrammeEntity(
                         playlistId = playlist.id,
                         channelEpgId = p.channelId,
-                        start = p.start,
-                        stop = p.stop,
+                        start = p.start + shift,
+                        stop = p.stop + shift,
                         title = p.title,
                         description = p.description,
                         category = p.category,

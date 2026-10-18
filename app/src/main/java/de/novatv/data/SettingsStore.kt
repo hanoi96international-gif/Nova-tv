@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +42,8 @@ data class AppSettings(
     val liveFormat: LiveFormat = LiveFormat.TS,
     val userAgent: String = DEFAULT_USER_AGENT,
     val zapWithUpDown: Boolean = true,
+    /** Korrektur für EPGs mit falscher Zeitzone, in Stunden. */
+    val epgShiftHours: Int = 0,
     /** Sprache, die beim Einschalten der Untertitel gewählt wird (ISO 639-1). */
     val subtitleLanguage: String = "en",
     /** Untertitel sind optional: standardmäßig aus, einschalten im Player über die Menütaste. */
@@ -77,6 +80,7 @@ class SettingsStore(private val context: Context) {
         val liveFormat = stringPreferencesKey("live_format")
         val userAgent = stringPreferencesKey("user_agent")
         val zap = booleanPreferencesKey("zap_up_down")
+        val epgShift = intPreferencesKey("epg_shift_hours")
         val subLang = stringPreferencesKey("subtitle_language_code")
         val subAuto = booleanPreferencesKey("subtitles_auto_on")
         val provider = stringPreferencesKey("translation_provider")
@@ -102,6 +106,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.liveFormat] = next.liveFormat.name
             prefs[Keys.userAgent] = next.userAgent
             prefs[Keys.zap] = next.zapWithUpDown
+            prefs[Keys.epgShift] = next.epgShiftHours
             prefs[Keys.subLang] = next.subtitleLanguage
             prefs[Keys.subAuto] = next.subtitlesAutoOn
             prefs[Keys.provider] = next.translationProvider.name
@@ -122,6 +127,7 @@ class SettingsStore(private val context: Context) {
         liveFormat = enumOrDefault(this[Keys.liveFormat], LiveFormat.TS),
         userAgent = this[Keys.userAgent]?.takeIf { it.isNotBlank() } ?: AppSettings.DEFAULT_USER_AGENT,
         zapWithUpDown = this[Keys.zap] ?: true,
+        epgShiftHours = this[Keys.epgShift] ?: 0,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
         translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.NONE),

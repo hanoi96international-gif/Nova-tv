@@ -27,7 +27,7 @@ class AppContainer(context: Context) {
         .followSslRedirects(true)
         .build()
 
-    val playlists = PlaylistRepository(db, http)
+    val playlists = PlaylistRepository(db, http, settings)
     val content = ContentRepository(db, http)
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
     val subtitles = SubtitleRepository(http, context.filesDir)

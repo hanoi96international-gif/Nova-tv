@@ -53,6 +53,8 @@ import de.novatv.ui.components.SectionTitle
 import de.novatv.ui.components.SyncBanner
 import de.novatv.ui.components.TvTextField
 import de.novatv.ui.theme.NovaColors
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -66,6 +68,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     val sync by container.playlists.state.collectAsStateWithLifecycle()
     var confirmDelete by remember { mutableStateOf<Long?>(null) }
     var pickingLanguage by remember { mutableStateOf(false) }
+    var epgReloadJob by remember { mutableStateOf<Job?>(null) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settings.update(transform) }
@@ -156,6 +159,25 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         }
         item {
             UserAgentRow(settings.userAgent) { ua -> update { it.copy(userAgent = ua) } }
+        }
+        item {
+            val shift = settings.epgShiftHours
+            SettingRow(
+                "TV-Guide-Zeitverschiebung",
+                if (shift == 0) "Keine" else "%+d Std.".format(shift),
+                "Falls „Jetzt läuft“ nicht stimmt: Zeiten des Anbieters korrigieren. Der Guide wird danach neu geladen.",
+            ) {
+                // Zyklus 0, +1 … +12, −12 … −1
+                val next = if (shift >= 12) -12 else shift + 1
+                scope.launch {
+                    container.settings.update { it.copy(epgShiftHours = next) }
+                    epgReloadJob?.cancel()
+                    epgReloadJob = container.scope.launch {
+                        delay(2_500) // mehrere Klicks abwarten, dann einmal neu laden
+                        container.playlists.reloadAllEpg()
+                    }
+                }
+            }
         }
 
         item { SectionTitle("Untertitel (Filme & Serien)", Modifier.padding(top = 20.dp)) }
