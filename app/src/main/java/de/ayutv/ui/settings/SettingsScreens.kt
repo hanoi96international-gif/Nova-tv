@@ -57,6 +57,11 @@ import de.ayutv.ui.components.SyncBanner
 import de.ayutv.ui.components.TvTextField
 import de.ayutv.ui.theme.AyuColors
 import kotlinx.coroutines.Job
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.background
+import de.ayutv.data.setup.KeyCheck
+import de.ayutv.data.setup.PhoneSetupServer
+import de.ayutv.ui.components.QrCode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -72,6 +77,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     var confirmDelete by remember { mutableStateOf<Long?>(null) }
     var pickingLanguage by remember { mutableStateOf(false) }
     var epgReloadJob by remember { mutableStateOf<Job?>(null) }
+    // Einrichtung per Handy: Webseite im Heimnetz, solange die Einstellungen offen sind.
+    val phoneSetup = remember { PhoneSetupServer(container) }
+    val phone by phoneSetup.state.collectAsStateWithLifecycle()
+    DisposableEffect(Unit) {
+        phoneSetup.start()
+        onDispose { phoneSetup.stop() }
+    }
+    var keyReport by remember { mutableStateOf<String?>(null) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settings.update(transform) }
@@ -218,6 +231,20 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         }
 
         item { SectionTitle("Untertitel (Filme & Serien)", Modifier.padding(top = 20.dp)) }
+        item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
+        item {
+            SettingRow(
+                "Zugänge prüfen",
+                "",
+                "Testet OpenSubtitles und DeepL sofort mit den gespeicherten Schlüsseln.",
+            ) {
+                keyReport = "Prüfe …"
+                scope.launch {
+                    keyReport = KeyCheck.run(container.http, container.settings.current())
+                        .joinToString("\n") { (if (it.ok) "✓ " else "✗ ") + it.text }
+                }
+            }
+        }
         item {
             SettingRow(
                 "Automatisch einschalten",
@@ -258,7 +285,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             SettingRow(
                 "Automatische Übersetzung",
                 settings.translationProvider.label,
-                "Gibt es keine Untertitel in der Wunschsprache, werden vorhandene automatisch übersetzt. „Auf dem Gerät“ ist kostenlos und braucht kein Konto (Sprachpaket wird einmalig geladen, ca. 30 MB).",
+                "Hat OpenSubtitles nichts in der Wunschsprache, werden vorhandene Untertitel übersetzt. DeepL: kostenloser Schlüssel, am einfachsten per Handy eintragen.",
             ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
         }
         if (settings.translationProvider == TranslationProvider.DEEPL) {
@@ -529,5 +556,28 @@ private fun TypeButton(label: String, selected: Boolean, onClick: () -> Unit) {
         Button(onClick = onClick) { Text(label) }
     } else {
         OutlinedButton(onClick = onClick) { Text(label) }
+    }
+}
+
+@Composable
+private fun PhoneSetupCard(state: PhoneSetupServer.State, report: String?) {
+    Row(
+        Modifier.fillMaxWidth().background(AyuColors.Surface, RoundedCornerShape(12.dp)).padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        state.url?.let { QrCode(it, size = 150.dp) }
+        Spacer(Modifier.width(20.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Einrichtung per Handy", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "QR-Code mit dem Handy scannen (gleiches WLAN) und dort OpenSubtitles- und DeepL-Schlüssel oder " +
+                    "Playlists bequem einfügen. Die Seite erklärt, wo es die kostenlosen Schlüssel gibt.",
+                color = AyuColors.TextSecondary,
+                fontSize = 13.sp,
+            )
+            state.url?.let { Text(it, color = AyuColors.Accent, fontSize = 18.sp, modifier = Modifier.padding(top = 8.dp)) }
+            state.error?.let { Text(it, color = AyuColors.Live, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+            report?.let { Text(it, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+        }
     }
 }

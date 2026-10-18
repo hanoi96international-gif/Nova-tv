@@ -31,12 +31,8 @@ interface Translator {
 }
 
 object Translators {
-    /** Eine gemeinsame Instanz: geladene Sprachpakete und Übersetzer bleiben im Speicher. */
-    val onDevice by lazy { OnDeviceTranslator() }
-
     fun from(http: OkHttpClient, settings: AppSettings): Translator? = when (settings.translationProvider) {
         TranslationProvider.NONE -> null
-        TranslationProvider.ON_DEVICE -> onDevice
         TranslationProvider.DEEPL -> settings.deeplKey.trim().takeIf { it.isNotEmpty() }?.let { DeepLTranslator(http, it) }
         TranslationProvider.LIBRE -> settings.libreUrl.trim().takeIf { it.isNotEmpty() }
             ?.let { LibreTranslator(http, it, settings.libreKey.trim()) }

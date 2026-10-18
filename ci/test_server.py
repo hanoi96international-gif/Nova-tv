@@ -72,6 +72,17 @@ class Handler(SimpleHTTPRequestHandler):
             self.path = "/" + target
         return self.serve_file()
 
+    def do_POST(self):
+        """Spielt einen LibreTranslate-Server: übersetzt, indem die Zielsprache vorangestellt wird."""
+        if urlparse(self.path).path != "/translate":
+            return self.send_error(404)
+        body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+        texts = body.get("q", [])
+        target = body.get("target", "?")
+        if isinstance(texts, list):
+            return self.send_json({"translatedText": ["[%s] %s" % (target, t) for t in texts]})
+        return self.send_json({"translatedText": "[%s] %s" % (target, texts)})
+
     def do_HEAD(self):
         self.head_only = True
         self.do_GET()

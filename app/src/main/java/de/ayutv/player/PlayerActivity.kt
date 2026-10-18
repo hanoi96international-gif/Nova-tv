@@ -153,11 +153,6 @@ class PlayerActivity : ComponentActivity() {
 
         lifecycleScope.launch {
             settings = container.settings.current()
-            Translators.onDevice.onModelDownload = { languages ->
-                runOnUiThread {
-                    subtitleStatus = "Lade Sprachpaket ${languages.split(", ").joinToString(", ") { Languages.label(it) }} (einmalig, ca. 30 MB) …"
-                }
-            }
             subtitleScale = settings.subtitleSize.scale
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
@@ -552,10 +547,12 @@ class PlayerActivity : ComponentActivity() {
             }
             // 5. Nichts da, was sich übersetzen ließe
             subtitleStatus = when {
-                !settings.translationEnabled -> "Übersetzung ist in den Einstellungen ausgeschaltet"
                 request == null -> "Dieser Sender hat keine Untertitel, die übersetzt werden könnten"
-                settings.onlineSubtitlesEnabled -> "Für diesen Film gibt es weder eingebettete noch Online-Untertitel"
-                else -> "Dieser Film enthält keine Untertitel zum Übersetzen. Mit einem OpenSubtitles-Zugang (Einstellungen) holt Ayu-TV welche aus dem Internet"
+                !settings.onlineSubtitlesEnabled && !settings.translationEnabled ->
+                    "Für Untertitel in $label: OpenSubtitles (und für Übersetzungen DeepL) einrichten – Einstellungen → Einrichtung per Handy"
+                !settings.onlineSubtitlesEnabled -> "Keine Untertitel in $label gefunden. Mehr Auswahl mit OpenSubtitles: Einstellungen → Einrichtung per Handy"
+                !settings.translationEnabled -> "OpenSubtitles hat für diesen Film nichts in $label. Zum Übersetzen DeepL einrichten: Einstellungen → Einrichtung per Handy"
+                else -> "Für diesen Film gibt es weder eingebettete noch Online-Untertitel"
             }
         }
     }
@@ -629,7 +626,7 @@ class PlayerActivity : ComponentActivity() {
         languagePicker = false
         closeOverlay()
         if (!settings.translationEnabled) {
-            subtitleStatus = "Übersetzung ist in den Einstellungen ausgeschaltet"
+            subtitleStatus = "Zum Übersetzen DeepL einrichten: Einstellungen → Einrichtung per Handy"
             return
         }
         if (source == null) {
@@ -641,7 +638,8 @@ class PlayerActivity : ComponentActivity() {
         liveSourceLanguage = group.getTrackFormat(index).language?.takeIf { it.isNotBlank() && it != "und" }
         cueTranslations.clear()
         liveTranslateTarget = target
-        subtitleStatus = "Übersetze ${liveSourceLanguage?.let { Languages.label(it) + " " }.orEmpty()}→ ${Languages.label(target)} auf dem Gerät"
+        val via = Translators.from(container.http, settings)?.name?.let { " mit $it" }.orEmpty()
+        subtitleStatus = "Übersetze ${liveSourceLanguage?.let { Languages.label(it) + " " }.orEmpty()}→ ${Languages.label(target)}$via"
     }
 
     fun stopLiveTranslation() {

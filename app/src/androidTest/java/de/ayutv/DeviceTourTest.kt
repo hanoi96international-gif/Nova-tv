@@ -203,6 +203,11 @@ class DeviceTourTest {
 
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
+        // Übersetzungsdienst: der Testserver spielt LibreTranslate (antwortet mit "[ziel] text").
+        // So läuft die ganze Kette Spur → Übersetzer → Anzeige wie mit DeepL auf dem Fire TV.
+        runBlocking {
+            container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.LIBRE, libreUrl = base) }
+        }
         if (movie != null) section("vod") {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
             launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
@@ -218,20 +223,22 @@ class DeviceTourTest {
                 Thread.sleep(4_000)
                 log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
                 shot("21_vod_subtitles")
-                // Wie auf dem Fire TV: Indonesisch wählen, obwohl der Film nur englische Untertitel hat
-                // und kein Zugang eingerichtet ist. Erwartet: Live-Übersetzung auf dem Gerät.
+                // Wie auf dem Fire TV: Indonesisch wählen, obwohl der Film nur englische Untertitel hat.
+                // Erwartet: Live-Übersetzung der englischen Spur.
                 scenario.onActivity { it.loadSubtitles("id") }
-                val translated = waitFor(180_000) { scenario.read { it.translatedCue } != null }
+                val translated = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("[id]") == true }
                 log(
                     "translate_id: ok=$translated target=${scenario.read { it.liveTranslateTarget }} " +
                         "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} statuses=${scenario.read { it.statusHistory.toList() }}"
                 )
                 shot("23_vod_translated_id")
+                assertTrue("Übersetzung nach Indonesisch fehlgeschlagen", translated)
                 scenario.onActivity { it.loadSubtitles("de") }
                 Thread.sleep(2_000)
-                waitFor(120_000) { scenario.read { it.translatedCue } != null && scenario.read { it.liveTranslateTarget } == "de" }
+                val german = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("[de]") == true }
                 log("translate_de: target=${scenario.read { it.liveTranslateTarget }} cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')}")
                 shot("24_vod_translated_de")
+                assertTrue("Übersetzung nach Deutsch fehlgeschlagen", german)
                 key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(1_500)
                 log("vod after_seek position_ms=${scenario.read { it.player?.currentPosition }} message=${scenario.read { it.message }}")
                 shot("22_vod_seek")
@@ -280,6 +287,25 @@ class DeviceTourTest {
                     "now_playing_all_ms=${System.currentTimeMillis() - nowStart} now_found=${now.size} sync=${container.playlists.state.value}"
             )
         }
+        // Einrichtung per Handy: Seite erreichbar, Formular speichert Werte
+        section("phone_setup") {
+            val server = de.ayutv.data.setup.PhoneSetupServer(container)
+            server.start()
+            try {
+                assertTrue("Keine Adresse", waitFor(5_000) { server.state.value.url != null })
+                val url = server.state.value.url!!
+                val page = container.http.newCall(okhttp3.Request.Builder().url(url).build()).execute().use { it.code to it.body.string() }
+                val form = okhttp3.FormBody.Builder().add("os_user", "ayu-ci").build()
+                val saved = container.http.newCall(okhttp3.Request.Builder().url(url).post(form).build()).execute().use { it.code }
+                val user = runBlocking { container.settings.current().openSubtitlesUser }
+                log("phone_setup: url=$url get=${page.first} has_form=${"os_key" in page.second} post=$saved user=$user report=${server.state.value.lastSaved?.replace('\n', '|')}")
+                assertTrue("Formular nicht gespeichert", page.first == 200 && saved == 200 && user == "ayu-ci")
+                runBlocking { container.settings.update { it.copy(openSubtitlesUser = "") } }
+            } finally {
+                server.stop()
+            }
+        }
+
         // Suche zeigt alle Treffer (früher fest maximal 40)
         section("search_all") {
             val startedSearch = System.currentTimeMillis()

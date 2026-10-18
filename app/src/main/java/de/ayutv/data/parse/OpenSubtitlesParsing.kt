@@ -44,6 +44,8 @@ data class SubtitleCandidate(
     val hashMatch: Boolean,
     val downloads: Long,
     val hearingImpaired: Boolean,
+    /** Von OpenSubtitles per KI oder Maschine übersetzt (statt von Menschen erstellt). */
+    val translated: Boolean = false,
 )
 
 object OpenSubtitlesParsing {
@@ -67,9 +69,12 @@ object OpenSubtitlesParsing {
                 hashMatch = attributes.primitive("moviehash_match")?.booleanOrNull ?: false,
                 downloads = attributes.primitive("download_count")?.longOrNull ?: 0L,
                 hearingImpaired = attributes.primitive("hearing_impaired")?.booleanOrNull ?: false,
+                translated = attributes.primitive("ai_translated")?.booleanOrNull == true ||
+                    attributes.primitive("machine_translated")?.booleanOrNull == true,
             )
         }.sortedWith(
             compareByDescending<SubtitleCandidate> { it.hashMatch }
+                .thenBy { it.translated }
                 .thenBy { it.hearingImpaired }
                 .thenByDescending { it.downloads }
         )

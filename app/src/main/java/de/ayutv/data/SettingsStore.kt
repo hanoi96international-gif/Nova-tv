@@ -30,11 +30,15 @@ enum class AudioOutput(val label: String) {
     PCM("Immer im Gerät dekodieren"),
 }
 
+/**
+ * Maschinelle Übersetzung, falls OpenSubtitles keine Untertitel in der Wunschsprache hat.
+ * (Googles Übersetzung auf dem Gerät ist laut Google-Bedingungen auf Fernsehern nicht erlaubt
+ * und braucht Google-Dienste, die Fire TV nicht hat.)
+ */
 enum class TranslationProvider(val label: String) {
-    ON_DEVICE("Auf dem Gerät (kostenlos)"),
-    NONE("Aus"),
     DEEPL("DeepL"),
     LIBRE("LibreTranslate"),
+    NONE("Aus"),
 }
 
 enum class SubtitleSize(val label: String, val scale: Float) {
@@ -68,7 +72,7 @@ data class AppSettings(
     val openSubtitlesKey: String = "",
     val openSubtitlesUser: String = "",
     val openSubtitlesPassword: String = "",
-    val translationProvider: TranslationProvider = TranslationProvider.ON_DEVICE,
+    val translationProvider: TranslationProvider = TranslationProvider.DEEPL,
     val deeplKey: String = "",
     val libreUrl: String = "",
     val libreKey: String = "",
@@ -78,7 +82,6 @@ data class AppSettings(
     val onlineSubtitlesEnabled: Boolean get() = openSubtitlesApiKey.isNotBlank()
     val translationEnabled: Boolean
         get() = when (translationProvider) {
-            TranslationProvider.ON_DEVICE -> true
             TranslationProvider.NONE -> false
             TranslationProvider.DEEPL -> deeplKey.isNotBlank()
             TranslationProvider.LIBRE -> libreUrl.isNotBlank()
@@ -158,7 +161,7 @@ class SettingsStore(private val context: Context) {
         showGuide = this[Keys.showGuide] ?: true,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
-        translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),
+        translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.DEEPL),
         deeplKey = this[Keys.deepl].orEmpty(),
         libreUrl = this[Keys.libreUrl].orEmpty(),
         libreKey = this[Keys.libreKey].orEmpty(),

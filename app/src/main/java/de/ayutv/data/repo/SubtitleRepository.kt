@@ -177,8 +177,11 @@ class SubtitleRepository(
 
     private fun search(apiKey: String, params: Map<String, String>): List<SubtitleCandidate> {
         // OpenSubtitles erwartet alphabetisch sortierte Parameter in Kleinbuchstaben (sonst Redirect).
+        // Auch KI-/maschinell übersetzte Untertitel zulassen: Damit gibt es fast jeden Film in fast
+        // jeder Sprache. Von Menschen erstellte werden beim Sortieren trotzdem bevorzugt.
+        val all = params + mapOf("ai_translated" to "include", "machine_translated" to "include")
         val url = "$API/subtitles".toHttpUrl().newBuilder().apply {
-            params.toSortedMap().forEach { (k, v) -> addQueryParameter(k, v.lowercase()) }
+            all.toSortedMap().forEach { (k, v) -> addQueryParameter(k, v.lowercase()) }
         }.build()
         http.newCall(apiRequest(apiKey).url(url).get().build()).execute().use { response ->
             val body = response.body.string()

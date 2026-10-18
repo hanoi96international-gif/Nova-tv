@@ -443,7 +443,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
             }
         }
         if (!activity.isLive && !activity.onlineSubtitlesAvailable && !activity.translationAvailable) {
-            item { MenuHint("Für Untertitel aus dem Internet und Übersetzungen: OpenSubtitles bzw. DeepL in den Einstellungen eintragen") }
+            item { MenuHint("Für Untertitel in jeder Sprache: Einstellungen → Einrichtung per Handy (OpenSubtitles, DeepL)") }
         }
         item { MenuHeader("Ton") }
         if (audio.isEmpty()) item { MenuHint("Dieser Stream hat keine Tonspur") }
