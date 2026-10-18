@@ -148,7 +148,7 @@ private fun SideNav(sections: List<Section>, selected: Section, onSelect: (Secti
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
-            if (expanded) "Ayu-TV" else "Ayu",
+            if (expanded) "DnA-TV" else "DnA",
             fontWeight = FontWeight.Bold,
             fontSize = if (expanded) 22.sp else 18.sp,
             maxLines = 1,

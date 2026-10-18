@@ -12,12 +12,16 @@ android {
 
     defaultConfig {
         applicationId = "de.ayutv"
-        // Media3 und Compose verlangen API 23 (Fire OS 6+, alle Fire TV Sticks ab 2018).
-        minSdk = 23
+        // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
+        minSdk = 24
         targetSdk = 35
         versionCode = 9
         versionName = "0.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
         // App-Schlüssel für OpenSubtitles (GitHub-Secret OPENSUBTITLES_API_KEY). Damit funktionieren
         // Online-Untertitel auf jedem Gerät ohne Einrichtung; ein eigener Schlüssel hat Vorrang.
         buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${System.getenv("OPENSUBTITLES_API_KEY").orEmpty().trim()}\"")
@@ -41,6 +45,13 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
+    // Native Bibliotheken komprimiert ablegen: hält die APK klein (ONNX Runtime, FFmpeg).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 
@@ -101,6 +112,8 @@ dependencies {
     // Untertitel-Übersetzung auf dem Gerät: kostenlos, ohne Konto, Sprachpakete werden einmalig geladen.
     // QR-Code für die Einrichtung per Handy
     implementation("com.google.zxing:core:3.5.3")
+    // Übersetzung auf dem Gerät (OPUS-MT als ONNX)
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 

@@ -3,6 +3,7 @@ package de.ayutv.data.repo
 import de.ayutv.data.AppSettings
 import de.ayutv.data.Languages
 import de.ayutv.data.TranslationProvider
+import de.ayutv.data.translate.OnDeviceTranslator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -31,11 +32,47 @@ interface Translator {
 }
 
 object Translators {
-    fun from(http: OkHttpClient, settings: AppSettings): Translator? = when (settings.translationProvider) {
-        TranslationProvider.NONE -> null
-        TranslationProvider.DEEPL -> settings.deeplKey.trim().takeIf { it.isNotEmpty() }?.let { DeepLTranslator(http, it) }
-        TranslationProvider.LIBRE -> settings.libreUrl.trim().takeIf { it.isNotEmpty() }
-            ?.let { LibreTranslator(http, it, settings.libreKey.trim()) }
+    /** Übersetzer auf dem Gerät; einmal pro App (geladene Modelle bleiben im Speicher). */
+    lateinit var onDevice: OnDeviceTranslator
+
+    /**
+     * Gewählter Übersetzer mit Rückfallebenen: Kann er eine Sprache nicht, ist das DeepL-Kontingent
+     * aufgebraucht oder fehlt die Verbindung, übernimmt automatisch der nächste.
+     */
+    fun from(http: OkHttpClient, settings: AppSettings): Translator? {
+        val deepl = settings.deeplKey.trim().takeIf { it.isNotEmpty() }?.let { DeepLTranslator(http, it) }
+        val libre = settings.libreUrl.trim().takeIf { it.isNotEmpty() }?.let { LibreTranslator(http, it, settings.libreKey.trim()) }
+        val primary = when (settings.translationProvider) {
+            TranslationProvider.NONE -> return null
+            TranslationProvider.ON_DEVICE -> onDevice
+            TranslationProvider.DEEPL -> deepl ?: onDevice
+            TranslationProvider.LIBRE -> libre ?: onDevice
+        }
+        return ChainTranslator(listOfNotNull(primary, onDevice, deepl, libre).distinct())
+    }
+}
+
+/** Probiert die Übersetzer der Reihe nach; der erste, der die Sprache kann und antwortet, gewinnt. */
+class ChainTranslator(private val chain: List<Translator>) : Translator {
+    override val name: String get() = chain.first().name
+
+    override fun supports(language: String) = chain.any { it.supports(language) }
+
+    override suspend fun translate(texts: List<String>, target: String): List<String> = translate(texts, target, null)
+
+    override suspend fun translate(texts: List<String>, target: String, source: String?): List<String> {
+        var error: Exception? = null
+        for (translator in chain) {
+            if (!translator.supports(target)) continue
+            try {
+                return translator.translate(texts, target, source)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = e
+            }
+        }
+        throw error ?: IOException("Übersetzung nach ${Languages.label(target)} wird nicht unterstützt")
     }
 }
 

@@ -73,7 +73,7 @@ object KeyCheck {
 
     private fun deepl(http: OkHttpClient, settings: AppSettings): Line {
         val key = settings.deeplKey.trim()
-        if (key.isEmpty()) return Line(false, "DeepL: kein API-Key eingetragen (Übersetzung nur über OpenSubtitles)")
+        if (key.isEmpty()) return Line(true, "Übersetzung: auf dem Gerät (ohne Konto, unbegrenzt) – DeepL nicht eingetragen")
         val host = if (key.endsWith(":fx")) "https://api-free.deepl.com" else "https://api.deepl.com"
         return runCatching {
             val request = Request.Builder().url("$host/v2/usage").header("Authorization", "DeepL-Auth-Key $key").build()
@@ -95,5 +95,5 @@ object KeyCheck {
         }.getOrElse { Line(false, "DeepL: keine Verbindung (${it.message})") }
     }
 
-    private val AGENT = "AyuTV v${BuildConfig.VERSION_NAME}"
+    private val AGENT = "DnATV v${BuildConfig.VERSION_NAME}"
 }

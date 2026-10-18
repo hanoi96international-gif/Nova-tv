@@ -91,7 +91,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
             item {
                 EmptyHint(
                     "Alles bereit",
-                    "Öffne Live TV oder Filme. Was du schaust, merkt sich Ayu-TV und schlägt dir hier Passendes vor.",
+                    "Öffne Live TV oder Filme. Was du schaust, merkt sich DnA-TV und schlägt dir hier Passendes vor.",
                 )
             }
         }

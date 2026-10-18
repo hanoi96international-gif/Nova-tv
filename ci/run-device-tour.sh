@@ -14,7 +14,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell dumpsys gfxinfo de.ayutv reset >/dev/null 2>&1 || true
 adb logcat -c
-timeout 1200 adb shell am instrument -w -e class de.ayutv.DeviceTourTest de.ayutv.test/androidx.test.runner.AndroidJUnitRunner | tee ci-out/instrument.txt
+timeout 1800 adb shell am instrument -w -e class de.ayutv.DeviceTourTest de.ayutv.test/androidx.test.runner.AndroidJUnitRunner | tee ci-out/instrument.txt
 adb shell dumpsys gfxinfo de.ayutv > ci-out/gfxinfo.txt 2>&1 || true
 adb logcat -d -v time '*:W' AyuSubtitles:I AyuTour:I > ci-out/logcat_warnings.txt 2>&1 || true
 adb exec-out run-as de.ayutv tar c -C files ci | tar x -C ci-out --strip-components=1 || true

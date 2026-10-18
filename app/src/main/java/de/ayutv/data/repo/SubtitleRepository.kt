@@ -7,6 +7,7 @@ import de.ayutv.data.Languages
 import de.ayutv.data.parse.MovieHash
 import de.ayutv.data.parse.OpenSubtitlesParsing
 import de.ayutv.data.parse.Srt
+import de.ayutv.data.parse.SrtCue
 import de.ayutv.data.parse.SubtitleCandidate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -42,7 +43,7 @@ class SubtitleRepository(
 
     enum class Source { CACHE, HASH, TITLE, TRANSLATED }
 
-    data class Result(val file: File, val source: Source, val translator: String? = null)
+    data class Result(val file: File, val source: Source, val translator: String? = null, val language: String? = null)
 
     fun cached(key: String, language: String): File? =
         cacheFile(key, language).takeIf { it.isFile && it.length() > 0 }
@@ -126,7 +127,37 @@ class SubtitleRepository(
             if (!response.isSuccessful) throw IOException("Untertitel-Download: HTTP ${response.code}")
             writeAtomically(target, response.body.string())
         }
-        return Result(target, source)
+        return Result(target, source, language = actualLanguage)
+    }
+
+    /**
+     * Vorlage zum Übersetzen nach [target]: bereits gespeicherte Untertitel einer anderen Sprache,
+     * sonst online Englisch, sonst irgendeine Sprache. Übersetzt wird danach im Player, Zeile für
+     * Zeile vor der aktuellen Stelle, damit man nicht auf den ganzen Film warten muss.
+     */
+    suspend fun findSource(
+        key: String,
+        videoUrl: String,
+        title: String,
+        target: String,
+        settings: AppSettings,
+        progress: (String) -> Unit = {},
+    ): Result? = withContext(Dispatchers.IO) {
+        cachedAny(key, except = target)?.let { file ->
+            val language = file.name.removeSuffix(".srt").substringAfterLast('.')
+            return@withContext Result(file, Source.CACHE, language = language.takeIf { it.length in 2..3 && it != "xx" })
+        }
+        if (!settings.onlineSubtitlesEnabled) return@withContext null
+        progress("Lade Vorlage für die Übersetzung …")
+        if (target != "en") download(key, videoUrl, title, "en", settings)?.let { return@withContext it }
+        download(key, videoUrl, title, null, settings)
+    }
+
+    /** Fertig übersetzte Untertitel speichern: Beim nächsten Mal stehen sie sofort bereit. */
+    fun saveTranslation(key: String, language: String, cues: List<SrtCue>): File {
+        val target = cacheFile(key, language)
+        writeAtomically(target, Srt.write(cues))
+        return target
     }
 
     /** Alle gespeicherten Untertitel eines Films, nach Sprache. Werden beim Start gleich mitgegeben. */
@@ -232,7 +263,7 @@ class SubtitleRepository(
 
     private fun apiRequest(apiKey: String) = Request.Builder()
         .header("Api-Key", apiKey)
-        .header("User-Agent", "AyuTV v${BuildConfig.VERSION_NAME}")
+        .header("User-Agent", "DnATV v${BuildConfig.VERSION_NAME}")
         .header("Accept", "application/json")
 
     private fun safeName(key: String) = key.replace(Regex("[^A-Za-z0-9_-]"), "_").takeLast(120)

@@ -62,6 +62,9 @@ import androidx.compose.foundation.background
 import de.ayutv.data.setup.KeyCheck
 import de.ayutv.data.setup.PhoneSetupServer
 import de.ayutv.ui.components.QrCode
+import de.ayutv.data.repo.Translators
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -285,8 +288,28 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             SettingRow(
                 "Automatische Übersetzung",
                 settings.translationProvider.label,
-                "Hat OpenSubtitles nichts in der Wunschsprache, werden vorhandene Untertitel übersetzt. DeepL: kostenloser Schlüssel, am einfachsten per Handy eintragen.",
+                "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene übersetzt. „Auf dem Gerät“: ohne Konto und ohne Grenze, " +
+                    "pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen. DeepL (optional) übersetzt noch etwas natürlicher; ist sein Kontingent leer, übernimmt automatisch das Gerät.",
             ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
+        }
+        item {
+            var modelInfo by remember { mutableStateOf("") }
+            LaunchedEffect(Unit) {
+                modelInfo = withContext(Dispatchers.IO) {
+                    val pairs = Translators.onDevice.installedPairs()
+                    if (pairs.isEmpty()) "noch keine geladen" else "${pairs.size} · ${Translators.onDevice.installedBytes() / 1_000_000} MB"
+                }
+            }
+            SettingRow(
+                "Sprachmodelle auf dem Gerät",
+                modelInfo,
+                "Auswählen löscht alle geladenen Modelle (werden bei Bedarf neu geladen). Übersetzung: OPUS-MT, Universität Helsinki, CC BY 4.0.",
+            ) {
+                scope.launch {
+                    Translators.onDevice.deleteAll()
+                    modelInfo = "noch keine geladen"
+                }
+            }
         }
         if (settings.translationProvider == TranslationProvider.DEEPL) {
             item {
@@ -315,7 +338,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             }
         }
         item {
-            Text("Ayu-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp))
+            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp))
         }
     }
 
@@ -517,7 +540,7 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
     ) {
         Text("Playlist hinzufügen", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Ayu-TV ist ein Player: Du brauchst einen Zugang von deinem IPTV-Anbieter.",
+            "DnA-TV ist ein Player: Du brauchst einen Zugang von deinem IPTV-Anbieter.",
             color = AyuColors.TextSecondary,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

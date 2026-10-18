@@ -100,6 +100,7 @@ class PhoneSetupServer(private val container: AppContainer) {
             field("os_user").takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesUser = it) }
             form["os_password"]?.takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesPassword = it) }
             field("deepl_key").takeIf { it.isNotEmpty() }?.let { next = next.copy(deeplKey = it, translationProvider = TranslationProvider.DEEPL) }
+            if (form["deepl_off"] == "1") next = next.copy(translationProvider = TranslationProvider.ON_DEVICE)
             next
         }
         val lines = mutableListOf<KeyCheck.Line>()
@@ -141,21 +142,22 @@ class PhoneSetupServer(private val container: AppContainer) {
         val result = report?.joinToString("") { "<li class=${if (it.ok) "ok" else "no"}>${if (it.ok) "✓" else "✗"} ${esc(it.text)}</li>" }
             ?.let { "<h2>Ergebnis</h2><ul>$it</ul>" }.orEmpty()
         return """
-            <h1>Ayu-TV einrichten</h1>
+            <h1>DnA-TV einrichten</h1>
             $result
             <form method=post>
             <h2>Untertitel aus dem Internet: OpenSubtitles ${status(settings.openSubtitlesKey.isNotBlank())}</h2>
             <p>Untertitel für fast jeden Film in fast jeder Sprache (auch automatisch übersetzte).
             Kostenloses Konto auf <a href="https://www.opensubtitles.com" target=_blank>opensubtitles.com</a> anlegen,
             dann <a href="https://www.opensubtitles.com/consumers" target=_blank>opensubtitles.com/consumers</a> →
-            „New consumer“ → Name z. B. „Ayu-TV“ → API-Key kopieren.</p>
+            „New consumer“ → Name z. B. „DnA-TV“ → API-Key kopieren.</p>
             <label>API-Key<input name=os_key autocomplete=off placeholder="${if (settings.openSubtitlesKey.isNotBlank()) "gespeichert – nur zum Ändern ausfüllen" else "API-Key einfügen"}"></label>
             <label>Benutzername (empfohlen: 20 statt 5 Downloads pro Tag)<input name=os_user autocomplete=username value="${esc(settings.openSubtitlesUser)}"></label>
             <label>Passwort<input name=os_password type=password autocomplete=current-password placeholder="${if (settings.openSubtitlesPassword.isNotEmpty()) "gespeichert" else ""}"></label>
 
-            <h2>Übersetzung: DeepL ${status(settings.deeplKey.isNotBlank())}</h2>
-            <p>Übersetzt vorhandene Untertitel in jede gewünschte Sprache, wenn es keine passenden gibt.
-            Kostenlos bis 500.000 Zeichen im Monat (ca. 10–15 Filme):
+            <h2>Übersetzung (optional): DeepL ${status(settings.deeplKey.isNotBlank())}</h2>
+            <p>Nicht nötig: DnA-TV übersetzt Untertitel ohne Konto und ohne Grenze direkt auf dem Fire TV.
+            DeepL klingt oft noch etwas natürlicher; ist sein Kontingent (500.000 Zeichen/Monat) leer,
+            übernimmt automatisch wieder das Gerät. Schlüssel:
             <a href="https://www.deepl.com/pro-api" target=_blank>deepl.com/pro-api</a> → „DeepL API Free“ →
             nach der Anmeldung unter „API Keys“ den Schlüssel kopieren (endet auf :fx).</p>
             <label>DeepL API-Key<input name=deepl_key autocomplete=off placeholder="${if (settings.deeplKey.isNotBlank()) "gespeichert – nur zum Ändern ausfüllen" else "…:fx"}"></label>
@@ -177,7 +179,7 @@ class PhoneSetupServer(private val container: AppContainer) {
 
     private fun respond(client: Socket, code: Int, body: String) {
         val html = """<!doctype html><html lang=de><head><meta charset=utf-8>
-            <meta name=viewport content="width=device-width,initial-scale=1"><title>Ayu-TV einrichten</title>
+            <meta name=viewport content="width=device-width,initial-scale=1"><title>DnA-TV einrichten</title>
             <style>body{font-family:system-ui,sans-serif;background:#0d0f14;color:#e8eaf0;margin:0 auto;max-width:640px;padding:16px}
             h1{color:#8fb4ff}h2{font-size:1.05em;margin-top:28px}p{color:#aab0bd;line-height:1.45}a{color:#8fb4ff}
             label{display:block;margin:10px 0;color:#c8ccd6}input{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:12px;

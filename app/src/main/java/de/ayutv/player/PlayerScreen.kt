@@ -481,7 +481,7 @@ private fun LanguagePicker(activity: PlayerActivity) {
         item { MenuHeader("Sprache wählen") }
         item {
             MenuHint(
-                "Ayu-TV nimmt eine passende Spur oder lädt Untertitel. Gibt es keine, " +
+                "DnA-TV nimmt eine passende Spur oder lädt Untertitel. Gibt es keine, " +
                     "werden vorhandene Untertitel automatisch auf dem Gerät übersetzt (kostenlos, ohne Konto)."
             )
         }

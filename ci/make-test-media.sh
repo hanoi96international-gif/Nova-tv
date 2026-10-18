@@ -18,10 +18,12 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi 
 
 # Film mit eingebetteten englischen Untertiteln
 python3 - <<'PY'
+phrases = ["Hello, how are you?", "I told you we should never have come here.", "Where is my brother?",
+           "We have to leave before it gets dark.", "Thank you for everything.", "- Where is he?\n- I don't know."]
 lines = []
 for i in range(60):
     s, e = i * 4, i * 4 + 3
-    lines.append(f"{i+1}\n00:{s//60:02d}:{s%60:02d},000 --> 00:{e//60:02d}:{e%60:02d},000\nThis is English subtitle line {i+1}.\n")
+    lines.append(f"{i+1}\n00:{s//60:02d}:{s%60:02d},000 --> 00:{e//60:02d}:{e%60:02d},000\n{phrases[i % len(phrases)]}\n")
 open("subs.en.srt", "w").write("\n".join(lines))
 PY
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi -i "sine=frequency=660:sample_rate=48000" -i subs.en.srt \
@@ -36,6 +38,10 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi 
   -c:a eac3 -b:a 384k -f mpegts eac3.ts
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi -i "sine=frequency=700:sample_rate=48000" \
   -t 90 -c:v libx264 -preset veryfast -g 48 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" -c:a truehd -strict -2 movie/test/test/1002.mkv
+
+# Film ohne eingebettete Untertitel: Übersetzung aus einer Untertiteldatei
+ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=800:sample_rate=48000" \
+  -t 120 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -c:a aac movie/test/test/1003.mkv
 
 cat > playlist.m3u <<'M3U'
 #EXTM3U url-tvg="http://10.0.2.2:8000/epg.xml"
@@ -53,6 +59,8 @@ http://10.0.2.2:8000/eac3.ts
 http://10.0.2.2:8000/movie/test/test/1001.mkv
 #EXTINF:-1 group-title="Filme Test",TrueHD Testfilm (2025)
 http://10.0.2.2:8000/movie/test/test/1002.mkv
+#EXTINF:-1 group-title="Filme Test",Stummfilm ohne Untertitel (2023)
+http://10.0.2.2:8000/movie/test/test/1003.mkv
 M3U
 
 python3 - <<'PY'

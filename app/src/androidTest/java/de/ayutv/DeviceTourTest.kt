@@ -269,6 +269,53 @@ class DeviceTourTest {
             }
         }
 
+        // 5b. Übersetzung auf dem Gerät (OPUS-MT): echtes Modell laden, Qualität und Tempo messen
+        runBlocking { container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.ON_DEVICE, libreUrl = "") } }
+        section("mt_on_device") {
+            val translator = de.ayutv.data.repo.Translators.onDevice
+            val progress = mutableListOf<String>()
+            translator.onProgress = { progress += it }
+            val sentences = listOf("Hello, how are you?", "I told you we should never have come here.", "- Where is he?\n- I don't know.")
+            val loadStart = System.currentTimeMillis()
+            val german = runBlocking { translator.translate(sentences.take(1), "de", "en") }
+            val firstMs = System.currentTimeMillis() - loadStart
+            val runStart = System.currentTimeMillis()
+            val more = runBlocking { translator.translate(sentences, "de", "en") }
+            val perSentence = (System.currentTimeMillis() - runStart) / sentences.size
+            log("mt de: first_ms=$firstMs per_sentence_ms=$perSentence result=${more.joinToString(" | ") { it.replace('\n', '/') }} progress_events=${progress.size}")
+            assertTrue("Keine deutsche Übersetzung: $german", german.single().contains("Hallo") || german.single().contains("geht"))
+            // Sprache ohne eigenes Modell: über das Mehrsprachen-Modell mit Sprachkennung
+            val polish = runBlocking { translator.translate(listOf("Thank you for everything."), "pl", "en") }
+            log("mt pl (en-mul): ${polish.single()}")
+            assertTrue("Keine polnische Übersetzung", polish.single().isNotBlank() && polish.single() != "Thank you for everything.")
+            log("mt installed=${translator.installedPairs()} bytes=${translator.installedBytes()}")
+        }
+
+        // 5c. Film ohne eingebettete Untertitel, aber mit (geladener) englischer Datei: vorausschauend übersetzen
+        section("file_translation") {
+            val movie = runBlocking { container.db.vod().search("Stummfilm", 5) }.firstOrNull() ?: error("Film ohne Untertitel fehlt")
+            val english = listOf("Hello, how are you?", "Where is my brother?", "Thank you for everything.", "We have to leave before it gets dark.")
+            val cues = (0 until 30).map { i ->
+                val start = i * 4
+                fun t(sec: Int) = "00:%02d:%02d,000".format(sec / 60, sec % 60)
+                de.ayutv.data.parse.SrtCue(t(start), t(start + 3), english[i % english.size])
+            }
+            container.subtitles.saveTranslation(movie.key, "en", cues)
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, null, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.loadSubtitles("de") }
+                val ok = waitFor(120_000) {
+                    val cue = scenario.read { it.translatedCue }
+                    cue != null && english.none { e -> cue == e } && cue.isNotBlank()
+                }
+                Thread.sleep(1_500)
+                shot("25_file_translation_de")
+                log("file_translation: ok=$ok cue=${scenario.read { it.translatedCue }?.replace('\n', '/')} target=${scenario.read { it.liveTranslateTarget }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(4)}")
+                assertTrue("Datei-Übersetzung fehlgeschlagen", ok)
+            }
+        }
+
         // 6. Belastung: großer Anbieter (3000 Sender, 36.000 EPG-Einträge als .xml.gz)
         section("big") {
             val bigStart = System.currentTimeMillis()

@@ -32,10 +32,11 @@ enum class AudioOutput(val label: String) {
 
 /**
  * Maschinelle Übersetzung, falls OpenSubtitles keine Untertitel in der Wunschsprache hat.
- * (Googles Übersetzung auf dem Gerät ist laut Google-Bedingungen auf Fernsehern nicht erlaubt
- * und braucht Google-Dienste, die Fire TV nicht hat.)
+ * Standard ist der DnA-Übersetzer auf dem Gerät (OPUS-MT, offen lizenziert, ohne Grenze).
+ * DeepL/LibreTranslate sind optional; was einer nicht kann, übernimmt automatisch der andere.
  */
 enum class TranslationProvider(val label: String) {
+    ON_DEVICE("Auf dem Gerät (unbegrenzt, ohne Konto)"),
     DEEPL("DeepL"),
     LIBRE("LibreTranslate"),
     NONE("Aus"),
@@ -72,7 +73,7 @@ data class AppSettings(
     val openSubtitlesKey: String = "",
     val openSubtitlesUser: String = "",
     val openSubtitlesPassword: String = "",
-    val translationProvider: TranslationProvider = TranslationProvider.DEEPL,
+    val translationProvider: TranslationProvider = TranslationProvider.ON_DEVICE,
     val deeplKey: String = "",
     val libreUrl: String = "",
     val libreKey: String = "",
@@ -83,12 +84,12 @@ data class AppSettings(
     val translationEnabled: Boolean
         get() = when (translationProvider) {
             TranslationProvider.NONE -> false
-            TranslationProvider.DEEPL -> deeplKey.isNotBlank()
-            TranslationProvider.LIBRE -> libreUrl.isNotBlank()
+            // Ohne Schlüssel bzw. Server springt der Übersetzer auf dem Gerät ein.
+            TranslationProvider.ON_DEVICE, TranslationProvider.DEEPL, TranslationProvider.LIBRE -> true
         }
 
     companion object {
-        const val DEFAULT_USER_AGENT = "AyuTV/0.7 (Linux; Android) ExoPlayer"
+        const val DEFAULT_USER_AGENT = "DnATV/0.7 (Linux; Android) ExoPlayer"
     }
 }
 
@@ -161,7 +162,7 @@ class SettingsStore(private val context: Context) {
         showGuide = this[Keys.showGuide] ?: true,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
-        translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.DEEPL),
+        translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),
         deeplKey = this[Keys.deepl].orEmpty(),
         libreUrl = this[Keys.libreUrl].orEmpty(),
         libreKey = this[Keys.libreKey].orEmpty(),
