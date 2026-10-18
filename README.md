@@ -49,9 +49,9 @@ Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose is
 ./gradlew assembleRelease        # optimierte APK (mit Debug-Schlüssel signiert, zum Sideloaden)
 ```
 
-Voraussetzungen: JDK 17 und Android SDK (compileSdk 36). Unterstützt werden Fire OS 6 und neuer (minSdk 23), also alle Fire TV Sticks ab 2018.
+Voraussetzungen: JDK 17 und Android SDK (compileSdk 37). Unterstützt werden Fire OS 6 und neuer (minSdk 23), also alle Fire TV Sticks ab 2018.
 
-Technikstand (Oktober 2026): Kotlin 2.3, AGP 8.13, Media3 1.11.1 (mit dynamischem Scheduling der Wiedergabeschleife standardmäßig an, besserer Bildraten-Schätzung, Dolby Vision Profil 10), Compose 1.12, Compose for TV Material 1.1, Room 2.8, Coil 3, OkHttp 5. Die GitHub-Action baut bei jedem Push automatisch beide APKs.
+Technikstand (Oktober 2026): Kotlin 2.3, AGP 9.4 (mit eingebautem Kotlin), Gradle 9.8, compileSdk 37, Media3 1.11.1 (mit dynamischem Scheduling der Wiedergabeschleife standardmäßig an, besserer Bildraten-Schätzung, Dolby Vision Profil 10), Compose 1.12, Compose for TV Material 1.1, Room 2.8, Coil 3, OkHttp 5. Die GitHub-Action baut bei jedem Push automatisch beide APKs.
 Ein Tag `v*` (z. B. `v0.1.0`) erstellt ein Release mit der APK.
 
 ### Aufbau

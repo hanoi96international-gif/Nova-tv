@@ -1,8 +1,5 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
@@ -10,7 +7,7 @@ plugins {
 
 android {
     namespace = "de.novatv"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "de.novatv"
@@ -45,12 +42,6 @@ android {
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
