@@ -57,3 +57,31 @@ out.append("</tv>")
 open("epg.xml", "w").write("\n".join(out))
 PY
 ls -la . hls movie/test/test | head -30
+
+# Belastungstest: großer Anbieter mit 3000 Sendern in 60 Gruppen und 36.000 EPG-Einträgen (gzip)
+python3 - <<'PY'
+import datetime as dt, gzip, random
+random.seed(1)
+streams = ["hd50.ts", "hls/index.m3u8"]
+lines = ['#EXTM3U']
+for i in range(3000):
+    g = i // 50
+    lines.append(f'#EXTINF:-1 tvg-id="big{i}" tvg-chno="{100+i}" tvg-logo="" group-title="Land {g:02d} | Gruppe",Sender {i:04d} {"HD" if i % 3 else "UHD"}')
+    lines.append(f"http://10.0.2.2:8000/{streams[i % 2]}?ch={i}")
+open("playlist_big.m3u", "w").write("\n".join(lines))
+now = dt.datetime.now(dt.timezone.utc).replace(minute=0, second=0, microsecond=0) - dt.timedelta(hours=2)
+fmt = lambda t: t.strftime("%Y%m%d%H%M%S +0000")
+out = ['<?xml version="1.0" encoding="UTF-8"?>', "<tv>"]
+for i in range(3000):
+    out.append(f'<channel id="big{i}"><display-name>Sender {i:04d}</display-name></channel>')
+for i in range(3000):
+    t = now
+    for j in range(12):
+        e = t + dt.timedelta(minutes=random.choice([30, 45, 60, 90]))
+        out.append(f'<programme start="{fmt(t)}" stop="{fmt(e)}" channel="big{i}"><title>Programm {j} auf {i}</title><desc>Text {j}</desc></programme>')
+        t = e
+out.append("</tv>")
+with gzip.open("epg_big.xml.gz", "wt") as f:
+    f.write("\n".join(out))
+PY
+ls -la playlist_big.m3u epg_big.xml.gz

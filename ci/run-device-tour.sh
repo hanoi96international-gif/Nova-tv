@@ -15,13 +15,31 @@ adb logcat -d -v time NovaTour:I ActivityTaskManager:I ActivityManager:I PlayerA
 # Release-APK (R8-optimiert) über die Debug-Version installieren: gleiche Signatur, Daten bleiben erhalten.
 adb uninstall de.novatv.test || true
 adb install -r app/build/outputs/apk/release/app-release.apk
+# Wie auf dem Fire TV nach der Installation: Baseline-Profil anwenden (sonst erst später im Leerlauf).
+adb shell cmd package compile -f -m speed-profile de.novatv || true
 adb shell am force-stop de.novatv
 adb logcat -c
 adb shell am start -W -n de.novatv/.MainActivity | tee ci-out/release_start.txt
 sleep 12
 adb exec-out screencap -p > ci-out/release_home.png
-adb shell input keyevent KEYCODE_DPAD_DOWN; adb shell input keyevent KEYCODE_DPAD_CENTER; sleep 3
+key() { adb shell input keyevent "$@"; }
+# Ruckler im Dauerbetrieb messen (ohne Kaltstart): Live TV mit 3000 Sendern und TV-Guide durchscrollen.
+adb shell dumpsys gfxinfo de.novatv reset >/dev/null
+key KEYCODE_DPAD_DOWN KEYCODE_DPAD_CENTER; sleep 2
+key KEYCODE_DPAD_RIGHT; sleep 1
+for i in $(seq 1 25); do key KEYCODE_DPAD_DOWN; done; sleep 1
+key KEYCODE_DPAD_RIGHT; sleep 1
+for i in $(seq 1 40); do key KEYCODE_DPAD_DOWN; done; sleep 1
 adb exec-out screencap -p > ci-out/release_live.png
+for i in $(seq 1 20); do key KEYCODE_DPAD_UP; done; sleep 1
+adb shell dumpsys gfxinfo de.novatv > ci-out/release_gfxinfo_live.txt 2>&1 || true
+adb shell dumpsys gfxinfo de.novatv reset >/dev/null
+for i in $(seq 1 6); do key KEYCODE_DPAD_LEFT; done; sleep 1
+key KEYCODE_DPAD_DOWN KEYCODE_DPAD_CENTER; sleep 3
+key KEYCODE_DPAD_RIGHT; sleep 1
+for i in $(seq 1 30); do key KEYCODE_DPAD_DOWN; done
+for i in $(seq 1 8); do key KEYCODE_DPAD_RIGHT; done; sleep 1
+adb exec-out screencap -p > ci-out/release_guide.png
+adb shell dumpsys gfxinfo de.novatv > ci-out/release_gfxinfo_guide.txt 2>&1 || true
 adb logcat -d -v time AndroidRuntime:E '*:S' > ci-out/release_crash.txt 2>&1 || true
-adb shell dumpsys gfxinfo de.novatv > ci-out/release_gfxinfo.txt 2>&1 || true
 exit 0

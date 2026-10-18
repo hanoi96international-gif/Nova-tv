@@ -206,6 +206,24 @@ class DeviceTourTest {
                 shot("30_episode")
             }
         } }
+        // 6. Belastung: großer Anbieter (3000 Sender, 36.000 EPG-Einträge als .xml.gz)
+        section("big") {
+            val bigStart = System.currentTimeMillis()
+            runBlocking {
+                val id = container.playlists.add(
+                    PlaylistEntity(name = "Groß", type = PlaylistType.M3U, url = "$base/playlist_big.m3u", epgUrl = "$base/epg_big.xml.gz")
+                )
+                container.playlists.sync(id)
+            }
+            val total = runBlocking { container.content.zapList(null, false) }.size
+            val epgCount = runBlocking { container.db.programmes().observeCount().first() }
+            val nowStart = System.currentTimeMillis()
+            val now = runBlocking { container.content.nowPlaying(container.content.zapList(null, false)) }
+            log(
+                "big: import_ms=${nowStart - bigStart} channels_total=$total programmes_total=$epgCount " +
+                    "now_playing_all_ms=${System.currentTimeMillis() - nowStart} now_found=${now.size} sync=${container.playlists.state.value}"
+            )
+        }
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
     }
