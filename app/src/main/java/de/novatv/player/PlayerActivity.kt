@@ -51,6 +51,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
+import kotlin.math.abs
 
 enum class Overlay { NONE, INFO, CHANNELS, CONTROLS, TRACKS }
 
@@ -75,6 +76,8 @@ class PlayerActivity : ComponentActivity() {
     var numberInput by mutableStateOf(""); private set
     var message by mutableStateOf<String?>(null); private set
     var buffering by mutableStateOf(true); private set
+    /** Endgültiger Fehler: Bild schwarz statt des letzten Bildes vom vorigen Sender. */
+    var fatalError by mutableStateOf(false); private set
     var showTech by mutableStateOf(false); private set
     var stats by mutableStateOf(StreamStats()); private set
     var vodTitle by mutableStateOf(""); private set
@@ -92,6 +95,8 @@ class PlayerActivity : ComponentActivity() {
     private var retries = 0
     private var triedHls = false
     private var zapStartedAt = 0L
+    private var everReady = false
+    private var fpsSample: Pair<Long, Long>? = null
     private var progressJob: Job? = null
     private var numberJob: Job? = null
     private var watchdogJob: Job? = null
@@ -173,6 +178,7 @@ class PlayerActivity : ComponentActivity() {
                 lastPosition = p.currentPosition
                 stalledSeconds = if (waiting || frozen) stalledSeconds + 1 else 0
                 val limit = if (isLive) LIVE_STALL_SECONDS else VOD_STALL_SECONDS
+                estimateFrameRate(p)
                 val now = SystemClock.elapsedRealtime()
                 if (stalledSeconds >= limit && now - lastReconnect > 20_000) {
                     stalledSeconds = 0
@@ -181,6 +187,54 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun resetStreamState() {
+        everReady = false
+        fatalError = false
+        fpsSample = null
+    }
+
+    /**
+     * Viele TS-Streams nennen keine Bildrate (fps = -1). Dann wird sie aus den Decoder-Zählern
+     * gemessen und auf den nächsten Standardwert gerundet. Erst damit kann die Bildwiederholrate
+     * des Fernsehers bei Live-TV auf 50 Hz umschalten.
+     */
+    private fun estimateFrameRate(p: ExoPlayer) {
+        if (stats.frameRate > 0f || p.playbackState != Player.STATE_READY || !p.isPlaying) return
+        val counters = p.videoDecoderCounters ?: return
+        counters.ensureUpdated()
+        val frames = (counters.renderedOutputBufferCount + counters.droppedBufferCount + counters.skippedOutputBufferCount).toLong()
+        val now = SystemClock.elapsedRealtime()
+        val sample = fpsSample
+        if (sample == null) {
+            fpsSample = now to frames
+            return
+        }
+        if (now - sample.first < 3_000) return
+        val measured = (frames - sample.second) * 1000f / (now - sample.first)
+        val snapped = STANDARD_FRAME_RATES.minByOrNull { abs(it - measured) }
+            ?.takeIf { abs(it - measured) / it < 0.06f } ?: return
+        stats = stats.copy(frameRate = snapped, frameRateMeasured = true)
+        if (settings.matchFrameRate) frameRateMatcher.match(snapped)
+    }
+
+    private fun unsupportedFormatMessage(): String {
+        val format = tracks.groups.firstOrNull { it.type == C.TRACK_TYPE_VIDEO }
+            ?.let { group -> (0 until group.length).map(group::getTrackFormat).maxByOrNull { it.height } }
+        val codec = when (format?.sampleMimeType) {
+            MimeTypes.VIDEO_H265 -> "HEVC"
+            MimeTypes.VIDEO_H264 -> "H.264"
+            MimeTypes.VIDEO_AV1 -> "AV1"
+            MimeTypes.VIDEO_VP9 -> "VP9"
+            MimeTypes.VIDEO_MPEG2 -> "MPEG-2"
+            MimeTypes.VIDEO_DOLBY_VISION -> "Dolby Vision"
+            null -> "dieses Videoformat"
+            else -> format?.sampleMimeType?.substringAfter('/') ?: "dieses Videoformat"
+        }
+        val bits = format?.colorInfo?.lumaBitdepth?.takeIf { it > 8 }?.let { " $it Bit" }.orEmpty()
+        val resolution = format?.height?.takeIf { it > 0 }?.let { if (it >= 2000) " in 4K" else " in ${it}p" }.orEmpty()
+        return "Dieses Gerät kann $codec$bits$resolution nicht abspielen"
     }
 
     private fun reconnect(reason: String) {
@@ -199,6 +253,7 @@ class PlayerActivity : ComponentActivity() {
         val p = player ?: return
         current?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         current = channel
+        resetStreamState()
         retries = 0
         triedHls = false
         message = null
@@ -262,6 +317,7 @@ class PlayerActivity : ComponentActivity() {
     private fun startVod(request: VodRequest, resumeMs: Long) {
         val p = player ?: return
         headers?.userAgent = settings.userAgent
+        resetStreamState()
         // Schon einmal geladene Untertitel direkt mitgeben, dann gibt es kein erneutes Puffern.
         subtitleFiles.clear()
         subtitleFiles.putAll(container.subtitles.cachedAll(request.key))
@@ -515,6 +571,8 @@ class PlayerActivity : ComponentActivity() {
             if (state == Player.STATE_READY) {
                 retries = 0
                 message = null
+                everReady = true
+                fatalError = false
                 if (!isLive) maybeAutoSubtitles()
             }
             if (state == Player.STATE_ENDED && !isLive) finish()
@@ -559,12 +617,25 @@ class PlayerActivity : ComponentActivity() {
                     message = "Tunneling für diesen Stream deaktiviert, starte neu …"
                     p.prepare()
                 }
+                // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
+                error.isFormatError() && !everReady -> {
+                    fatalError = true
+                    message = unsupportedFormatMessage()
+                }
                 retries < MAX_RETRIES -> {
                     retries++
                     message = "Verbindung wird wiederhergestellt … ($retries/$MAX_RETRIES)"
                     handler.postDelayed({ player?.prepare() }, 800L * retries)
                 }
-                else -> message = "Stream nicht verfügbar (${error.errorCodeName})"
+                else -> {
+                    fatalError = true
+                    message = when (error.errorCode) {
+                        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Der Anbieter lehnt den Stream ab (z. B. zu viele Verbindungen oder Konto abgelaufen)"
+                        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+                        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Keine Verbindung zum Server"
+                        else -> "Stream nicht verfügbar (${error.errorCodeName})"
+                    }
+                }
             }
         }
     }
@@ -600,7 +671,8 @@ class PlayerActivity : ComponentActivity() {
         stats = stats.copy(
             width = video?.width ?: 0,
             height = video?.height ?: 0,
-            frameRate = video?.frameRate ?: 0f,
+            // Gemessene Bildrate behalten, wenn der Stream selbst keine angibt.
+            frameRate = video?.frameRate?.takeIf { it > 0f } ?: stats.frameRate.takeIf { stats.frameRateMeasured } ?: 0f,
             videoCodec = video?.sampleMimeType?.substringAfter('/') ?: "",
             videoBitrate = video?.bitrate ?: 0,
             audioCodec = audio?.sampleMimeType?.substringAfter('/') ?: "",
@@ -725,6 +797,7 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val MAX_RETRIES = 3
+        private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 10
         private const val VOD_STALL_SECONDS = 20
         private const val EXTRA_CHANNEL_KEY = "channel_key"
@@ -804,6 +877,7 @@ data class StreamStats(
     val bandwidth: Long = 0,
     val startupMs: Long = 0,
     val hdr: String = "",
+    val frameRateMeasured: Boolean = false,
 ) {
     val resolutionLabel: String
         get() = when {
@@ -814,6 +888,13 @@ data class StreamStats(
             else -> ""
         }
 }
+
+private fun PlaybackException.isFormatError(): Boolean = errorCode in setOf(
+    PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,
+    PlaybackException.ERROR_CODE_DECODING_FAILED,
+    PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+    PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+)
 
 private fun PlaybackException.isDecoderOrAudioError(): Boolean = errorCode in setOf(
     PlaybackException.ERROR_CODE_DECODER_INIT_FAILED,

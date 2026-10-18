@@ -131,7 +131,7 @@ private fun SideNav(selected: Section, onSelect: (Section) -> Unit) {
 
     if (expanded) {
         // Abdunkeln des Inhalts hinter der aufgeklappten Navigation
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)))
     }
     Column(
         Modifier

@@ -108,9 +108,16 @@ fun PlayerScreen(activity: PlayerActivity) {
                     it.player = player
                     it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
                     it.subtitleView?.visibility = if (activity.liveTranslateTarget != null) View.INVISIBLE else View.VISIBLE
+                    // Untertitel über die Steuerleiste anheben, solange sie sichtbar ist.
+                    val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
+                    it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else 0.07f)
                 },
                 modifier = Modifier.fillMaxSize(),
             )
+        }
+
+        if (activity.fatalError) {
+            Box(Modifier.fillMaxSize().background(Color.Black))
         }
 
         if (activity.buffering && activity.message == null) {
@@ -313,7 +320,7 @@ private fun VodControls(activity: PlayerActivity) {
 private fun TechLine(stats: StreamStats) {
     val parts = buildList {
         if (stats.width > 0) add("${stats.width}×${stats.height}")
-        if (stats.frameRate > 0) add("%.2f fps".format(stats.frameRate))
+        if (stats.frameRate > 0) add("%.2f fps".format(stats.frameRate) + if (stats.frameRateMeasured) " (gemessen)" else "")
         if (stats.videoCodec.isNotEmpty()) add(stats.videoCodec)
         if (stats.videoBitrate > 0) add("%.1f Mbit/s".format(stats.videoBitrate / 1_000_000f))
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")

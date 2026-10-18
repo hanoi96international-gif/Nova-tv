@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,8 @@ import androidx.tv.material3.Border
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import de.novatv.data.db.ChannelEntity
@@ -211,7 +214,11 @@ fun PosterCard(
     }
 }
 
-/** Textfeld, das mit der Fernbedienung bedienbar ist: OK öffnet die Bildschirmtastatur. */
+/**
+ * Textfeld für die Fernbedienung. Im Ruhezustand ist es ein normales Element, an dem man
+ * vorbeinavigieren kann, ohne dass die Bildschirmtastatur aufgeht und die Tasten schluckt.
+ * Erst OK öffnet die Eingabe; "Fertig" oder Zurück beendet sie.
+ */
 @Composable
 fun TvTextField(
     value: String,
@@ -224,28 +231,71 @@ fun TvTextField(
     onImeAction: () -> Unit = {},
     focusRequester: FocusRequester? = null,
 ) {
-    var focused by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    var wasEditing by remember { mutableStateOf(false) }
+    val editRequester = remember { FocusRequester() }
+    val viewRequester = remember { FocusRequester() }
+    // Nach dem Tippen den Fokus wieder auf das Feld setzen, sonst wäre er verloren.
+    LaunchedEffect(editing) {
+        if (editing) wasEditing = true else if (wasEditing) runCatching { viewRequester.requestFocus() }
+    }
+    val shape = RoundedCornerShape(10.dp)
     Column(modifier) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = NovaColors.TextSecondary)
         Spacer(Modifier.height(4.dp))
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = TextStyle(color = NovaColors.TextPrimary, fontSize = 18.sp),
-            cursorBrush = SolidColor(NovaColors.Accent),
-            visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
-            keyboardActions = KeyboardActions(onAny = { onImeAction() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                .onFocusChanged { focused = it.isFocused }
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (focused) NovaColors.SurfaceRaised else NovaColors.Surface)
-                .border(2.dp, if (focused) NovaColors.Accent else Color.Transparent, RoundedCornerShape(10.dp))
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        )
+        if (editing) {
+            var hadFocus by remember { mutableStateOf(false) }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = TextStyle(color = NovaColors.TextPrimary, fontSize = 18.sp),
+                cursorBrush = SolidColor(NovaColors.Accent),
+                visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+                keyboardActions = KeyboardActions(onAny = {
+                    editing = false
+                    onImeAction()
+                }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(editRequester)
+                    .onFocusChanged {
+                        if (it.isFocused) hadFocus = true else if (hadFocus) editing = false
+                    }
+                    .clip(shape)
+                    .background(NovaColors.SurfaceRaised)
+                    .border(2.dp, NovaColors.Accent, shape)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            )
+            LaunchedEffect(Unit) { runCatching { editRequester.requestFocus() } }
+        } else {
+            Surface(
+                onClick = { editing = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(viewRequester)
+                    .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier),
+                shape = ClickableSurfaceDefaults.shape(shape),
+                colors = ClickableSurfaceDefaults.colors(containerColor = NovaColors.Surface, focusedContainerColor = NovaColors.SurfaceRaised),
+                border = ClickableSurfaceDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, NovaColors.Accent))),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+            ) {
+                val shown = when {
+                    value.isEmpty() -> ""
+                    password -> "•".repeat(value.length.coerceAtMost(16))
+                    else -> value
+                }
+                Text(
+                    shown.ifEmpty { "OK drücken zum Eingeben" },
+                    color = if (shown.isEmpty()) NovaColors.TextSecondary else NovaColors.TextPrimary,
+                    fontSize = 18.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+            }
+        }
     }
 }
 

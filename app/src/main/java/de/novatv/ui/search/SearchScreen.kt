@@ -65,7 +65,6 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         results = content.search(query)
         searching = false
     }
-    LaunchedEffect(Unit) { runCatching { fieldFocus.requestFocus() } }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
