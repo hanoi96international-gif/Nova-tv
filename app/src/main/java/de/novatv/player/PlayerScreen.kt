@@ -354,7 +354,7 @@ private fun ChannelListOverlay(activity: PlayerActivity) {
         Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.88f)).padding(vertical = 24.dp)
     ) {
         Text(
-            activity.current?.groupTitle ?: "Sender",
+            activity.listTitle.ifEmpty { "Sender" },
             style = MaterialTheme.typography.titleMedium,
             color = Color.White,
             modifier = Modifier.padding(start = 24.dp, bottom = 12.dp),

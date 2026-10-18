@@ -41,16 +41,16 @@ interface ChannelDao {
     @Query("SELECT groupTitle AS name, COUNT(*) AS count FROM visible_channels GROUP BY groupTitle ORDER BY MIN(id)")
     fun observeGroups(): Flow<List<GroupCount>>
 
-    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY playlistId, number, id")
     fun observeInGroup(group: String): Flow<List<ChannelEntity>>
 
-    @Query("SELECT * FROM visible_channels ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels ORDER BY playlistId, number, id")
     fun observeAll(): Flow<List<ChannelEntity>>
 
-    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY playlistId, number, id")
     suspend fun inGroup(group: String): List<ChannelEntity>
 
-    @Query("SELECT * FROM visible_channels ORDER BY number, id")
+    @Query("SELECT * FROM visible_channels ORDER BY playlistId, number, id")
     suspend fun all(): List<ChannelEntity>
 
     @Query("SELECT * FROM channels WHERE `key` = :key")
@@ -72,7 +72,7 @@ interface ChannelDao {
     )
     suspend fun search(query: String, limit: Int): List<ChannelEntity>
 
-    @Query("SELECT * FROM visible_channels WHERE groupTitle IN (:groups) AND `key` NOT IN (:exclude) ORDER BY number, id LIMIT :limit")
+    @Query("SELECT * FROM visible_channels WHERE groupTitle IN (:groups) AND `key` NOT IN (:exclude) ORDER BY playlistId, number, id LIMIT :limit")
     suspend fun inGroupsExcluding(groups: List<String>, exclude: List<String>, limit: Int): List<ChannelEntity>
 
     @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds) GROUP BY epgId")

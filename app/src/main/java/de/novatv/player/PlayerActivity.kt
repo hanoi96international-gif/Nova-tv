@@ -70,6 +70,8 @@ class PlayerActivity : ComponentActivity() {
     var overlay by mutableStateOf(Overlay.NONE); private set
     var overlayToken by mutableIntStateOf(0); private set
     var channels by mutableStateOf<List<ChannelEntity>>(emptyList()); private set
+    /** Überschrift der Senderliste: Gruppe, Favoriten oder alle Sender. */
+    var listTitle by mutableStateOf(""); private set
     var current by mutableStateOf<ChannelEntity?>(null); private set
     var nowNext by mutableStateOf<List<ProgrammeEntity>>(emptyList()); private set
     var nowPlayingMap by mutableStateOf<Map<String, ProgrammeEntity>>(emptyMap()); private set
@@ -145,6 +147,11 @@ class PlayerActivity : ComponentActivity() {
                 val group = intent.getStringExtra(EXTRA_GROUP)
                 val favoritesOnly = intent.getBooleanExtra(EXTRA_FAVORITES, false)
                 channels = container.content.zapList(group, favoritesOnly)
+                listTitle = when {
+                    favoritesOnly -> "★ Favoriten"
+                    group != null -> group
+                    else -> "Alle Sender"
+                }
                 val start = key?.let { k -> channels.firstOrNull { it.key == k } ?: container.content.channel(k) }
                     ?: channels.firstOrNull()
                 if (start == null) {
