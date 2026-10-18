@@ -44,6 +44,8 @@ data class SubtitleCandidate(
     val hashMatch: Boolean,
     val downloads: Long,
     val hearingImpaired: Boolean,
+    /** Von OpenSubtitles per KI oder Maschine übersetzt (statt von Menschen erstellt). */
+    val translated: Boolean = false,
 )
 
 object OpenSubtitlesParsing {
@@ -67,9 +69,12 @@ object OpenSubtitlesParsing {
                 hashMatch = attributes.primitive("moviehash_match")?.booleanOrNull ?: false,
                 downloads = attributes.primitive("download_count")?.longOrNull ?: 0L,
                 hearingImpaired = attributes.primitive("hearing_impaired")?.booleanOrNull ?: false,
+                translated = attributes.primitive("ai_translated")?.booleanOrNull == true ||
+                    attributes.primitive("machine_translated")?.booleanOrNull == true,
             )
         }.sortedWith(
             compareByDescending<SubtitleCandidate> { it.hashMatch }
+                .thenBy { it.translated }
                 .thenBy { it.hearingImpaired }
                 .thenByDescending { it.downloads }
         )
@@ -95,7 +100,7 @@ object OpenSubtitlesParsing {
         val year = Regex("""\b(19[3-9]\d|20[0-4]\d)\b""").findAll(raw).lastOrNull()?.value?.toInt()
         var title = raw
             .replace(Regex("""^\s*[A-Z]{2,3}\s*[-|:]\s*"""), "")
-            .replace(Regex("""\[[^]]*]|\([^)]*\)"""), " ")
+            .replace(Regex("""\[[^\]]*\]|\([^)]*\)"""), " ")
             .replace(Regex("""\b(4K|UHD|FHD|HD|SD|HEVC|H\.?26[45]|x26[45]|1080p|2160p|720p|HDR(?:10)?|DV|MULTI|DUAL)\b""", RegexOption.IGNORE_CASE), " ")
         if (year != null) title = title.replace(year.toString(), " ")
         title = title.replace(Regex("""[._]"""), " ").replace(Regex("""\s+"""), " ").trim(' ', '-', '|', ':')

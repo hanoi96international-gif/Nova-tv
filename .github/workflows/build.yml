@@ -11,10 +11,45 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  # FFmpeg-Tondecoder (DTS, TrueHD, AC-3/E-AC-3 …) für Media3 bauen. Dauert beim ersten Mal einige
+  # Minuten, danach kommt das Ergebnis aus dem Cache (Schlüssel: Bauskript + Media3-Version).
+  ffmpeg:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: Cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ffmpeg-aar
+          key: media3-ffmpeg-${{ hashFiles('ci/build-ffmpeg.sh') }}
+
+      - uses: actions/setup-java@v5
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: FFmpeg-Erweiterung bauen
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ci/build-ffmpeg.sh ffmpeg-aar /tmp/ffmpeg-build
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: ffmpeg-aar/*.aar
+
+  build:
+    needs: ffmpeg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: app/libs
 
       - uses: actions/setup-java@v5
         with:
@@ -24,17 +59,19 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
 
       - name: Tests und APKs bauen
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
 
       - name: APK umbenennen
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk out/AyuTV.apk
-          cp app/build/outputs/apk/debug/app-debug.apk out/AyuTV-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk out/DnA-TV.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/DnA-TV-debug.apk
 
       - uses: actions/upload-artifact@v5
         with:
-          name: AyuTV-apk
+          name: DnA-TV-apk
           path: out/*.apk
 
       - name: Versionsnummer lesen
@@ -48,19 +85,24 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.name }}
-          name: Ayu-TV ${{ steps.version.outputs.name }}
+          name: DnA-TV ${{ steps.version.outputs.name }}
           make_latest: true
           overwrite_files: true
-          files: out/AyuTV*.apk
+          files: out/DnA-TV*.apk
 
   # Rundgang auf einem Android-TV-Emulator: echte Wiedergabe, Screenshots, Messwerte.
   # Ergebnisse landen im Branch ci-results (Screenshots, results.txt, gfxinfo, logcat).
   device:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: app/libs
 
       - uses: actions/setup-java@v5
         with:
@@ -82,14 +124,30 @@ jobs:
           nohup python3 ci/test_server.py ci-media > http.log 2>&1 &
 
       - name: APKs bauen
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest assembleRelease
+
+      # Upgrade-Test: Die Version aus main zuerst installieren, dann die neue darüber. So fällt eine
+      # fehlerhafte Datenbank-Migration auf, bevor sie auf dem Fire TV die Playlists kostet.
+      - name: Vorversion bauen (Upgrade-Test)
+        run: |
+          mkdir -p ~/.android && cp signing/ayutv.keystore ~/.android/debug.keystore
+          git fetch -q --depth 1 origin main
+          git worktree add -q ../previous FETCH_HEAD
+          if (cd ../previous && ./gradlew --no-daemon assembleDebug > ../previous-build.log 2>&1); then
+            cp ../previous/app/build/outputs/apk/debug/app-debug.apk previous-debug.apk
+          else
+            echo "Vorversion ließ sich nicht bauen, Upgrade-Test entfällt"; tail -40 ../previous-build.log
+          fi
 
       - name: Rundgang im Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
-          target: android-tv
-          arch: x86
+          # AOSP ohne Google-Play-Dienste: verhält sich wie Fire OS (Amazon hat keine Google-Dienste).
+          target: default
+          arch: x86_64
           profile: tv_1080p
           ram-size: 3072M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
@@ -103,7 +161,7 @@ jobs:
           cd ci-out
           echo "${{ github.sha }}" > COMMIT
           git init -q -b ci-results
-          git config user.name "Ayu-TV CI"
+          git config user.name "DnA-TV CI"
           git config user.email "ci@users.noreply.github.com"
           git add -A
           git commit -qm "Ergebnisse für ${{ github.sha }}"

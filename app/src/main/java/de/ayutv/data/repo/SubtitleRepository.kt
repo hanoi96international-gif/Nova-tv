@@ -7,6 +7,7 @@ import de.ayutv.data.Languages
 import de.ayutv.data.parse.MovieHash
 import de.ayutv.data.parse.OpenSubtitlesParsing
 import de.ayutv.data.parse.Srt
+import de.ayutv.data.parse.SrtCue
 import de.ayutv.data.parse.SubtitleCandidate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -29,7 +30,7 @@ import java.io.IOException
  * 64 KiB vom Anfang und Ende werden per HTTP-Range geladen, ein Treffer passt zeitgenau),
  * dann nach bereinigtem Titel und Jahr. Von Menschen übersetzte Untertitel sind immer besser
  * als Maschinenübersetzung. 3. Gibt es keine: Untertitel in einer anderen Sprache (bevorzugt
- * Englisch) laden und mit DeepL/LibreTranslate übersetzen. Alles wird dauerhaft gespeichert.
+ * Englisch) als Vorlage laden; übersetzt wird im Player auf dem Gerät. Alles wird dauerhaft gespeichert.
  */
 class SubtitleRepository(
     private val http: OkHttpClient,
@@ -42,7 +43,7 @@ class SubtitleRepository(
 
     enum class Source { CACHE, HASH, TITLE, TRANSLATED }
 
-    data class Result(val file: File, val source: Source, val translator: String? = null)
+    data class Result(val file: File, val source: Source, val translator: String? = null, val language: String? = null)
 
     fun cached(key: String, language: String): File? =
         cacheFile(key, language).takeIf { it.isFile && it.length() > 0 }
@@ -62,34 +63,12 @@ class SubtitleRepository(
             download(key, videoUrl, title, language, settings)?.let { return@withContext it }
         }
 
-        val translator = Translators.from(http, settings) ?: return@withContext null
-        if (!translator.supports(language)) throw IOException("${translator.name} unterstützt ${Languages.label(language)} nicht")
-
-        // Quelle: vorhandene Datei einer anderen Sprache, sonst online Englisch, sonst irgendeine Sprache.
-        var source: File? = cachedAny(key, except = language)
-        if (source == null && settings.onlineSubtitlesEnabled) {
-            progress("Lade Vorlage für die Übersetzung …")
-            if (language != "en") source = download(key, videoUrl, title, "en", settings)?.file
-            if (source == null) source = download(key, videoUrl, title, null, settings)?.file
-        }
-        if (source == null) return@withContext null
-
-        val cues = Srt.parse(source.readText())
-        if (cues.isEmpty()) return@withContext null
-        val texts = cues.map { Srt.plainText(it.text) }
-        val translated = ArrayList<String>(texts.size)
-        texts.chunked(TRANSLATE_BATCH).forEachIndexed { index, chunk ->
-            progress("Übersetze mit ${translator.name} … ${(index * TRANSLATE_BATCH * 100) / texts.size} %")
-            translated += translator.translate(chunk, language)
-        }
-        val target = cacheFile(key, language)
-        writeAtomically(target, Srt.write(cues.mapIndexed { i, cue -> cue.copy(text = translated.getOrElse(i) { cue.text }) }))
-        Result(target, Source.TRANSLATED, translator.name)
+        null
     }
 
     /** Lädt von OpenSubtitles in [language] (null = beliebige Sprache) und speichert unter der echten Sprache. */
     private suspend fun download(key: String, videoUrl: String, title: String, language: String?, settings: AppSettings): Result? {
-        val apiKey = settings.openSubtitlesKey.trim().ifEmpty { return null }
+        val apiKey = settings.openSubtitlesApiKey.ifEmpty { return null }
         // ConcurrentHashMap erlaubt kein null: "" steht für "kein Hash möglich".
         val hash = hashCache.getOrPut(videoUrl) {
             runCatching { movieHash(videoUrl, settings.userAgent) }
@@ -123,7 +102,48 @@ class SubtitleRepository(
             if (!response.isSuccessful) throw IOException("Untertitel-Download: HTTP ${response.code}")
             writeAtomically(target, response.body.string())
         }
-        return Result(target, source)
+        return Result(target, source, language = actualLanguage)
+    }
+
+    /**
+     * Vorlage zum Übersetzen nach [target]: bereits gespeicherte Untertitel einer anderen Sprache,
+     * sonst online Englisch, sonst irgendeine Sprache. Übersetzt wird danach im Player, Zeile für
+     * Zeile vor der aktuellen Stelle, damit man nicht auf den ganzen Film warten muss.
+     */
+    suspend fun findSource(
+        key: String,
+        videoUrl: String,
+        title: String,
+        target: String,
+        settings: AppSettings,
+        progress: (String) -> Unit = {},
+    ): Result? = withContext(Dispatchers.IO) {
+        cachedAny(key, except = target)?.let { file ->
+            val language = file.name.removeSuffix(".srt").substringAfterLast('.')
+            return@withContext Result(file, Source.CACHE, language = language.takeIf { it.length in 2..3 && it != "xx" })
+        }
+        if (!settings.onlineSubtitlesEnabled) return@withContext null
+        progress("Lade Vorlage für die Übersetzung …")
+        if (target != "en") download(key, videoUrl, title, "en", settings)?.let { return@withContext it }
+        download(key, videoUrl, title, null, settings)
+    }
+
+    /** Anzahl der Treffer bei OpenSubtitles für einen Titel (Selbsttest, lädt nichts herunter). */
+    suspend fun countResults(title: String, language: String, settings: AppSettings): Int = withContext(Dispatchers.IO) {
+        val apiKey = settings.openSubtitlesApiKey.ifEmpty { return@withContext 0 }
+        val (cleanTitle, year) = OpenSubtitlesParsing.cleanTitle(title)
+        search(apiKey, buildMap {
+            put("query", cleanTitle)
+            put("languages", language)
+            if (year != null) put("year", year.toString())
+        }).size
+    }
+
+    /** Fertig übersetzte Untertitel speichern: Beim nächsten Mal stehen sie sofort bereit. */
+    fun saveTranslation(key: String, language: String, cues: List<SrtCue>): File {
+        val target = cacheFile(key, language)
+        writeAtomically(target, Srt.write(cues))
+        return target
     }
 
     /** Alle gespeicherten Untertitel eines Films, nach Sprache. Werden beim Start gleich mitgegeben. */
@@ -174,8 +194,11 @@ class SubtitleRepository(
 
     private fun search(apiKey: String, params: Map<String, String>): List<SubtitleCandidate> {
         // OpenSubtitles erwartet alphabetisch sortierte Parameter in Kleinbuchstaben (sonst Redirect).
+        // Auch KI-/maschinell übersetzte Untertitel zulassen: Damit gibt es fast jeden Film in fast
+        // jeder Sprache. Von Menschen erstellte werden beim Sortieren trotzdem bevorzugt.
+        val all = params + mapOf("ai_translated" to "include", "machine_translated" to "include")
         val url = "$API/subtitles".toHttpUrl().newBuilder().apply {
-            params.toSortedMap().forEach { (k, v) -> addQueryParameter(k, v.lowercase()) }
+            all.toSortedMap().forEach { (k, v) -> addQueryParameter(k, v.lowercase()) }
         }.build()
         http.newCall(apiRequest(apiKey).url(url).get().build()).execute().use { response ->
             val body = response.body.string()
@@ -226,7 +249,7 @@ class SubtitleRepository(
 
     private fun apiRequest(apiKey: String) = Request.Builder()
         .header("Api-Key", apiKey)
-        .header("User-Agent", "AyuTV v${BuildConfig.VERSION_NAME}")
+        .header("User-Agent", "DnATV v${BuildConfig.VERSION_NAME}")
         .header("Accept", "application/json")
 
     private fun safeName(key: String) = key.replace(Regex("[^A-Za-z0-9_-]"), "_").takeLast(120)
@@ -239,7 +262,6 @@ class SubtitleRepository(
     private companion object {
         const val TAG = "Subtitles"
         const val API = "https://api.opensubtitles.com/api/v1"
-        const val TRANSLATE_BATCH = 200
         val JSON = "application/json".toMediaType()
     }
 }

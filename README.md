@@ -1,12 +1,12 @@
-# Ayu-TV
+# DnA-TV
 
 Schneller, moderner IPTV-Player für **Fire TV** und Android TV. Gebaut mit Kotlin, Jetpack Compose for TV und Media3/ExoPlayer.
 
-Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen Zugang (M3U oder Xtream Codes).
+DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen Zugang (M3U oder Xtream Codes).
 
-## Was Ayu-TV besser machen will
+## Was DnA-TV besser machen will
 
-| Problem bei anderen Playern | Ayu-TV |
+| Problem bei anderen Playern | DnA-TV |
 |---|---|
 | 4K ruckelt oder startet langsam | Hardware-Decoder mit Fallback, Pufferprofile (Schnell, Ausgewogen, Stabil 4K), optionaler Tunneling-Modus, Anpassung der Bildwiederholrate (50 Hz / 23,976 Hz) |
 | Langsames Umschalten | Der TS-Stream startet ohne auf einen Keyframe zu warten, Verbindungen bleiben offen, das letzte Bild bleibt beim Zappen stehen. Die Umschaltzeit wird gemessen und im Stream-Info angezeigt |
@@ -16,7 +16,7 @@ Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.5)
+## Funktionen (Version 0.6)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`, auch aus `url-tvg` im Playlist-Header), Xtream Codes API (Live, Filme, Serien, EPG)
 - **Gruppen ein- und ausblenden:** pro Playlist, getrennt für Live TV, Filme und Serien (*Einstellungen → Playlist → Gruppen*), mit Filter und „Alle ein/aus“. Schneller geht es mit langem Druck auf OK auf einer Gruppe in der Liste. Ausgeblendete Gruppen verschwinden überall: in Listen, TV-Guide, Suche, Startseite und beim Zappen. Sie bleiben auch nach dem Aktualisieren ausgeblendet.
@@ -26,7 +26,7 @@ Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Untertitel (Filme & Serien), optional:** standardmäßig aus, im Film mit der Menütaste ☰ einschalten (oder in den Einstellungen „automatisch einschalten“). In **41 Sprachen**:
   1. eingebettete Spur des Films,
   2. echte Untertitel von [OpenSubtitles](https://www.opensubtitles.com) in der Wunschsprache (per Datei-Hash zeitgenau, sonst nach Titel/Jahr),
-  3. gibt es keine: **automatische Übersetzung** einer vorhandenen Datei (meist Englisch) mit DeepL oder LibreTranslate,
+  3. gibt es keine: **Übersetzung direkt auf dem Fire TV** (OPUS-MT, ohne Konto, ohne Zeichengrenze, nach dem ersten Laden offline) einer eingebetteten Spur oder einer geladenen Datei – vorausschauend, damit die Zeilen fertig sind, bevor sie erscheinen. Optional DeepL/LibreTranslate,
   4. eingebettete Spuren lassen sich auch **live übersetzen** (jede Zeile beim Erscheinen).
   Alles Geladene und Übersetzte wird gespeichert; mehrere Sprachen hängen gleichzeitig am Film.
 - **Ton- und Untertitelmenü (☰-Taste):** Audiospuren mit Sprache und Format (Dolby Atmos, Dolby Digital Plus, DTS, 5.1), Untertitelspuren, Online-Suche. Bei Live TV zusätzlich Favorit setzen.
@@ -35,6 +35,8 @@ Ayu-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Automatische Aktualisierung:** Playlists alle 12 Stunden, EPG alle 8 Stunden
 
 - **4K und Stabilität:** asynchrone Ansteuerung der Hardware-Decoder (mehr Reserven bei 4K, automatischer Rückfall bei Problemen), Speicher-Obergrenze für den Puffer (kein Absturz nach langem 4K-Schauen auf Sticks mit wenig RAM), Watchdog, Tunneling-Rückfall, Erkennung von HDR10/HLG/Dolby Vision.
+- **Alle Tonformate, auch ohne AV-Receiver:** eingebaute FFmpeg-Tondecoder (in der CI aus dem Media3-Quellcode gebaut) für DTS, Dolby TrueHD, Dolby Digital (Plus), FLAC, ALAC, Opus, Vorbis, MP3. Was das Gerät selbst kann oder an den Receiver durchreicht, bleibt beim Gerät. Meldet eine Soundbar Formate, die sie nicht abspielt, schaltet DnA-TV automatisch auf Dekodierung im Gerät um (auch fest einstellbar). Die Stream-Info zeigt den aktiven Ton-Decoder.
+- **Weitere Absicherungen:** Bildwiederholrate wird beim Zappen nicht mehr zurückgesetzt (kein doppeltes Schwarzbild), Hinweis bei nicht abspielbarer Tonspur statt stiller Wiedergabe, Empfehlung für den 4K-Puffer bei schwankender Leitung.
 - **TV-Guide optional:** Das Programm-Raster lässt sich in den Einstellungen ausblenden. Die Programmdaten bleiben für „Jetzt läuft“, Fortschritt, Suche und Empfehlungen aktiv.
 - **Weitere:** EPG-Zeitverschiebung (−12 bis +12 Std.), gemessene Bildrate für TS-Streams ohne Angabe (damit greift die 50-Hz-Anpassung auch bei Live-TV), verständliche Fehlermeldungen („Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen“), Textfelder öffnen die Tastatur erst nach OK.
 
@@ -57,21 +59,21 @@ Screenshots, Logs und Ruckler-Statistik liegen nach jedem Lauf im Branch `ci-res
 ## Installation auf dem Fire TV Stick
 
 1. Auf dem Fire TV unter *Einstellungen → Mein Fire TV → Entwickleroptionen* „Apps unbekannter Herkunft“ für die App **Downloader** erlauben.
-2. Die Datei `AyuTV.apk` aus dem neuesten [Release](../../releases/latest) nehmen. Jede neue Version erscheint als eigenes Release.
+2. Die Datei `DnA-TV.apk` aus dem neuesten [Release](../../releases/latest) nehmen. Jede neue Version erscheint als eigenes Release.
 3. In Downloader die APK-URL eingeben und installieren. War vorher „NovaTV“ installiert, diese alte App deinstallieren (anderer Paketname, sie wird nicht ersetzt).
-   Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install AyuTV.apk`.
+   Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install DnA-TV.apk`.
 
 Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose ist im Debug-Build deutlich langsamer.
 
-## Untertitel und Übersetzung einrichten (einmalig, kostenlos)
+## Untertitel und Übersetzung einrichten (optional, kostenlos)
 
-1. Auf [opensubtitles.com](https://www.opensubtitles.com) ein Konto anlegen.
-2. Unter *Profil → API-Consumer* einen API-Key erzeugen.
-3. In Ayu-TV unter *Einstellungen → Untertitel* den API-Key eintragen. Benutzername und Passwort sind optional, ergeben aber mehr Downloads pro Tag.
+Übersetzen funktioniert ohne jede Einrichtung: Pro Sprachrichtung lädt DnA-TV einmalig ein Übersetzungsmodell (ca. 110 MB, [OPUS-MT](https://github.com/Helsinki-NLP/Opus-MT), Universität Helsinki, CC BY 4.0) und übersetzt danach auf dem Gerät.
 
-4. Für automatische Übersetzung: *Einstellungen → Untertitel → Automatische Übersetzung* auf **DeepL** stellen und den kostenlosen DeepL-API-Key eintragen ([deepl.com/pro-api](https://www.deepl.com/pro-api), 500.000 Zeichen pro Monat, reicht für etwa 10 Filme). Alternativ **LibreTranslate** mit eigener Server-Adresse.
+Für **Untertitel aus dem Internet** (fast jeder Film, viele Sprachen, auch KI-übersetzte) einmalig OpenSubtitles verbinden:
 
-Ohne Zugänge funktionieren eingebettete Untertitel trotzdem.
+1. In DnA-TV *Einstellungen → Untertitel → Einrichtung per Handy*: QR-Code mit dem Handy scannen (gleiches WLAN).
+2. Auf der Seite stehen die Links: kostenloses Konto auf [opensubtitles.com](https://www.opensubtitles.com), unter [opensubtitles.com/consumers](https://www.opensubtitles.com/consumers) einen API-Key anlegen, Key, Benutzername und Passwort einfügen, *Speichern und prüfen*.
+3. Optional ebenso einen DeepL-API-Key ([deepl.com/pro-api](https://www.deepl.com/pro-api), 500.000 Zeichen/Monat frei). Ist das Kontingent leer, übersetzt wieder das Gerät.
 
 ## Tipps für flüssiges 4K
 

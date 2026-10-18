@@ -103,10 +103,12 @@ class ContentRepository(
         val q = query.trim()
         if (q.length < 2) return@coroutineScope SearchResults()
         val now = System.currentTimeMillis()
-        val channels = async { db.channels().search(q, 40) }
-        val programmes = async { db.programmes().search(q, now, 40) }
-        val movies = async { db.vod().search(q, 40) }
-        val series = async { db.series().search(q, 40) }
+        // Alle Treffer zeigen (die Reihen laden lazy). Die Grenze schützt nur vor Speicherproblemen
+        // bei Ein-Buchstaben-artigen Suchen in Playlists mit Hunderttausenden Einträgen.
+        val channels = async { db.channels().search(q, SEARCH_MAX) }
+        val programmes = async { db.programmes().search(q, now, SEARCH_MAX) }
+        val movies = async { db.vod().search(q, SEARCH_MAX) }
+        val series = async { db.series().search(q, SEARCH_MAX) }
 
         val programmeList = programmes.await().distinctBy { Triple(it.channelEpgId, it.start, it.title) }
         // Zu jeder gefundenen Sendung den passenden Sender (für "Jetzt einschalten").
@@ -196,5 +198,6 @@ class ContentRepository(
 
     private companion object {
         const val SQL_CHUNK = 500
+        const val SEARCH_MAX = 20_000
     }
 }

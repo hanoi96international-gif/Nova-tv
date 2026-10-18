@@ -104,6 +104,22 @@ class DeviceTourTest {
         val container = app.container
         val base = "http://10.0.2.2:8000"
 
+        // 0. Nach dem Upgrade von der Vorversion: Datenbank muss migriert sein (nicht gelöscht/abgestürzt)
+        section("upgrade") {
+            val version = container.db.openHelper.readableDatabase.version
+            val existing = runBlocking { container.db.playlists().all() }
+            log("db_version=$version playlists_before=${existing.size}")
+            assertTrue("Datenbank nicht auf Version 2", version == 2)
+        }
+
+        // 0b. Textmuster auf Android prüfen (Android nutzt eine andere Regex-Engine als der PC)
+        section("regex") {
+            val plain = de.ayutv.data.parse.Srt.plainText("<i>Hallo</i> {\\an8}Welt")
+            val (title, year) = de.ayutv.data.parse.OpenSubtitlesParsing.cleanTitle("DE - Der Film [4K] (Director's Cut) 2020")
+            log("regex: plain=$plain title=$title year=$year")
+            assertTrue("Srt.plainText: $plain", plain == "Hallo Welt")
+        }
+
         // 1. Playlist + EPG importieren
         val started = System.currentTimeMillis()
         runBlocking {
@@ -167,7 +183,8 @@ class DeviceTourTest {
                 log(
                     "live[$index] ${channel.name}: ready=$ready startup_ms=${stats.startupMs} ${stats.width}x${stats.height} " +
                         "fps=${stats.frameRate} codec=${stats.videoCodec} decoder=${stats.decoder} dropped=${stats.droppedFrames} " +
-                        "hdr=${stats.hdr} message=${scenario.read { it.message }}"
+                        "hdr=${stats.hdr} audio=${stats.audioCodec}/${stats.audioChannels}ch audio_decoder=${stats.audioDecoder} " +
+                        "message=${scenario.read { it.message }}"
                 )
                 shot("1${index}_live_${channel.name.filter(Char::isLetterOrDigit)}")
                 if (index == 0) {
@@ -194,6 +211,23 @@ class DeviceTourTest {
 
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
+        // OpenSubtitles (eingebauter Schlüssel): Zugang gültig, Suche nach einem bekannten Film liefert Treffer.
+        // Danach aus, damit die Übersetzungstests nicht von zufälligen Online-Treffern abhängen.
+        section("opensubtitles") {
+            val settings = runBlocking { container.settings.current() }
+            if (settings.openSubtitlesApiKey.isBlank()) {
+                log("opensubtitles: kein eingebauter Schlüssel (GitHub-Secret fehlt)")
+            } else {
+                val check = runBlocking { de.ayutv.data.setup.KeyCheck.run(container.http, settings) }
+                val german = runBlocking { container.subtitles.countResults("Inception (2010)", "de", settings) }
+                val english = runBlocking { container.subtitles.countResults("The Matrix (1999)", "en", settings) }
+                log("opensubtitles: check=${check.map { "${it.ok}:${it.text}" }} inception_de=$german matrix_en=$english")
+                assertTrue("OpenSubtitles-Schlüssel ungültig: $check", check.all { it.ok })
+                assertTrue("OpenSubtitles findet nichts", german > 0 && english > 0)
+            }
+        }
+        runBlocking { container.settings.update { it.copy(onlineSubtitles = false) } }
+
         if (movie != null) section("vod") {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
             launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
@@ -209,6 +243,25 @@ class DeviceTourTest {
                 Thread.sleep(4_000)
                 log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
                 shot("21_vod_subtitles")
+                // Wie auf dem Fire TV: Indonesisch wählen, obwohl der Film nur englische Untertitel hat.
+                // Erwartet: Live-Übersetzung der englischen Spur auf dem Gerät (Modell wird einmalig geladen).
+                val englishLines = setOf("Hello, how are you?", "I told you we should never have come here.", "Where is my brother?",
+                    "We have to leave before it gets dark.", "Thank you for everything.", "- Where is he?\n- I don't know.")
+                fun translatedNow() = scenario.read { it.translatedCue }?.takeIf { it.isNotBlank() && it !in englishLines }
+                scenario.onActivity { it.loadSubtitles("id") }
+                val translated = waitFor(240_000) { translatedNow() != null }
+                log(
+                    "translate_id: ok=$translated target=${scenario.read { it.liveTranslateTarget }} " +
+                        "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} statuses=${scenario.read { it.statusHistory.toList() }}"
+                )
+                shot("23_vod_translated_id")
+                assertTrue("Übersetzung nach Indonesisch fehlgeschlagen", translated)
+                scenario.onActivity { it.loadSubtitles("de") }
+                Thread.sleep(2_000)
+                val german = waitFor(240_000) { scenario.read { it.liveTranslateTarget } == "de" && translatedNow() != null }
+                log("translate_de: target=${scenario.read { it.liveTranslateTarget }} cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')}")
+                shot("24_vod_translated_de")
+                assertTrue("Übersetzung nach Deutsch fehlgeschlagen", german)
                 key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(1_500)
                 log("vod after_seek position_ms=${scenario.read { it.player?.currentPosition }} message=${scenario.read { it.message }}")
                 shot("22_vod_seek")
@@ -226,6 +279,72 @@ class DeviceTourTest {
                 shot("30_episode")
             }
         } }
+        // 5. Tonformate, die Fire TV ohne AV-Receiver nicht selbst dekodiert: FFmpeg muss sie abspielen
+        val audioTests = runBlocking { container.db.vod().search("Tontest", 20) }
+        log("audio_tests=${audioTests.size}")
+        audioTests.forEach { movie -> section("audio ${movie.name}") {
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, null, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                val start = scenario.read { it.player?.currentPosition } ?: 0L
+                Thread.sleep(5_000)
+                val position = scenario.read { it.player?.currentPosition } ?: 0L
+                val stats = scenario.read { it.stats }
+                val audioTracks = scenario.read { a -> a.tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }.map { it.getTrackFormat(0).sampleMimeType } }
+                log(
+                    "audio ${movie.name}: ready=$ready advanced_ms=${position - start} audio=${stats.audioCodec}/${stats.audioChannels}ch " +
+                        "decoder=${stats.audioDecoder} tracks=$audioTracks message=${scenario.read { it.message }} status=${scenario.read { it.subtitleStatus }}"
+                )
+                assertTrue("${movie.name} spielt nicht (ready=$ready, ${position - start} ms)", ready && position - start >= 3_000 && stats.audioDecoder.isNotEmpty())
+            }
+        } }
+
+        // 5b. Übersetzung auf dem Gerät (OPUS-MT): echtes Modell laden, Qualität und Tempo messen
+        section("mt_on_device") {
+            val translator = de.ayutv.data.repo.Translators.onDevice
+            val progress = mutableListOf<String>()
+            translator.onProgress = { progress += it }
+            val sentences = listOf("Hello, how are you?", "I told you we should never have come here.", "- Where is he?\n- I don't know.")
+            val loadStart = System.currentTimeMillis()
+            val german = runBlocking { translator.translate(sentences.take(1), "de", "en") }
+            val firstMs = System.currentTimeMillis() - loadStart
+            val runStart = System.currentTimeMillis()
+            val more = runBlocking { translator.translate(sentences, "de", "en") }
+            val perSentence = (System.currentTimeMillis() - runStart) / sentences.size
+            log("mt de: first_ms=$firstMs per_sentence_ms=$perSentence result=${more.joinToString(" | ") { it.replace('\n', '/') }} progress_events=${progress.size}")
+            assertTrue("Keine deutsche Übersetzung: $german", german.single().contains("Hallo") || german.single().contains("geht"))
+            // Sprache ohne eigenes Modell: über das Mehrsprachen-Modell mit Sprachkennung
+            val polish = runBlocking { translator.translate(listOf("Thank you for everything."), "pl", "en") }
+            log("mt pl (en-mul): ${polish.single()}")
+            assertTrue("Keine polnische Übersetzung", polish.single().isNotBlank() && polish.single() != "Thank you for everything.")
+            log("mt installed=${translator.installedPairs()} bytes=${translator.installedBytes()}")
+        }
+
+        // 5c. Film ohne eingebettete Untertitel, aber mit (geladener) englischer Datei: vorausschauend übersetzen
+        section("file_translation") {
+            val movie = runBlocking { container.db.vod().search("Stummfilm", 5) }.firstOrNull() ?: error("Film ohne Untertitel fehlt")
+            val english = listOf("Hello, how are you?", "Where is my brother?", "Thank you for everything.", "We have to leave before it gets dark.")
+            val cues = (0 until 30).map { i ->
+                val start = i * 4
+                fun t(sec: Int) = "00:%02d:%02d,000".format(sec / 60, sec % 60)
+                de.ayutv.data.parse.SrtCue(t(start), t(start + 3), english[i % english.size])
+            }
+            container.subtitles.saveTranslation(movie.key, "en", cues)
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, null, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.loadSubtitles("de") }
+                val ok = waitFor(120_000) {
+                    val cue = scenario.read { it.translatedCue }
+                    cue != null && english.none { e -> cue == e } && cue.isNotBlank()
+                }
+                Thread.sleep(1_500)
+                shot("25_file_translation_de")
+                log("file_translation: ok=$ok cue=${scenario.read { it.translatedCue }?.replace('\n', '/')} target=${scenario.read { it.liveTranslateTarget }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(4)}")
+                assertTrue("Datei-Übersetzung fehlgeschlagen", ok)
+            }
+        }
+
         // 6. Belastung: großer Anbieter (3000 Sender, 36.000 EPG-Einträge als .xml.gz)
         section("big") {
             val bigStart = System.currentTimeMillis()
@@ -243,6 +362,45 @@ class DeviceTourTest {
                 "big: import_ms=${nowStart - bigStart} channels_total=$total programmes_total=$epgCount " +
                     "now_playing_all_ms=${System.currentTimeMillis() - nowStart} now_found=${now.size} sync=${container.playlists.state.value}"
             )
+        }
+        // Einrichtung per Handy: Seite erreichbar, Formular speichert Werte
+        section("phone_setup") {
+            val server = de.ayutv.data.setup.PhoneSetupServer(container)
+            server.start()
+            try {
+                assertTrue("Keine Adresse", waitFor(5_000) { server.state.value.url != null })
+                val url = server.state.value.url!!
+                val page = container.http.newCall(okhttp3.Request.Builder().url(url).build()).execute().use { it.code to it.body.string() }
+                val form = okhttp3.FormBody.Builder().add("os_user", "ayu-ci").build()
+                val saved = container.http.newCall(okhttp3.Request.Builder().url(url).post(form).build()).execute().use { it.code }
+                val user = runBlocking { container.settings.current().openSubtitlesUser }
+                log("phone_setup: url=$url get=${page.first} has_form=${"os_key" in page.second} post=$saved user=$user report=${server.state.value.lastSaved?.replace('\n', '|')}")
+                assertTrue("Formular nicht gespeichert", page.first == 200 && saved == 200 && user == "ayu-ci")
+                runBlocking { container.settings.update { it.copy(openSubtitlesUser = "") } }
+            } finally {
+                server.stop()
+            }
+        }
+
+        // Suche zeigt alle Treffer (früher fest maximal 40)
+        section("search_all") {
+            val startedSearch = System.currentTimeMillis()
+            val results = runBlocking { container.content.search("Sender") }
+            log("search_all: channels=${results.channels.size} programmes=${results.programmes.size} ms=${System.currentTimeMillis() - startedSearch}")
+            assertTrue("Suche begrenzt: ${results.channels.size}", results.channels.size >= 3000)
+        }
+
+        // Playlist ausschalten: verschwindet überall, Daten bleiben; wieder einschalten: alles wieder da
+        section("playlist_toggle") {
+            val big = runBlocking { container.db.playlists().all() }.first { it.name == "Groß" }
+            val before = runBlocking { container.content.zapList(null, false) }.size
+            runBlocking { container.playlists.setEnabled(big.id, false) }
+            val off = runBlocking { container.content.zapList(null, false) }.size
+            val searchOff = runBlocking { container.content.search("Sender") }.channels.size
+            runBlocking { container.playlists.setEnabled(big.id, true) }
+            val on = runBlocking { container.content.zapList(null, false) }.size
+            log("playlist_toggle: before=$before off=$off search_off=$searchOff on=$on")
+            assertTrue("Ausschalten wirkt nicht", off < before && searchOff == 0 && on == before)
         }
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)

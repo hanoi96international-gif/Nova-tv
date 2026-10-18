@@ -18,15 +18,44 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi 
 
 # Film mit eingebetteten englischen Untertiteln
 python3 - <<'PY'
+phrases = ["Hello, how are you?", "I told you we should never have come here.", "Where is my brother?",
+           "We have to leave before it gets dark.", "Thank you for everything.", "- Where is he?\n- I don't know."]
 lines = []
-for i in range(60):
+for i in range(220):
     s, e = i * 4, i * 4 + 3
-    lines.append(f"{i+1}\n00:{s//60:02d}:{s%60:02d},000 --> 00:{e//60:02d}:{e%60:02d},000\nThis is English subtitle line {i+1}.\n")
+    lines.append(f"{i+1}\n00:{s//60:02d}:{s%60:02d},000 --> 00:{e//60:02d}:{e%60:02d},000\n{phrases[i % len(phrases)]}\n")
 open("subs.en.srt", "w").write("\n".join(lines))
 PY
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi -i "sine=frequency=660:sample_rate=48000" -i subs.en.srt \
-  -t 240 -map 0 -map 1 -map 2 -c:v libx264 -preset veryfast -g 48 -pix_fmt yuv420p -c:a aac -c:s srt \
+  -t 900 -map 0 -map 1 -map 2 -c:v libx264 -preset veryfast -b:v 700k -g 48 -pix_fmt yuv420p -c:a aac -c:s srt \
   -metadata:s:s:0 language=eng movie/test/test/1001.mkv
+
+# Tonformate, die das Gerät (und der Emulator) nicht selbst dekodiert: Prüfstein für FFmpeg
+ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=500:sample_rate=48000" \
+  -t 60 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" -c:a dca -strict -2 -b:a 1509k dts.mkv
+ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=600:sample_rate=48000" \
+  -t 60 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" \
+  -c:a eac3 -b:a 384k -f mpegts eac3.ts
+ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi -i "sine=frequency=700:sample_rate=48000" \
+  -t 90 -c:v libx264 -preset veryfast -g 48 -pix_fmt yuv420p -af "pan=5.1|c0=c0|c1=c0|c2=c0|c3=c0|c4=c0|c5=c0" -c:a truehd -strict -2 movie/test/test/1002.mkv
+
+# Film ohne eingebettete Untertitel: Übersetzung aus einer Untertiteldatei
+ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=800:sample_rate=48000" \
+  -t 120 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -c:a aac movie/test/test/1003.mkv
+
+# Echte Tonspuren aus den offiziellen Media3-Testdaten (DTS, DTS-HD MA, DTS:X, Dolby Atmos).
+# Unverändert vervielfacht (-c copy), damit die Wiedergabe lange genug für die Prüfung läuft.
+media3=https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/test_data/src/test/assets/media
+fetch_loop() {
+  local src="src_$(basename "$2")"
+  curl -sSfL -o "$src" "$media3/$1" && ffmpeg -loglevel error -y -stream_loop 120 -i "$src" -map 0 -c copy -t 60 "$2" \
+    || echo "Testdatei $1 nicht verfügbar"
+}
+fetch_loop mkv/sample_with_dts_hd_ma.mkv movie/test/test/2001.mkv
+fetch_loop mkv/sample_with_dts_x.mkv movie/test/test/2002.mkv
+fetch_loop mkv/sample_with_dts.mkv movie/test/test/2003.mkv
+fetch_loop ts/sample_eac3joc.ts atmos.ts
+ffprobe -v error -show_entries stream=codec_name,profile,channels:format=duration -of compact movie/test/test/200*.mkv atmos.ts || true
 
 cat > playlist.m3u <<'M3U'
 #EXTM3U url-tvg="http://10.0.2.2:8000/epg.xml"
@@ -36,8 +65,24 @@ http://10.0.2.2:8000/hd50.ts
 http://10.0.2.2:8000/uhd.ts
 #EXTINF:-1 tvg-id="hls.test" tvg-chno="3" group-title="Test HD",HLS Test
 http://10.0.2.2:8000/hls/index.m3u8
+#EXTINF:-1 tvg-chno="4" group-title="Test Ton",Atmos Ton Test
+http://10.0.2.2:8000/atmos.ts
+#EXTINF:-1 tvg-chno="5" group-title="Test Ton",EAC3 Ton Test
+http://10.0.2.2:8000/eac3.ts
 #EXTINF:-1 group-title="Filme Test",Testfilm (2024)
 http://10.0.2.2:8000/movie/test/test/1001.mkv
+#EXTINF:-1 group-title="Tontest",Tontest TrueHD 5.1 (2025)
+http://10.0.2.2:8000/movie/test/test/1002.mkv
+#EXTINF:-1 group-title="Tontest",Tontest DTS 5.1 erzeugt (2025)
+http://10.0.2.2:8000/dts.mkv
+#EXTINF:-1 group-title="Tontest",Tontest DTS-HD MA (2025)
+http://10.0.2.2:8000/movie/test/test/2001.mkv
+#EXTINF:-1 group-title="Tontest",Tontest DTS-X (2025)
+http://10.0.2.2:8000/movie/test/test/2002.mkv
+#EXTINF:-1 group-title="Tontest",Tontest DTS echt (2025)
+http://10.0.2.2:8000/movie/test/test/2003.mkv
+#EXTINF:-1 group-title="Filme Test",Stummfilm ohne Untertitel (2023)
+http://10.0.2.2:8000/movie/test/test/1003.mkv
 M3U
 
 python3 - <<'PY'

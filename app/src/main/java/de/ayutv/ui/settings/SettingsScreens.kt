@@ -25,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
@@ -41,6 +42,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import de.ayutv.BuildConfig
 import de.ayutv.data.AppSettings
+import de.ayutv.data.AudioOutput
+import de.ayutv.player.AudioDecoders
 import de.ayutv.data.BufferProfile
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.Languages
@@ -54,6 +57,14 @@ import de.ayutv.ui.components.SyncBanner
 import de.ayutv.ui.components.TvTextField
 import de.ayutv.ui.theme.AyuColors
 import kotlinx.coroutines.Job
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.foundation.background
+import de.ayutv.data.setup.KeyCheck
+import de.ayutv.data.setup.PhoneSetupServer
+import de.ayutv.ui.components.QrCode
+import de.ayutv.data.repo.Translators
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -69,6 +80,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     var confirmDelete by remember { mutableStateOf<Long?>(null) }
     var pickingLanguage by remember { mutableStateOf(false) }
     var epgReloadJob by remember { mutableStateOf<Job?>(null) }
+    // Einrichtung per Handy: Webseite im Heimnetz, solange die Einstellungen offen sind.
+    val phoneSetup = remember { PhoneSetupServer(container) }
+    val phone by phoneSetup.state.collectAsStateWithLifecycle()
+    DisposableEffect(Unit) {
+        phoneSetup.start()
+        onDispose { phoneSetup.stop() }
+    }
+    var keyReport by remember { mutableStateOf<String?>(null) }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settings.update(transform) }
@@ -100,6 +119,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             PlaylistRow(
                 playlist = playlist,
                 confirmingDelete = confirmDelete == playlist.id,
+                onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
                 onGroups = { onManageGroups(playlist) },
                 onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
                 onDelete = {
@@ -152,10 +172,29 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         }
         item {
             SettingRow(
-                "Schnelles Dekodieren",
+                "Schnelles Dekodieren (experimentell)",
                 onOff(settings.asyncDecoding),
-                "Steuert den Hardware-Decoder asynchron an: mehr Reserven bei 4K. Wird bei Problemen automatisch abgeschaltet.",
+                "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
             ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
+        }
+        item {
+            SettingRow(
+                "Tonausgabe",
+                settings.audioOutput.label,
+                "Automatisch: Dolby/DTS gehen an Soundbar oder Receiver. Bei Stille oder Aussetzern auf „Immer im Gerät dekodieren“ stellen.",
+            ) {
+                update {
+                    it.copy(audioOutput = if (it.audioOutput == AudioOutput.AUTO) AudioOutput.PCM else AudioOutput.AUTO)
+                }
+            }
+        }
+        item {
+            SettingRow(
+                "Zusätzliche Tondecoder (FFmpeg)",
+                if (AudioDecoders.ffmpegAvailable) "Aktiv" else "Nicht enthalten",
+                "Spielt DTS, Dolby TrueHD, Dolby Digital (Plus) u. a. auch ohne AV-Receiver ab." +
+                    (AudioDecoders.ffmpegVersion?.let { " FFmpeg $it." } ?: ""),
+            ) {}
         }
         item {
             SettingRow(
@@ -195,6 +234,20 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         }
 
         item { SectionTitle("Untertitel (Filme & Serien)", Modifier.padding(top = 20.dp)) }
+        item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
+        item {
+            SettingRow(
+                "Zugänge prüfen",
+                "",
+                "Testet den OpenSubtitles-Zugang sofort.",
+            ) {
+                keyReport = "Prüfe …"
+                scope.launch {
+                    keyReport = KeyCheck.run(container.http, container.settings.current())
+                        .joinToString("\n") { (if (it.ok) "✓ " else "✗ ") + it.text }
+                }
+            }
+        }
         item {
             SettingRow(
                 "Automatisch einschalten",
@@ -215,9 +268,18 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             }
         }
         item {
+            val builtIn = BuildConfig.OPENSUBTITLES_API_KEY.isNotBlank()
+            SettingRow(
+                "Untertitel aus dem Internet",
+                onOff(settings.onlineSubtitles),
+                if (builtIn) "OpenSubtitles ist eingebaut, kein Konto nötig. Sucht Untertitel, wenn ein Film keine passenden hat."
+                else "Sucht bei OpenSubtitles, wenn ein Film keine passenden Untertitel hat (API-Key per Handy eintragen).",
+            ) { update { it.copy(onlineSubtitles = !it.onlineSubtitles) } }
+        }
+        item {
             CredentialField(
                 current = settings.openSubtitlesKey,
-                label = "OpenSubtitles API-Key (kostenlos auf opensubtitles.com → Konto → API-Consumer)",
+                label = "Eigener OpenSubtitles API-Key (optional, ersetzt den eingebauten)",
             ) { key -> update { it.copy(openSubtitlesKey = key) } }
         }
         item {
@@ -235,29 +297,29 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             SettingRow(
                 "Automatische Übersetzung",
                 settings.translationProvider.label,
-                "Gibt es keine Untertitel in der Wunschsprache, wird eine vorhandene Datei übersetzt. Auch eingebettete Spuren lassen sich live übersetzen.",
+                "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene direkt auf dem Fire TV übersetzt: " +
+                    "ohne Konto und ohne Grenze. Pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen.",
             ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
         }
-        if (settings.translationProvider == TranslationProvider.DEEPL) {
-            item {
-                CredentialField(settings.deeplKey, "DeepL API-Key (kostenlos auf deepl.com/pro-api, 500.000 Zeichen/Monat)") { key ->
-                    update { it.copy(deeplKey = key) }
+        item {
+            var modelInfo by remember { mutableStateOf("") }
+            LaunchedEffect(Unit) {
+                modelInfo = withContext(Dispatchers.IO) {
+                    val pairs = Translators.onDevice.installedPairs()
+                    if (pairs.isEmpty()) "noch keine geladen" else "${pairs.size} · ${Translators.onDevice.installedBytes() / 1_000_000} MB"
+                }
+            }
+            SettingRow(
+                "Sprachmodelle auf dem Gerät",
+                modelInfo,
+                "Auswählen löscht alle geladenen Modelle (werden bei Bedarf neu geladen). Übersetzung: OPUS-MT, Universität Helsinki, CC BY 4.0.",
+            ) {
+                scope.launch {
+                    Translators.onDevice.deleteAll()
+                    modelInfo = "noch keine geladen"
                 }
             }
         }
-        if (settings.translationProvider == TranslationProvider.LIBRE) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    CredentialField(settings.libreUrl, "LibreTranslate-Server, z. B. https://libretranslate.com", Modifier.width(380.dp)) { url ->
-                        update { it.copy(libreUrl = url) }
-                    }
-                    CredentialField(settings.libreKey, "API-Key (falls nötig)", Modifier.width(260.dp)) { key ->
-                        update { it.copy(libreKey = key) }
-                    }
-                }
-            }
-        }
-
         item { SectionTitle("Daten", Modifier.padding(top = 20.dp)) }
         item {
             SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
@@ -265,7 +327,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             }
         }
         item {
-            Text("Ayu-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp))
+            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp))
         }
     }
 
@@ -290,7 +352,7 @@ private fun LanguageList(selected: String, onSelect: (String) -> Unit) {
             SettingRow(
                 language.label,
                 if (language.code == selected) "✓" else "",
-                if (language.deepl == null) "Übersetzung nur mit LibreTranslate" else "",
+                if (Translators.onDevice.supports(language.code)) "" else "nur Untertitel aus dem Internet, keine Übersetzung",
                 modifier = if (language.code == selected) Modifier.focusRequester(focus) else Modifier,
             ) { onSelect(language.code) }
         }
@@ -328,6 +390,7 @@ private fun CredentialField(
 private fun PlaylistRow(
     playlist: PlaylistEntity,
     confirmingDelete: Boolean,
+    onToggle: () -> Unit,
     onGroups: () -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
@@ -336,15 +399,26 @@ private fun PlaylistRow(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Schalter vorne: Welche Playlists aktiv sind, entscheidet der Nutzer selbst.
+        OutlinedButton(
+            onClick = onToggle,
+            colors = if (playlist.enabled) ButtonDefaults.colors(containerColor = AyuColors.AccentSoft) else ButtonDefaults.colors(),
+        ) { Text(if (playlist.enabled) "● Aktiv" else "○ Aus") }
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(playlist.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                playlist.name,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (playlist.enabled) Color.Unspecified else AyuColors.TextSecondary,
+            )
             val type = if (playlist.type == PlaylistType.XTREAM) "Xtream Codes" else "M3U"
             val synced = if (playlist.lastSync > 0) {
                 "aktualisiert " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(playlist.lastSync))
             } else {
                 "noch nicht geladen"
             }
-            Text("$type · $synced", color = AyuColors.TextSecondary, fontSize = 13.sp)
+            val state = if (playlist.enabled) "" else " · ausgeschaltet, erscheint nirgends"
+            Text("$type · $synced$state", color = AyuColors.TextSecondary, fontSize = 13.sp)
         }
         OutlinedButton(onClick = onGroups) { Text("Gruppen") }
         Spacer(Modifier.width(10.dp))
@@ -455,7 +529,7 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
     ) {
         Text("Playlist hinzufügen", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Ayu-TV ist ein Player: Du brauchst einen Zugang von deinem IPTV-Anbieter.",
+            "DnA-TV ist ein Player: Du brauchst einen Zugang von deinem IPTV-Anbieter.",
             color = AyuColors.TextSecondary,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -494,5 +568,28 @@ private fun TypeButton(label: String, selected: Boolean, onClick: () -> Unit) {
         Button(onClick = onClick) { Text(label) }
     } else {
         OutlinedButton(onClick = onClick) { Text(label) }
+    }
+}
+
+@Composable
+private fun PhoneSetupCard(state: PhoneSetupServer.State, report: String?) {
+    Row(
+        Modifier.fillMaxWidth().background(AyuColors.Surface, RoundedCornerShape(12.dp)).padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        state.url?.let { QrCode(it, size = 150.dp) }
+        Spacer(Modifier.width(20.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Einrichtung per Handy", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "QR-Code mit dem Handy scannen (gleiches WLAN) und dort Playlist-Adressen oder den OpenSubtitles-Zugang " +
+                    "bequem einfügen statt mit der Fernbedienung zu tippen.",
+                color = AyuColors.TextSecondary,
+                fontSize = 13.sp,
+            )
+            state.url?.let { Text(it, color = AyuColors.Accent, fontSize = 18.sp, modifier = Modifier.padding(top = 8.dp)) }
+            state.error?.let { Text(it, color = AyuColors.Live, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+            report?.let { Text(it, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
+        }
     }
 }

@@ -5,7 +5,7 @@ data class SrtCue(val start: String, val end: String, val text: String)
 /** Liest und schreibt SubRip (.srt). Robust gegen BOM, Windows-Zeilenenden und fehlende Nummern. */
 object Srt {
     private val timing = Regex("""^\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}).*$""")
-    private val tags = Regex("""<[^>]+>|\{\\[^}]*}""")
+    private val tags = Regex("""<[^>]+>|\{\\[^}]*\}""")
 
     fun parse(content: String): List<SrtCue> {
         val lines = content.removePrefix("﻿").replace("\r\n", "\n").replace('\r', '\n').split('\n')
