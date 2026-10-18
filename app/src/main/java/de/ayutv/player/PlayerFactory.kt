@@ -249,19 +249,37 @@ class FrameRateMatcher(private val activity: Activity) {
     fun match(frameRate: Float): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || frameRate <= 0f || switching) return false
         val display = activity.windowManager.defaultDisplay ?: return false
+        val modes = display.supportedModes.map { DisplayModeInfo(it.modeId, it.physicalWidth, it.physicalHeight, it.refreshRate) }
         val current = display.mode
-        val sameSize = display.supportedModes.filter {
-            it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight
-        }
-        val targets = if (frameRate in 24.5f..30.5f) listOf(frameRate * 2, frameRate) else listOf(frameRate, frameRate * 2)
-        val best = targets.firstNotNullOfOrNull { target -> sameSize.firstOrNull { matches(it.refreshRate, target) } } ?: return false
-        if (best.modeId == current.modeId || best.modeId == requestedModeId) return false
-        requestedModeId = best.modeId
-        startSwitch(best.modeId)
+        val best = pickMode(modes, DisplayModeInfo(current.modeId, current.physicalWidth, current.physicalHeight, current.refreshRate), frameRate)
+            ?: return false
+        if (best == current.modeId || best == requestedModeId) return false
+        requestedModeId = best
+        startSwitch(best)
         val attributes = activity.window.attributes
-        attributes.preferredDisplayModeId = best.modeId
+        attributes.preferredDisplayModeId = best
         activity.window.attributes = attributes
         return true
+    }
+
+    data class DisplayModeInfo(val id: Int, val width: Int, val height: Int, val refreshRate: Float)
+
+    companion object {
+        /**
+         * Passender Anzeigemodus für [frameRate], bei gleicher Auflösung (kein Umschalten zwischen 4K und 1080p).
+         * 25/30 fps bevorzugt mit 50/60 Hz, Filme (23,976/24) exakt. Je Ziel der nächstliegende Modus,
+         * damit 23,976 und 24 Hz nicht verwechselt werden. null = nichts Passendes (oder schon richtig).
+         */
+        fun pickMode(modes: List<DisplayModeInfo>, current: DisplayModeInfo, frameRate: Float): Int? {
+            if (frameRate <= 0f) return null
+            val sameSize = modes.filter { it.width == current.width && it.height == current.height }
+            val targets = if (frameRate in 24.5f..30.5f) listOf(frameRate * 2, frameRate) else listOf(frameRate, frameRate * 2)
+            for (target in targets) {
+                val best = sameSize.filter { abs(it.refreshRate - target) < 0.05f }.minByOrNull { abs(it.refreshRate - target) }
+                if (best != null) return best.id
+            }
+            return null
+        }
     }
 
     fun reset() {
@@ -287,7 +305,7 @@ class FrameRateMatcher(private val activity: Activity) {
                 if (id != displayId || activity.windowManager.defaultDisplay.mode.modeId != modeId) return
                 // Modus steht, der Fernseher braucht aber noch einen Moment für das neue HDMI-Signal.
                 timeout?.let { handler.removeCallbacks(it) }
-                handler.postDelayed({ finishSwitch() }, SETTLE_MS)
+                handler.postDelayed({ finishSwitch() }, Timing.SETTLE_MS)
             }
         }
         listener = l
@@ -295,7 +313,7 @@ class FrameRateMatcher(private val activity: Activity) {
         // Manche Geräte melden den Wechsel nicht (oder lehnen ihn ab): spätestens dann weiterspielen.
         val t = Runnable { finishSwitch() }
         timeout = t
-        handler.postDelayed(t, MAX_SWITCH_MS)
+        handler.postDelayed(t, Timing.MAX_SWITCH_MS)
     }
 
     private fun finishSwitch() {
@@ -310,9 +328,7 @@ class FrameRateMatcher(private val activity: Activity) {
         }
     }
 
-    private fun matches(refreshRate: Float, frameRate: Float) = abs(refreshRate - frameRate) < 0.05f
-
-    private companion object {
+    private object Timing {
         const val SETTLE_MS = 1_200L
         const val MAX_SWITCH_MS = 5_000L
     }

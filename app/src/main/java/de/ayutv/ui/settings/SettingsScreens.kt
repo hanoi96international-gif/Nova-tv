@@ -181,14 +181,17 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Tunneling-Modus",
                             onOff(settings.tunneling),
-                            "Video geht direkt vom Decoder zum Display. Hilft oft gegen Ruckeln bei 4K auf Fire TV. Bei Tonaussetzern wieder ausschalten.",
+                            "Bild und Ton laufen direkt in der Hardware synchron: am Fire TV Stick 4K / 4K Max flüssigeres 4K und exakte Lippensynchronität. " +
+                                "Empfohlen für 4K. Ausschalten, falls Ton aussetzt (manche Soundbars) – das Puffer-Polster gegen Hänger ist dabei inaktiv.",
                         ) { update { it.copy(tunneling = !it.tunneling) } }
                     }
                     item {
                         SettingRow(
                             "Bildwiederholrate anpassen",
                             onOff(settings.matchFrameRate),
-                            "Schaltet den Fernseher auf 50 Hz bzw. 23,976 Hz passend zum Video. Beseitigt Ruckeln bei Kameraschwenks.",
+                            "Empfohlen: An. Deutsches TV läuft mit 50 Hz, Filme mit 23,976 Hz – der Fire TV gibt sonst 60 Hz aus, das ruckelt bei " +
+                                "Schwenks. Beim Umschalten ist das Bild 1–2 s schwarz (nur wenn sich die Rate ändert). Fire TV: zusätzlich unter " +
+                                "Einstellungen → Display & Audio → Display „Originalbildrate anpassen“ einschalten.",
                         ) { update { it.copy(matchFrameRate = !it.matchFrameRate) } }
                     }
                     item {

@@ -209,6 +209,28 @@ class DeviceTourTest {
             }
         } }
 
+        // 3a. Bildwiederholrate anpassen + Tunneling eingeschaltet: darf nie hängen oder sich neu starten
+        channels.firstOrNull { it.name == "HD Test 50fps" }?.let { hd -> section("afr_tunneling") {
+            runBlocking { container.settings.update { it.copy(matchFrameRate = true, tunneling = true) } }
+            try {
+                launchPlayer(PlayerActivity.liveIntent(app, hd.key, null)).use { scenario ->
+                    waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                    var playing = 0
+                    val messages = mutableSetOf<String>()
+                    repeat(30) {
+                        Thread.sleep(1_000)
+                        if (scenario.read { it.player?.isPlaying } == true) playing++
+                        scenario.read { it.message }?.let(messages::add)
+                    }
+                    val stats = scenario.read { it.stats }
+                    log("afr_tunneling: playing_s=$playing fps=${stats.frameRate} measured=${stats.frameRateMeasured} messages=$messages")
+                    assertTrue("Mit Bildwiederholrate/Tunneling nur $playing von 30 s gelaufen", playing >= 27)
+                }
+            } finally {
+                runBlocking { container.settings.update { it.copy(matchFrameRate = false, tunneling = false) } }
+            }
+        } }
+
         // 3b. Wackelige Leitung: Server liefert in Echtzeit und trennt alle 15 s. Das Bild muss weiterlaufen.
         channels.firstOrNull { it.name == "Wackelige Leitung" }?.let { flaky -> section("flaky") {
             launchPlayer(PlayerActivity.liveIntent(app, flaky.key, null)).use { scenario ->
