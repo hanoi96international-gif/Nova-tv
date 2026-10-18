@@ -34,7 +34,7 @@ object KeyCheck {
         return runCatching {
             val base = "https://api.opensubtitles.com/api/v1"
             val user = settings.openSubtitlesUser.trim()
-            if (user.isNotEmpty()) {
+            if (user.isNotEmpty() && settings.openSubtitlesPassword.isNotEmpty()) {
                 val body = buildJsonObject {
                     put("username", user)
                     put("password", settings.openSubtitlesPassword)

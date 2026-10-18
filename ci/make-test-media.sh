@@ -47,7 +47,8 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi 
 # Unverändert vervielfacht (-c copy), damit die Wiedergabe lange genug für die Prüfung läuft.
 media3=https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/test_data/src/test/assets/media
 fetch_loop() {
-  curl -sSfL -o "src_$2" "$media3/$1" && ffmpeg -loglevel error -y -stream_loop 120 -i "src_$2" -map 0 -c copy -t 60 "$2" \
+  local src="src_$(basename "$2")"
+  curl -sSfL -o "$src" "$media3/$1" && ffmpeg -loglevel error -y -stream_loop 120 -i "$src" -map 0 -c copy -t 60 "$2" \
     || echo "Testdatei $1 nicht verfügbar"
 }
 fetch_loop mkv/sample_with_dts_hd_ma.mkv movie/test/test/2001.mkv
