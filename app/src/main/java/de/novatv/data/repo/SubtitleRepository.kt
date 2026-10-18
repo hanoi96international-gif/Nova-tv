@@ -80,7 +80,7 @@ class SubtitleRepository(
 
     /** Größe per Range-Anfrage ermitteln, dann Anfang und Ende laden. Ohne Range-Support kein Hash. */
     private fun movieHash(url: String, userAgent: String): String? {
-        val (size, head) = range(url, userAgent, 0, MovieHash.CHUNK - 1) ?: return null
+        val (size, head) = range(url, userAgent, 0L, MovieHash.CHUNK - 1L) ?: return null
         if (size < MovieHash.CHUNK * 2) return null
         val (_, tail) = range(url, userAgent, size - MovieHash.CHUNK, size - 1) ?: return null
         return MovieHash.compute(size, head, tail)
