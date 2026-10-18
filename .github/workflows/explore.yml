@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: sudo apt-get install -y -qq ffmpeg >/dev/null
-      - run: ci/explore/audio_probe.sh explore-out || true
+      - run: ci/explore/versions.sh explore-out || true
       - name: Ergebnisse veröffentlichen
         if: always()
         run: |
