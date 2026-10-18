@@ -216,7 +216,7 @@ class DeviceTourTest {
                 val translated = waitFor(180_000) { scenario.read { it.translatedCue } != null }
                 log(
                     "translate_id: ok=$translated target=${scenario.read { it.liveTranslateTarget }} " +
-                        "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} status=${scenario.read { it.subtitleStatus }}"
+                        "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} statuses=${scenario.read { it.statusHistory.toList() }}"
                 )
                 shot("23_vod_translated_id")
                 scenario.onActivity { it.loadSubtitles("de") }

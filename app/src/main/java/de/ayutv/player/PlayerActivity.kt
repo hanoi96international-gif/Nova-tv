@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -96,7 +97,16 @@ class PlayerActivity : ComponentActivity() {
     var tracks by mutableStateOf(Tracks.EMPTY); private set
     var textDisabled by mutableStateOf(false); private set
     var subtitleScale by mutableFloatStateOf(1f); private set
-    var subtitleStatus by mutableStateOf<String?>(null); private set
+    var subtitleStatus by mutableStateOf<String?>(null)
+        private set(value) {
+            field = value
+            if (value != null) {
+                statusHistory += value
+                Log.i(SUBTITLE_TAG, value)
+            }
+        }
+    /** Alle Statusmeldungen dieser Sitzung (für Diagnose und Tests). */
+    val statusHistory = mutableListOf<String>()
     val onlineSubtitlesAvailable: Boolean get() = !isLive && ::settings.isInitialized && settings.onlineSubtitlesEnabled
 
     private var vod: VodRequest? = null
@@ -465,6 +475,7 @@ class PlayerActivity : ComponentActivity() {
             }
             // 3. Eingebettete Textspur einer anderen Sprache live übersetzen
             val source = bestTranslationSource()
+            Log.i(SUBTITLE_TAG, "Sprache $language: Vorlage=${source?.let { (g, i) -> g.getTrackFormat(i).let { f -> "${f.language}/${f.sampleMimeType}/${f.codecs}" } }} übersetzen=${settings.translationEnabled} online=${settings.onlineSubtitlesEnabled}")
             if (source != null && settings.translationEnabled) {
                 startLiveTranslation(language, source)
                 return@launch
@@ -599,8 +610,9 @@ class PlayerActivity : ComponentActivity() {
                     translatedCue = it
                 }
                 .onFailure {
+                    Log.w(SUBTITLE_TAG, "Live-Übersetzung fehlgeschlagen", it)
                     stopLiveTranslation()
-                    subtitleStatus = "Übersetzung: ${it.message}"
+                    subtitleStatus = "Übersetzung nicht möglich: ${it.message ?: it.javaClass.simpleName}"
                 }
         }
     }
@@ -955,6 +967,7 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val MAX_RETRIES = 3
+        const val SUBTITLE_TAG = "AyuSubtitles"
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 10
         private const val VOD_STALL_SECONDS = 20

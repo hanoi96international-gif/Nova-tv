@@ -188,7 +188,8 @@ fun PlayerScreen(activity: PlayerActivity) {
                 fontSize = 14.sp,
             )
             LaunchedEffect(status) {
-                delay(5_000)
+                // Fehler länger stehen lassen, damit man sie lesen kann.
+                delay(if ("nicht" in status || "keine" in status.lowercase()) 12_000 else 5_000)
                 activity.clearSubtitleStatus(status)
             }
         }
