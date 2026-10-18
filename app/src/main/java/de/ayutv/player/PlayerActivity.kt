@@ -527,7 +527,7 @@ class PlayerActivity : ComponentActivity() {
             if (request != null) {
                 if (settings.onlineSubtitlesEnabled) subtitleStatus = "Suche Untertitel ($label) …"
                 val found = runCatching {
-                    container.subtitles.find(request.key, request.url, request.title, language, settings, translate = false) { subtitleStatus = it }
+                    container.subtitles.find(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
                 }.onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
                 if (found != null) {
                     attachLoaded(request, language, found)
@@ -656,7 +656,7 @@ class PlayerActivity : ComponentActivity() {
         liveSourceLanguage = group.getTrackFormat(index).language?.takeIf { it.isNotBlank() && it != "und" }
         cueTranslations.clear()
         liveTranslateTarget = target
-        val via = Translators.from(container.http, settings)?.name?.let { " mit $it" }.orEmpty()
+        val via = Translators.from(settings)?.name?.let { " mit $it" }.orEmpty()
         subtitleStatus = "Übersetze ${liveSourceLanguage?.let { Languages.label(it) + " " }.orEmpty()}→ ${Languages.label(target)}$via"
     }
 
@@ -684,7 +684,7 @@ class PlayerActivity : ComponentActivity() {
         translatedCue = text
         cueJob?.cancel()
         cueJob = lifecycleScope.launch {
-            val translator = Translators.from(container.http, settings) ?: return@launch
+            val translator = Translators.from(settings) ?: return@launch
             runCatching { translator.translate(listOf(text), target, liveSourceLanguage).first() }
                 .onSuccess {
                     cueTranslations[text] = it
@@ -713,7 +713,7 @@ class PlayerActivity : ComponentActivity() {
             subtitleStatus = "Die gefundenen Untertitel sind leer"
             return
         }
-        val translator = Translators.from(container.http, settings) ?: return
+        val translator = Translators.from(settings) ?: return
         val translations = java.util.concurrent.atomic.AtomicReferenceArray<String>(cues.size)
         // Untertitel der Datei ersetzen die eingebetteten; das Overlay zeigt die Übersetzung.
         setTextEnabled(false)

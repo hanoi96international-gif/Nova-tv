@@ -3,7 +3,6 @@ package de.ayutv.data.setup
 import android.util.Log
 import de.ayutv.AppContainer
 import de.ayutv.data.AppSettings
-import de.ayutv.data.TranslationProvider
 import de.ayutv.data.db.PlaylistEntity
 import de.ayutv.data.db.PlaylistType
 import de.ayutv.data.repo.XtreamClient
@@ -99,8 +98,6 @@ class PhoneSetupServer(private val container: AppContainer) {
             field("os_key").takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesKey = it) }
             field("os_user").takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesUser = it) }
             form["os_password"]?.takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesPassword = it) }
-            field("deepl_key").takeIf { it.isNotEmpty() }?.let { next = next.copy(deeplKey = it, translationProvider = TranslationProvider.DEEPL) }
-            if (form["deepl_off"] == "1") next = next.copy(translationProvider = TranslationProvider.ON_DEVICE)
             next
         }
         val lines = mutableListOf<KeyCheck.Line>()
@@ -145,7 +142,7 @@ class PhoneSetupServer(private val container: AppContainer) {
             <h1>DnA-TV einrichten</h1>
             $result
             <form method=post>
-            <h2>Untertitel aus dem Internet: OpenSubtitles ${status(settings.openSubtitlesKey.isNotBlank())}</h2>
+            <h2>Untertitel aus dem Internet (optional): OpenSubtitles ${status(settings.openSubtitlesKey.isNotBlank())}</h2>
             <p>Untertitel für fast jeden Film in fast jeder Sprache (auch automatisch übersetzte).
             Kostenloses Konto auf <a href="https://www.opensubtitles.com" target=_blank>opensubtitles.com</a> anlegen,
             dann <a href="https://www.opensubtitles.com/consumers" target=_blank>opensubtitles.com/consumers</a> →
@@ -154,13 +151,8 @@ class PhoneSetupServer(private val container: AppContainer) {
             <label>Benutzername (empfohlen: 20 statt 5 Downloads pro Tag)<input name=os_user autocomplete=username value="${esc(settings.openSubtitlesUser)}"></label>
             <label>Passwort<input name=os_password type=password autocomplete=current-password placeholder="${if (settings.openSubtitlesPassword.isNotEmpty()) "gespeichert" else ""}"></label>
 
-            <h2>Übersetzung (optional): DeepL ${status(settings.deeplKey.isNotBlank())}</h2>
-            <p>Nicht nötig: DnA-TV übersetzt Untertitel ohne Konto und ohne Grenze direkt auf dem Fire TV.
-            DeepL klingt oft noch etwas natürlicher; ist sein Kontingent (500.000 Zeichen/Monat) leer,
-            übernimmt automatisch wieder das Gerät. Schlüssel:
-            <a href="https://www.deepl.com/pro-api" target=_blank>deepl.com/pro-api</a> → „DeepL API Free“ →
-            nach der Anmeldung unter „API Keys“ den Schlüssel kopieren (endet auf :fx).</p>
-            <label>DeepL API-Key<input name=deepl_key autocomplete=off placeholder="${if (settings.deeplKey.isNotBlank()) "gespeichert – nur zum Ändern ausfüllen" else "…:fx"}"></label>
+            <p>Übersetzen braucht nichts davon: DnA-TV übersetzt vorhandene Untertitel direkt auf dem Fire TV.
+            OpenSubtitles liefert Untertitel für Filme, die selbst keine haben.</p>
 
             <h2>Playlist hinzufügen (optional)</h2>
             <label>Name<input name=m3u_name placeholder="z. B. Mein Anbieter"></label>

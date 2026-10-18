@@ -31,14 +31,11 @@ enum class AudioOutput(val label: String) {
 }
 
 /**
- * Maschinelle Übersetzung, falls OpenSubtitles keine Untertitel in der Wunschsprache hat.
- * Standard ist der DnA-Übersetzer auf dem Gerät (OPUS-MT, offen lizenziert, ohne Grenze).
- * DeepL/LibreTranslate sind optional; was einer nicht kann, übernimmt automatisch der andere.
+ * Übersetzung von Untertiteln, falls es keine in der Wunschsprache gibt: direkt auf dem Gerät
+ * (OPUS-MT, offen lizenziert, ohne Konto und ohne Grenze).
  */
 enum class TranslationProvider(val label: String) {
-    ON_DEVICE("Auf dem Gerät (unbegrenzt, ohne Konto)"),
-    DEEPL("DeepL"),
-    LIBRE("LibreTranslate"),
+    ON_DEVICE("An (auf dem Gerät, unbegrenzt)"),
     NONE("Aus"),
 }
 
@@ -74,19 +71,11 @@ data class AppSettings(
     val openSubtitlesUser: String = "",
     val openSubtitlesPassword: String = "",
     val translationProvider: TranslationProvider = TranslationProvider.ON_DEVICE,
-    val deeplKey: String = "",
-    val libreUrl: String = "",
-    val libreKey: String = "",
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
     val onlineSubtitlesEnabled: Boolean get() = openSubtitlesApiKey.isNotBlank()
-    val translationEnabled: Boolean
-        get() = when (translationProvider) {
-            TranslationProvider.NONE -> false
-            // Ohne Schlüssel bzw. Server springt der Übersetzer auf dem Gerät ein.
-            TranslationProvider.ON_DEVICE, TranslationProvider.DEEPL, TranslationProvider.LIBRE -> true
-        }
+    val translationEnabled: Boolean get() = translationProvider != TranslationProvider.NONE
 
     companion object {
         const val DEFAULT_USER_AGENT = "DnATV/0.7 (Linux; Android) ExoPlayer"
@@ -110,9 +99,6 @@ class SettingsStore(private val context: Context) {
         val subLang = stringPreferencesKey("subtitle_language_code")
         val subAuto = booleanPreferencesKey("subtitles_auto_on")
         val provider = stringPreferencesKey("translation_provider")
-        val deepl = stringPreferencesKey("deepl_key")
-        val libreUrl = stringPreferencesKey("libre_url")
-        val libreKey = stringPreferencesKey("libre_key")
         val subSize = stringPreferencesKey("subtitle_size")
         val osKey = stringPreferencesKey("opensubtitles_key")
         val osUser = stringPreferencesKey("opensubtitles_user")
@@ -139,9 +125,6 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.subLang] = next.subtitleLanguage
             prefs[Keys.subAuto] = next.subtitlesAutoOn
             prefs[Keys.provider] = next.translationProvider.name
-            prefs[Keys.deepl] = next.deeplKey.trim()
-            prefs[Keys.libreUrl] = next.libreUrl.trim()
-            prefs[Keys.libreKey] = next.libreKey.trim()
             prefs[Keys.subSize] = next.subtitleSize.name
             prefs[Keys.osKey] = next.openSubtitlesKey.trim()
             prefs[Keys.osUser] = next.openSubtitlesUser.trim()
@@ -163,9 +146,6 @@ class SettingsStore(private val context: Context) {
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
         translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),
-        deeplKey = this[Keys.deepl].orEmpty(),
-        libreUrl = this[Keys.libreUrl].orEmpty(),
-        libreKey = this[Keys.libreKey].orEmpty(),
         subtitleSize = enumOrDefault(this[Keys.subSize], SubtitleSize.LARGE),
         openSubtitlesKey = this[Keys.osKey].orEmpty(),
         openSubtitlesUser = this[Keys.osUser].orEmpty(),

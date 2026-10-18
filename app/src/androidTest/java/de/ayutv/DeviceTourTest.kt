@@ -203,11 +203,6 @@ class DeviceTourTest {
 
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
-        // Übersetzungsdienst: der Testserver spielt LibreTranslate (antwortet mit "[ziel] text").
-        // So läuft die ganze Kette Spur → Übersetzer → Anzeige wie mit DeepL auf dem Fire TV.
-        runBlocking {
-            container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.LIBRE, libreUrl = base) }
-        }
         if (movie != null) section("vod") {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
             launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
@@ -224,9 +219,12 @@ class DeviceTourTest {
                 log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
                 shot("21_vod_subtitles")
                 // Wie auf dem Fire TV: Indonesisch wählen, obwohl der Film nur englische Untertitel hat.
-                // Erwartet: Live-Übersetzung der englischen Spur.
+                // Erwartet: Live-Übersetzung der englischen Spur auf dem Gerät (Modell wird einmalig geladen).
+                val englishLines = setOf("Hello, how are you?", "I told you we should never have come here.", "Where is my brother?",
+                    "We have to leave before it gets dark.", "Thank you for everything.", "- Where is he?\n- I don't know.")
+                fun translatedNow() = scenario.read { it.translatedCue }?.takeIf { it.isNotBlank() && it !in englishLines }
                 scenario.onActivity { it.loadSubtitles("id") }
-                val translated = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("[id]") == true }
+                val translated = waitFor(240_000) { translatedNow() != null }
                 log(
                     "translate_id: ok=$translated target=${scenario.read { it.liveTranslateTarget }} " +
                         "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} statuses=${scenario.read { it.statusHistory.toList() }}"
@@ -235,7 +233,7 @@ class DeviceTourTest {
                 assertTrue("Übersetzung nach Indonesisch fehlgeschlagen", translated)
                 scenario.onActivity { it.loadSubtitles("de") }
                 Thread.sleep(2_000)
-                val german = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("[de]") == true }
+                val german = waitFor(240_000) { scenario.read { it.liveTranslateTarget } == "de" && translatedNow() != null }
                 log("translate_de: target=${scenario.read { it.liveTranslateTarget }} cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')}")
                 shot("24_vod_translated_de")
                 assertTrue("Übersetzung nach Deutsch fehlgeschlagen", german)
@@ -256,21 +254,27 @@ class DeviceTourTest {
                 shot("30_episode")
             }
         } }
-        // 5b. Dolby TrueHD im Film: kann nur FFmpeg dekodieren
-        section("truehd") {
-            val truehd = runBlocking { container.db.vod().search("TrueHD", 5) }.firstOrNull()
-                ?: error("TrueHD-Film nicht importiert")
-            val request = VodRequest(truehd.key, HistoryKind.VOD, truehd.name, truehd.category, null, truehd.url)
+        // 5. Tonformate, die Fire TV ohne AV-Receiver nicht selbst dekodiert: FFmpeg muss sie abspielen
+        val audioTests = runBlocking { container.db.vod().search("Tontest", 20) }
+        log("audio_tests=${audioTests.size}")
+        audioTests.forEach { movie -> section("audio ${movie.name}") {
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, null, movie.url)
             launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
                 val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
-                Thread.sleep(4_000)
+                val start = scenario.read { it.player?.currentPosition } ?: 0L
+                Thread.sleep(5_000)
+                val position = scenario.read { it.player?.currentPosition } ?: 0L
                 val stats = scenario.read { it.stats }
-                log("truehd: ready=$ready audio=${stats.audioCodec}/${stats.audioChannels}ch audio_decoder=${stats.audioDecoder} message=${scenario.read { it.message }}")
+                val audioTracks = scenario.read { a -> a.tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }.map { it.getTrackFormat(0).sampleMimeType } }
+                log(
+                    "audio ${movie.name}: ready=$ready advanced_ms=${position - start} audio=${stats.audioCodec}/${stats.audioChannels}ch " +
+                        "decoder=${stats.audioDecoder} tracks=$audioTracks message=${scenario.read { it.message }} status=${scenario.read { it.subtitleStatus }}"
+                )
+                assertTrue("${movie.name} spielt nicht (ready=$ready, ${position - start} ms)", ready && position - start >= 3_000 && stats.audioDecoder.isNotEmpty())
             }
-        }
+        } }
 
         // 5b. Übersetzung auf dem Gerät (OPUS-MT): echtes Modell laden, Qualität und Tempo messen
-        runBlocking { container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.ON_DEVICE, libreUrl = "") } }
         section("mt_on_device") {
             val translator = de.ayutv.data.repo.Translators.onDevice
             val progress = mutableListOf<String>()

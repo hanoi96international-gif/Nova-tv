@@ -135,10 +135,10 @@ jobs:
           mkdir -p ~/.android && cp signing/ayutv.keystore ~/.android/debug.keystore
           git fetch -q --depth 1 origin main
           git worktree add -q ../previous FETCH_HEAD
-          if (cd ../previous && ./gradlew --no-daemon -q assembleDebug); then
+          if (cd ../previous && ./gradlew --no-daemon assembleDebug > ../previous-build.log 2>&1); then
             cp ../previous/app/build/outputs/apk/debug/app-debug.apk previous-debug.apk
           else
-            echo "Vorversion ließ sich nicht bauen, Upgrade-Test entfällt"
+            echo "Vorversion ließ sich nicht bauen, Upgrade-Test entfällt"; tail -40 ../previous-build.log
           fi
 
       - name: Rundgang im Emulator

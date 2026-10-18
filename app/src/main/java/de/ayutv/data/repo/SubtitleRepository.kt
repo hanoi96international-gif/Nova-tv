@@ -30,7 +30,7 @@ import java.io.IOException
  * 64 KiB vom Anfang und Ende werden per HTTP-Range geladen, ein Treffer passt zeitgenau),
  * dann nach bereinigtem Titel und Jahr. Von Menschen übersetzte Untertitel sind immer besser
  * als Maschinenübersetzung. 3. Gibt es keine: Untertitel in einer anderen Sprache (bevorzugt
- * Englisch) laden und mit DeepL/LibreTranslate übersetzen. Alles wird dauerhaft gespeichert.
+ * Englisch) als Vorlage laden; übersetzt wird im Player auf dem Gerät. Alles wird dauerhaft gespeichert.
  */
 class SubtitleRepository(
     private val http: OkHttpClient,
@@ -54,8 +54,6 @@ class SubtitleRepository(
         title: String,
         language: String,
         settings: AppSettings,
-        /** false: nur echte Untertitel in der Zielsprache, keine Übersetzung. */
-        translate: Boolean = true,
         progress: (String) -> Unit = {},
     ): Result? = withContext(Dispatchers.IO) {
         cached(key, language)?.let { return@withContext Result(it, Source.CACHE) }
@@ -65,30 +63,7 @@ class SubtitleRepository(
             download(key, videoUrl, title, language, settings)?.let { return@withContext it }
         }
 
-        if (!translate) return@withContext null
-        val translator = Translators.from(http, settings) ?: return@withContext null
-        if (!translator.supports(language)) throw IOException("${translator.name} unterstützt ${Languages.label(language)} nicht")
-
-        // Quelle: vorhandene Datei einer anderen Sprache, sonst online Englisch, sonst irgendeine Sprache.
-        var source: File? = cachedAny(key, except = language)
-        if (source == null && settings.onlineSubtitlesEnabled) {
-            progress("Lade Vorlage für die Übersetzung …")
-            if (language != "en") source = download(key, videoUrl, title, "en", settings)?.file
-            if (source == null) source = download(key, videoUrl, title, null, settings)?.file
-        }
-        if (source == null) return@withContext null
-
-        val cues = Srt.parse(source.readText())
-        if (cues.isEmpty()) return@withContext null
-        val texts = cues.map { Srt.plainText(it.text) }
-        val translated = ArrayList<String>(texts.size)
-        texts.chunked(TRANSLATE_BATCH).forEachIndexed { index, chunk ->
-            progress("Übersetze mit ${translator.name} … ${(index * TRANSLATE_BATCH * 100) / texts.size} %")
-            translated += translator.translate(chunk, language)
-        }
-        val target = cacheFile(key, language)
-        writeAtomically(target, Srt.write(cues.mapIndexed { i, cue -> cue.copy(text = translated.getOrElse(i) { cue.text }) }))
-        Result(target, Source.TRANSLATED, translator.name)
+        null
     }
 
     /** Lädt von OpenSubtitles in [language] (null = beliebige Sprache) und speichert unter der echten Sprache. */
@@ -276,7 +251,6 @@ class SubtitleRepository(
     private companion object {
         const val TAG = "Subtitles"
         const val API = "https://api.opensubtitles.com/api/v1"
-        const val TRANSLATE_BATCH = 200
         val JSON = "application/json".toMediaType()
     }
 }

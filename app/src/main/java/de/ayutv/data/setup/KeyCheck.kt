@@ -25,10 +25,7 @@ object KeyCheck {
     data class Line(val ok: Boolean, val text: String)
 
     suspend fun run(http: OkHttpClient, settings: AppSettings): List<Line> = withContext(Dispatchers.IO) {
-        buildList {
-            add(openSubtitles(http, settings))
-            add(deepl(http, settings))
-        }
+        listOf(openSubtitles(http, settings))
     }
 
     private fun openSubtitles(http: OkHttpClient, settings: AppSettings): Line {
@@ -69,30 +66,6 @@ object KeyCheck {
                 }
             }
         }.getOrElse { Line(false, "OpenSubtitles: keine Verbindung (${it.message})") }
-    }
-
-    private fun deepl(http: OkHttpClient, settings: AppSettings): Line {
-        val key = settings.deeplKey.trim()
-        if (key.isEmpty()) return Line(true, "Übersetzung: auf dem Gerät (ohne Konto, unbegrenzt) – DeepL nicht eingetragen")
-        val host = if (key.endsWith(":fx")) "https://api-free.deepl.com" else "https://api.deepl.com"
-        return runCatching {
-            val request = Request.Builder().url("$host/v2/usage").header("Authorization", "DeepL-Auth-Key $key").build()
-            http.newCall(request).execute().use { response ->
-                val text = response.body.string()
-                when (response.code) {
-                    200 -> {
-                        val usage = json.parseToJsonElement(text) as? JsonObject
-                        val used = (usage?.get("character_count") as? JsonPrimitive)?.longOrNull
-                        val limit = (usage?.get("character_limit") as? JsonPrimitive)?.longOrNull
-                        val rest = if (used != null && limit != null) " – noch ${"%,d".format(limit - used).replace(',', '.')} Zeichen frei" else ""
-                        Line(true, "DeepL: API-Key gültig$rest")
-                    }
-                    403 -> Line(false, "DeepL: API-Key ungültig")
-                    456 -> Line(false, "DeepL: Monatskontingent aufgebraucht")
-                    else -> Line(false, "DeepL: HTTP ${response.code}")
-                }
-            }
-        }.getOrElse { Line(false, "DeepL: keine Verbindung (${it.message})") }
     }
 
     private val AGENT = "DnATV v${BuildConfig.VERSION_NAME}"

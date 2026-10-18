@@ -239,7 +239,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             SettingRow(
                 "Zugänge prüfen",
                 "",
-                "Testet OpenSubtitles und DeepL sofort mit den gespeicherten Schlüsseln.",
+                "Testet den OpenSubtitles-Zugang sofort.",
             ) {
                 keyReport = "Prüfe …"
                 scope.launch {
@@ -288,8 +288,8 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             SettingRow(
                 "Automatische Übersetzung",
                 settings.translationProvider.label,
-                "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene übersetzt. „Auf dem Gerät“: ohne Konto und ohne Grenze, " +
-                    "pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen. DeepL (optional) übersetzt noch etwas natürlicher; ist sein Kontingent leer, übernimmt automatisch das Gerät.",
+                "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene direkt auf dem Fire TV übersetzt: " +
+                    "ohne Konto und ohne Grenze. Pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen.",
             ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
         }
         item {
@@ -311,26 +311,6 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 }
             }
         }
-        if (settings.translationProvider == TranslationProvider.DEEPL) {
-            item {
-                CredentialField(settings.deeplKey, "DeepL API-Key (kostenlos auf deepl.com/pro-api, 500.000 Zeichen/Monat)") { key ->
-                    update { it.copy(deeplKey = key) }
-                }
-            }
-        }
-        if (settings.translationProvider == TranslationProvider.LIBRE) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    CredentialField(settings.libreUrl, "LibreTranslate-Server, z. B. https://libretranslate.com", Modifier.width(380.dp)) { url ->
-                        update { it.copy(libreUrl = url) }
-                    }
-                    CredentialField(settings.libreKey, "API-Key (falls nötig)", Modifier.width(260.dp)) { key ->
-                        update { it.copy(libreKey = key) }
-                    }
-                }
-            }
-        }
-
         item { SectionTitle("Daten", Modifier.padding(top = 20.dp)) }
         item {
             SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
@@ -363,7 +343,7 @@ private fun LanguageList(selected: String, onSelect: (String) -> Unit) {
             SettingRow(
                 language.label,
                 if (language.code == selected) "✓" else "",
-                if (language.deepl == null) "Übersetzung nur mit LibreTranslate" else "",
+                if (Translators.onDevice.supports(language.code)) "" else "nur Untertitel aus dem Internet, keine Übersetzung",
                 modifier = if (language.code == selected) Modifier.focusRequester(focus) else Modifier,
             ) { onSelect(language.code) }
         }
@@ -593,8 +573,8 @@ private fun PhoneSetupCard(state: PhoneSetupServer.State, report: String?) {
         Column(Modifier.weight(1f)) {
             Text("Einrichtung per Handy", style = MaterialTheme.typography.titleMedium)
             Text(
-                "QR-Code mit dem Handy scannen (gleiches WLAN) und dort OpenSubtitles- und DeepL-Schlüssel oder " +
-                    "Playlists bequem einfügen. Die Seite erklärt, wo es die kostenlosen Schlüssel gibt.",
+                "QR-Code mit dem Handy scannen (gleiches WLAN) und dort Playlist-Adressen oder den OpenSubtitles-Zugang " +
+                    "bequem einfügen statt mit der Fernbedienung zu tippen.",
                 color = AyuColors.TextSecondary,
                 fontSize = 13.sp,
             )
