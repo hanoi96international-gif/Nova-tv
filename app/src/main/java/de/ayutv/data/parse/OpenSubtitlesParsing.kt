@@ -100,7 +100,7 @@ object OpenSubtitlesParsing {
         val year = Regex("""\b(19[3-9]\d|20[0-4]\d)\b""").findAll(raw).lastOrNull()?.value?.toInt()
         var title = raw
             .replace(Regex("""^\s*[A-Z]{2,3}\s*[-|:]\s*"""), "")
-            .replace(Regex("""\[[^]]*]|\([^)]*\)"""), " ")
+            .replace(Regex("""\[[^\]]*\]|\([^)]*\)"""), " ")
             .replace(Regex("""\b(4K|UHD|FHD|HD|SD|HEVC|H\.?26[45]|x26[45]|1080p|2160p|720p|HDR(?:10)?|DV|MULTI|DUAL)\b""", RegexOption.IGNORE_CASE), " ")
         if (year != null) title = title.replace(year.toString(), " ")
         title = title.replace(Regex("""[._]"""), " ").replace(Regex("""\s+"""), " ").trim(' ', '-', '|', ':')

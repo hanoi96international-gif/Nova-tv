@@ -167,7 +167,7 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
         private const val THREADS = 2
         private const val MIN_FREE_BYTES = 200L * 1024 * 1024
         private const val TOTAL_BYTES_ESTIMATE = 115_000_000L
-        private val TAGS = Regex("""<[^>]+>|\{\\[^}]*}""")
+        private val TAGS = Regex("""<[^>]+>|\{\\[^}]*\}""")
 
         /** Lokaler Dateiname → Datei im Modell-Repository (int8-quantisiert, Decoder mit KV-Cache). */
         private val FILES = linkedMapOf(

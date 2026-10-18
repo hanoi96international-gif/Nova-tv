@@ -112,6 +112,14 @@ class DeviceTourTest {
             assertTrue("Datenbank nicht auf Version 2", version == 2)
         }
 
+        // 0b. Textmuster auf Android prüfen (Android nutzt eine andere Regex-Engine als der PC)
+        section("regex") {
+            val plain = de.ayutv.data.parse.Srt.plainText("<i>Hallo</i> {\\an8}Welt")
+            val (title, year) = de.ayutv.data.parse.OpenSubtitlesParsing.cleanTitle("DE - Der Film [4K] (Director's Cut) 2020")
+            log("regex: plain=$plain title=$title year=$year")
+            assertTrue("Srt.plainText: $plain", plain == "Hallo Welt")
+        }
+
         // 1. Playlist + EPG importieren
         val started = System.currentTimeMillis()
         runBlocking {
