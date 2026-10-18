@@ -1,0 +1,25 @@
+name: Explore
+
+on:
+  push:
+    branches: ["explore/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: pip install -q onnxruntime numpy
+      - run: python3 ci/explore/mt_probe.py explore-out || true
+      - name: Ergebnisse veröffentlichen
+        if: always()
+        run: |
+          mkdir -p explore-out && rm -rf explore-out/m && cd explore-out
+          git init -q -b explore-results
+          git config user.name "Ayu-TV CI"
+          git config user.email "ci@users.noreply.github.com"
+          git add -A && git commit -qm "Erkundung ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" explore-results
