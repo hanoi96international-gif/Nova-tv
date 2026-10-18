@@ -1,4 +1,4 @@
-# Baseline-Profil: alle NovaTV-Klassen und -Methoden beim Installieren vorkompilieren (AOT).
+# Baseline-Profil: alle Ayu-TV-Klassen und -Methoden beim Installieren vorkompilieren (AOT).
 # Compose, Media3 und Room bringen ihre eigenen Profile mit; der Profile Installer wendet alles an.
-Lde/novatv/**;
-HSPLde/novatv/**;->**(**)**
+Lde/ayutv/**;
+HSPLde/ayutv/**;->**(**)**

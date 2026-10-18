@@ -9,14 +9,14 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:name=".NovaApp"
+        android:name=".AyuApp"
         android:allowBackup="true"
         android:banner="@drawable/banner"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.NovaTV"
+        android:theme="@style/Theme.AyuTV"
         android:usesCleartextTraffic="true">
 
         <activity
@@ -37,6 +37,6 @@
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="false"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.NovaTV.Player" />
+            android:theme="@style/Theme.AyuTV.Player" />
     </application>
 </manifest>
