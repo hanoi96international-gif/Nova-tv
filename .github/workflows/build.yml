@@ -29,29 +29,29 @@ jobs:
       - name: APK umbenennen
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk out/NovaTV.apk
-          cp app/build/outputs/apk/debug/app-debug.apk out/NovaTV-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk out/AyuTV.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/AyuTV-debug.apk
 
       - uses: actions/upload-artifact@v5
         with:
-          name: NovaTV-apk
+          name: AyuTV-apk
           path: out/*.apk
 
       - name: Versionsnummer lesen
         id: version
         run: echo "name=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)" >> "$GITHUB_OUTPUT"
 
-      # Jeder grüne Build auf main aktualisiert das Release der aktuellen Version (Tag v<versionName>).
+      # Jede neue Version (versionName) auf main erzeugt ein eigenes Release mit Tag v<versionName>.
       - name: Release veröffentlichen
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.name }}
-          name: NovaTV ${{ steps.version.outputs.name }}
+          name: Ayu-TV ${{ steps.version.outputs.name }}
           make_latest: true
           overwrite_files: true
-          files: out/NovaTV*.apk
+          files: out/AyuTV*.apk
 
   # Rundgang auf einem Android-TV-Emulator: echte Wiedergabe, Screenshots, Messwerte.
   # Ergebnisse landen im Branch ci-results (Screenshots, results.txt, gfxinfo, logcat).
@@ -103,7 +103,7 @@ jobs:
           cd ci-out
           echo "${{ github.sha }}" > COMMIT
           git init -q -b ci-results
-          git config user.name "NovaTV CI"
+          git config user.name "Ayu-TV CI"
           git config user.email "ci@users.noreply.github.com"
           git add -A
           git commit -qm "Ergebnisse für ${{ github.sha }}"
