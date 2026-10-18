@@ -3,6 +3,7 @@
 package de.novatv.player
 
 import android.graphics.Color as AndroidColor
+import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
@@ -36,7 +37,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +60,7 @@ import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
+import de.novatv.data.Languages
 import de.novatv.ui.components.ChannelListItem
 import de.novatv.ui.components.ChannelLogo
 import de.novatv.ui.components.ProgressLine
@@ -101,6 +107,7 @@ fun PlayerScreen(activity: PlayerActivity) {
                 update = {
                     it.player = player
                     it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
+                    it.subtitleView?.visibility = if (activity.liveTranslateTarget != null) View.INVISIBLE else View.VISIBLE
                 },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -150,6 +157,19 @@ fun PlayerScreen(activity: PlayerActivity) {
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             VodControls(activity)
+        }
+
+        if (activity.liveTranslateTarget != null) {
+            activity.translatedCue?.let { cue ->
+                Text(
+                    cue,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 64.dp, end = 64.dp, bottom = 40.dp),
+                    color = Color.White,
+                    fontSize = (22 * activity.subtitleScale).sp,
+                    textAlign = TextAlign.Center,
+                    style = TextStyle(shadow = Shadow(Color.Black, Offset(2f, 2f), blurRadius = 6f)),
+                )
+            }
         }
 
         activity.subtitleStatus?.let { status ->
@@ -358,16 +378,22 @@ private fun ChannelListOverlay(activity: PlayerActivity) {
     }
 }
 
-/** Spurmenü: Audiospur, Untertitel, Online-Suche und (bei Live) Favorit. Rechts eingeblendet. */
+/** Spurmenü: Audiospur, Untertitel (inkl. Laden und Übersetzen in jede Sprache) und bei Live der Favorit. */
 @Composable
 private fun TracksOverlay(activity: PlayerActivity) {
+    if (activity.languagePicker) {
+        LanguagePicker(activity)
+        return
+    }
     val tracks = activity.tracks
     val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO) }
     val text = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_TEXT) }
     val firstItem = remember { FocusRequester() }
+    val preferred = activity.preferredSubtitleLanguage
+    val liveTarget = activity.liveTranslateTarget
 
     LazyColumn(
-        modifier = Modifier.fillMaxHeight().width(400.dp).background(Color.Black.copy(alpha = 0.9f)),
+        modifier = Modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 28.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -380,29 +406,81 @@ private fun TracksOverlay(activity: PlayerActivity) {
                 ) { activity.toggleFavorite() }
             }
         }
-        item { MenuHeader("Ton") }
-        if (audio.isEmpty()) item { MenuHint("Keine Auswahl verfügbar") }
-        audio.forEachIndexed { index, option ->
+        item { MenuHeader("Untertitel") }
+        item {
+            OptionRow(
+                "Aus",
+                activity.textDisabled || text.none { it.selected },
+                if (!activity.isLive) Modifier.focusRequester(firstItem) else Modifier,
+            ) { activity.setTextEnabled(false) }
+        }
+        text.forEach { option ->
             item {
-                OptionRow(
-                    option.label,
-                    option.selected,
-                    if (!activity.isLive && index == 0) Modifier.focusRequester(firstItem) else Modifier,
-                ) { activity.selectTrack(option.group, option.index) }
+                OptionRow(option.label, option.selected && !activity.textDisabled && liveTarget == null) {
+                    activity.selectTrack(option.group, option.index)
+                }
             }
         }
-        item { MenuHeader("Untertitel") }
-        item { OptionRow("Aus", activity.textDisabled || text.none { it.selected }) { activity.setTextEnabled(false) } }
-        text.forEach { option ->
-            item { OptionRow(option.label, option.selected && !activity.textDisabled) { activity.selectTrack(option.group, option.index) } }
+        if (!activity.isLive) {
+            item { OptionRow("${Languages.label(preferred)} laden", selected = false) { activity.loadSubtitles(preferred) } }
+            item { OptionRow("Andere Sprache laden / übersetzen …", selected = false) { activity.openLanguagePicker() } }
         }
-        if (activity.onlineSubtitlesAvailable) {
-            item { OptionRow("Online suchen (OpenSubtitles)", selected = false) { activity.searchSubtitlesOnline() } }
-        } else if (!activity.isLive) {
-            item { MenuHint("Online-Untertitel: OpenSubtitles-API-Key in den Einstellungen eintragen") }
+        if (activity.translationAvailable && text.any { it.selected } && !activity.textDisabled) {
+            if (liveTarget == null) {
+                item { OptionRow("Gewählte Spur live übersetzen: ${Languages.label(preferred)}", false) { activity.startLiveTranslation(preferred) } }
+            } else {
+                item { OptionRow("Live-Übersetzung (${Languages.label(liveTarget)}) beenden", true) { activity.stopLiveTranslation() } }
+            }
+        }
+        if (!activity.isLive && !activity.onlineSubtitlesAvailable && !activity.translationAvailable) {
+            item { MenuHint("Für Untertitel aus dem Internet und Übersetzungen: OpenSubtitles bzw. DeepL in den Einstellungen eintragen") }
+        }
+        item { MenuHeader("Ton") }
+        if (audio.isEmpty()) item { MenuHint("Keine Auswahl verfügbar") }
+        audio.forEach { option ->
+            item { OptionRow(option.label, option.selected) { activity.selectTrack(option.group, option.index) } }
         }
     }
 
+    LaunchedEffect(Unit) {
+        repeat(5) {
+            if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
+}
+
+/** Alle Sprachen: lädt menschliche Untertitel (OpenSubtitles) oder übersetzt automatisch. */
+@Composable
+private fun LanguagePicker(activity: PlayerActivity) {
+    val firstItem = remember { FocusRequester() }
+    val embeddedSelected = !activity.textDisabled && trackOptions(activity.tracks, C.TRACK_TYPE_TEXT).any { it.selected }
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 28.dp, horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        item { MenuHeader("Sprache wählen") }
+        item {
+            MenuHint(
+                if (embeddedSelected && activity.translationAvailable) {
+                    "OK = Untertitel laden bzw. übersetzen. Lange OK = gewählte Spur live übersetzen."
+                } else {
+                    "Zuerst werden echte Untertitel gesucht, sonst wird automatisch übersetzt."
+                }
+            )
+        }
+        Languages.all.forEachIndexed { index, language ->
+            item {
+                OptionRow(
+                    language.label,
+                    selected = false,
+                    modifier = if (index == 0) Modifier.focusRequester(firstItem) else Modifier,
+                    onLongClick = if (embeddedSelected && activity.translationAvailable) ({ activity.startLiveTranslation(language.code) }) else null,
+                ) { activity.loadSubtitles(language.code) }
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         repeat(5) {
             if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
@@ -459,9 +537,16 @@ private fun MenuHint(text: String) {
 }
 
 @Composable
-private fun OptionRow(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun OptionRow(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     Surface(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier.fillMaxWidth(),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(

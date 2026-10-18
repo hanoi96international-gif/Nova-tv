@@ -42,7 +42,8 @@ import de.novatv.BuildConfig
 import de.novatv.data.AppSettings
 import de.novatv.data.BufferProfile
 import de.novatv.data.LiveFormat
-import de.novatv.data.SubtitleLanguage
+import de.novatv.data.Languages
+import de.novatv.data.TranslationProvider
 import de.novatv.data.SubtitleSize
 import de.novatv.data.db.PlaylistEntity
 import de.novatv.data.db.PlaylistType
@@ -149,10 +150,17 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         item { SectionTitle("Untertitel (Filme & Serien)", Modifier.padding(top = 20.dp)) }
         item {
             SettingRow(
-                "Sprache",
-                settings.subtitleLanguage.label,
-                "Wird automatisch eingeschaltet. Hat der Film keine passende Spur, sucht NovaTV online (siehe unten).",
-            ) { update { it.copy(subtitleLanguage = it.subtitleLanguage.next()) } }
+                "Automatisch einschalten",
+                onOff(settings.subtitlesAutoOn),
+                "Aus: Untertitel nur bei Bedarf im Film über die Menütaste ☰. An: bevorzugte Sprache startet mit.",
+            ) { update { it.copy(subtitlesAutoOn = !it.subtitlesAutoOn) } }
+        }
+        item {
+            SettingRow(
+                "Bevorzugte Sprache",
+                Languages.label(settings.subtitleLanguage),
+                "Wird beim Einschalten zuerst gewählt. Jede andere Sprache geht im Film über ☰ → Andere Sprache.",
+            ) { update { it.copy(subtitleLanguage = nextLanguage(it.subtitleLanguage)) } }
         }
         item {
             SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung: weiße Schrift mit schwarzem Rand.") {
@@ -176,6 +184,33 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             }
         }
 
+        item {
+            SettingRow(
+                "Automatische Übersetzung",
+                settings.translationProvider.label,
+                "Gibt es keine Untertitel in der Wunschsprache, wird eine vorhandene Datei übersetzt. Auch eingebettete Spuren lassen sich live übersetzen.",
+            ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
+        }
+        if (settings.translationProvider == TranslationProvider.DEEPL) {
+            item {
+                CredentialField(settings.deeplKey, "DeepL API-Key (kostenlos auf deepl.com/pro-api, 500.000 Zeichen/Monat)") { key ->
+                    update { it.copy(deeplKey = key) }
+                }
+            }
+        }
+        if (settings.translationProvider == TranslationProvider.LIBRE) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    CredentialField(settings.libreUrl, "LibreTranslate-Server, z. B. https://libretranslate.com", Modifier.width(380.dp)) { url ->
+                        update { it.copy(libreUrl = url) }
+                    }
+                    CredentialField(settings.libreKey, "API-Key (falls nötig)", Modifier.width(260.dp)) { key ->
+                        update { it.copy(libreKey = key) }
+                    }
+                }
+            }
+        }
+
         item { SectionTitle("Daten", Modifier.padding(top = 20.dp)) }
         item {
             SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
@@ -193,7 +228,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
 private fun onOff(value: Boolean) = if (value) "An" else "Aus"
 
 private fun BufferProfile.next(): BufferProfile = BufferProfile.entries[(ordinal + 1) % BufferProfile.entries.size]
-private fun SubtitleLanguage.next(): SubtitleLanguage = SubtitleLanguage.entries[(ordinal + 1) % SubtitleLanguage.entries.size]
+private fun TranslationProvider.next(): TranslationProvider = TranslationProvider.entries[(ordinal + 1) % TranslationProvider.entries.size]
+
+private fun nextLanguage(code: String): String {
+    val index = Languages.all.indexOfFirst { it.code == code }
+    return Languages.all[(index + 1) % Languages.all.size].code
+}
 private fun SubtitleSize.next(): SubtitleSize = SubtitleSize.entries[(ordinal + 1) % SubtitleSize.entries.size]
 
 /** Speichert bei jeder Eingabe: Auf Fire TV schließt man die Tastatur oft mit "Zurück" statt "Fertig". */

@@ -41,8 +41,8 @@ object PlayerFactory {
     /** Der User-Agent kann sich pro Sender unterscheiden (#EXTVLCOPT), ohne den Player neu zu bauen. */
     class HeaderProvider(var userAgent: String)
 
-    /** [subtitleLanguage]: bei Filmen die gewünschte Untertitelsprache, null = Untertitel aus (Live: nur erzwungene). */
-    fun create(context: Context, http: OkHttpClient, settings: AppSettings, subtitleLanguage: String?, live: Boolean): Built {
+    /** Untertitel sind bei Filmen optional: bevorzugte Sprache ist gesetzt, eingeschaltet nur mit "automatisch an". */
+    fun create(context: Context, http: OkHttpClient, settings: AppSettings, live: Boolean): Built {
         val headers = HeaderProvider(settings.userAgent)
 
         // Eigener, kurzer Lese-Timeout für Streams: Ein hängender Server wird nach 12 s erkannt
@@ -71,10 +71,9 @@ object PlayerFactory {
                     .setTunnelingEnabled(settings.tunneling)
                     .setPreferredAudioLanguage(Locale.getDefault().language)
                     .apply {
-                        when {
-                            live -> Unit
-                            subtitleLanguage != null -> setPreferredTextLanguage(subtitleLanguage)
-                            else -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                        if (!live) {
+                            setPreferredTextLanguage(settings.subtitleLanguage)
+                            if (!settings.subtitlesAutoOn) setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                         }
                     }
                     // Kein Herunterskalieren auf die UI-Auflösung: Fire OS meldet bei 4K oft nur 1080p für die UI.

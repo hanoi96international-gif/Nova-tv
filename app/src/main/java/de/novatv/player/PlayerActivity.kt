@@ -29,17 +29,21 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
+import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import de.novatv.NovaApp
 import de.novatv.data.AppSettings
+import de.novatv.data.Languages
 import de.novatv.data.LiveFormat
 import de.novatv.data.db.ChannelEntity
 import de.novatv.data.db.HistoryEntity
 import de.novatv.data.db.HistoryKind
 import de.novatv.data.db.ProgrammeEntity
+import de.novatv.data.repo.SubtitleRepository
+import de.novatv.data.repo.Translators
 import de.novatv.ui.theme.NovaTheme
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -91,8 +95,19 @@ class PlayerActivity : ComponentActivity() {
     private var progressJob: Job? = null
     private var numberJob: Job? = null
     private var watchdogJob: Job? = null
-    private var subtitleFile: File? = null
-    private var subtitleSearchStarted = false
+    /** Nachgeladene/übersetzte Untertitel nach Sprache. Alle hängen gleichzeitig am Film, Umschalten ist sofort. */
+    private val subtitleFiles = LinkedHashMap<String, File>()
+    private var autoSubtitleTried = false
+    private var subtitleJob: Job? = null
+    private val cueTranslations = HashMap<String, String>()
+    private var cueJob: Job? = null
+
+    /** Live-Übersetzung eingebetteter Untertitel: Zielsprache, oder null wenn aus. */
+    var liveTranslateTarget by mutableStateOf<String?>(null); private set
+    var translatedCue by mutableStateOf<String?>(null); private set
+    var languagePicker by mutableStateOf(false); private set
+    val preferredSubtitleLanguage: String get() = if (::settings.isInitialized) settings.subtitleLanguage else "en"
+    val translationAvailable: Boolean get() = ::settings.isInitialized && settings.translationEnabled
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,14 +121,8 @@ class PlayerActivity : ComponentActivity() {
         lifecycleScope.launch {
             settings = container.settings.current()
             subtitleScale = settings.subtitleSize.scale
-            textDisabled = vod != null && settings.subtitleLanguage.code == null
-            val built = PlayerFactory.create(
-                this@PlayerActivity,
-                container.http,
-                settings,
-                subtitleLanguage = settings.subtitleLanguage.code,
-                live = vod == null,
-            )
+            textDisabled = vod != null && !settings.subtitlesAutoOn
+            val built = PlayerFactory.create(this@PlayerActivity, container.http, settings, live = vod == null)
             headers = built.headers
             trackSelector = built.trackSelector
             built.player.addListener(playerListener)
@@ -254,8 +263,9 @@ class PlayerActivity : ComponentActivity() {
         val p = player ?: return
         headers?.userAgent = settings.userAgent
         // Schon einmal geladene Untertitel direkt mitgeben, dann gibt es kein erneutes Puffern.
-        subtitleFile = settings.subtitleLanguage.code?.let { container.subtitles.cached(request.key, it) }
-        p.setMediaItem(mediaItem(request.url, guessMime(request.url), subtitleFile), resumeMs.coerceAtLeast(0))
+        subtitleFiles.clear()
+        subtitleFiles.putAll(container.subtitles.cachedAll(request.key))
+        p.setMediaItem(vodItem(request), resumeMs.coerceAtLeast(0))
         p.prepare()
         p.playWhenReady = true
         showOverlay(Overlay.CONTROLS)
@@ -272,27 +282,52 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /**
-     * Hat der Film keine eingebettete Spur in der gewünschten Sprache, wird online gesucht.
-     * Ein Fund wird nahtlos an der aktuellen Position eingehängt und für das nächste Mal gespeichert.
+     * Nur wenn "Untertitel automatisch an" eingestellt ist: Fehlt eine eingebettete Spur in der
+     * bevorzugten Sprache, wird sie geladen (OpenSubtitles, sonst Übersetzung).
      */
-    private fun maybeFetchSubtitles(force: Boolean = false) {
+    private fun maybeAutoSubtitles() {
+        if (vod == null || autoSubtitleTried || !settings.subtitlesAutoOn) return
+        autoSubtitleTried = true
+        val language = settings.subtitleLanguage
+        if (hasTextTrack(language)) return
+        if (settings.onlineSubtitlesEnabled || settings.translationEnabled) loadSubtitles(language)
+    }
+
+    /** Untertitel in [language] besorgen und einschalten. Bereits vorhandene Spuren werden direkt gewählt. */
+    fun loadSubtitles(language: String) {
         val request = vod ?: return
-        val language = settings.subtitleLanguage.code ?: return
-        if (!settings.onlineSubtitlesEnabled || subtitleFile != null) return
-        if (!force && (subtitleSearchStarted || hasTextTrack(language))) return
-        subtitleSearchStarted = true
-        lifecycleScope.launch {
-            subtitleStatus = "Untertitel (${settings.subtitleLanguage.label}) werden gesucht …"
-            runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings) }
-                .onSuccess { result ->
-                    if (result == null) {
-                        subtitleStatus = "Keine passenden Untertitel gefunden"
-                    } else {
-                        attachSubtitle(request, result.file)
-                        subtitleStatus = if (result.hashMatch) "Untertitel geladen (passend zur Datei)" else "Untertitel geladen (nach Titel gefunden)"
+        languagePicker = false
+        closeOverlay()
+        stopLiveTranslation()
+        if (hasTextTrack(language)) {
+            selectTextLanguage(language)
+            subtitleStatus = "Untertitel: ${Languages.label(language)}"
+            return
+        }
+        if (!settings.onlineSubtitlesEnabled && !settings.translationEnabled) {
+            subtitleStatus = "Keine ${Languages.label(language)}-Spur. Für mehr: OpenSubtitles bzw. Übersetzer in den Einstellungen eintragen"
+            return
+        }
+        subtitleJob?.cancel()
+        subtitleJob = lifecycleScope.launch {
+            subtitleStatus = "Suche Untertitel (${Languages.label(language)}) …"
+            runCatching {
+                container.subtitles.find(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
+            }.onSuccess { result ->
+                if (result == null) {
+                    subtitleStatus = "Keine Untertitel (${Languages.label(language)}) gefunden"
+                } else {
+                    subtitleFiles[language] = result.file
+                    reloadWithSubtitles(request)
+                    selectTextLanguage(language)
+                    subtitleStatus = when (result.source) {
+                        SubtitleRepository.Source.HASH -> "Untertitel geladen, passend zur Datei"
+                        SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden)"
+                        SubtitleRepository.Source.TRANSLATED -> "Untertitel übersetzt mit ${result.translator}"
+                        SubtitleRepository.Source.CACHE -> "Untertitel: ${Languages.label(language)}"
                     }
                 }
-                .onFailure { subtitleStatus = "Untertitel: ${it.message}" }
+            }.onFailure { subtitleStatus = "Untertitel: ${it.message}" }
         }
     }
 
@@ -301,21 +336,83 @@ class PlayerActivity : ComponentActivity() {
             (0 until group.length).any { group.getTrackFormat(it).language?.startsWith(language, ignoreCase = true) == true }
     }
 
-    private fun attachSubtitle(request: VodRequest, file: File) {
+    /** Film mit allen geladenen Untertiteln an der aktuellen Position neu aufsetzen (kurzes Nachpuffern). */
+    private fun reloadWithSubtitles(request: VodRequest) {
         val p = player ?: return
-        subtitleFile = file
         val position = p.currentPosition
         val playing = p.playWhenReady
-        p.setMediaItem(mediaItem(request.url, guessMime(request.url), file), position)
+        p.setMediaItem(vodItem(request), position)
         p.prepare()
         p.playWhenReady = playing
-        setTextEnabled(true)
     }
 
-    fun searchSubtitlesOnline() {
-        subtitleFile = null
-        maybeFetchSubtitles(force = true)
+    private fun selectTextLanguage(language: String) {
+        val p = player ?: return
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .setPreferredTextLanguage(language)
+            .build()
+        textDisabled = false
+    }
+
+    fun openLanguagePicker() {
+        languagePicker = true
+        overlayToken++
+    }
+
+    fun closeLanguagePicker() {
+        languagePicker = false
+        overlayToken++
+    }
+
+    /**
+     * Übersetzt die gerade gewählte eingebettete Spur live in [target]. Jede Zeile wird beim Erscheinen
+     * übersetzt und zwischengespeichert. Dafür werden die Originaluntertitel ausgeblendet.
+     */
+    fun startLiveTranslation(target: String) {
+        languagePicker = false
         closeOverlay()
+        if (!settings.translationEnabled) {
+            subtitleStatus = "Für Live-Übersetzung DeepL oder LibreTranslate in den Einstellungen eintragen"
+            return
+        }
+        if (textDisabled) setTextEnabled(true)
+        cueTranslations.clear()
+        liveTranslateTarget = target
+        subtitleStatus = "Live-Übersetzung: ${Languages.label(target)}"
+    }
+
+    fun stopLiveTranslation() {
+        liveTranslateTarget = null
+        translatedCue = null
+        cueJob?.cancel()
+    }
+
+    private fun onCuesChanged(cueGroup: CueGroup) {
+        val target = liveTranslateTarget ?: return
+        val text = cueGroup.cues.mapNotNull { it.text?.toString()?.trim() }.filter { it.isNotEmpty() }.joinToString("\n")
+        if (text.isEmpty()) {
+            translatedCue = null
+            return
+        }
+        cueTranslations[text]?.let {
+            translatedCue = it
+            return
+        }
+        cueJob?.cancel()
+        cueJob = lifecycleScope.launch {
+            val translator = Translators.from(container.http, settings) ?: return@launch
+            runCatching { translator.translate(listOf(text), target).first() }
+                .onSuccess {
+                    cueTranslations[text] = it
+                    translatedCue = it
+                }
+                .onFailure {
+                    stopLiveTranslation()
+                    subtitleStatus = "Übersetzung: ${it.message}"
+                }
+        }
     }
 
     // ---------------------------------------------------------------- Spuren (Audio/Untertitel)
@@ -326,7 +423,10 @@ class PlayerActivity : ComponentActivity() {
             .setTrackTypeDisabled(group.type, false)
             .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index))
             .build()
-        if (group.type == C.TRACK_TYPE_TEXT) textDisabled = false
+        if (group.type == C.TRACK_TYPE_TEXT) {
+            textDisabled = false
+            stopLiveTranslation()
+        }
     }
 
     fun setTextEnabled(enabled: Boolean) {
@@ -336,6 +436,7 @@ class PlayerActivity : ComponentActivity() {
             .apply { if (!enabled) clearOverridesOfType(C.TRACK_TYPE_TEXT) }
             .build()
         textDisabled = !enabled
+        if (!enabled) stopLiveTranslation()
     }
 
     fun openTracks() = showOverlay(Overlay.TRACKS)
@@ -378,22 +479,21 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Gemeinsam
 
-    private fun mediaItem(url: String, mime: String?, subtitle: File? = null): MediaItem =
-        MediaItem.Builder().setUri(url).apply {
-            if (mime != null) setMimeType(mime)
-            if (subtitle != null) {
-                setSubtitleConfigurations(
-                    listOf(
-                        MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(subtitle))
-                            .setMimeType(MimeTypes.APPLICATION_SUBRIP)
-                            .setLanguage(settings.subtitleLanguage.code)
-                            .setLabel("${settings.subtitleLanguage.label} (OpenSubtitles)")
-                            .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
-                            .build()
-                    )
-                )
-            }
-        }.build()
+    private fun mediaItem(url: String, mime: String?): MediaItem =
+        MediaItem.Builder().setUri(url).apply { if (mime != null) setMimeType(mime) }.build()
+
+    private fun vodItem(request: VodRequest): MediaItem =
+        mediaItem(request.url, guessMime(request.url)).buildUpon()
+            .setSubtitleConfigurations(
+                subtitleFiles.map { (language, file) ->
+                    MediaItem.SubtitleConfiguration.Builder(Uri.fromFile(file))
+                        .setMimeType(MimeTypes.APPLICATION_SUBRIP)
+                        .setLanguage(language)
+                        .setLabel("${Languages.label(language)} (geladen)")
+                        .build()
+                }
+            )
+            .build()
 
     private fun guessMime(url: String): String? {
         val path = url.substringBefore('?').lowercase(Locale.ROOT)
@@ -415,7 +515,7 @@ class PlayerActivity : ComponentActivity() {
             if (state == Player.STATE_READY) {
                 retries = 0
                 message = null
-                if (!isLive) maybeFetchSubtitles()
+                if (!isLive) maybeAutoSubtitles()
             }
             if (state == Player.STATE_ENDED && !isLive) finish()
         }
@@ -426,6 +526,8 @@ class PlayerActivity : ComponentActivity() {
                 zapStartedAt = 0
             }
         }
+
+        override fun onCues(cueGroup: CueGroup) = onCuesChanged(cueGroup)
 
         override fun onTracksChanged(tracks: Tracks) {
             this@PlayerActivity.tracks = tracks
@@ -520,7 +622,11 @@ class PlayerActivity : ComponentActivity() {
         val code = event.keyCode
         if (code == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
-                if (overlay != Overlay.NONE) closeOverlay() else finish()
+                when {
+                    languagePicker -> closeLanguagePicker()
+                    overlay != Overlay.NONE -> closeOverlay()
+                    else -> finish()
+                }
             }
             return true
         }
