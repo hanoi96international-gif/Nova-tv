@@ -91,7 +91,12 @@ class ContentRepository(
 
     suspend fun upcoming(channel: ChannelEntity, limit: Int = 8): List<ProgrammeEntity> {
         val id = channel.epgId?.takeIf(String::isNotEmpty) ?: return emptyList()
-        return db.programmes().upcoming(id, System.currentTimeMillis(), limit)
+        // Nutzen mehrere Playlists dieselben EPG-IDs, käme jede Sendung mehrfach: die eigene Playlist
+        // bevorzugen und doppelte Startzeiten entfernen.
+        return db.programmes().upcoming(id, System.currentTimeMillis(), limit * 3)
+            .sortedWith(compareBy({ it.start }, { if (it.playlistId == channel.playlistId) 0 else 1 }))
+            .distinctBy { it.start }
+            .take(limit)
     }
 
     suspend fun search(query: String): SearchResults = coroutineScope {
@@ -103,7 +108,7 @@ class ContentRepository(
         val movies = async { db.vod().search(q, 40) }
         val series = async { db.series().search(q, 40) }
 
-        val programmeList = programmes.await()
+        val programmeList = programmes.await().distinctBy { Triple(it.channelEpgId, it.start, it.title) }
         // Zu jeder gefundenen Sendung den passenden Sender (für "Jetzt einschalten").
         val epgIds = programmeList.map { it.channelEpgId }.distinct()
         val channelsByEpg = if (epgIds.isEmpty()) emptyMap() else db.channels().byEpgIds(epgIds).associateBy { it.epgId }
