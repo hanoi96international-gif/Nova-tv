@@ -16,7 +16,7 @@
         android:label="@string/app_name"
         android:largeHeap="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Ayu-TV"
+        android:theme="@style/Theme.AyuTV"
         android:usesCleartextTraffic="true">
 
         <activity
@@ -37,6 +37,6 @@
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="false"
             android:screenOrientation="landscape"
-            android:theme="@style/Theme.Ayu-TV.Player" />
+            android:theme="@style/Theme.AyuTV.Player" />
     </application>
 </manifest>

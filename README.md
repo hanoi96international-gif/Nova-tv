@@ -57,9 +57,9 @@ Screenshots, Logs und Ruckler-Statistik liegen nach jedem Lauf im Branch `ci-res
 ## Installation auf dem Fire TV Stick
 
 1. Auf dem Fire TV unter *Einstellungen → Mein Fire TV → Entwickleroptionen* „Apps unbekannter Herkunft“ für die App **Downloader** erlauben.
-2. Die Datei `AyuTV.apk` aus dem neuesten [Release](../../releases/latest) herunterladen. Jeder grüne Build aktualisiert es automatisch.
-3. In Downloader die APK-URL eingeben und installieren.
-   Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install Ayu-TV-xxxx.apk`.
+2. Die Datei `AyuTV.apk` aus dem neuesten [Release](../../releases/latest) nehmen. Jede neue Version erscheint als eigenes Release.
+3. In Downloader die APK-URL eingeben und installieren. War vorher „NovaTV“ installiert, diese alte App deinstallieren (anderer Paketname, sie wird nicht ersetzt).
+   Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install AyuTV.apk`.
 
 Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose ist im Debug-Build deutlich langsamer.
 

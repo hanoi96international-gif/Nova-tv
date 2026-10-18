@@ -1,12 +1,12 @@
 <resources>
-    <style name="Theme.Ayu-TV" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.AyuTV" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/background</item>
         <item name="android:colorAccent">@color/accent</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
     </style>
 
-    <style name="Theme.Ayu-TV.Player">
+    <style name="Theme.AyuTV.Player">
         <item name="android:windowBackground">@android:color/black</item>
     </style>
 </resources>
