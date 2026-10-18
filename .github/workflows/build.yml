@@ -29,16 +29,25 @@ jobs:
       - name: APK umbenennen
         run: |
           mkdir -p out
-          cp app/build/outputs/apk/release/app-release.apk out/NovaTV-${GITHUB_SHA::7}.apk
-          cp app/build/outputs/apk/debug/app-debug.apk out/NovaTV-debug-${GITHUB_SHA::7}.apk
+          cp app/build/outputs/apk/release/app-release.apk out/NovaTV.apk
+          cp app/build/outputs/apk/debug/app-debug.apk out/NovaTV-debug.apk
 
       - uses: actions/upload-artifact@v5
         with:
           name: NovaTV-apk
           path: out/*.apk
 
+      - name: Versionsnummer lesen
+        id: version
+        run: echo "name=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)" >> "$GITHUB_OUTPUT"
+
+      # Jeder grüne Build auf main aktualisiert das Release der aktuellen Version (Tag v<versionName>).
       - name: Release veröffentlichen
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: out/NovaTV-*.apk
+          tag_name: v${{ steps.version.outputs.name }}
+          name: NovaTV ${{ steps.version.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: out/NovaTV*.apk

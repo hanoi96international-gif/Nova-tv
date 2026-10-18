@@ -32,7 +32,7 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 ## Installation auf dem Fire TV Stick
 
 1. Auf dem Fire TV unter *Einstellungen → Mein Fire TV → Entwickleroptionen* „Apps unbekannter Herkunft“ für die App **Downloader** erlauben.
-2. Die APK aus dem neuesten [Release](../../releases) bzw. dem Actions-Artefakt `NovaTV-apk` herunterladen.
+2. Die Datei `NovaTV.apk` aus dem neuesten [Release](../../releases/latest) herunterladen. Jeder grüne Build aktualisiert es automatisch.
 3. In Downloader die APK-URL eingeben und installieren.
    Alternativ per ADB: `adb connect <IP-des-Sticks>` und danach `adb install NovaTV-xxxx.apk`.
 
