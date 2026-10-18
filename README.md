@@ -23,7 +23,12 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Live TV:** Gruppen, Senderliste mit aktuellem Programm und Fortschritt, Detailspalte mit den nächsten Sendungen, Favoriten (OK lange drücken)
 - **TV-Guide:** EPG-Raster pro Gruppe, 2-Stunden-Fenster, das sich mit links/rechts verschieben lässt
 - **Player:** Hoch/Runter schaltet um, OK oder links öffnet die Senderliste, rechts zeigt das Stream-Info (Auflösung, fps, Codec, Decoder, verworfene Frames, Leitung, Startzeit), Zifferntasten wählen direkt einen Sender, die „Letzter Sender“-Taste bzw. die blaue Taste springt zurück, Menü-Taste setzt einen Favoriten. Erkennt 4K, HDR10, HLG und Dolby Vision
-- **Untertitel (Filme & Serien):** Englisch ist automatisch an (umstellbar auf Deutsch oder Aus). Zuerst wird eine eingebettete Spur gesucht. Fehlt sie, lädt NovaTV passende Untertitel von [OpenSubtitles](https://www.opensubtitles.com). Dabei wird zuerst per Datei-Hash gesucht (dann passen sie zeitgenau zur Datei), sonst nach Titel und Jahr. Gefundene Untertitel werden gespeichert und kommen beim nächsten Mal sofort. Größe einstellbar, weiße Schrift mit Rand für gute Lesbarkeit.
+- **Untertitel (Filme & Serien), optional:** standardmäßig aus, im Film mit der Menütaste ☰ einschalten (oder in den Einstellungen „automatisch einschalten“). In **41 Sprachen**:
+  1. eingebettete Spur des Films,
+  2. echte Untertitel von [OpenSubtitles](https://www.opensubtitles.com) in der Wunschsprache (per Datei-Hash zeitgenau, sonst nach Titel/Jahr),
+  3. gibt es keine: **automatische Übersetzung** einer vorhandenen Datei (meist Englisch) mit DeepL oder LibreTranslate,
+  4. eingebettete Spuren lassen sich auch **live übersetzen** (jede Zeile beim Erscheinen).
+  Alles Geladene und Übersetzte wird gespeichert; mehrere Sprachen hängen gleichzeitig am Film.
 - **Ton- und Untertitelmenü (☰-Taste):** Audiospuren mit Sprache und Format (Dolby Atmos, Dolby Digital Plus, DTS, 5.1), Untertitelspuren, Online-Suche. Bei Live TV zusätzlich Favorit setzen.
 - **Stabilität:** Ein Watchdog erkennt eingefrorene Streams (Dauer-Puffern, stehendes Bild) und verbindet automatisch neu. Stürzt der Decoder bei aktivem Tunneling ab, wird Tunneling für diesen Stream abgeschaltet und neu gestartet. Kurzer Lese-Timeout (12 s), damit tote Verbindungen schnell auffallen. Bei Fehlern gibt es bis zu drei Wiederholungen, HLS ohne Endung wird automatisch erkannt.
 - **Filme und Serien:** Kategorien, Poster-Raster, Staffeln und Episoden (Xtream), Fortsetzen an der letzten Position
@@ -38,13 +43,15 @@ NovaTV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 
 Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose ist im Debug-Build deutlich langsamer.
 
-## Online-Untertitel einrichten (einmalig, kostenlos)
+## Untertitel und Übersetzung einrichten (einmalig, kostenlos)
 
 1. Auf [opensubtitles.com](https://www.opensubtitles.com) ein Konto anlegen.
 2. Unter *Profil → API-Consumer* einen API-Key erzeugen.
 3. In NovaTV unter *Einstellungen → Untertitel* den API-Key eintragen. Benutzername und Passwort sind optional, ergeben aber mehr Downloads pro Tag.
 
-Ohne API-Key funktionieren eingebettete Untertitel trotzdem automatisch.
+4. Für automatische Übersetzung: *Einstellungen → Untertitel → Automatische Übersetzung* auf **DeepL** stellen und den kostenlosen DeepL-API-Key eintragen ([deepl.com/pro-api](https://www.deepl.com/pro-api), 500.000 Zeichen pro Monat, reicht für etwa 10 Filme). Alternativ **LibreTranslate** mit eigener Server-Adresse.
+
+Ohne Zugänge funktionieren eingebettete Untertitel trotzdem.
 
 ## Tipps für flüssiges 4K
 
