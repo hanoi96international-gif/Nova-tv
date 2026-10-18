@@ -10,7 +10,7 @@ adb logcat -c
 timeout 900 adb shell am instrument -w -e class de.novatv.DeviceTourTest de.novatv.test/androidx.test.runner.AndroidJUnitRunner | tee ci-out/instrument.txt
 adb shell dumpsys gfxinfo de.novatv > ci-out/gfxinfo.txt 2>&1 || true
 adb exec-out run-as de.novatv tar c -C files ci | tar x -C ci-out --strip-components=1 || true
-adb logcat -d -v time NovaTour:I ExoPlayerImpl:W MediaCodec:W AndroidRuntime:E PlaylistRepository:W Subtitles:I '*:E' > ci-out/logcat.txt 2>&1 || true
+adb logcat -d -v time NovaTour:I ActivityTaskManager:I ActivityManager:I PlayerActivity:I ExoPlayerImpl:W MediaCodec:W AndroidRuntime:E PlaylistRepository:W Subtitles:I '*:E' > ci-out/logcat.txt 2>&1 || true
 
 # Release-APK (R8-optimiert) über die Debug-Version installieren: gleiche Signatur, Daten bleiben erhalten.
 adb uninstall de.novatv.test || true

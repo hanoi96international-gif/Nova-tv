@@ -61,6 +61,19 @@ class DeviceTourTest {
         return value as T
     }
 
+    /** Jeder Abschnitt läuft für sich: ein Fehler wird protokolliert, der Rundgang geht weiter. */
+    private var failures = 0
+
+    private fun section(name: String, block: () -> Unit) {
+        try {
+            block()
+        } catch (t: Throwable) {
+            failures++
+            log("FEHLER in $name: ${t.javaClass.simpleName}: ${t.message}")
+            android.util.Log.e("NovaTour", "Fehler in $name", t)
+        }
+    }
+
     private fun waitFor(timeoutMs: Long, condition: () -> Boolean): Boolean {
         val end = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < end) {
@@ -109,7 +122,7 @@ class DeviceTourTest {
         )
 
         // 2. Oberfläche per Fernbedienung durchgehen
-        ActivityScenario.launch(MainActivity::class.java).use {
+        section("ui") { ActivityScenario.launch(MainActivity::class.java).use {
             Thread.sleep(4_000)
             shot("01_home")
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
@@ -126,11 +139,11 @@ class DeviceTourTest {
             shot("06_search")
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
             shot("07_settings")
-        }
+        } }
 
         // 3. Live: Start, Zappen, Senderliste, Menü
         val live = channels.filter { "/movie/" !in it.url }
-        live.forEachIndexed { index, channel ->
+        live.forEachIndexed { index, channel -> section("live[$index]") {
             ActivityScenario.launch<PlayerActivity>(PlayerActivity.liveIntent(app, channel.key, null)).use { scenario ->
                 val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(8_000)
@@ -157,13 +170,14 @@ class DeviceTourTest {
                     key(KeyEvent.KEYCODE_BACK)
                 }
             }
-        }
+        } }
 
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
-        if (movie != null) {
+        if (movie != null) section("vod") {
             val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
             ActivityScenario.launch<PlayerActivity>(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                log("vod launched state=${scenario.state}")
                 val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                 Thread.sleep(3_000)
                 val textGroups = scenario.read { a -> a.tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT } }
@@ -179,11 +193,10 @@ class DeviceTourTest {
                 log("vod after_seek position_ms=${scenario.read { it.player?.currentPosition }} message=${scenario.read { it.message }}")
                 shot("22_vod_seek")
             }
-        } else {
-            log("vod: kein Film gefunden")
         }
+        if (movie == null) log("vod: kein Film gefunden")
         // 5. Serienfolge über Xtream abspielen
-        episodes.firstOrNull()?.let { (episode, url) ->
+        episodes.firstOrNull()?.let { (episode, url) -> section("episode") {
             val series = seriesList.first()
             val request = VodRequest("${series.key}:e:${episode.id}", HistoryKind.EPISODE, "${series.name} S1E1", episode.title, null, url)
             ActivityScenario.launch<PlayerActivity>(PlayerActivity.vodIntent(app, request)).use { scenario ->
@@ -192,7 +205,8 @@ class DeviceTourTest {
                 log("episode ${episode.title}: ready=$ready message=${scenario.read { it.message }}")
                 shot("30_episode")
             }
-        }
-        log("done")
+        } }
+        log("done failures=$failures")
+        assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
     }
 }

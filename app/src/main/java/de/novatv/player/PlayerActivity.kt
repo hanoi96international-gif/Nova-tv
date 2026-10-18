@@ -205,14 +205,21 @@ class PlayerActivity : ComponentActivity() {
         val counters = p.videoDecoderCounters ?: return
         counters.ensureUpdated()
         val frames = (counters.renderedOutputBufferCount + counters.droppedBufferCount + counters.skippedOutputBufferCount).toLong()
-        val now = SystemClock.elapsedRealtime()
+        // Gegen die Wiedergabeposition messen (Frames pro Sekunde Video), nicht gegen die Uhr:
+        // so stört es nicht, wenn der Decoder anfangs gepufferte Frames schubweise abarbeitet.
+        val position = p.currentPosition
         val sample = fpsSample
         if (sample == null) {
-            fpsSample = now to frames
+            fpsSample = position to frames
             return
         }
-        if (now - sample.first < 3_000) return
-        val measured = (frames - sample.second) * 1000f / (now - sample.first)
+        val elapsedMedia = position - sample.first
+        if (elapsedMedia < 0) {
+            fpsSample = null
+            return
+        }
+        if (elapsedMedia < 4_000) return
+        val measured = (frames - sample.second) * 1000f / elapsedMedia
         val snapped = STANDARD_FRAME_RATES.minByOrNull { abs(it - measured) }
             ?.takeIf { abs(it - measured) / it < 0.06f } ?: return
         stats = stats.copy(frameRate = snapped, frameRateMeasured = true)
