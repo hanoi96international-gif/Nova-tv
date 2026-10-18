@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
+    id("androidx.room")
 }
 
 android {
@@ -45,8 +46,10 @@ android {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
+// Das Room-Plugin verwaltet die Schema-Dateien je Build-Variante. Mit dem alten ksp-Argument
+// schrieben Debug- und Release-Build parallel in dieselbe Datei und zerstörten sie gegenseitig.
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
