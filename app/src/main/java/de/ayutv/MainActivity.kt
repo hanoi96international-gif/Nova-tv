@@ -17,5 +17,13 @@ class MainActivity : ComponentActivity() {
                 AyuTheme { AyuRoot() }
             }
         }
+        // Ist beim letzten Mal etwas abgestürzt, den Grund zeigen (zum Fotografieren und Melden).
+        if (savedInstanceState == null) CrashReport.takePending(this)?.let { report ->
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Beim letzten Mal ist etwas schiefgegangen")
+                .setMessage("$report\n\nBitte ein Foto davon an den Entwickler schicken.")
+                .setPositiveButton("OK", null)
+                .show()
+        }
     }
 }

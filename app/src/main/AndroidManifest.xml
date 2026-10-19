@@ -46,6 +46,12 @@
             android:exported="false"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AyuTV.Player" />
+        <!-- Übersetzer und Texterkennung im eigenen Prozess: Speichermangel oder ein Modellabsturz
+             beenden nur die Übersetzung, nie den laufenden Film. -->
+        <service
+            android:name=".data.translate.TranslationService"
+            android:exported="false"
+            android:process=":mt" />
         <receiver
             android:name=".data.reminders.ReminderReceiver"
             android:exported="false">

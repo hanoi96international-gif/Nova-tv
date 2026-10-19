@@ -518,6 +518,16 @@ class DeviceTourTest {
                         "statuses=${scenario.read { it.statusHistory.toList() }.takeLast(4)}"
                 )
                 assertTrue("Bild-Untertitel nicht übersetzt", ok)
+                // Übersetzer-Prozess hart beenden (wie bei Speichermangel): Der Film muss weiterlaufen.
+                val am = app.getSystemService(android.app.ActivityManager::class.java)
+                val mt = am.runningAppProcesses.orEmpty().firstOrNull { it.processName.endsWith(":mt") }
+                log("bitmap_translation mt_process=${mt?.processName} pid=${mt?.pid}")
+                mt?.let { android.os.Process.killProcess(it.pid) }
+                Thread.sleep(6_000)
+                val alive = scenario.read { it.player?.playbackState == Player.STATE_READY && it.player?.isPlaying == true && !it.isFinishing }
+                log("translator_killed: film_alive=$alive status=${scenario.read { it.subtitleStatus }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(2)}")
+                assertTrue("Film lief nach Ende des Übersetzers nicht weiter", alive)
+                assertTrue("Übersetzer lief nicht im eigenen Prozess", mt != null)
             }
         }
 

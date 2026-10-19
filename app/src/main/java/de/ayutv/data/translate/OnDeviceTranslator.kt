@@ -23,7 +23,7 @@ import java.util.concurrent.Executors
  * geht es über Englisch oder über das Mehrsprachen-Modell mit Sprachkennung (">>pol<<").
  */
 class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Translator {
-    override val name = "DnA-Übersetzer (auf dem Gerät)"
+    override val name = NAME
 
     /** Fortschritt beim einmaligen Laden eines Sprachmodells (für die Anzeige im Player). */
     @Volatile
@@ -185,6 +185,7 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
     }
 
     companion object {
+        const val NAME = "DnA-Übersetzer (auf dem Gerät)"
         private const val TAG = "OnDeviceTranslator"
         private const val BASE = "https://huggingface.co/Xenova"
         private const val THREADS = 2

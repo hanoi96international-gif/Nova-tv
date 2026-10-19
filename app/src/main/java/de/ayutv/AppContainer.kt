@@ -41,6 +41,6 @@ class AppContainer(context: Context) {
 
     init {
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)
-        Translators.ocr = de.ayutv.data.translate.SubtitleOcr(context.filesDir, http)
+        Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)
     }
 }

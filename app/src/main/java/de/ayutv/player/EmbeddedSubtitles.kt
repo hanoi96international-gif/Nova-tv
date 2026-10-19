@@ -46,11 +46,23 @@ class EmbeddedSubtitles {
 
     private val tracks = ConcurrentHashMap<String, Track>()
 
-    /** Bilder nur aufheben, wenn sie gelesen werden sollen (Übersetzung an); sonst kosten sie nur Speicher. */
+    /**
+     * Spur, deren Bilder gelesen werden sollen (Übersetzung läuft), sonst null. Bild-Untertitel aller
+     * anderen Spuren werden gar nicht erst dekodiert: Das spart Rechenzeit und Speicher bei 4K.
+     */
     @Volatile
-    var keepImages = false
+    private var imageTrack: String? = null
 
     fun clear() = tracks.clear()
+
+    fun readImagesOf(format: Format?) {
+        imageTrack = format?.let(::key)
+    }
+
+    internal fun wantsImages(format: Format) = imageTrack == key(format)
+
+    /** Bild-Untertitel (PGS, DVB, VobSub): ursprüngliches Format steht nach der Umwandlung in codecs. */
+    internal fun isBitmap(format: Format) = format.codecs in BITMAP_TYPES || format.sampleMimeType in BITMAP_TYPES
 
     /** Gibt es schon mitgelesene Einblendungen dieser Spur? */
     fun hasEntries(format: Format): Boolean = find(format)?.let { synchronized(it) { it.entries.isNotEmpty() } } == true
@@ -97,7 +109,7 @@ class EmbeddedSubtitles {
                 return
             }
             val text = cues.mapNotNull { it.text?.toString()?.trim() }.filter { it.isNotEmpty() }.joinToString("\n").ifEmpty { null }
-            val image = if (text == null && keepImages) toGray(cues) else null
+            val image = if (text == null && wantsImages(format)) toGray(cues) else null
             if (text == null && image == null) return
             track.entries[startMs] = Entry(startMs, endMs, text, image)
             while (track.entries.size > MAX_ENTRIES) track.entries.pollFirstEntry()
@@ -148,6 +160,7 @@ class EmbeddedSubtitles {
         const val OPEN_END_MS = 6_000L
         const val MAX_HEIGHT_PER_IMAGE = 110
         const val KEEP_IMAGES_BEHIND_MS = 30_000L
+        val BITMAP_TYPES = setOf(MimeTypes.APPLICATION_PGS, MimeTypes.APPLICATION_DVBSUBS, MimeTypes.APPLICATION_VOBSUB)
     }
 }
 
@@ -247,6 +260,8 @@ private class TapTrackOutput(private val delegate: TrackOutput, private val stor
         if (offset > 0 && end >= 0) pending.write(bytes, end, offset)
         val start = end - size
         if (start < 0 || size <= 0) return
+        // Bild-Untertitel, die niemand lesen will: nicht dekodieren (PNG pro Einblendung).
+        if (store.isBitmap(current) && !store.wantsImages(current)) return
         runCatching {
             val cues = decoder.decode(timeUs, bytes, start, size)
             store.add(current, timeUs, cues.durationUs, cues.cues)
