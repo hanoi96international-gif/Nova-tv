@@ -277,7 +277,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         Text(
             "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
         )
     }
 }
@@ -312,7 +312,7 @@ private fun VodControls(activity: PlayerActivity) {
         Text(
             (if (activity.player?.playWhenReady == false) "Pausiert  ·  " else "") + "OK Pause   ◀ −10 s   ▶ +30 s (halten = schneller)   ▲ Stream-Info   ☰ Ton/Untertitel",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
         )
     }
 }
@@ -341,7 +341,7 @@ private fun Badge(text: String) {
         text,
         modifier = Modifier.padding(start = 12.dp).clip(RoundedCornerShape(4.dp)).background(AyuColors.AccentSoft).padding(horizontal = 8.dp, vertical = 2.dp),
         color = Color.White,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
         fontWeight = FontWeight.Bold,
     )
 }
@@ -557,7 +557,7 @@ private fun MenuHeader(text: String) {
 
 @Composable
 private fun MenuHint(text: String) {
-    Text(text, color = AyuColors.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+    Text(text, color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
 }
 
 @Composable

@@ -51,8 +51,15 @@ import de.ayutv.ui.components.rememberMinuteTicker
 import de.ayutv.ui.theme.AyuColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 const val FAVORITES_GROUP = "\u0000favoriten"
+private const val NOW_PAGE = 30
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -70,11 +77,34 @@ fun LiveScreen() {
     val channelsFlow = remember(selectedGroup) {
         if (selectedGroup == FAVORITES_GROUP) content.favoriteChannels else content.channelsIn(selectedGroup)
     }
-    val channels by channelsFlow.collectAsStateWithLifecycle(emptyList())
+    // null = lädt noch (dann kein „Keine Sender“-Aufblitzen), leer = wirklich keine.
+    val loaded by channelsFlow.collectAsStateWithLifecycle(null)
+    val channels = loaded.orEmpty()
     val favoriteSet = remember(favoriteKeys) { favoriteKeys.toHashSet() }
+    val listState = rememberLazyListState()
+    val focusManager = LocalFocusManager.current
 
+    // Neue Gruppe: oben beginnen (nicht an der Scrollposition der vorigen).
+    var shownGroup by rememberSaveable { mutableStateOf(selectedGroup) }
+    LaunchedEffect(selectedGroup) {
+        if (shownGroup != selectedGroup) {
+            shownGroup = selectedGroup
+            listState.scrollToItem(0)
+        }
+    }
+
+    // „Jetzt läuft“ nur für den sichtbaren Ausschnitt (plus Vorlauf) laden: Bei 20.000 Sendern
+    // würde sonst jede Minute das ganze Programm aller Sender gelesen.
     var nowMap by remember { mutableStateOf<Map<String, ProgrammeEntity>>(emptyMap()) }
-    LaunchedEffect(channels, minute) { nowMap = content.nowPlaying(channels) }
+    LaunchedEffect(channels, minute) {
+        snapshotFlow { listState.firstVisibleItemIndex / NOW_PAGE }
+            .distinctUntilChanged()
+            .collectLatest { page ->
+                val from = ((page - 1) * NOW_PAGE).coerceAtLeast(0)
+                val to = ((page + 3) * NOW_PAGE).coerceAtMost(channels.size)
+                if (from < to) nowMap = nowMap + content.nowPlaying(channels.subList(from, to))
+            }
+    }
 
     // Fokussierter Sender als State-Objekt: nur die Detailspalte liest ihn. So wird beim Scrollen
     // nicht bei jedem Tastendruck der ganze Bildschirm neu berechnet.
@@ -109,7 +139,9 @@ fun LiveScreen() {
             },
         )
 
-        if (channels.isEmpty()) {
+        if (loaded == null) {
+            Spacer(Modifier.weight(1f))
+        } else if (channels.isEmpty()) {
             EmptyHint(
                 if (selectedGroup == FAVORITES_GROUP) "Noch keine Favoriten" else "Keine Sender",
                 if (selectedGroup == FAVORITES_GROUP) "Halte OK auf einem Sender gedrückt, um ihn zu den Favoriten hinzuzufügen." else "",
@@ -117,11 +149,12 @@ fun LiveScreen() {
             )
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f).fillMaxHeight().focusRestorer(),
                 contentPadding = PaddingValues(vertical = 24.dp, horizontal = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                items(channels, key = { it.key }) { channel ->
+                items(channels, key = { it.key }, contentType = { "channel" }) { channel ->
                     ChannelListItem(
                         channel = channel,
                         now = channel.epgId?.let { nowMap[it] },
@@ -131,7 +164,13 @@ fun LiveScreen() {
                             val favoritesOnly = selectedGroup == FAVORITES_GROUP
                             PlayerActivity.startLive(context, channel.key, selectedGroup.takeUnless { favoritesOnly }, favoritesOnly)
                         },
-                        onLongClick = { scope.launch { content.toggleFavorite(channel.key) } },
+                        onLongClick = {
+                            // In der Favoriten-Gruppe verschwindet der Sender: vorher den Fokus weitergeben.
+                            if (selectedGroup == FAVORITES_GROUP && !focusManager.moveFocus(FocusDirection.Down)) {
+                                focusManager.moveFocus(FocusDirection.Up)
+                            }
+                            scope.launch { content.toggleFavorite(channel.key) }
+                        },
                     )
                 }
             }
@@ -174,7 +213,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
             Text(
                 "${formatTime(p.start)} – ${formatTime(p.stop)}",
                 color = if (index == 0) AyuColors.Accent else AyuColors.TextSecondary,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
             )
             Text(
                 p.title,
@@ -193,7 +232,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
             Spacer(Modifier.height(12.dp))
         }
         Spacer(Modifier.weight(1f))
-        Text("OK abspielen  ·  OK halten = Favorit", fontSize = 12.sp, color = AyuColors.TextSecondary)
-        Text("OK halten auf Gruppe = ausblenden", fontSize = 12.sp, color = AyuColors.TextSecondary)
+        Text("OK abspielen  ·  OK halten = Favorit", fontSize = 13.sp, color = AyuColors.TextSecondary)
+        Text("OK halten auf Gruppe = ausblenden", fontSize = 13.sp, color = AyuColors.TextSecondary)
     }
 }

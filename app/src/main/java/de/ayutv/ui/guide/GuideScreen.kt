@@ -381,7 +381,7 @@ private fun GuideCell(
                     color = if (live || focused) AyuColors.TextPrimary else AyuColors.TextSecondary,
                 )
                 if (time != null && width > 90.dp) {
-                    Text(time, fontSize = 12.sp, color = AyuColors.TextSecondary, maxLines = 1)
+                    Text(time, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 1)
                 }
             }
         }

@@ -143,7 +143,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 )
             }
             Spacer(Modifier.weight(1f))
-            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp))
+            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
         }
         // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
         key(page) { LazyColumn(
@@ -514,7 +514,7 @@ private fun SettingRow(title: String, value: String, description: String, modifi
         Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 16.sp)
-                if (description.isNotEmpty()) Text(description, color = AyuColors.TextSecondary, fontSize = 12.sp)
+                if (description.isNotEmpty()) Text(description, color = AyuColors.TextSecondary, fontSize = 13.sp)
             }
             if (value.isNotEmpty()) {
                 Spacer(Modifier.width(16.dp))
@@ -705,7 +705,7 @@ private fun TypeCard(title: String, description: String, selected: Boolean, modi
     ) {
         Column(Modifier.padding(16.dp)) {
             Text((if (selected) "● " else "○ ") + title, fontSize = 17.sp, color = Color.White)
-            Text(description, fontSize = 12.sp, color = AyuColors.TextSecondary, modifier = Modifier.padding(top = 4.dp))
+            Text(description, fontSize = 13.sp, color = AyuColors.TextSecondary, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
