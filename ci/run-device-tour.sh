@@ -50,4 +50,9 @@ for i in $(seq 1 8); do key KEYCODE_DPAD_RIGHT; done; sleep 1
 adb exec-out screencap -p > ci-out/release_guide.png
 adb shell dumpsys gfxinfo de.ayutv > ci-out/release_gfxinfo_guide.txt 2>&1 || true
 adb logcat -d -v time AndroidRuntime:E '*:S' > ci-out/release_crash.txt 2>&1 || true
-exit 0
+# Job nur grün, wenn wirklich alles stimmt: jeder Abschnitt des Rundgangs bestanden und die
+# Release-APK ohne Absturz gestartet (vorher stand ein Fehler nur in results.txt).
+status=0
+grep -q "^OK (" ci-out/instrument.txt || { echo "::error::Rundgang im Emulator fehlgeschlagen (siehe results.txt)"; status=1; }
+grep -q "FATAL EXCEPTION" ci-out/release_crash.txt && { echo "::error::Release-APK abgestürzt"; status=1; }
+exit $status
