@@ -149,7 +149,10 @@ class OnDeviceTranslator(
         pairs.filter { pair -> runCatching { model(pair) }.isSuccess }.also { release() }
     }
 
-    private fun isInstalled(folder: File) = FILES.keys.all { File(folder, it).length() > 0 }
+    /** Vollständig da: Konfiguration, Tokenizer und je Teilmodell die ORT-Datei oder die ONNX-Datei. */
+    private fun isInstalled(folder: File) = FILES.keys.all { local ->
+        File(folder, local).length() > 0 || (local in MODEL_FILES && OrtLoader.hasPrepared(File(folder, local)))
+    }
 
     private fun download(pair: String, folder: File) {
         if (dir.apply { mkdirs() }.usableSpace < MIN_FREE_BYTES) throw IOException("Zu wenig Speicher für das Übersetzungsmodell (ca. 120 MB nötig)")
@@ -158,45 +161,71 @@ class OnDeviceTranslator(
         var done = 0L
         val total = TOTAL_BYTES_ESTIMATE
         for ((local, remote) in FILES) {
-            val target = File(folder, local)
-            if (target.length() > 0) continue
-            val part = File(folder, "$local.part")
-            // Nach einem WLAN-Abbruch dort weitermachen, wo der Download aufgehört hat.
-            val have = part.length()
-            val request = Request.Builder().url("$BASE/opus-mt-$pair/resolve/main/$remote")
-                .apply { if (have > 0) header("Range", "bytes=$have-") }
-                .build()
-            http.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("Übersetzungsmodell nicht erreichbar (HTTP ${response.code})")
-                val append = response.code == 206
-                if (append) done += have
-                // Erwartete Gesamtgröße, um abgebrochene oder verstümmelte Downloads zu erkennen.
-                val expected = response.body.contentLength().takeIf { it > 0 }?.let { if (append) it + have else it }
-                var lastPercent = -1
-                response.body.byteStream().use { input ->
-                    java.io.FileOutputStream(part, append).use { output ->
-                        val buffer = ByteArray(256 * 1024)
-                        while (true) {
-                            val n = input.read(buffer)
-                            if (n < 0) break
-                            output.write(buffer, 0, n)
-                            done += n
-                            val percent = (done * 100 / total).toInt().coerceAtMost(99)
-                            if (percent != lastPercent && percent % 5 == 0) {
-                                lastPercent = percent
-                                onProgress("Lade Übersetzer $label: $percent % (einmalig ca. ${total / 1_000_000} MB)")
-                            }
-                        }
-                    }
-                }
-                // Verbindung mittendrin abgerissen: Teil behalten (wird beim nächsten Mal fortgesetzt), aber nicht verwenden.
-                if (expected != null && part.length() != expected) {
-                    throw IOException("Download des Übersetzungsmodells unvollständig, bitte erneut versuchen")
+            if (File(folder, local).length() > 0) continue
+            // Modelle zuerst fertig umgewandelt (ORT-Format) aus dem DnA-TV-Release: Das Umwandeln selbst
+            // bräuchte ~500 MB und klappt auf einem Fire TV Stick nicht. Gibt es keins, das ONNX-Original.
+            val prepared = if (local in MODEL_FILES) OrtLoader.prepared(env, File(folder, local)) else null
+            if (prepared != null && prepared.length() > 0) continue
+            val sources = listOfNotNull(
+                prepared?.let { "$RELEASES/models-ort-${env.version}/opus-mt-$pair.${local.substringBefore('.')}.ort" to it },
+                "$BASE/opus-mt-$pair/resolve/main/$remote" to File(folder, local),
+            )
+            var lastError: IOException? = null
+            for ((url, target) in sources) {
+                try {
+                    fetch(url, target) { n -> done += n; report(label, done, total) }
+                    lastError = null
+                    break
+                } catch (e: IOException) {
+                    lastError = e
                 }
             }
-            if (!part.renameTo(target)) throw IOException("Übersetzungsmodell konnte nicht gespeichert werden")
+            lastError?.let { throw it }
         }
         Log.i(TAG, "Modell $pair geladen: ${folder.walk().sumOf { it.length() } / 1_000_000} MB")
+    }
+
+    private var lastPercent = -1
+
+    private fun report(label: String, done: Long, total: Long) {
+        val percent = (done * 100 / total).toInt().coerceAtMost(99)
+        if (percent != lastPercent && percent % 5 == 0) {
+            lastPercent = percent
+            onProgress("Lade Übersetzer $label: $percent % (einmalig ca. ${total / 1_000_000} MB)")
+        }
+    }
+
+    /** Eine Datei laden, nach einem Abbruch fortsetzen; vollständig erst nach dem Umbenennen. */
+    private fun fetch(url: String, target: File, progress: (Long) -> Unit) {
+        val part = File(target.path + ".part")
+        // Nach einem WLAN-Abbruch dort weitermachen, wo der Download aufgehört hat.
+        val have = part.length()
+        val request = Request.Builder().url(url)
+            .apply { if (have > 0) header("Range", "bytes=$have-") }
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("Übersetzungsmodell nicht erreichbar (HTTP ${response.code})")
+            val append = response.code == 206
+            if (append) progress(have)
+            // Erwartete Gesamtgröße, um abgebrochene oder verstümmelte Downloads zu erkennen.
+            val expected = response.body.contentLength().takeIf { it > 0 }?.let { if (append) it + have else it }
+            response.body.byteStream().use { input ->
+                java.io.FileOutputStream(part, append).use { output ->
+                    val buffer = ByteArray(256 * 1024)
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        output.write(buffer, 0, n)
+                        progress(n.toLong())
+                    }
+                }
+            }
+            // Verbindung mittendrin abgerissen: Teil behalten (wird beim nächsten Mal fortgesetzt), aber nicht verwenden.
+            if (expected != null && part.length() != expected) {
+                throw IOException("Download des Übersetzungsmodells unvollständig, bitte erneut versuchen")
+            }
+        }
+        if (!part.renameTo(target)) throw IOException("Übersetzungsmodell konnte nicht gespeichert werden")
     }
 
     /** Belegter Speicher aller geladenen Sprachmodelle. */
@@ -239,6 +268,9 @@ class OnDeviceTranslator(
         fun hasPendingPreparation(baseDir: File): Boolean = File(File(baseDir, "mt"), PENDING_FILE).isFile
         private const val TAG = "OnDeviceTranslator"
         private const val BASE = "https://huggingface.co/Xenova"
+        /** Fertig umgewandelte Modelle (ORT-Format, Workflow „Models“) als Release-Dateien von DnA-TV. */
+        private const val RELEASES = "https://github.com/hanoi96international-gif/Nova-tv/releases/download"
+        private val MODEL_FILES = setOf(OpusMtModel.ENCODER, OpusMtModel.DECODER)
         private const val THREADS = 2
         private const val MIN_FREE_BYTES = 200L * 1024 * 1024
         private const val TOTAL_BYTES_ESTIMATE = 115_000_000L

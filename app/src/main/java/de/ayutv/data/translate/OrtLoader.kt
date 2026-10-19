@@ -23,6 +23,10 @@ internal object OrtLoader {
 
     fun isPrepared(env: OrtEnvironment, onnx: File): Boolean = prepared(env, onnx).length() > 0
 
+    /** Irgendeine umgewandelte Datei vorhanden (ohne die Runtime zu laden, z. B. für die Einstellungen). */
+    fun hasPrepared(onnx: File): Boolean = onnx.parentFile?.listFiles()
+        ?.any { it.name.startsWith(onnx.nameWithoutExtension + ".") && it.name.endsWith(".ort") && it.length() > 0 } == true
+
     /** Einmalige Umwandlung. Braucht etwa das Dreifache der Dateigröße an freiem Speicher. */
     fun prepare(env: OrtEnvironment, onnx: File, configure: OrtSession.SessionOptions.() -> Unit) {
         val target = prepared(env, onnx)

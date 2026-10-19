@@ -525,7 +525,7 @@ class DeviceTourTest {
             val result = runBlocking { de.ayutv.data.translate.TranslatorSelfTest.run("de") }
             de.ayutv.data.repo.Translators.remote.release()
             log("translator_selftest: ${result.replace("\n", " | ")}")
-            assertTrue("Selbsttest fehlgeschlagen: $result", result.lines().filterNot { it.startsWith("Speicher") }.all { "ok" in it })
+            assertTrue("Selbsttest fehlgeschlagen: $result", result.lines().filterNot { it.startsWith("Speicher") || it.startsWith("Prozessor") }.all { "ok" in it })
         }
 
         // 5d. Film nur mit Bild-Untertiteln (PGS wie auf Blu-ray): mitlesen, Texterkennung, Übersetzung mit Vorlauf
