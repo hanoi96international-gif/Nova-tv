@@ -143,7 +143,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 )
             }
             Spacer(Modifier.weight(1f))
-            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp))
+            Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
         }
         // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
         key(page) { LazyColumn(
@@ -376,6 +376,9 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
 
                 }
+                SettingsPage.PARENTAL -> {
+                    item { ParentalSettings() }
+                }
                 SettingsPage.DATA -> {
                     item {
                         SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
@@ -511,7 +514,7 @@ private fun SettingRow(title: String, value: String, description: String, modifi
         Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = 16.sp)
-                if (description.isNotEmpty()) Text(description, color = AyuColors.TextSecondary, fontSize = 12.sp)
+                if (description.isNotEmpty()) Text(description, color = AyuColors.TextSecondary, fontSize = 13.sp)
             }
             if (value.isNotEmpty()) {
                 Spacer(Modifier.width(16.dp))
@@ -702,7 +705,7 @@ private fun TypeCard(title: String, description: String, selected: Boolean, modi
     ) {
         Column(Modifier.padding(16.dp)) {
             Text((if (selected) "● " else "○ ") + title, fontSize = 17.sp, color = Color.White)
-            Text(description, fontSize = 12.sp, color = AyuColors.TextSecondary, modifier = Modifier.padding(top = 4.dp))
+            Text(description, fontSize = 13.sp, color = AyuColors.TextSecondary, modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -736,6 +739,7 @@ private enum class SettingsPage(val title: String, val description: String, val 
     PLAYBACK("Wiedergabe", "Puffer, Bild, Ton und Stabilität", "▶"),
     SUBTITLES("Untertitel", "Sprachen, Größe, Übersetzung auf dem Gerät", "💬"),
     DISPLAY("Bedienung & TV-Guide", "Umschalten, Programmführer, Zeitverschiebung", "📺"),
+    PARENTAL("Kindersicherung", "Gruppen mit PIN sperren", "🔒"),
     DATA("Daten & Info", "Verlauf, Speicher, Version", "ⓘ"),
 }
 
@@ -783,5 +787,68 @@ private fun ActiveToggle(enabled: Boolean, onToggle: () -> Unit) {
             textAlign = TextAlign.Center,
             fontSize = 15.sp,
         )
+    }
+}
+
+/** PIN festlegen, entsperren, wieder sperren. Gesperrt wird in Playlists → Gruppen (OK halten). */
+@Composable
+private fun ParentalSettings() {
+    val container = LocalContainer.current
+    val scope = rememberCoroutineScope()
+    val hasPin by container.parental.hasPin.collectAsStateWithLifecycle(false)
+    val unlocked by container.parental.unlocked.collectAsStateWithLifecycle()
+    val locked by container.parental.lockedGroups.collectAsStateWithLifecycle(emptySet())
+    var pin by remember { mutableStateOf("") }
+    var info by remember { mutableStateOf<String?>(null) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val status = when {
+            !hasPin -> "Keine PIN festgelegt – nichts ist gesperrt."
+            unlocked -> "🔓 Entsperrt, bis die App verlassen wird. ${locked.size} Gruppe(n) mit Sperre."
+            else -> "🔒 Gesperrt: ${locked.size} Gruppe(n) sind ausgeblendet."
+        }
+        Text(status, fontSize = 17.sp)
+        Text(
+            "Gesperrte Gruppen verschwinden überall: Listen, TV-Guide, Suche und Umschalten. Sperren: Playlists → Gruppen → " +
+                "Gruppe auswählen und OK gedrückt halten. Beim Verlassen der App wird automatisch wieder gesperrt.",
+            color = AyuColors.TextSecondary,
+            fontSize = 13.sp,
+        )
+        TvTextField(
+            value = pin,
+            onValueChange = { value -> pin = value.filter(Char::isDigit).take(8) },
+            label = if (hasPin) "PIN" else "Neue PIN (mindestens 4 Ziffern)",
+            password = true,
+            keyboardType = KeyboardType.NumberPassword,
+            imeAction = ImeAction.Done,
+            modifier = Modifier.width(320.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (!hasPin) {
+                Button(onClick = {
+                    scope.launch {
+                        info = runCatching { container.parental.setPin(pin) }
+                            .fold({ "PIN gespeichert. Jetzt Gruppen sperren (Playlists → Gruppen → OK halten)." }, { it.message })
+                        pin = ""
+                    }
+                }) { Text("PIN festlegen") }
+            } else if (!unlocked) {
+                Button(onClick = {
+                    scope.launch {
+                        info = if (container.parental.unlock(pin)) "Entsperrt." else "Falsche PIN."
+                        pin = ""
+                    }
+                }) { Text("Entsperren") }
+            } else {
+                Button(onClick = { scope.launch { container.parental.lock(); info = "Wieder gesperrt." } }) { Text("Wieder sperren") }
+                OutlinedButton(onClick = {
+                    scope.launch {
+                        info = if (container.parental.removePin(pin)) "PIN entfernt, Kindersicherung aus." else "Zum Entfernen die PIN eingeben."
+                        pin = ""
+                    }
+                }) { Text("PIN entfernen") }
+            }
+        }
+        info?.let { Text(it, color = AyuColors.Accent, fontSize = 14.sp) }
     }
 }

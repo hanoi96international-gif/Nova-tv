@@ -7,6 +7,8 @@ import de.ayutv.data.repo.ContentRepository
 import de.ayutv.data.repo.PlaylistRepository
 import de.ayutv.data.repo.SubtitleRepository
 import de.ayutv.data.repo.Translators
+import de.ayutv.data.reminders.Reminders
+import de.ayutv.data.parental.ParentalControl
 import de.ayutv.data.translate.OnDeviceTranslator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,9 @@ class AppContainer(context: Context) {
     val content = ContentRepository(db, http)
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
     val subtitles = SubtitleRepository(http, context.filesDir)
+
+    val reminders = Reminders(context)
+    val parental = ParentalControl(context, db)
 
     init {
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)

@@ -22,6 +22,8 @@ data class PlaylistEntity(
     val lastEpgSync: Long = 0,
     /** Ausgeschaltete Playlists bleiben gespeichert, erscheinen aber nirgends (Sender, Filme, Suche). */
     @ColumnInfo(defaultValue = "1") val enabled: Boolean = true,
+    /** Zeitzone des Xtream-Servers (für Archiv-Adressen, die in Serverzeit angegeben werden). */
+    val timezone: String? = null,
 )
 
 /**
@@ -44,6 +46,9 @@ data class ChannelEntity(
     val number: Int,
     val catchupDays: Int = 0,
     val userAgent: String? = null,
+    /** Archiv-Art aus der M3U (default, append, shift, flussonic, xc) und die Vorlage dafür. */
+    val catchupType: String? = null,
+    val catchupSource: String? = null,
 )
 
 @Entity(
@@ -100,7 +105,7 @@ data class FavoriteEntity(
     val addedAt: Long,
 )
 
-enum class HistoryKind { LIVE, VOD, EPISODE }
+enum class HistoryKind { LIVE, VOD, EPISODE, CATCHUP }
 
 @Entity(tableName = "history", indices = [Index("watchedAt")])
 data class HistoryEntity(
@@ -132,6 +137,17 @@ data class HiddenGroupEntity(
     val name: String,
 )
 
+/**
+ * Kindersicherung: Gruppen, die gerade gesperrt sind. Die Liste wird beim App-Start aus den
+ * Einstellungen gefüllt und beim Entsperren mit der PIN geleert; die Views blenden sie aus.
+ */
+@Entity(tableName = "locked_groups", primaryKeys = ["playlistId", "kind", "name"])
+data class LockedGroupEntity(
+    val playlistId: Long,
+    val kind: GroupKind,
+    val name: String,
+)
+
 /** Gruppe mit Anzahl und Sichtbarkeit für die Gruppenverwaltung. */
 data class GroupToggle(val name: String, val count: Int, val hidden: Boolean)
 
@@ -143,15 +159,21 @@ data class GroupToggle(val name: String, val count: Int, val hidden: Boolean)
  */
 const val VISIBLE_CHANNELS_SQL = """SELECT * FROM channels c WHERE c.playlistId IN (SELECT id FROM playlists WHERE enabled = 1)
                AND NOT EXISTS (SELECT 1 FROM hidden_groups h
-               WHERE h.playlistId = c.playlistId AND h.kind = 'LIVE' AND h.name = c.groupTitle)"""
+               WHERE h.playlistId = c.playlistId AND h.kind = 'LIVE' AND h.name = c.groupTitle)
+               AND NOT EXISTS (SELECT 1 FROM locked_groups l
+               WHERE l.playlistId = c.playlistId AND l.kind = 'LIVE' AND l.name = c.groupTitle)"""
 
 const val VISIBLE_VOD_SQL = """SELECT * FROM vod v WHERE v.playlistId IN (SELECT id FROM playlists WHERE enabled = 1)
                AND NOT EXISTS (SELECT 1 FROM hidden_groups h
-               WHERE h.playlistId = v.playlistId AND h.kind = 'VOD' AND h.name = v.category)"""
+               WHERE h.playlistId = v.playlistId AND h.kind = 'VOD' AND h.name = v.category)
+               AND NOT EXISTS (SELECT 1 FROM locked_groups l
+               WHERE l.playlistId = v.playlistId AND l.kind = 'VOD' AND l.name = v.category)"""
 
 const val VISIBLE_SERIES_SQL = """SELECT * FROM series s WHERE s.playlistId IN (SELECT id FROM playlists WHERE enabled = 1)
                AND NOT EXISTS (SELECT 1 FROM hidden_groups h
-               WHERE h.playlistId = s.playlistId AND h.kind = 'SERIES' AND h.name = s.category)"""
+               WHERE h.playlistId = s.playlistId AND h.kind = 'SERIES' AND h.name = s.category)
+               AND NOT EXISTS (SELECT 1 FROM locked_groups l
+               WHERE l.playlistId = s.playlistId AND l.kind = 'SERIES' AND l.name = s.category)"""
 
 @DatabaseView(viewName = "visible_channels", value = VISIBLE_CHANNELS_SQL)
 data class VisibleChannelView(val id: Long)

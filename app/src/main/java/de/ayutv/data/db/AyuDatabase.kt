@@ -17,9 +17,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         FavoriteEntity::class,
         HistoryEntity::class,
         HiddenGroupEntity::class,
+        LockedGroupEntity::class,
     ],
     views = [VisibleChannelView::class, VisibleVodView::class, VisibleSeriesView::class],
-    version = 2,
+    version = AyuDatabase.VERSION,
     exportSchema = true,
 )
 abstract class AyuDatabase : RoomDatabase() {
@@ -31,12 +32,36 @@ abstract class AyuDatabase : RoomDatabase() {
     abstract fun favorites(): FavoriteDao
     abstract fun history(): HistoryDao
     abstract fun hiddenGroups(): HiddenGroupDao
+    abstract fun lockedGroups(): LockedGroupDao
 
     companion object {
+        const val VERSION = 3
+
         /** 1 → 2: Playlists ein-/ausschaltbar. Views neu anlegen, damit sie ausgeschaltete Playlists ausblenden. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `playlists` ADD COLUMN `enabled` INTEGER NOT NULL DEFAULT 1")
+                // Die Views verweisen inzwischen auf locked_groups (kommt mit Version 3): Tabelle schon hier anlegen.
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `locked_groups` (`playlistId` INTEGER NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, PRIMARY KEY(`playlistId`, `kind`, `name`))"
+                )
+                recreateViews(db)
+            }
+        }
+
+        /** 2 → 3: Archiv (Catch-up): Art und Vorlage je Sender, Server-Zeitzone je Playlist. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `channels` ADD COLUMN `catchupType` TEXT")
+                db.execSQL("ALTER TABLE `channels` ADD COLUMN `catchupSource` TEXT")
+                db.execSQL("ALTER TABLE `playlists` ADD COLUMN `timezone` TEXT")
+                // Kindersicherung
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `locked_groups` (`playlistId` INTEGER NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, PRIMARY KEY(`playlistId`, `kind`, `name`))"
+                )
+                // Die Views lesen "SELECT *": neu anlegen, damit sie die neuen Spalten sicher enthalten.
                 recreateViews(db)
             }
         }
@@ -57,7 +82,7 @@ abstract class AyuDatabase : RoomDatabase() {
                 // WAL erzwingen: Die Oberfläche kann lesen, während im Hintergrund EPG geschrieben wird.
                 // Fire TV Sticks melden sich oft als "low RAM", dann würde Room sonst TRUNCATE wählen.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 // Nur für unbekannte Versionssprünge: Playlists sollen Updates sonst immer überstehen.
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()

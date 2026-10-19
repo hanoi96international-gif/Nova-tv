@@ -89,6 +89,10 @@ class ContentRepository(
         return ids.chunked(SQL_CHUNK).flatMap { db.programmes().inRange(it, from, to) }.groupBy { it.channelEpgId }
     }
 
+    /** Archiv-Adresse einer vergangenen Sendung oder null (Sender ohne Archiv, zu alt). */
+    suspend fun catchupUrl(channel: ChannelEntity, programme: ProgrammeEntity): String? =
+        Catchup.url(db.playlists().byId(channel.playlistId), channel, programme.start, programme.stop)
+
     suspend fun upcoming(channel: ChannelEntity, limit: Int = 8): List<ProgrammeEntity> {
         val id = channel.epgId?.takeIf(String::isNotEmpty) ?: return emptyList()
         // Nutzen mehrere Playlists dieselben EPG-IDs, käme jede Sendung mehrfach: die eigene Playlist
@@ -159,7 +163,16 @@ class ContentRepository(
         db.history().upsert(entry.copy(playCount = existing?.playCount ?: 1))
     }
 
-    suspend fun resumePosition(key: String): Long = db.history().byKey(key)?.positionMs ?: 0L
+    /**
+     * Wo ein Film weiterläuft: ein paar Sekunden vor der letzten Stelle (Wiedereinstieg). Zu Ende
+     * oder fast zu Ende geschaut beginnt er von vorn, statt sofort wieder zu enden.
+     */
+    suspend fun resumePosition(key: String): Long {
+        val entry = db.history().byKey(key) ?: return 0L
+        val nearEnd = entry.durationMs > 0 &&
+            (entry.positionMs >= entry.durationMs * 0.95 || entry.durationMs - entry.positionMs < 120_000)
+        return if (nearEnd) 0L else (entry.positionMs - 3_000).coerceAtLeast(0)
+    }
 
     suspend fun clearHistory() = db.history().clear()
 

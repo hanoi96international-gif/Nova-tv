@@ -48,6 +48,7 @@ import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.components.TvTextField
 import de.ayutv.ui.theme.AyuColors
 import kotlinx.coroutines.launch
+import de.ayutv.data.parental.ParentalControl
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
 import androidx.tv.material3.OutlinedButtonDefaults
@@ -68,7 +69,12 @@ private val GroupKind.label
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GroupManagerScreen(playlist: PlaylistEntity, onBack: () -> Unit) {
-    val content = LocalContainer.current.content
+    val container = LocalContainer.current
+    val content = container.content
+    val lockedGroups by container.parental.lockedGroups.collectAsStateWithLifecycle(emptySet())
+    val hasPin by container.parental.hasPin.collectAsStateWithLifecycle(false)
+    val unlocked by container.parental.unlocked.collectAsStateWithLifecycle()
+    var lockHint by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     BackHandler(onBack = onBack)
 
@@ -154,6 +160,11 @@ fun GroupManagerScreen(playlist: PlaylistEntity, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(8.dp))
         Text(
+            lockHint ?: "OK = ein-/ausblenden  ·  OK halten = mit Kindersicherung sperren (🔒)",
+            color = if (lockHint != null) AyuColors.Accent else AyuColors.TextSecondary,
+            fontSize = 13.sp,
+        )
+        Text(
             "${shown.count { !it.hidden }} von ${shown.size} sichtbar",
             color = AyuColors.TextSecondary,
             fontSize = 13.sp,
@@ -170,17 +181,33 @@ fun GroupManagerScreen(playlist: PlaylistEntity, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             items(shown, key = { it.name }) { group ->
-                GroupRow(group) { setHidden(listOf(group), hidden = !group.hidden) }
+                val lockKey = ParentalControl.LockedGroup(playlist.id, kind, group.name)
+                val locked = lockKey in lockedGroups
+                GroupRow(
+                    group,
+                    locked = locked,
+                    onLongToggleLock = {
+                        when {
+                            !hasPin -> lockHint = "Zuerst unter Einstellungen → Kindersicherung eine PIN festlegen"
+                            !unlocked -> lockHint = "Zum Ändern der Sperren zuerst mit der PIN entsperren (Einstellungen → Kindersicherung)"
+                            else -> {
+                                lockHint = null
+                                scope.launch { container.parental.setLocked(lockKey, !locked) }
+                            }
+                        }
+                    },
+                ) { setHidden(listOf(group), hidden = !group.hidden) }
             }
         }
     }
 }
 
 @Composable
-private fun GroupRow(group: GroupToggle, onToggle: () -> Unit) {
+private fun GroupRow(group: GroupToggle, locked: Boolean, onLongToggleLock: () -> Unit, onToggle: () -> Unit) {
     val visible = !group.hidden
     Surface(
         onClick = onToggle,
+        onLongClick = onLongToggleLock,
         modifier = Modifier.fillMaxWidth(0.75f),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.AccentSoft),
@@ -204,6 +231,7 @@ private fun GroupRow(group: GroupToggle, onToggle: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (locked) Text("🔒  ", fontSize = 14.sp)
             Text("${group.count}", color = AyuColors.TextSecondary, fontSize = 13.sp)
         }
     }

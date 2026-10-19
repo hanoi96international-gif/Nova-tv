@@ -90,6 +90,12 @@ interface ChannelDao {
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
     fun setEpgId(id: Long, epgId: String)
 
+    @Query("SELECT COALESCE(MAX(catchupDays), 0) FROM channels WHERE playlistId = :playlistId")
+    fun maxCatchupDays(playlistId: Long): Int
+
+    @Query("SELECT COALESCE(MAX(catchupDays), 0) FROM visible_channels")
+    suspend fun maxCatchupDaysAll(): Int
+
     @Query("SELECT DISTINCT epgId FROM channels WHERE playlistId = :playlistId AND epgId IS NOT NULL AND epgId != ''")
     suspend fun epgIds(playlistId: Long): List<String>
 
@@ -277,4 +283,13 @@ interface HiddenGroupDao {
 
     @Query("SELECT COUNT(*) FROM hidden_groups")
     fun observeHiddenCount(): Flow<Int>
+}
+
+@Dao
+interface LockedGroupDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(groups: List<LockedGroupEntity>)
+
+    @Query("DELETE FROM locked_groups")
+    suspend fun clear()
 }

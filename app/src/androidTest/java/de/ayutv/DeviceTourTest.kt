@@ -109,7 +109,7 @@ class DeviceTourTest {
             val version = container.db.openHelper.readableDatabase.version
             val existing = runBlocking { container.db.playlists().all() }
             log("db_version=$version playlists_before=${existing.size}")
-            assertTrue("Datenbank nicht auf Version 2", version == 2)
+            assertTrue("Datenbank auf Version $version statt ${de.ayutv.data.db.AyuDatabase.VERSION}", version == de.ayutv.data.db.AyuDatabase.VERSION)
         }
 
         // 0b. Textmuster auf Android prüfen (Android nutzt eine andere Regex-Engine als der PC)
@@ -199,6 +199,19 @@ class DeviceTourTest {
                         scenario.read { it.player?.playbackState == Player.STATE_READY && it.stats.startupMs > 0 }
                     }
                     log("zap: ready=$zapReady startup_ms=${scenario.read { it.stats.startupMs }} now=${scenario.read { it.current?.name }}")
+                    // Schnell dreimal: Anzeige läuft mit, umgeschaltet wird einmal, auf den dritten Sender.
+                    val before = scenario.read { act -> act.channels.indexOfFirst { it.key == act.current?.key } }
+                    repeat(3) { key(KeyEvent.KEYCODE_DPAD_UP); Thread.sleep(150) }
+                    val burstReady = waitFor(15_000) {
+                        scenario.read { act ->
+                            act.player?.currentMediaItem?.localConfiguration?.uri?.toString()?.let { uri ->
+                                act.current?.url?.let { uri.startsWith(it.substringBeforeLast('.')) }
+                            } == true && act.player?.playbackState == Player.STATE_READY
+                        }
+                    }
+                    val after = scenario.read { act -> act.channels.indexOfFirst { it.key == act.current?.key } }
+                    val size = scenario.read { it.channels.size }
+                    log("zap_burst: ready=$burstReady moved=${(after - before + size) % size} expected=${3 % size} now=${scenario.read { it.current?.name }}")
                     key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_200)
                     shot("1${index}_live_channel_list")
                     key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)
@@ -208,6 +221,72 @@ class DeviceTourTest {
                 }
             }
         } }
+
+        // 2b. Archiv (Catch-up): Xtream-Sender mit Archiv, vergangene Sendung abspielen
+        section("catchup") {
+            val archived = runBlocking { container.content.zapList(null, false) }.firstOrNull { it.catchupDays > 0 }
+                ?: error("Kein Sender mit Archiv importiert")
+            val now = System.currentTimeMillis()
+            val programme = de.ayutv.data.db.ProgrammeEntity(
+                playlistId = archived.playlistId, channelEpgId = archived.epgId ?: "x",
+                start = now - 3_600_000L, stop = now - 1_800_000L, title = "Archiv-Test", description = null, category = null,
+            )
+            val url = runBlocking { container.content.catchupUrl(archived, programme) } ?: error("Keine Archiv-Adresse")
+            val intent = PlayerActivity.vodIntent(
+                app,
+                VodRequest("catchup:test", HistoryKind.CATCHUP, programme.title, archived.name, null, url),
+            )
+            launchPlayer(intent).use { scenario ->
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                log("catchup: channel=${archived.name} days=${archived.catchupDays} url=${url.substringAfter("8000")} ready=$ready")
+                assertTrue("Archiv spielt nicht ab", ready && "/timeshift/" in url)
+            }
+        }
+
+        // 2c. Erinnerung setzen, auslösen (Benachrichtigung) und wieder entfernen
+        section("reminder") {
+            val channel = runBlocking { container.content.zapList(null, false) }.first()
+            val reminder = de.ayutv.data.reminders.Reminder(channel.key, channel.name, "Tagesschau", System.currentTimeMillis() + 3_600_000L)
+            val set = runBlocking { container.reminders.toggle(reminder) }
+            val stored = runBlocking { container.reminders.isSet(reminder.channelKey, reminder.start) }
+            instrumentation.runOnMainSync {
+                de.ayutv.data.reminders.ReminderReceiver().onReceive(
+                    app,
+                    android.content.Intent(app, de.ayutv.data.reminders.ReminderReceiver::class.java)
+                        .setAction(de.ayutv.data.reminders.Reminders.ACTION_REMIND)
+                        .putExtra(de.ayutv.data.reminders.Reminders.EXTRA_CHANNEL, reminder.channelKey)
+                        .putExtra(de.ayutv.data.reminders.Reminders.EXTRA_CHANNEL_NAME, reminder.channelName)
+                        .putExtra(de.ayutv.data.reminders.Reminders.EXTRA_TITLE, reminder.title),
+                )
+            }
+            val removed = !runBlocking { container.reminders.toggle(reminder) }
+            log("reminder: set=$set stored=$stored removed=$removed")
+            assertTrue("Erinnerung funktioniert nicht", set && stored && removed)
+        }
+
+        // 2d. Kindersicherung: Gruppe sperren → verschwindet; mit PIN entsperren → wieder da
+        section("parental") {
+            val parental = container.parental
+            val ciPlaylist = runBlocking { container.db.playlists().all() }.first { it.name == "CI-Test" }
+            val group = de.ayutv.data.parental.ParentalControl.LockedGroup(ciPlaylist.id, de.ayutv.data.db.GroupKind.LIVE, "Test Ton")
+            val before = runBlocking { container.content.zapList(null, false) }.size
+            val wrong: Boolean
+            val locked: Int
+            val unlocked: Int
+            runBlocking {
+                parental.setPin("1234")
+                parental.setLocked(group, true)
+                parental.lock()
+                locked = container.content.zapList(null, false).size
+                wrong = parental.unlock("0000")
+                parental.unlock("1234")
+                unlocked = container.content.zapList(null, false).size
+                parental.setLocked(group, false)
+                parental.removePin("1234")
+            }
+            log("parental: before=$before locked=$locked wrong_pin_accepted=$wrong unlocked=$unlocked")
+            assertTrue("Kindersicherung wirkt nicht", locked < before && !wrong && unlocked == before)
+        }
 
         // 3a. Bildwiederholrate anpassen + Tunneling eingeschaltet: darf nie hängen oder sich neu starten
         channels.firstOrNull { it.name == "HD Test 50fps" }?.let { hd -> section("afr_tunneling") {

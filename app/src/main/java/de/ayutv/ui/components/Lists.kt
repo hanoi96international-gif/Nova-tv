@@ -89,7 +89,7 @@ fun ChannelListItem(
                     if (favorite) Text("  ★", color = AyuColors.Accent, fontSize = 14.sp)
                 }
                 if (now != null) {
-                    Text(now.title, color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(now.title, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
                     ProgressLine(now.progress())
                 }
@@ -150,7 +150,7 @@ fun CategoryColumn(
                         color = if (entry.id == selected) AyuColors.Accent else AyuColors.TextPrimary,
                         fontSize = 15.sp,
                     )
-                    entry.count?.let { Text("$it", color = AyuColors.TextSecondary, fontSize = 12.sp) }
+                    entry.count?.let { Text("$it", color = AyuColors.TextSecondary, fontSize = 13.sp) }
                 }
             }
         }

@@ -66,6 +66,10 @@ class Handler(SimpleHTTPRequestHandler):
         if url.path == "/xmltv.php":
             self.path = "/epg.xml"
             return self.serve_file()
+        # Archiv (Catch-up): /timeshift/user/pass/<minuten>/<yyyy-MM-dd:HH-mm>/<id>.ts
+        if re.match(r"^/timeshift/%s/%s/\d+/\d{4}-\d{2}-\d{2}:\d{2}-\d{2}/\d+\.ts$" % (USER, PASSWORD), url.path):
+            self.path = "/hd50.ts"
+            return self.serve_file()
         match = re.match(r"^/(live|movie|series)/%s/%s/(\d+)\.\w+$" % (USER, PASSWORD), url.path)
         if match:
             target = FILES.get("%s/%s" % (match.group(1), match.group(2)))

@@ -15,8 +15,8 @@ android {
         // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
         minSdk = 24
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.8.0"
+        versionCode = 11
+        versionName = "0.9.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
@@ -87,6 +87,10 @@ dependencies {
     implementation("androidx.tv:tv-material:1.1.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    // Kindersicherung: sperren, sobald die App in den Hintergrund geht
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
+    // Playlists und TV-Guide im Hintergrund aktuell halten
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
     // Kompiliert beim Sideloaden die mitgelieferten Baseline-Profile von Compose: flüssigere UI ab dem ersten Start.
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 

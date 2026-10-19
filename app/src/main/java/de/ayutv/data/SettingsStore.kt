@@ -84,7 +84,8 @@ data class AppSettings(
     }
 }
 
-private val Context.dataStore by preferencesDataStore(name = "settings")
+/** Eine einzige DataStore-Instanz für die Datei "settings" (zwei Instanzen derselben Datei sind nicht erlaubt). */
+val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 private const val SEARCH_HISTORY_SIZE = 12
 
@@ -110,18 +111,18 @@ class SettingsStore(private val context: Context) {
         val osPassword = stringPreferencesKey("opensubtitles_password")
     }
 
-    val settings: Flow<AppSettings> = context.dataStore.data.map { it.toSettings() }
+    val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
 
     private val searchHistoryKey = stringPreferencesKey("search_history")
 
     /** Letzte Suchbegriffe, neueste zuerst. */
-    val searchHistory: Flow<List<String>> = context.dataStore.data.map { prefs ->
+    val searchHistory: Flow<List<String>> = context.settingsDataStore.data.map { prefs ->
         prefs[searchHistoryKey].orEmpty().split('\n').filter { it.isNotBlank() }
     }
 
     suspend fun rememberSearch(query: String) {
         val q = query.trim().takeIf { it.length >= 2 } ?: return
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             val old = prefs[searchHistoryKey].orEmpty().split('\n').filter { it.isNotBlank() }
             prefs[searchHistoryKey] = (listOf(q) + old.filterNot { it.equals(q, ignoreCase = true) })
                 .take(SEARCH_HISTORY_SIZE).joinToString("\n")
@@ -129,13 +130,13 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun clearSearchHistory() {
-        context.dataStore.edit { it.remove(searchHistoryKey) }
+        context.settingsDataStore.edit { it.remove(searchHistoryKey) }
     }
 
     suspend fun current(): AppSettings = settings.first()
 
     suspend fun update(transform: (AppSettings) -> AppSettings) {
-        context.dataStore.edit { prefs ->
+        context.settingsDataStore.edit { prefs ->
             val next = transform(prefs.toSettings())
             prefs[Keys.buffer] = next.bufferProfile.name
             prefs[Keys.tunneling] = next.tunneling

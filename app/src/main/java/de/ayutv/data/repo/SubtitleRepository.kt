@@ -40,6 +40,8 @@ class SubtitleRepository(
     private var token: String? = null
     private var tokenFor: String? = null
     private var tokenAt = 0L
+    @Volatile
+    private var blockedUntil = 0L
     private val hashCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     enum class Source { CACHE, HASH, TITLE, TRANSLATED }
@@ -209,6 +211,8 @@ class SubtitleRepository(
         // OpenSubtitles erwartet alphabetisch sortierte Parameter in Kleinbuchstaben (sonst Redirect).
         // Auch KI-/maschinell übersetzte Untertitel zulassen: Damit gibt es fast jeden Film in fast
         // jeder Sprache. Von Menschen erstellte werden beim Sortieren trotzdem bevorzugt.
+        // Nach „zu viele Anfragen“ (429) kurz Pause, statt das Limit weiter zu reizen.
+        if (System.currentTimeMillis() < blockedUntil) return emptyList()
         val all = params + mapOf("ai_translated" to "include", "machine_translated" to "include")
         val url = "$API/subtitles".toHttpUrl().newBuilder().apply {
             all.toSortedMap().forEach { (k, v) -> addQueryParameter(k, v.lowercase()) }
@@ -216,6 +220,10 @@ class SubtitleRepository(
         http.newCall(apiRequest(apiKey).url(url).get().build()).execute().use { response ->
             val body = response.body.string()
             if (!response.isSuccessful) {
+                if (response.code == 429) {
+                    val seconds = response.header("Retry-After")?.toLongOrNull()?.coerceIn(1, 300) ?: 10
+                    blockedUntil = System.currentTimeMillis() + seconds * 1000
+                }
                 Log.w(TAG, "Suche fehlgeschlagen: HTTP ${response.code} ${OpenSubtitlesParsing.message(body)}")
                 return emptyList()
             }

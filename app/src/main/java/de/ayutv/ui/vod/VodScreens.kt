@@ -261,10 +261,10 @@ private fun EpisodeRow(episode: XtreamEpisode, onClick: () -> Unit) {
             }
             Column(Modifier.weight(1f)) {
                 Text("${episode.episode}. ${episode.title}", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                episode.plot?.let { Text(it, fontSize = 12.sp, color = AyuColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                episode.plot?.let { Text(it, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             }
             if (episode.durationSeconds > 0) {
-                Text("${episode.durationSeconds / 60} min", fontSize = 12.sp, color = AyuColors.TextSecondary)
+                Text("${episode.durationSeconds / 60} min", fontSize = 13.sp, color = AyuColors.TextSecondary)
             }
         }
     }

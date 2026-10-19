@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Hält WLAN und CPU während der Wiedergabe wach (gegen Hänger durch Stromsparmodus). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Erinnerungen an Sendungen: Benachrichtigung und nach Neustart wieder einplanen -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Fire TV / Android TV: keine Touch-Bedienung nötig, Leanback-Launcher unterstützen -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -43,6 +46,15 @@
             android:exported="false"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.AyuTV.Player" />
+        <receiver
+            android:name=".data.reminders.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Keine Telemetrie der ONNX Runtime (würde Nutzungsdaten an Microsoft senden). -->
         <provider
             android:name="ai.onnxruntime.TelemetryInitializer"

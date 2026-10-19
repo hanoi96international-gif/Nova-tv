@@ -15,7 +15,9 @@ data class M3uEntry(
     val logo: String? get() = attributes["tvg-logo"]?.takeIf { it.isNotBlank() }
     val groupTitle: String get() = attributes["group-title"]?.takeIf { it.isNotBlank() } ?: group ?: ""
     val number: Int? get() = (attributes["tvg-chno"] ?: attributes["channel-number"])?.trim()?.toIntOrNull()
-    val catchupDays: Int get() = (attributes["catchup-days"] ?: attributes["tvg-rec"])?.trim()?.toIntOrNull() ?: 0
+    val catchupDays: Int get() = (attributes["catchup-days"] ?: attributes["timeshift"] ?: attributes["tvg-rec"])?.trim()?.toIntOrNull() ?: 0
+    val catchupType: String? get() = (attributes["catchup"] ?: attributes["catchup-type"])?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+    val catchupSource: String? get() = attributes["catchup-source"]?.trim()?.takeIf { it.isNotEmpty() }
 
     /** Filme und Serien-Episoden erkennt man bei den meisten Anbietern am Pfad oder an der Dateiendung. */
     val isVod: Boolean

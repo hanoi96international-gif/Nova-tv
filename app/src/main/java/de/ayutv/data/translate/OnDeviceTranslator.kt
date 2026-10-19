@@ -123,6 +123,8 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
                 if (!response.isSuccessful) throw IOException("Übersetzungsmodell nicht erreichbar (HTTP ${response.code})")
                 val append = response.code == 206
                 if (append) done += have
+                // Erwartete Gesamtgröße, um abgebrochene oder verstümmelte Downloads zu erkennen.
+                val expected = response.body.contentLength().takeIf { it > 0 }?.let { if (append) it + have else it }
                 var lastPercent = -1
                 response.body.byteStream().use { input ->
                     java.io.FileOutputStream(part, append).use { output ->
@@ -139,6 +141,10 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
                             }
                         }
                     }
+                }
+                // Verbindung mittendrin abgerissen: Teil behalten (wird beim nächsten Mal fortgesetzt), aber nicht verwenden.
+                if (expected != null && part.length() != expected) {
+                    throw IOException("Download des Übersetzungsmodells unvollständig, bitte erneut versuchen")
                 }
             }
             if (!part.renameTo(target)) throw IOException("Übersetzungsmodell konnte nicht gespeichert werden")

@@ -209,10 +209,10 @@ private fun ProgrammeResult(programme: ProgrammeEntity, channelName: String?, on
             Text(
                 if (live) "● JETZT  bis ${formatTime(programme.stop)}" else "${formatTime(programme.start)} – ${formatTime(programme.stop)}",
                 color = if (live) AyuColors.Live else AyuColors.TextSecondary,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
             )
             Text(programme.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(channelName ?: programme.channelEpgId, color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 1)
+            Text(channelName ?: programme.channelEpgId, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1)
         }
     }
 }
