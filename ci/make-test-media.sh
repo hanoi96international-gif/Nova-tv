@@ -2,6 +2,7 @@
 # Erzeugt Testinhalte für den Emulator-Rundgang: Live-Streams, 4K, HLS, Film mit Untertiteln, M3U und EPG.
 set -euo pipefail
 dir=${1:-ci-media}
+here=$(cd "$(dirname "$0")" && pwd)
 mkdir -p "$dir/movie/test/test" "$dir/hls"
 cd "$dir"
 
@@ -47,6 +48,13 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi -i "sine=frequency=800:sample_rate=48000" \
   -t 120 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -c:a aac movie/test/test/1003.mkv
 
+# Film nur mit Bild-Untertiteln (PGS, wie Blu-ray-Remuxe): Texterkennung und Übersetzung mit Vorlauf
+pip install -q pillow > /dev/null 2>&1 || true
+python3 "$here/make-pgs.py" subs.en.sup && ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" \
+  -f lavfi -i "sine=frequency=900:sample_rate=48000" -i subs.en.sup -t 125 -map 0 -map 1 -map 2 -c:v libx264 -preset veryfast \
+  -b:v 600k -g 48 -pix_fmt yuv420p -c:a aac -c:s copy -metadata:s:s:0 language=eng movie/test/test/1004.mkv \
+  || echo "PGS-Testfilm konnte nicht erzeugt werden"
+
 # Echte Tonspuren aus den offiziellen Media3-Testdaten (DTS, DTS-HD MA, DTS:X, Dolby Atmos).
 # Unverändert vervielfacht (-c copy), damit die Wiedergabe lange genug für die Prüfung läuft.
 media3=https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/test_data/src/test/assets/media
@@ -89,6 +97,8 @@ http://10.0.2.2:8000/movie/test/test/2002.mkv
 http://10.0.2.2:8000/movie/test/test/2003.mkv
 #EXTINF:-1 group-title="Filme Test",Stummfilm ohne Untertitel (2023)
 http://10.0.2.2:8000/movie/test/test/1003.mkv
+#EXTINF:-1 group-title="Filme Test",Bilduntertitel Test (2024)
+http://10.0.2.2:8000/movie/test/test/1004.mkv
 M3U
 
 python3 - <<'PY'

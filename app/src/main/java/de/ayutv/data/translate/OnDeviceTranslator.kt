@@ -48,9 +48,9 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
     override suspend fun translate(texts: List<String>, target: String): List<String> = translate(texts, target, null)
 
     override suspend fun translate(texts: List<String>, target: String, source: String?): List<String> = withContext(dispatcher) {
-        val to = target.take(2).lowercase()
-        // Unbekannte Vorlage: Untertitel sind fast immer Englisch.
-        val from = source?.take(2)?.lowercase()?.takeIf { Languages.of(it) != null } ?: "en"
+        val to = Languages.normalize(target) ?: target.take(2).lowercase()
+        // Unbekannte Vorlage: Untertitel sind fast immer Englisch. MKV nennt Deutsch "ger".
+        val from = Languages.normalize(source) ?: "en"
         val hops = route(from, to) ?: throw IOException("${Languages.label(from)} → ${Languages.label(to)} geht auf dem Gerät nicht")
         val models = hops.map { it to model(it.pair) }
         texts.map { text ->

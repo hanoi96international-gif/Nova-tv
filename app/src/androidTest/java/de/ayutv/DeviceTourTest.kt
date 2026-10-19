@@ -494,6 +494,33 @@ class DeviceTourTest {
             }
         }
 
+        // 5d. Film nur mit Bild-Untertiteln (PGS wie auf Blu-ray): mitlesen, Texterkennung, Übersetzung mit Vorlauf
+        section("bitmap_translation") {
+            val movie = runBlocking { container.db.vod().search("Bilduntertitel", 5) }.firstOrNull() ?: error("PGS-Testfilm fehlt")
+            val english = setOf("Where is my brother?", "Thank you for everything.", "We have to leave before it gets dark.",
+                "Hello, how are you?", "I told you we should never have come here.")
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, null, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                val textGroups = scenario.read { a -> a.tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT } }
+                log("bitmap_translation tracks=${textGroups.map { g -> g.getTrackFormat(0).let { "${it.language}/${it.codecs}" } }}")
+                scenario.onActivity { it.loadSubtitles("de") }
+                val seen = mutableSetOf<String>()
+                val ok = waitFor(240_000) {
+                    val cue = scenario.read { it.translatedCue }
+                    if (cue != null) seen += cue
+                    cue != null && cue.isNotBlank() && cue !in english && cue.any(Char::isLetter)
+                }
+                Thread.sleep(1_500)
+                shot("26_bitmap_translation_de")
+                log(
+                    "bitmap_translation: ok=$ok cue=${scenario.read { it.translatedCue }?.replace('\n', '/')} seen=${seen.take(5)} " +
+                        "statuses=${scenario.read { it.statusHistory.toList() }.takeLast(4)}"
+                )
+                assertTrue("Bild-Untertitel nicht übersetzt", ok)
+            }
+        }
+
         // 6. Belastung: großer Anbieter (3000 Sender, 36.000 EPG-Einträge als .xml.gz)
         section("big") {
             val bigStart = System.currentTimeMillis()

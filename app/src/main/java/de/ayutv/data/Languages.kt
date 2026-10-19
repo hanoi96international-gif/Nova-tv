@@ -50,7 +50,26 @@ object Languages {
 
     private val byCode = all.associateBy { it.code }
 
-    fun of(code: String?): Language? = code?.let { byCode[it.lowercase().take(2)] }
+    /** Dreibuchstabige Kennungen (ISO 639-2, wie in MKV/TS) auf zwei Buchstaben. */
+    private val THREE_LETTER: Map<String, String> = all.associate { language ->
+        runCatching { java.util.Locale(language.code).isO3Language }.getOrDefault("") to language.code
+    } + mapOf(
+        // Bibliografische Varianten, die Locale nicht kennt.
+        "ger" to "de", "fre" to "fr", "dut" to "nl", "gre" to "el", "cze" to "cs", "slo" to "sk",
+        "rum" to "ro", "alb" to "sq", "per" to "fa", "chi" to "zh", "nob" to "no", "nno" to "no",
+    )
+
+    /** "ger", "deu", "de-DE", "DE" → "de"; null, wenn unbekannt. */
+    fun normalize(code: String?): String? {
+        val raw = code?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_')?.takeIf { it.isNotEmpty() } ?: return null
+        return when (raw.length) {
+            2 -> raw.takeIf { it in byCode }
+            3 -> THREE_LETTER[raw]
+            else -> null
+        }
+    }
+
+    fun of(code: String?): Language? = normalize(code)?.let(byCode::get)
 
     fun label(code: String?): String = of(code)?.label ?: code.orEmpty()
 }
