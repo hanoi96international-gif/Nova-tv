@@ -461,6 +461,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
                 item { OptionRow("Live-Übersetzung (${Languages.label(liveTarget)}) beenden", true) { activity.stopLiveTranslation() } }
             }
         }
+        activity.lastOnlineProblem?.let { problem -> item { MenuHint("Internet-Untertitel: $problem") } }
         if (!activity.isLive && !activity.onlineSubtitlesAvailable && !activity.translationAvailable) {
             item { MenuHint("Für Filme ganz ohne Untertitel: OpenSubtitles verbinden (Einstellungen → Einrichtung per Handy)") }
         }
