@@ -728,22 +728,39 @@ class PlayerActivity : ComponentActivity() {
                 return@launch
             }
             // 3. Gespeicherte Datei oder Untertitel in der Zielsprache von OpenSubtitles (werden automatisch ausgerichtet)
+            var onlineProblem: String? = null
             if (request != null) {
                 if (settings.onlineSubtitlesEnabled) subtitleStatus = "Suche Untertitel ($label) …"
                 val found = runCatching {
                     container.subtitles.find(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
-                }.onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
+                }.onFailure {
+                    Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it)
+                    onlineProblem = describeOnlineProblem(it)
+                }.getOrNull()
                 if (found != null) {
                     attachLoaded(language, found)
                     return@launch
                 }
             }
             if (!settings.translationEnabled) {
-                subtitleStatus = "Keine Untertitel in $label gefunden (Übersetzung ist in den Einstellungen aus)"
+                subtitleStatus = onlineProblem ?: "Keine Untertitel in $label gefunden (Übersetzung ist in den Einstellungen aus)"
                 return@launch
             }
-            // 3b. Nichts Fertiges gefunden: Bild-Untertitel doch auf dem Gerät lesen und übersetzen
-            if (embeddedSource != null) {
+            // 3b. Schwaches Gerät: vorhandene Untertitel einer anderen Sprache übersetzen (nur der
+            //     Übersetzer, keine Texterkennung). Sie werden an der eingebetteten Spur ausgerichtet.
+            if (heavy && request != null) {
+                val template = runCatching {
+                    container.subtitles.findSource(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
+                }.onFailure { if (onlineProblem == null) onlineProblem = describeOnlineProblem(it) }.getOrNull()
+                if (template != null) {
+                    startFileTranslation(request, language, template.file, template.language)
+                    onlineProblem?.let { subtitleStatus = "$it · Übersetze vorhandene Untertitel" }
+                    return@launch
+                }
+            }
+            // 3c. Bild-Untertitel auf dem Gerät lesen und übersetzen (nicht, wenn die Texterkennung
+            //     hier schon in allen Varianten abgestürzt ist)
+            if (embeddedSource != null && !de.ayutv.data.translate.SubtitleOcr.unavailable(filesDir)) {
                 startLiveTranslation(language, embeddedSource)
                 return@launch
             }
@@ -763,6 +780,10 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
             // 6. Nichts da, was sich übersetzen ließe
+            onlineProblem?.let {
+                subtitleStatus = it
+                return@launch
+            }
             subtitleStatus = when {
                 request == null -> "Dieser Sender hat keine Untertitel, die übersetzt werden könnten"
                 !settings.onlineSubtitlesEnabled ->
@@ -1104,6 +1125,17 @@ class PlayerActivity : ComponentActivity() {
                 .onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
             if (found != null) attachLoaded(language, found)
             else subtitleStatus = "Keine passenden Untertitel in ${Languages.label(language)} gefunden"
+        }
+    }
+
+    /** Fehler von OpenSubtitles verständlich machen, vor allem das Tageslimit. */
+    private fun describeOnlineProblem(error: Throwable): String {
+        val text = error.message.orEmpty()
+        return if ("allowed" in text && ("subtitles" in text || "download" in text)) {
+            "OpenSubtitles-Tageslimit erreicht (ohne Konto 5, mit kostenlosem Konto 20 Downloads pro Tag). " +
+                "Konto eintragen: Einstellungen → Einrichtung per Handy"
+        } else {
+            "OpenSubtitles: ${text.ifEmpty { error.javaClass.simpleName }}"
         }
     }
 
