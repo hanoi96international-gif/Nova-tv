@@ -21,6 +21,10 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        val process = processName()
+        CrashReport.install(this, process)
+        // Der Übersetzer-Prozess braucht nichts davon (keine Datenbank, keine Synchronisierung).
+        if (process.endsWith(":mt")) return
         container = AppContainer(this)
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.
         // Kindersicherung: Verlässt man die App (Home-Taste, anderes Programm), ist wieder alles gesperrt.
@@ -39,6 +43,10 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
         container.scope.launch { container.reminders.rescheduleAll() }
     }
+
+    private fun processName(): String =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) getProcessName()
+        else runCatching { java.io.File("/proc/self/cmdline").readText().trimEnd('\u0000') }.getOrDefault(packageName)
 
     /** Logos und Poster: kleiner Speicher-Cache (Fire TV Stick hat wenig RAM), großer Disk-Cache. */
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)

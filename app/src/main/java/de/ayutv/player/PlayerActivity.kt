@@ -205,8 +205,7 @@ class PlayerActivity : ComponentActivity() {
         lifecycleScope.launch {
             settings = container.settings.current()
             // Einmaliges Laden eines Sprachmodells für die Übersetzung auf dem Gerät anzeigen.
-            Translators.onDevice.onProgress = { text -> runOnUiThread { subtitleStatus = text } }
-            Translators.ocr.onProgress = { text -> runOnUiThread { subtitleStatus = text } }
+            Translators.remote.onProgress = { text -> runOnUiThread { subtitleStatus = text } }
             subtitleScale = settings.subtitleSize.scale
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
@@ -252,7 +251,7 @@ class PlayerActivity : ComponentActivity() {
         val built = PlayerFactory.create(this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm)
         headers = built.headers
         trackSelector = built.trackSelector
-        embedded = built.subtitles.also { it.keepImages = settings.translationEnabled }
+        embedded = built.subtitles
         asyncDecodingActive = asyncDecoding
         forcePcmActive = forcePcm
         built.player.addListener(playerListener)
@@ -868,6 +867,11 @@ class PlayerActivity : ComponentActivity() {
         val translator = Translators.from(settings) ?: return
         val source = liveSourceLanguage
         val bitmap = format.isBitmapSubtitle()
+        if (bitmap) {
+            embedded?.readImagesOf(format)
+            // Bilder der schon gepufferten Minute wurden nicht gelesen: ab hier neu laden (kurzes Nachpuffern).
+            if (!isLive) player?.let { it.seekTo(it.currentPosition) }
+        }
         aheadJob = lifecycleScope.launch {
             launch {
                 while (true) {
@@ -892,7 +896,7 @@ class PlayerActivity : ComponentActivity() {
                 }
                 try {
                     val started = SystemClock.elapsedRealtime()
-                    val text = next.text ?: next.image?.let { image -> Translators.ocr.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
+                    val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
                     aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, source).first()
                     Log.i(SUBTITLE_TAG, "Vorlauf ${(next.startMs - position) / 1000} s, ${SystemClock.elapsedRealtime() - started} ms: $text → ${aheadTranslations[next.startMs]}")
                     failures = 0
@@ -928,6 +932,7 @@ class PlayerActivity : ComponentActivity() {
         aheadJob = null
         aheadFormat = null
         aheadTranslations.clear()
+        embedded?.readImagesOf(null)
     }
 
     // ---------------------------------------------------------------- Geladene Untertitel
@@ -1102,7 +1107,7 @@ class PlayerActivity : ComponentActivity() {
             return if (i < 0) cues.size else i
         }
         fileTranslationJob = lifecycleScope.launch {
-            val batch = if (translator.name == Translators.onDevice.name) 3 else 40
+            val batch = if (translator.name == de.ayutv.data.translate.OnDeviceTranslator.NAME) 3 else 40
             try {
                 while (true) {
                     val from = indexAt(player?.currentPosition ?: 0L)
@@ -1580,14 +1585,10 @@ class PlayerActivity : ComponentActivity() {
         frameRateMatcher.reset()
         player?.release()
         player = null
-        // Keinen Verweis auf diese Activity im App-weiten Übersetzer behalten, und dessen Modelle
-        // (zusammen gut 200 MB) freigeben: Auf dem Stick wird der Speicher sonst für die nächste Wiedergabe knapp.
-        Translators.onDevice.onProgress = {}
-        Translators.ocr.onProgress = {}
-        container.scope.launch {
-            Translators.onDevice.release()
-            Translators.ocr.release()
-        }
+        // Keinen Verweis auf diese Activity im App-weiten Übersetzer behalten und den Übersetzer-Prozess
+        // beenden: Seine Modelle (gut 200 MB) brauchen außerhalb des Players keinen Speicher.
+        Translators.remote.onProgress = {}
+        Translators.remote.release()
     }
 
     companion object {

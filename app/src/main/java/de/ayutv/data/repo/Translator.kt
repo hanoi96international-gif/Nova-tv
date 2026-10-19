@@ -18,12 +18,15 @@ object Translators {
     /** Übersetzer auf dem Gerät; einmal pro App (geladene Modelle bleiben im Speicher). */
     lateinit var onDevice: OnDeviceTranslator
 
-    /** Texterkennung für Bild-Untertitel (PGS/DVB), damit auch diese übersetzt werden können. */
-    lateinit var ocr: de.ayutv.data.translate.SubtitleOcr
+    /**
+     * Übersetzer und Texterkennung im eigenen Prozess (für den Player): Speichermangel oder ein
+     * Absturz im Modell beendet nur die Übersetzung, nie den Film.
+     */
+    lateinit var remote: de.ayutv.data.translate.RemoteTranslator
 
     /** Übersetzer gemäß Einstellung, oder null, wenn die Übersetzung ausgeschaltet ist. */
     fun from(settings: AppSettings): Translator? = when (settings.translationProvider) {
-        TranslationProvider.ON_DEVICE -> onDevice
+        TranslationProvider.ON_DEVICE -> remote
         TranslationProvider.NONE -> null
     }
 }

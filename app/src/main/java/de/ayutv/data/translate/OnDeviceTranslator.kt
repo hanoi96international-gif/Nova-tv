@@ -22,8 +22,13 @@ import java.util.concurrent.Executors
  * Pro Sprachrichtung wird einmalig ein Modell (ca. 110 MB) geladen. Fehlt eine direkte Richtung,
  * geht es über Englisch oder über das Mehrsprachen-Modell mit Sprachkennung (">>pol<<").
  */
-class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Translator {
-    override val name = "DnA-Übersetzer (auf dem Gerät)"
+class OnDeviceTranslator(
+    baseDir: File,
+    private val http: OkHttpClient,
+    /** Freier Arbeitsspeicher in MB (null = unbekannt), um vor dem Laden eines Modells zu prüfen. */
+    private val freeMemoryMb: () -> Long? = { null },
+) : Translator {
+    override val name = NAME
 
     /** Fortschritt beim einmaligen Laden eines Sprachmodells (für die Anzeige im Player). */
     @Volatile
@@ -90,7 +95,13 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
             val eldest = loaded.keys.first()
             loaded.remove(eldest)?.close()
         }
-        onProgress("Starte Übersetzer ${describe(pair)} …")
+        // Reicht der Speicher neben der laufenden Wiedergabe nicht, ehrlich sagen statt vom System beendet zu werden.
+        val needMb = folder.walk().filter { it.isFile }.sumOf { it.length() } * 13 / 10 / 1_000_000
+        val freeMb = freeMemoryMb()
+        if (freeMb != null && freeMb < needMb) {
+            throw IOException("Zu wenig freier Arbeitsspeicher für den Übersetzer (frei $freeMb MB, nötig ca. $needMb MB)")
+        }
+        onProgress("Starte Übersetzer ${describe(pair)} …" + (freeMb?.let { " (frei: $it MB)" } ?: ""))
         val model = try {
             OpusMtModel(folder, env, THREADS)
         } catch (e: Exception) {
@@ -185,6 +196,7 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
     }
 
     companion object {
+        const val NAME = "DnA-Übersetzer (auf dem Gerät)"
         private const val TAG = "OnDeviceTranslator"
         private const val BASE = "https://huggingface.co/Xenova"
         private const val THREADS = 2
