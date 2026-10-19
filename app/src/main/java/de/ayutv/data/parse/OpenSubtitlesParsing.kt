@@ -92,14 +92,22 @@ object OpenSubtitlesParsing {
 
     private fun JsonObject.primitive(key: String): JsonPrimitive? = this[key] as? JsonPrimitive
 
+    private val PREFIX = Regex("""^\s*(?:\[[^\]]*\]|\|[^|]*\||(?:4K|UHD|FHD|HD|SD|[A-Z]{2,3})(?:[-_ ](?:4K|UHD|FHD|HD|SD|[A-Z]{2,3}))*\s*[-|:])\s*""")
+
     /**
      * Titel aus IPTV-Listen sind oft "DE - Film Name (2019) [4K]". Für die Suche nach Name
      * werden Präfixe, Qualitätsangaben und Klammern entfernt, das Jahr wird separat erkannt.
      */
     fun cleanTitle(raw: String): Pair<String, Int?> {
         val year = Regex("""\b(19[3-9]\d|20[0-4]\d)\b""").findAll(raw).lastOrNull()?.value?.toInt()
+        // Vorsätze der Anbieter, auch mehrere: "4K-DE - ", "DE: ", "[DE] ", "|DE| ", "EN | "
         var title = raw
-            .replace(Regex("""^\s*[A-Z]{2,3}\s*[-|:]\s*"""), "")
+        while (true) {
+            val stripped = title.replace(PREFIX, "")
+            if (stripped == title) break
+            title = stripped
+        }
+        title = title
             .replace(Regex("""\[[^\]]*\]|\([^)]*\)"""), " ")
             .replace(Regex("""\b(4K|UHD|FHD|HD|SD|HEVC|H\.?26[45]|x26[45]|1080p|2160p|720p|HDR(?:10)?|DV|MULTI|DUAL)\b""", RegexOption.IGNORE_CASE), " ")
         if (year != null) title = title.replace(year.toString(), " ")
