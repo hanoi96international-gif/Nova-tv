@@ -218,6 +218,9 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
             if (version.toInt() == de.ayutv.BuildConfig.VERSION_CODE) variant.toInt() else 0
         }.getOrDefault(0)
 
+        /** Texterkennung ist auf diesem Gerät in allen Varianten abgestürzt (bis zum nächsten App-Update). */
+        fun unavailable(baseDir: File): Boolean = variant(File(baseDir, VARIANT_FILE)) >= VARIANTS
+
         /** Nach einem Absturz in der Texterkennung: nächstes Mal die nächste Variante. Gibt sie zurück (1-basiert), null = keine mehr. */
         fun markCrash(baseDir: File): Int? {
             val file = File(baseDir, VARIANT_FILE)

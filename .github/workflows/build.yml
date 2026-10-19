@@ -91,6 +91,54 @@ jobs:
           files: out/DnA-TV*.apk
 
   # Rundgang auf einem Android-TV-Emulator: echte Wiedergabe, Screenshots, Messwerte.
+  # Fire TV Stick 4K hat einen 32-Bit-ARM-Prozessor: App mit armeabi-v7a-Bibliotheken im Emulator
+  # (Android 11 übersetzt ARM-Code) und Texterkennung/Übersetzung prüfen. Ergebnis im Branch arm-results.
+  arm32:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: ffmpeg-aar
+          path: app/libs
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+      - name: KVM aktivieren
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: APKs bauen
+        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: Selbsttest mit 32-Bit-ARM
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          # Google-APIs-Abbild: enthält die ARM-Übersetzung (native bridge) für 32-Bit-ARM-Apps.
+          target: google_apis
+          arch: x86_64
+          ram-size: 3072M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
+          disable-animations: true
+          script: ci/run-arm-selftest.sh
+      - name: Ergebnisse veröffentlichen
+        if: always()
+        run: |
+          mkdir -p arm-out && cd arm-out
+          echo "${{ github.sha }}" > COMMIT
+          git init -q -b arm-results
+          git config user.name "DnA-TV CI"
+          git config user.email "ci@users.noreply.github.com"
+          git add -A
+          git commit -qm "ARM-Ergebnisse für ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" arm-results
+
   # Ergebnisse landen im Branch ci-results (Screenshots, results.txt, gfxinfo, logcat).
   device:
     needs: build
