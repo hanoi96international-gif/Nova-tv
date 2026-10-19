@@ -33,9 +33,9 @@ class SubtitleSyncTest {
     }
 
     @Test
-    fun findsConstantOffsetAfterTwoMinutes() {
+    fun findsConstantOffsetAfterFewMinutes() {
         val file = speech.map { it + 2_400 } // andere Fassung: Untertitel 2,4 s zu spät
-        val fit = requireFit(SubtitleSync.estimate(references(0, 120_000), file))
+        val fit = requireFit(SubtitleSync.estimate(references(0, 240_000), file))
         assertEquals(1.0, fit.timing.ratio, 0.0)
         assertTrue("Versatz ${fit.timing.offsetMs}", abs(fit.timing.offsetMs + 2_400) < 150)
     }

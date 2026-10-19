@@ -33,7 +33,10 @@ object SubtitleSync {
     fun estimate(references: List<Long>, starts: List<Long>): Fit? {
         if (references.size < MIN_REFERENCES || starts.isEmpty()) return null
         val sorted = starts.sorted().toLongArray()
-        val candidates = RATIOS.mapNotNull { ratio ->
+        // 24 ↔ 23,976 fps verschiebt erst nach vielen Minuten merklich: nur mit genug Film dazwischen prüfen.
+        val span = references.max() - references.min()
+        val ratios = RATIOS.filter { abs(it - 1.0) > 0.01 || it == 1.0 || span > 20 * 60_000L }
+        val candidates = ratios.mapNotNull { ratio ->
             val bins = votes(references, sorted, ratio)
             val top = bins.keys.maxByOrNull { score(bins, it) } ?: return@mapNotNull null
             // Zweitbester Versatz derselben Bildrate, mindestens 1 s entfernt: Maß für Eindeutigkeit.
@@ -42,14 +45,14 @@ object SubtitleSync {
         }
         // Bildratenkorrektur nur, wenn sie klar mehr erklärt als "gleiche Bildrate".
         var winner = candidates.firstOrNull() ?: return null
-        for (c in candidates.drop(1)) if (c.score > winner.score + 2) winner = c
+        for (c in candidates.drop(1)) if (c.score > winner.score + 4) winner = c
         // Andere Bildraten mit ganz anderem Versatz, aber ähnlich vielen Stimmen: nicht eindeutig.
         val runnerUp = candidates.filter { it !== winner && abs(it.bin - winner.bin) * BIN_MS > 1_000 }.maxOfOrNull { it.score } ?: 0
-        val enough = winner.score >= MIN_REFERENCES && winner.score * 2 >= references.size
+        val enough = winner.score >= MIN_REFERENCES && winner.score * 3 >= references.size
         val clear = winner.score >= 2 * maxOf(winner.second, runnerUp)
         if (!enough || !clear) return null
         // Feinabstimmung: Median der Abweichungen um den gewählten Versatz.
-        val center = winner.bin * BIN_MS + BIN_MS
+        val center = winner.bin * BIN_MS + BIN_MS / 2
         val diffs = references.mapNotNull { r -> nearest(r, sorted, winner.ratio, center) }.sorted()
         if (diffs.size < MIN_REFERENCES) return null
         return Fit(SubtitleTiming(winner.ratio, diffs[diffs.size / 2]), diffs.size, references.size)
@@ -74,8 +77,8 @@ object SubtitleSync {
         return bins
     }
 
-    /** Zwei benachbarte Fächer zusammen: Treffer an der Fachgrenze zählen nicht halb. */
-    private fun score(bins: Map<Long, Int>, bin: Long) = (bins[bin] ?: 0) + (bins[bin + 1] ?: 0)
+    /** Drei Fächer (300 ms) zusammen: Einblendungen beginnen nie auf die Millisekunde gleich. */
+    private fun score(bins: Map<Long, Int>, bin: Long) = (bins[bin - 1] ?: 0) + (bins[bin] ?: 0) + (bins[bin + 1] ?: 0)
 
     private fun nearest(reference: Long, sorted: LongArray, ratio: Double, center: Long): Long? {
         val i = lowerBound(sorted, ((reference - center - MATCH_MS) / ratio).toLong())
