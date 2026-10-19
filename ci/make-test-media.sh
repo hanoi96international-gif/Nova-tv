@@ -20,10 +20,14 @@ ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1280x720:rate=25" -f lavfi 
 python3 - <<'PY'
 phrases = ["Hello, how are you?", "I told you we should never have come here.", "Where is my brother?",
            "We have to leave before it gets dark.", "Thank you for everything.", "- Where is he?\n- I don't know."]
-lines = []
+# Unregelmäßige Abstände wie bei echten Dialogen (gleiche Formel im Gerätetest "subtitle_sync").
+def ts(ms):
+    return f"{ms//3600000:02d}:{ms//60000%60:02d}:{ms//1000%60:02d},{ms%1000:03d}"
+lines, t = [], 1000
 for i in range(220):
-    s, e = i * 4, i * 4 + 3
-    lines.append(f"{i+1}\n00:{s//60:02d}:{s%60:02d},000 --> 00:{e//60:02d}:{e%60:02d},000\n{phrases[i % len(phrases)]}\n")
+    gap = 2000 + (i * i * 7919 + i * 104729) % 4001
+    lines.append(f"{i+1}\n{ts(t)} --> {ts(t + min(1800, gap - 200))}\n{phrases[i % len(phrases)]}\n")
+    t += gap
 open("subs.en.srt", "w").write("\n".join(lines))
 PY
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=24" -f lavfi -i "sine=frequency=660:sample_rate=48000" -i subs.en.srt \

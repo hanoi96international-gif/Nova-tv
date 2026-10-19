@@ -388,6 +388,35 @@ class DeviceTourTest {
             }
         }
         if (movie == null) log("vod: kein Film gefunden")
+
+        // 4d. Geladene Untertitel einer anderen Fassung (2,5 s zu spät): automatisch an der eingebetteten
+        // Spur ausrichten. Zeiten wie in ci/make-test-media.sh.
+        if (movie != null) section("subtitle_sync") {
+            fun ts(ms: Long) = "%02d:%02d:%02d,%03d".format(ms / 3_600_000, ms / 60_000 % 60, ms / 1_000 % 60, ms % 1_000)
+            var t = 1_000L
+            val cues = (0 until 220).map { i ->
+                val gap = 2_000L + (i.toLong() * i * 7_919 + i.toLong() * 104_729) % 4_001
+                val start = t + 2_500
+                t += gap
+                de.ayutv.data.parse.SrtCue(ts(start), ts(start + minOf(1_800L, gap - 200)), "Bonjour numéro $i")
+            }
+            container.subtitles.saveTranslation(movie.key, "fr", cues)
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.showLoaded("fr") }
+                val synced = waitFor(180_000) {
+                    scenario.read { it.subtitleAutoSynced && it.subtitleTiming.offsetMs in -2_800L..-2_200L }
+                }
+                Thread.sleep(1_000)
+                shot("24_subtitle_sync")
+                log(
+                    "subtitle_sync: ok=$synced timing=${scenario.read { it.subtitleTiming }} " +
+                        "cue=${scenario.read { it.translatedCue }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(3)}"
+                )
+                assertTrue("Untertitel nicht automatisch ausgerichtet", synced)
+            }
+        }
         // 5. Serienfolge über Xtream abspielen
         episodes.firstOrNull()?.let { (episode, url) -> section("episode") {
             val series = seriesList.first()

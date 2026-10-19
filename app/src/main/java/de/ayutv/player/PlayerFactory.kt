@@ -338,6 +338,9 @@ class FrameRateMatcher(private val activity: Activity) {
 
     data class DisplayModeInfo(val id: Int, val width: Int, val height: Int, val refreshRate: Float)
 
+    @Suppress("DEPRECATION")
+    fun currentRefreshRate(): Float = runCatching { activity.windowManager.defaultDisplay.refreshRate }.getOrDefault(0f)
+
     companion object {
         /**
          * Passender Anzeigemodus für [frameRate], bei gleicher Auflösung (kein Umschalten zwischen 4K und 1080p).

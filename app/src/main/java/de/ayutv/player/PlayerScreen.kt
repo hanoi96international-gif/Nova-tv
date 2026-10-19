@@ -107,7 +107,8 @@ fun PlayerScreen(activity: PlayerActivity) {
                 update = {
                     it.player = player
                     it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
-                    it.subtitleView?.visibility = if (activity.liveTranslateTarget != null) View.INVISIBLE else View.VISIBLE
+                    // Eigene Einblendung (Übersetzung, geladene Datei): Die Spur des Players läuft nur als Taktgeber mit.
+                    it.subtitleView?.visibility = if (activity.ownSubtitles) View.INVISIBLE else View.VISIBLE
                     // Untertitel über die Steuerleiste anheben, solange sie sichtbar ist.
                     val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
                     it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else 0.07f)
@@ -166,11 +167,13 @@ fun PlayerScreen(activity: PlayerActivity) {
             VodControls(activity)
         }
 
-        if (activity.liveTranslateTarget != null) {
+        if (activity.ownSubtitles) {
             activity.translatedCue?.let { cue ->
+                // Über die Steuerleiste anheben, solange sie sichtbar ist (wie beim Player).
+                val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
                 Text(
                     cue,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 64.dp, end = 64.dp, bottom = 40.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 64.dp, end = 64.dp, bottom = if (barVisible) 200.dp else 40.dp),
                     color = Color.White,
                     fontSize = (22 * activity.subtitleScale).sp,
                     textAlign = TextAlign.Center,
@@ -323,6 +326,7 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean) {
         add("Puffer %.1f s".format(bufferedMs / 1000f) + if (cushion) " (wird aufgefüllt)" else "")
         if (stats.width > 0) add("${stats.width}×${stats.height}")
         if (stats.frameRate > 0) add("%.2f fps".format(stats.frameRate) + if (stats.frameRateMeasured) " (gemessen)" else "")
+        if (stats.displayHz > 0) add("Fernseher %.2f Hz".format(stats.displayHz))
         if (stats.videoCodec.isNotEmpty()) add(stats.videoCodec)
         if (stats.videoBitrate > 0) add("%.1f Mbit/s".format(stats.videoBitrate / 1_000_000f))
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")
@@ -402,6 +406,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
     val firstItem = remember { FocusRequester() }
     val preferred = activity.preferredSubtitleLanguage
     val liveTarget = activity.liveTranslateTarget
+    val external = activity.externalLanguage
 
     LazyColumn(
         modifier = Modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
@@ -421,22 +426,35 @@ private fun TracksOverlay(activity: PlayerActivity) {
         item {
             OptionRow(
                 "Aus",
-                activity.textDisabled || text.none { it.selected },
+                !activity.ownSubtitles && (activity.textDisabled || text.none { it.selected }),
                 if (!activity.isLive) Modifier.focusRequester(firstItem) else Modifier,
             ) { activity.setTextEnabled(false) }
         }
         text.forEach { option ->
             item {
-                OptionRow(option.label, option.selected && !activity.textDisabled && liveTarget == null) {
+                OptionRow(option.label, option.selected && !activity.textDisabled && !activity.ownSubtitles) {
                     activity.selectTrack(option.group, option.index)
                 }
             }
         }
+        activity.loadedLanguages.forEach { language ->
+            item {
+                OptionRow("${Languages.label(language)} (geladen)", external == language) { activity.showLoaded(language) }
+            }
+        }
+        if (external != null) {
+            item { MenuHeader("Untertitel-Zeit") }
+            item { OptionRow("Früher einblenden (−0,5 s)", selected = false) { activity.shiftSubtitles(-500) } }
+            item { OptionRow("Später einblenden (+0,5 s)", selected = false) { activity.shiftSubtitles(500) } }
+            item { MenuHint(syncHint(activity)) }
+        }
         if (!activity.isLive) {
-            item { OptionRow("${Languages.label(preferred)} laden", selected = false) { activity.loadSubtitles(preferred) } }
+            if (preferred !in activity.loadedLanguages) {
+                item { OptionRow("${Languages.label(preferred)} laden", selected = false) { activity.loadSubtitles(preferred) } }
+            }
             item { OptionRow("Andere Sprache laden / übersetzen …", selected = false) { activity.openLanguagePicker() } }
         }
-        if (activity.translationAvailable && text.any { it.selected } && !activity.textDisabled) {
+        if (activity.translationAvailable && external == null && text.any { it.selected } && !activity.textDisabled) {
             if (liveTarget == null) {
                 item { OptionRow("Gewählte Spur live übersetzen: ${Languages.label(preferred)}", false) { activity.startLiveTranslation(preferred) } }
             } else {
@@ -502,6 +520,19 @@ private fun LanguagePicker(activity: PlayerActivity) {
             if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
             delay(16)
         }
+    }
+}
+
+/** Wie die geladenen Untertitel gerade liegen, in Worten. */
+private fun syncHint(activity: PlayerActivity): String {
+    val timing = activity.subtitleTiming
+    val total = timing.offsetMs + activity.subtitleDelayMs
+    val shift = String.format(Locale.GERMAN, "%+.1f s", total / 1000f)
+    return when {
+        activity.subtitleAutoSynced && activity.subtitleDelayMs == 0L ->
+            "Automatisch an den eingebetteten Untertiteln ausgerichtet ($shift" + (if (timing.ratio != 1.0) ", Bildrate korrigiert" else "") + ")."
+        activity.subtitleAutoSynced -> "Automatisch ausgerichtet, von Hand nachgestellt: $shift."
+        else -> "Verschiebung: $shift. Hat der Film eingebettete Untertitel, richtet DnA-TV die Zeiten nach wenigen Minuten automatisch aus."
     }
 }
 
