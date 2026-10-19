@@ -498,7 +498,7 @@ class DeviceTourTest {
         section("translator_selftest") {
             val result = runBlocking { de.ayutv.data.translate.TranslatorSelfTest.run("de") }
             de.ayutv.data.repo.Translators.remote.release()
-            log("translator_selftest: ${result.replace('\n', ' | ')}")
+            log("translator_selftest: ${result.replace("\n", " | ")}")
             assertTrue("Selbsttest fehlgeschlagen: $result", result.lines().all { "ok" in it })
         }
 
