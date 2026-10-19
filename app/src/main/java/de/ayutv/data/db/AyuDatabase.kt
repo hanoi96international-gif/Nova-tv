@@ -20,7 +20,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LockedGroupEntity::class,
     ],
     views = [VisibleChannelView::class, VisibleVodView::class, VisibleSeriesView::class],
-    version = 3,
+    version = AyuDatabase.VERSION,
     exportSchema = true,
 )
 abstract class AyuDatabase : RoomDatabase() {
@@ -35,6 +35,8 @@ abstract class AyuDatabase : RoomDatabase() {
     abstract fun lockedGroups(): LockedGroupDao
 
     companion object {
+        const val VERSION = 3
+
         /** 1 → 2: Playlists ein-/ausschaltbar. Views neu anlegen, damit sie ausgeschaltete Playlists ausblenden. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {

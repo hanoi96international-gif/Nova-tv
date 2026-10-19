@@ -109,7 +109,7 @@ class DeviceTourTest {
             val version = container.db.openHelper.readableDatabase.version
             val existing = runBlocking { container.db.playlists().all() }
             log("db_version=$version playlists_before=${existing.size}")
-            assertTrue("Datenbank nicht auf Version 2", version == 2)
+            assertTrue("Datenbank auf Version $version statt ${de.ayutv.data.db.AyuDatabase.VERSION}", version == de.ayutv.data.db.AyuDatabase.VERSION)
         }
 
         // 0b. Textmuster auf Android prüfen (Android nutzt eine andere Regex-Engine als der PC)
