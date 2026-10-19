@@ -8,23 +8,34 @@ on:
 permissions:
   contents: write
 
+env:
+  GH_TOKEN: ${{ github.token }}
+  ORT_VERSION: "1.22.0"
+
 jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Release anlegen
+        run: |
+          gh release view models-ort-${ORT_VERSION} >/dev/null 2>&1 || gh release create models-ort-${ORT_VERSION} \
+            --prerelease --title "Übersetzungsmodelle (ORT ${ORT_VERSION})" \
+            --notes "OPUS-MT (Universität Helsinki, CC BY 4.0) über Xenova/ONNX, ins ORT-Format umgewandelt für ONNX Runtime ${ORT_VERSION}. Lädt die App bei Bedarf."
+
   convert:
+    needs: release
     runs-on: ubuntu-latest
     timeout-minutes: 240
-    env:
-      GH_TOKEN: ${{ github.token }}
-      ORT_VERSION: "1.22.0"
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install -q onnxruntime==${ORT_VERSION} huggingface_hub
-      - name: Release anlegen
-        run: |
-          gh release view models-ort-${ORT_VERSION} >/dev/null 2>&1 || gh release create models-ort-${ORT_VERSION} \
-            --prerelease --title "Übersetzungsmodelle (ORT ${ORT_VERSION})" \
-            --notes "OPUS-MT (Universität Helsinki, CC BY 4.0) über Xenova/ONNX, ins ORT-Format umgewandelt für ONNX Runtime ${ORT_VERSION}. Lädt die App bei Bedarf."
       - name: Umwandeln und hochladen
-        run: python3 ci/models/convert.py ci/models/pairs.txt models-ort-${ORT_VERSION}
+        run: python3 ci/models/convert.py ci/models/pairs.txt models-ort-${ORT_VERSION} ${{ matrix.shard }} 4

@@ -3,7 +3,7 @@
 
 Fire TV Sticks mit 32-Bit-ARM können ein ONNX-Modell nicht selbst umwandeln (braucht ~500 MB) und
 blenden die ORT-Datei nur ein (mmap). Optimierungsstufe BASIC: plattformunabhängig (x86 → ARM).
-Aufruf: convert.py <pairs.txt> <release-tag>
+Aufruf: convert.py <pairs.txt> <release-tag> [<shard> <shards>]
 """
 import os
 import subprocess
@@ -14,6 +14,9 @@ from huggingface_hub import hf_hub_download
 
 pairs = [p.strip() for p in open(sys.argv[1]) if p.strip()]
 tag = sys.argv[2]
+# Aufteilung auf parallele Jobs: Teil <shard> von <shards>; wichtige Paare stehen vorn in der Liste.
+shard, shards = (int(sys.argv[3]), int(sys.argv[4])) if len(sys.argv) > 4 else (0, 1)
+pairs = pairs[shard::shards]
 existing = set(subprocess.run(["gh", "release", "view", tag, "--json", "assets", "-q", ".assets[].name"],
                               capture_output=True, text=True).stdout.split())
 for pair in pairs:
