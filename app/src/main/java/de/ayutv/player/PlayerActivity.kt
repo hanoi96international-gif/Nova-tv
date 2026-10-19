@@ -1171,6 +1171,10 @@ class PlayerActivity : ComponentActivity() {
         frameRateMatcher.reset()
         player?.release()
         player = null
+        // Keinen Verweis auf diese Activity im App-weiten Übersetzer behalten, und dessen Modelle
+        // (zusammen gut 200 MB) freigeben: Auf dem Stick wird der Speicher sonst für die nächste Wiedergabe knapp.
+        Translators.onDevice.onProgress = {}
+        container.scope.launch { Translators.onDevice.release() }
     }
 
     companion object {

@@ -13,7 +13,7 @@
 
     <application
         android:name=".AyuApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:banner="@drawable/banner"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"

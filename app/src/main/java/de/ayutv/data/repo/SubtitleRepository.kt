@@ -39,6 +39,7 @@ class SubtitleRepository(
     private val tokenLock = Mutex()
     private var token: String? = null
     private var tokenFor: String? = null
+    private var tokenAt = 0L
     private val hashCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     enum class Source { CACHE, HASH, TITLE, TRANSLATED }
@@ -69,12 +70,19 @@ class SubtitleRepository(
     /** Lädt von OpenSubtitles in [language] (null = beliebige Sprache) und speichert unter der echten Sprache. */
     private suspend fun download(key: String, videoUrl: String, title: String, language: String?, settings: AppSettings): Result? {
         val apiKey = settings.openSubtitlesApiKey.ifEmpty { return null }
-        // ConcurrentHashMap erlaubt kein null: "" steht für "kein Hash möglich".
-        val hash = hashCache.getOrPut(videoUrl) {
-            runCatching { movieHash(videoUrl, settings.userAgent) }
-                .onFailure { Log.i(TAG, "Kein Datei-Hash möglich: ${it.message}") }
-                .getOrNull() ?: ""
-        }.ifEmpty { null }
+        // Kein Datei-Hash während der Wiedergabe: Er bräuchte zwei zusätzliche Verbindungen zum
+        // IPTV-Anbieter. Bei Zugängen mit nur einer erlaubten Verbindung kann das den laufenden Film
+        // abbrechen. Gesucht wird deshalb nach Titel und Jahr.
+        val hash: String? = if (HASH_DURING_PLAYBACK) {
+            // ConcurrentHashMap erlaubt kein null: "" steht für "kein Hash möglich".
+            hashCache.getOrPut(videoUrl) {
+                runCatching { movieHash(videoUrl, settings.userAgent) }
+                    .onFailure { Log.i(TAG, "Kein Datei-Hash möglich: ${it.message}") }
+                    .getOrNull() ?: ""
+            }.ifEmpty { null }
+        } else {
+            null
+        }
 
         var source = Source.HASH
         var candidates: List<SubtitleCandidate> = emptyList()
@@ -186,8 +194,13 @@ class SubtitleRepository(
             // Ignoriert der Server Range (200), würde der ganze Film geladen werden, also abbrechen.
             if (response.code != 206) return null
             val total = response.header("Content-Range")?.substringAfter('/')?.trim()?.toLongOrNull() ?: return null
-            val bytes = response.body.source().use { it.readByteArray() }
-            if (bytes.size < (to - from + 1)) return null
+            // Nur genau den angefragten Bereich lesen: Ein Server, der trotzdem den ganzen Film schickt,
+            // darf den Speicher nicht füllen.
+            val length = to - from + 1
+            val bytes = response.body.source().use { source ->
+                if (!source.request(length)) return null
+                source.readByteArray(length)
+            }
             return total to bytes
         }
     }
@@ -231,7 +244,14 @@ class SubtitleRepository(
     private suspend fun loginToken(apiKey: String, settings: AppSettings): String? = tokenLock.withLock {
         val user = settings.openSubtitlesUser.trim()
         if (user.isEmpty() || settings.openSubtitlesPassword.isEmpty()) return null
-        if (tokenFor == user && token != null) return token
+        val account = user + "\n" + settings.openSubtitlesPassword
+        val now = System.currentTimeMillis()
+        // Token gilt rund 24 Stunden. Nach einer gescheiterten Anmeldung nicht bei jedem Aufruf erneut
+        // versuchen (OpenSubtitles erlaubt nur wenige Anfragen pro Sekunde).
+        if (tokenFor == account && now - tokenAt < TOKEN_TTL) {
+            if (token != null) return token
+            if (now - tokenAt < LOGIN_RETRY) return null
+        }
         val payload = buildJsonObject {
             put("username", user)
             put("password", settings.openSubtitlesPassword)
@@ -243,7 +263,8 @@ class SubtitleRepository(
             }
         }.getOrNull().also {
             token = it
-            tokenFor = user
+            tokenFor = account
+            tokenAt = now
         }
     }
 
@@ -261,6 +282,9 @@ class SubtitleRepository(
 
     private companion object {
         const val TAG = "Subtitles"
+        const val HASH_DURING_PLAYBACK = false
+        const val TOKEN_TTL = 23 * 3_600_000L
+        const val LOGIN_RETRY = 10 * 60_000L
         const val API = "https://api.opensubtitles.com/api/v1"
         val JSON = "application/json".toMediaType()
     }

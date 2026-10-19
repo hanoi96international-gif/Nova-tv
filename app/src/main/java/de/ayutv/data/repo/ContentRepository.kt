@@ -113,7 +113,8 @@ class ContentRepository(
         val programmeList = programmes.await().distinctBy { Triple(it.channelEpgId, it.start, it.title) }
         // Zu jeder gefundenen Sendung den passenden Sender (für "Jetzt einschalten").
         val epgIds = programmeList.map { it.channelEpgId }.distinct()
-        val channelsByEpg = if (epgIds.isEmpty()) emptyMap() else db.channels().byEpgIds(epgIds).associateBy { it.epgId }
+        // In Stücken: Ältere Fire-OS-SQLite erlaubt höchstens 999 Platzhalter pro Abfrage.
+        val channelsByEpg = epgIds.chunked(SQL_CHUNK).flatMap { db.channels().byEpgIds(it) }.associateBy { it.epgId }
         SearchResults(
             channels = channels.await(),
             programmes = programmeList.map { it to channelsByEpg[it.channelEpgId] },

@@ -25,6 +25,9 @@ interface PlaylistDao {
     @Update
     suspend fun update(playlist: PlaylistEntity)
 
+    @Query("UPDATE playlists SET lastEpgSync = :time WHERE id = :id")
+    suspend fun setLastEpgSync(id: Long, time: Long)
+
     @Query("UPDATE playlists SET enabled = :enabled WHERE id = :id")
     suspend fun setEnabled(id: Long, enabled: Boolean)
 

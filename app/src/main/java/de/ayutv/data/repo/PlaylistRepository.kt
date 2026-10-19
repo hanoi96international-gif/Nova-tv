@@ -27,6 +27,9 @@ import okhttp3.Request
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
+import de.ayutv.data.parse.XtreamParsing
+import java.util.concurrent.TimeUnit
+import java.io.File
 import java.util.concurrent.Executors
 import java.util.zip.GZIPInputStream
 
@@ -45,7 +48,25 @@ class PlaylistRepository(
     private val db: AyuDatabase,
     private val http: OkHttpClient,
     private val settings: SettingsStore,
+    cacheDir: File,
 ) {
+    /** Downloads landen hier vollständig, bevor importiert wird (keine offene Verbindung während der Transaktion). */
+    private val importDir = File(cacheDir, "import")
+
+    /** Für Importe: eingestellter User-Agent (viele Anbieter sperren den von OkHttp) und langer Lese-Timeout. */
+    @Volatile
+    private var importHttp: OkHttpClient = http
+
+    private suspend fun prepareImportClient() {
+        val userAgent = settings.current().userAgent
+        importHttp = http.newBuilder()
+            .readTimeout(120, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val request = chain.request()
+                chain.proceed(if (request.header("User-Agent") == null) request.newBuilder().header("User-Agent", userAgent).build() else request)
+            }
+            .build()
+    }
     private val mutex = Mutex()
 
     /**
@@ -54,7 +75,9 @@ class PlaylistRepository(
      */
     private val importDispatcher = Executors.newSingleThreadExecutor { task ->
         Thread({
-            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
+            // Knapp über "Hintergrund": nicht in die stark gedrosselte Hintergrundgruppe von Fire OS,
+            // gibt der Wiedergabe aber trotzdem Vorrang.
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND + Process.THREAD_PRIORITY_MORE_FAVORABLE)
             task.run()
         }, "ayu-import")
     }.asCoroutineDispatcher()
@@ -119,6 +142,7 @@ class PlaylistRepository(
     suspend fun sync(playlistId: Long, withEpg: Boolean = true) {
         val playlist = db.playlists().byId(playlistId) ?: return
         val ok = mutex.withLock {
+            prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: Sender werden geladen …")
             try {
                 val updated = withContext(importDispatcher) {
@@ -143,13 +167,14 @@ class PlaylistRepository(
 
     private fun importM3u(playlist: PlaylistEntity): PlaylistEntity {
         var detectedEpg: String? = null
-        db.runInTransaction(Runnable {
+        val source = fetch(playlist.url, "playlist-${playlist.id}.m3u")
+        try { db.runInTransaction(Runnable {
             db.channels().deleteForPlaylist(playlist.id)
             db.vod().deleteForPlaylist(playlist.id)
             val channels = ArrayList<ChannelEntity>(BATCH)
             val vod = ArrayList<VodEntity>(BATCH)
             var position = 0
-            open(playlist.url).bufferedReader().use { reader ->
+            openFile(source).bufferedReader().use { reader ->
                 val header = M3uParser.parse(reader) { entry ->
                     position++
                     if (entry.isVod) {
@@ -185,24 +210,32 @@ class PlaylistRepository(
             }
             db.channels().insertAll(channels)
             db.vod().insertAll(vod)
-        })
+        }) } finally { discard(source) }
         return playlist.copy(lastSync = System.currentTimeMillis(), epgUrl = playlist.epgUrl ?: detectedEpg)
     }
 
     private fun importXtream(playlist: PlaylistEntity): PlaylistEntity {
-        val client = XtreamClient.of(http, playlist)
+        val client = XtreamClient.of(importHttp, playlist)
         val liveCategories = client.liveCategories()
         val vodCategories = runCatching { client.vodCategories() }.getOrDefault(emptyMap())
         val seriesCategories = runCatching { client.seriesCategories() }.getOrDefault(emptyMap())
 
-        db.runInTransaction(Runnable {
+        // Erst alles herunterladen. Scheitern Filme oder Serien, bleiben die bisherigen erhalten,
+        // statt dass die Bibliothek bis zum nächsten Abgleich leer ist.
+        val liveFile = fetch(client.apiUrl("get_live_streams"), "xtream-${playlist.id}-live.json")
+        _state.value = SyncState.Running("${playlist.name}: Filme werden geladen …")
+        val vodFile = runCatching { fetch(client.apiUrl("get_vod_streams"), "xtream-${playlist.id}-vod.json") }
+            .onFailure { Log.w(TAG, "Filme konnten nicht geladen werden", it) }.getOrNull()
+        _state.value = SyncState.Running("${playlist.name}: Serien werden geladen …")
+        val seriesFile = runCatching { fetch(client.apiUrl("get_series"), "xtream-${playlist.id}-series.json") }
+            .onFailure { Log.w(TAG, "Serien konnten nicht geladen werden", it) }.getOrNull()
+
+        try { db.runInTransaction(Runnable {
             db.channels().deleteForPlaylist(playlist.id)
-            db.vod().deleteForPlaylist(playlist.id)
-            db.series().deleteForPlaylist(playlist.id)
 
             val channels = ArrayList<ChannelEntity>(BATCH)
             var position = 0
-            client.liveStreams { live ->
+            openFile(liveFile).use { input -> XtreamParsing.liveStreams(input) { live ->
                 position++
                 channels += ChannelEntity(
                     key = "${playlist.id}:c:${live.streamId}",
@@ -216,13 +249,13 @@ class PlaylistRepository(
                     catchupDays = live.archiveDays,
                 )
                 if (channels.size >= BATCH) db.channels().insertAll(channels.drain())
-            }
+            } }
             db.channels().insertAll(channels)
 
-            _state.value = SyncState.Running("${playlist.name}: Filme werden geladen …")
-            val vod = ArrayList<VodEntity>(BATCH)
-            runCatching {
-                client.vodStreams { item ->
+            if (vodFile != null) {
+                db.vod().deleteForPlaylist(playlist.id)
+                val vod = ArrayList<VodEntity>(BATCH)
+                openFile(vodFile).use { input -> XtreamParsing.vodStreams(input) { item ->
                     vod += VodEntity(
                         key = "${playlist.id}:v:${item.streamId}",
                         playlistId = playlist.id,
@@ -234,14 +267,14 @@ class PlaylistRepository(
                         added = item.added,
                     )
                     if (vod.size >= BATCH) db.vod().insertAll(vod.drain())
-                }
-            }.onFailure { Log.w(TAG, "Filme konnten nicht geladen werden", it) }
-            db.vod().insertAll(vod)
+                } }
+                db.vod().insertAll(vod)
+            }
 
-            _state.value = SyncState.Running("${playlist.name}: Serien werden geladen …")
-            val series = ArrayList<SeriesEntity>(BATCH)
-            runCatching {
-                client.series { item ->
+            if (seriesFile != null) {
+                db.series().deleteForPlaylist(playlist.id)
+                val series = ArrayList<SeriesEntity>(BATCH)
+                openFile(seriesFile).use { input -> XtreamParsing.series(input) { item ->
                     series += SeriesEntity(
                         key = "${playlist.id}:s:${item.seriesId}",
                         playlistId = playlist.id,
@@ -254,29 +287,34 @@ class PlaylistRepository(
                         added = item.added,
                     )
                     if (series.size >= BATCH) db.series().insertAll(series.drain())
-                }
-            }.onFailure { Log.w(TAG, "Serien konnten nicht geladen werden", it) }
-            db.series().insertAll(series)
-        })
+                } }
+                db.series().insertAll(series)
+            }
+        }) } finally {
+            discard(liveFile)
+            vodFile?.let(::discard)
+            seriesFile?.let(::discard)
+        }
         return playlist.copy(lastSync = System.currentTimeMillis())
     }
 
     suspend fun syncEpg(playlistId: Long) {
-        val playlist = db.playlists().byId(playlistId) ?: return
-        val epgUrl = when (playlist.type) {
-            PlaylistType.M3U -> playlist.epgUrl
-            PlaylistType.XTREAM -> playlist.epgUrl?.takeIf { it.isNotBlank() } ?: XtreamClient.of(http, playlist).epgUrl
-        }
-        if (epgUrl.isNullOrBlank()) return
-
         mutex.withLock {
+            // Erst hier lesen: Während auf die Sperre gewartet wurde, kann die Playlist geändert oder gelöscht worden sein.
+            val playlist = db.playlists().byId(playlistId) ?: return
+            val epgUrl = when (playlist.type) {
+                PlaylistType.M3U -> playlist.epgUrl
+                PlaylistType.XTREAM -> playlist.epgUrl?.takeIf { it.isNotBlank() } ?: XtreamClient.of(http, playlist).epgUrl
+            }
+            if (epgUrl.isNullOrBlank()) return
+            prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: TV-Guide wird geladen …")
             try {
                 val known = db.channels().epgIds(playlist.id).toHashSet()
                 val withoutId = db.channels().withoutEpgId(playlist.id)
                 val shift = settings.current().epgShiftHours * HOUR
                 withContext(importDispatcher) { importEpg(playlist, epgUrl, known, withoutId, shift) }
-                db.playlists().update(playlist.copy(lastEpgSync = System.currentTimeMillis()))
+                db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
                 Log.w(TAG, "EPG fehlgeschlagen", e)
@@ -299,8 +337,9 @@ class PlaylistRepository(
         // Sender ohne tvg-id lassen sich erst nach dem Lesen der <channel>-Liste zuordnen,
         // deshalb ihre möglichen Kandidaten vorab über die Namen bestimmen.
         val wantedNames = withoutId.mapTo(HashSet()) { XmltvParser.normalizeName(it.name) }
+        val source = fetch(epgUrl, "epg-${playlist.id}.xml")
 
-        db.runInTransaction(Runnable {
+        try { db.runInTransaction(Runnable {
             db.programmes().deleteForPlaylist(playlist.id)
             val batch = ArrayList<ProgrammeEntity>(BATCH)
             var count = 0
@@ -308,7 +347,7 @@ class PlaylistRepository(
             val nameMatchedIds by lazy {
                 parser.channelNames.filterKeys { it in wantedNames }.values.toHashSet()
             }
-            open(epgUrl).use { input ->
+            openFile(source).use { input ->
                 parser.parse(
                     input,
                     wanted = { id, start, stop ->
@@ -337,24 +376,48 @@ class PlaylistRepository(
                 val id = parser.channelNames[XmltvParser.normalizeName(channel.name)] ?: continue
                 db.channels().setEpgId(channel.id, id)
             }
-        })
+        }) } finally { discard(source) }
     }
 
     private fun <T> ArrayList<T>.drain(): List<T> = toList().also { clear() }
 
-    /** Öffnet eine URL oder Datei und entpackt gzip automatisch anhand der Magic Bytes. */
-    private fun open(url: String): InputStream {
-        val raw: InputStream = if (url.startsWith("http://", true) || url.startsWith("https://", true)) {
-            val response = http.newCall(Request.Builder().url(url).build()).execute()
-            if (!response.isSuccessful) {
-                response.close()
-                throw IOException("HTTP ${response.code} beim Laden von ${url.substringBefore('?')}")
+    /**
+     * Lädt eine Adresse vollständig in eine Datei (bis zu 3 Versuche mit Pause). So bricht ein kurzer
+     * Netzaussetzer nicht den ganzen Import ab, und die Datenbank-Transaktion hält keine Verbindung offen.
+     * Lokale Pfade werden direkt verwendet.
+     */
+    private fun fetch(url: String, name: String): File {
+        if (!url.startsWith("http://", true) && !url.startsWith("https://", true)) return File(url.removePrefix("file://"))
+        importDir.mkdirs()
+        val target = File(importDir, name)
+        var wait = 2_000L
+        repeat(3) { attempt ->
+            try {
+                importHttp.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("HTTP ${response.code} beim Laden von ${url.substringBefore('?')}")
+                    target.outputStream().use { out -> response.body.byteStream().copyTo(out, 64 * 1024) }
+                }
+                return target
+            } catch (e: IOException) {
+                if (attempt == 2) {
+                    target.delete()
+                    throw e
+                }
+                Thread.sleep(wait)
+                wait *= 3
             }
-            response.body?.byteStream() ?: throw IOException("Leere Antwort")
-        } else {
-            java.io.File(url.removePrefix("file://")).inputStream()
         }
-        val buffered = BufferedInputStream(raw, 64 * 1024)
+        throw IOException("Download fehlgeschlagen")
+    }
+
+    /** Heruntergeladene Zwischendateien wieder löschen (eigene Dateien des Nutzers bleiben). */
+    private fun discard(file: File) {
+        if (file.parentFile == importDir) file.delete()
+    }
+
+    /** Öffnet eine Datei und entpackt gzip automatisch anhand der Magic Bytes. */
+    private fun openFile(file: File): InputStream {
+        val buffered = BufferedInputStream(file.inputStream(), 64 * 1024)
         buffered.mark(2)
         val b1 = buffered.read()
         val b2 = buffered.read()

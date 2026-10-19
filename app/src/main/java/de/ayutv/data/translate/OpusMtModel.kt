@@ -27,6 +27,7 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
     private val encoder: OrtSession
     private val decoder: OrtSession
     private val pastNames: List<String>
+    private val options = OrtSession.SessionOptions()
 
     init {
         val config = Json.parseToJsonElement(File(dir, CONFIG).readText()) as JsonObject
@@ -36,10 +37,16 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
         start = int("decoder_start_token_id")
         heads = int("decoder_attention_heads")
         headDim = int("d_model") / heads
-        val options = OrtSession.SessionOptions().apply {
+        options.apply {
             setIntraOpNumThreads(threads)
             setInterOpNumThreads(1)
+            setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL)
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            // Formen ändern sich bei jedem Schritt: Speicher-Vorplanung bringt nichts.
+            setMemoryPatternOptimization(false)
+            // Rechen-Threads nicht aktiv warten lassen: sonst nehmen sie dem Video-Decoder CPU weg.
+            addConfigEntry("session.intra_op.allow_spinning", "0")
+            addConfigEntry("session.inter_op.allow_spinning", "0")
         }
         encoder = env.createSession(File(dir, ENCODER).path, options)
         decoder = env.createSession(File(dir, DECODER).path, options)
@@ -127,6 +134,7 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
     override fun close() {
         encoder.close()
         decoder.close()
+        options.close()
     }
 
     companion object {

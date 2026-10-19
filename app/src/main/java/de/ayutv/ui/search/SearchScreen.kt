@@ -57,11 +57,11 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val history by container.settings.searchHistory.collectAsStateWithLifecycle(emptyList())
+    var query by rememberSaveable { mutableStateOf("") }
     // Wer einen Treffer öffnet oder die Suche bestätigt, findet den Begriff später unter „Letzte Suchen“.
     fun saveQuery() {
         scope.launch { container.settings.rememberSearch(query) }
     }
-    var query by rememberSaveable { mutableStateOf("") }
     var results by remember { mutableStateOf(SearchResults()) }
     var searching by remember { mutableStateOf(false) }
     val fieldFocus = remember { FocusRequester() }
@@ -103,10 +103,17 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
                     ) {
                         items(history, key = { it }) { term ->
-                            Chip(term) { query = term }
+                            Chip(term) {
+                                // Erst den Fokus ins Suchfeld, dann verschwindet die Reihe: sonst ginge er verloren.
+                                runCatching { fieldFocus.requestFocus() }
+                                query = term
+                            }
                         }
                         item(key = "clear") {
-                            Chip("✕ Verlauf löschen", subtle = true) { scope.launch { container.settings.clearSearchHistory() } }
+                            Chip("✕ Verlauf löschen", subtle = true) {
+                                runCatching { fieldFocus.requestFocus() }
+                                scope.launch { container.settings.clearSearchHistory() }
+                            }
                         }
                     }
                 }

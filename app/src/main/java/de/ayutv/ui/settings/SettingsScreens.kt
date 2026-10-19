@@ -510,10 +510,13 @@ private fun UserAgentRow(current: String, onChange: (String) -> Unit) {
     Column(Modifier.padding(vertical = 6.dp)) {
         TvTextField(
             value = value,
-            onValueChange = { value = it },
+            // Bei jeder Änderung speichern: Wer die Tastatur mit „Zurück“ schließt, verliert sonst die Eingabe.
+            onValueChange = {
+                value = it
+                onChange(it.ifBlank { AppSettings.DEFAULT_USER_AGENT })
+            },
             label = "User-Agent (manche Anbieter verlangen einen bestimmten)",
             imeAction = ImeAction.Done,
-            onImeAction = { onChange(value.ifBlank { AppSettings.DEFAULT_USER_AGENT }) },
             modifier = Modifier.fillMaxWidth(0.8f),
         )
     }

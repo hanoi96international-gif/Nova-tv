@@ -27,6 +27,8 @@ class XmltvParser(private val parser: XmlPullParser) {
         onProgramme: (XmltvProgramme) -> Unit,
     ) {
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+        // Viele EPGs enthalten "&nbsp;" oder ein loses "&": tolerant lesen statt den ganzen Import abzubrechen.
+        runCatching { parser.setFeature("http://xmlpull.org/v1/doc/features.html#relaxed", true) }
         parser.setInput(input, null)
 
         var event = parser.eventType
@@ -126,13 +128,18 @@ object XmltvTime {
         val day = text.number(6, 2) ?: return null
         val hour = text.number(8, 2) ?: return null
         val minute = text.number(10, 2) ?: return null
-        val second = if (text.length >= 14) text.number(12, 2) ?: 0 else 0
+        // Sekunden sind optional ("202401012030 +0100"); die Zeitzone folgt nach den Ziffern.
+        var digits = 8
+        while (digits < text.length && text[digits].isDigit()) digits++
+        val second = if (digits >= 14) text.number(12, 2) ?: 0 else 0
 
         var offsetMinutes = 0
-        val rest = text.substring(minOf(14, text.length)).trim()
-        if (rest.length >= 5 && (rest[0] == '+' || rest[0] == '-')) {
+        val rest = text.substring(digits).trim()
+        if (rest.length >= 3 && (rest[0] == '+' || rest[0] == '-')) {
             val hours = rest.number(1, 2) ?: 0
-            val minutes = rest.number(3, 2) ?: 0
+            // "+0100" und "+01:00"
+            val minuteText = rest.substring(3).removePrefix(":")
+            val minutes = if (minuteText.length >= 2) minuteText.number(0, 2) ?: 0 else 0
             offsetMinutes = (hours * 60 + minutes) * if (rest[0] == '-') -1 else 1
         }
 
