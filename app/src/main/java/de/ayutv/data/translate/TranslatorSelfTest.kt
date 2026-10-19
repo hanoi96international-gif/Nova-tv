@@ -33,8 +33,17 @@ object TranslatorSelfTest {
             parts += "Übersetzung: ${e.message ?: e.javaClass.simpleName}"
         }
         remote.lastPeakMb?.let { peak -> parts += "Speicher Übersetzer: höchstens $peak MB, belegt ${remote.lastAnonMb ?: "?"} MB" }
+        cpu()?.let { parts += "Prozessor: $it" }
         return parts.joinToString("\n")
     }
+
+    /** Prozessor und Befehlssätze (für Fehler, die nur auf bestimmten Chips auftreten). */
+    private fun cpu(): String? = runCatching {
+        val info = java.io.File("/proc/cpuinfo").readLines()
+        fun field(name: String) = info.firstOrNull { it.startsWith(name) }?.substringAfter(':')?.trim()
+        listOfNotNull(field("Hardware"), field("model name") ?: field("Processor"), field("CPU part")?.let { "Teil $it" },
+            field("Features")?.let { "Features: $it" }).joinToString(" · ")
+    }.getOrNull()
 
     /** Wie ein Blu-ray-Untertitel: weiße Schrift mit schwarzem Rand auf durchsichtigem Grund. */
     private fun render(text: String): Bitmap {

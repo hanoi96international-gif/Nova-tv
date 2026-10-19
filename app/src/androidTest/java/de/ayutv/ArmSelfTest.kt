@@ -37,7 +37,7 @@ class ArmSelfTest {
             val result = runBlocking { TranslatorSelfTest.run(language) }
             Translators.remote.release()
             log("round $round $language lowmem=$lowMemory: ${result.replace("\n", " | ")}")
-            failures += result.lines().filterNot { "ok" in it || it.startsWith("Speicher") }
+            failures += result.lines().filterNot { "ok" in it || it.startsWith("Speicher") || it.startsWith("Prozessor") }
             Thread.sleep(1_000)
             am.runningAppProcesses.orEmpty().filter { it.processName.endsWith(":mt") }.forEach { android.os.Process.killProcess(it.pid) }
             Thread.sleep(1_500)
