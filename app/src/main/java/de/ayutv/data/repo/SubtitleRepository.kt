@@ -208,12 +208,13 @@ class SubtitleRepository(
     }
 
     /**
-     * Einmalig nach dem Update auf 0.14: Bis dahin gefundene Untertitel stammen oft aus einer
-     * ungenauen Titelsuche (z. B. ein anderer Harry-Potter-Teil). Alles verwerfen, neu suchen.
+     * Einmalig nach einem Update, das die Suche verbessert (0.14: Vorsätze im Titel, 0.19: Titelsuche
+     * nahm den beliebtesten statt des richtigen Films): Bis dahin geladene Untertitel können zu einem
+     * anderen Film gehören. Alles verwerfen, neu suchen.
      */
     fun purgeLegacyCache() {
         val dir = File(cacheDir, "subtitles")
-        val marker = File(dir, ".cache_v2")
+        val marker = File(dir, ".cache_v3")
         if (marker.exists()) return
         dir.listFiles()?.filter { it.name.endsWith(".srt") || it.name.endsWith(".sync") }?.forEach { it.delete() }
         runCatching { dir.mkdirs(); marker.createNewFile() }
