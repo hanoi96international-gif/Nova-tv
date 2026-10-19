@@ -1,0 +1,940 @@
+--------- beginning of system
+10-19 21:11:15.381 I/ActivityManager(  508): Force stopping de.ayutv appid=10130 user=0: from pid 2374
+10-19 21:11:15.381 I/ActivityManager(  508): Killing 2150:de.ayutv/u0a130 (adj 0): stop de.ayutv due to from pid 2374
+10-19 21:11:15.386 W/ActivityTaskManager(  508): Force removing ActivityRecord{89b4d72 u0 de.ayutv/.MainActivity t9 f}}: app died, no saved state
+--------- beginning of main
+10-19 21:11:15.394 W/ActivityManager(  508): setHasOverlayUi called on unknown pid: 2150
+10-19 21:11:15.890 I/ActivityManager(  508): Force stopping de.ayutv appid=10130 user=-1: installPackageLI
+10-19 21:11:15.906 E/installd(  416): Couldn't opendir /data/app/vmdl1976834132.tmp: No such file or directory
+10-19 21:11:15.906 E/installd(  416): Failed to delete /data/app/vmdl1976834132.tmp: No such file or directory
+10-19 21:11:15.907 I/ActivityManager(  508): Force stopping de.ayutv appid=10130 user=0: pkg removed
+10-19 21:11:15.951 I/ActivityManager(  508): Start proc 2388:com.android.keychain/1000 for service {com.android.keychain/com.android.keychain.KeyChainService}
+10-19 21:11:15.982 I/ActivityManager(  508): Killing 1965:com.android.calendar/u0a107 (adj 975): empty #17
+10-19 21:11:16.006 E/installd(  416): Couldn't opendir /data/app/vmdl766151728.tmp: No such file or directory
+10-19 21:11:16.006 E/installd(  416): Failed to delete /data/app/vmdl766151728.tmp: No such file or directory
+10-19 21:11:16.087 E/libc    ( 2414): Access denied finding property "persist.device_config.runtime_native_boot.profilebootclasspath"
+10-19 21:11:16.087 E/libc    ( 2414): Access denied finding property "persist.device_config.runtime_native_boot.enable_apex_image"
+10-19 21:11:16.087 E/libc    ( 2414): Access denied finding property "persist.device_config.runtime_native_boot.disable_lock_profiling"
+10-19 21:11:16.087 E/libc    ( 2414): Access denied finding property "persist.device_config.runtime_native_boot.enable_generational_cc"
+10-19 21:11:16.129 I/ActivityManager(  508): Force stopping de.ayutv appid=10130 user=0: start instr
+10-19 21:11:16.134 I/ActivityManager(  508): Start proc 2427:de.ayutv/u0a130 for added application de.ayutv
+10-19 21:11:17.090 I/AyuTour ( 2427): db_version=3 playlists_before=0
+10-19 21:11:17.093 I/AyuTour ( 2427): regex: plain=Hallo Welt title=Der Film year=2020
+10-19 21:11:17.149 I/AyuTour ( 2427): import_ms=55 channels=6 programmes=72 sync=Idle
+10-19 21:11:17.223 I/AyuTour ( 2427): xtream: wrong_login_rejected=true login=ok import_ms=63 channels_total=8 movies=9 series=1 episodes=2 sync=Idle
+10-19 21:11:17.229 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10008000 cmp=de.ayutv/.MainActivity} from uid 10130
+10-19 21:11:17.683 I/ActivityTaskManager(  508): Displayed de.ayutv/.MainActivity: +429ms
+10-19 21:11:18.753 I/ActivityManager(  508): Start proc 2479:com.android.cellbroadcastreceiver.module/u0a122 for broadcast {com.android.cellbroadcastreceiver.module/com.android.cellbroadcastreceiver.CellBroadcastReceiver}
+10-19 21:11:18.777 I/ActivityManager(  508): Killing 2002:com.android.camera2/u0a110 (adj 985): empty #17
+10-19 21:11:19.469 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:11:22.718 E/FMQ     (  286): grantorIdx must be less than 3
+10-19 21:11:22.718 E/FMQ     (  286): grantorIdx must be less than 3
+10-19 21:11:22.719 E/FMQ     (  358): grantorIdx must be less than 3
+10-19 21:11:22.719 E/FMQ     (  358): grantorIdx must be less than 3
+10-19 21:11:23.969 E/WifiHealthMonitor(  508):  Hit PackageManager exception
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): android.content.pm.PackageManager$NameNotFoundException: com.google.android.wifi
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:206)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.app.ApplicationPackageManager.getPackageInfo(ApplicationPackageManager.java:178)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at com.android.server.wifi.WifiHealthMonitor.extractCurrentSoftwareBuildInfo(WifiHealthMonitor.java:545)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at com.android.server.wifi.WifiHealthMonitor.postBootSwBuildCheck(WifiHealthMonitor.java:477)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at com.android.server.wifi.WifiHealthMonitor.postBootDetectionHandler(WifiHealthMonitor.java:468)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at com.android.server.wifi.WifiHealthMonitor.access$200(WifiHealthMonitor.java:70)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at com.android.server.wifi.WifiHealthMonitor$2.onAlarm(WifiHealthMonitor.java:163)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.app.AlarmManager$ListenerWrapper.run(AlarmManager.java:239)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.os.Handler.handleCallback(Handler.java:938)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.os.Handler.dispatchMessage(Handler.java:99)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:23.969 E/WifiHealthMonitor(  508): 	at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:25.996 I/ActivityManager(  508): Killing 1994:com.android.localtransport/1000 (adj 985): empty #17
+10-19 21:11:25.998 I/ActivityManager(  508): Killing 1293:com.android.cellbroadcastreceiver/u0a65 (adj 985): empty #18
+10-19 21:11:31.948 I/ActivityManager(  508): Killing 2045:com.android.contacts/u0a98 (adj 985): empty #17
+10-19 21:11:31.962 I/ActivityManager(  508): Killing 1620:android.process.acore/u0a63 (adj 975): empty #17
+10-19 21:11:38.383 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:11:38.413 I/ActivityManager(  508): Start proc 2514:de.ayutv.test/u0a131 for pre-top-activity {de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity}
+10-19 21:11:39.120 E/Layer   (  346): [Surface(name=Task=11)/@0x7ae9707 - animation-leash#0] No local sync point found
+10-19 21:11:39.120 E/Layer   (  346): [Surface(name=Task=11)/@0x7ae9707 - animation-leash#0] No local sync point found
+10-19 21:11:39.120 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:11:39.120 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:11:40.359 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:11:40.363 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (38614)
+10-19 21:11:40.826 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +464ms
+10-19 21:11:41.178 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:11:41.197 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:11:41.197 E/OMXNodeInstance(  446): getParameter(0xeb880940:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:41.197 E/OMXNodeInstance(  446): setConfig(0xeb880940:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:41.197 E/OMXNodeInstance(  446): getConfig(0xeb880940:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:41.197 E/OMXNodeInstance(  446): getConfig(0xeb880940:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:41.279 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:41.279 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:41.279 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:41.279 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:41.280 E/ion     ( 2427): ioctl c0044901 failed with code -1: Inappropriate ioctl for device
+10-19 21:11:41.296 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:41.296 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:41.384 E/OMXNodeInstance(  446): getConfig(0xeb880940:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:41.436 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:41.436 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:42.440 E/OMXNodeInstance(  446): setConfig(0xeb880940:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:43.302 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:11:49.770 I/AyuTour ( 2427): live[0] HD Test 50fps: ready=true startup_ms=602 1920x1080 fps=0.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=517 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=null
+10-19 21:11:52.134 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:11:52.134 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:11:52.135 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:11:52.135 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:11:52.566 E/OMXNodeInstance(  446): getExtensionIndex(0xeb880da0:google.hevc.decoder, OMX.google.android.index.enableAndroidNativeBuffers) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:52.566 E/ACodec  ( 2427): [OMX.google.hevc.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:11:52.566 E/OMXNodeInstance(  446): getParameter(0xeb880da0:google.hevc.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:52.567 E/OMXNodeInstance(  446): setConfig(0xeb880da0:google.hevc.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:52.567 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:52.580 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:52.608 E/SoftHEVC(  446): Fatal Error : 0x43dd
+10-19 21:11:52.612 E/ACodec  ( 2427): [OMX.google.hevc.decoder] ERROR(0x80001019)
+10-19 21:11:52.612 E/ACodec  ( 2427): signalError(omxError 0x80001019, internalError -2147483648)
+10-19 21:11:52.666 E/MediaCodec( 2427): Codec reported err 0x80001019, actionCode 0, while in state 6
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427): Video codec error
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):   java.lang.IllegalStateException
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:52.667 E/MediaCodecVideoRenderer( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427): Playback error
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):   androidx.media3.exoplayer.ExoPlaybackException: MediaCodecVideoRenderer error, index=0, format=Format(1/256, null, video/mp2t, video/hevc, hvc1.2.4.L150.90, -1, null, [3840, 2160, -1.0, ColorInfo(Unset color space, Limited range, Unset color transfer, false, 10bit Luma, 10bit Chroma)], [-1, -1, -1]), format_supported=NO_EXCEEDS_CAPABILITIES
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.createRendererException(BaseRenderer.java:586)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1011)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):   Caused by: androidx.media3.exoplayer.video.MediaCodecVideoDecoderException: Decoder failed: OMX.google.hevc.decoder
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.createDecoderException(MediaCodecVideoRenderer.java:2777)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1005)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):   Caused by: java.lang.IllegalStateException
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:11:52.668 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427): Disable failed.
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):   java.lang.IllegalStateException
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_flush(Native Method)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.flush(MediaCodec.java:2298)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.flush(SynchronousMediaCodecAdapter.java:161)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.flushCodec(MediaCodecRenderer.java:1107)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.flushOrReleaseCodec(MediaCodecRenderer.java:1049)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.onDisabled(MediaCodecRenderer.java:862)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.onDisabled(MediaCodecVideoRenderer.java:1210)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.disable(BaseRenderer.java:261)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.disableRenderer(RendererHolder.java:721)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.disable(RendererHolder.java:601)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.disableRenderer(ExoPlayerImplInternal.java:2367)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.disableRenderers(ExoPlayerImplInternal.java:2360)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.resetInternal(ExoPlayerImplInternal.java:2088)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.stopInternal(ExoPlayerImplInternal.java:2042)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:970)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:52.669 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427): Reset failed.
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):   java.lang.IllegalStateException
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_stop(Native Method)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.stop(MediaCodec.java:2251)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.release(SynchronousMediaCodecAdapter.java:172)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.releaseCodec(MediaCodecRenderer.java:893)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.onReset(MediaCodecRenderer.java:870)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.onReset(MediaCodecVideoRenderer.java:1220)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.reset(BaseRenderer.java:270)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.maybeResetRenderer(RendererHolder.java:767)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.reset(RendererHolder.java:757)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.resetInternal(ExoPlayerImplInternal.java:2096)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.stopInternal(ExoPlayerImplInternal.java:2042)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:970)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:52.670 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:53.733 E/OMXNodeInstance(  446): getExtensionIndex(0xeb880da0:google.hevc.decoder, OMX.google.android.index.enableAndroidNativeBuffers) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:53.733 E/ACodec  ( 2427): [OMX.google.hevc.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:11:53.733 E/OMXNodeInstance(  446): getParameter(0xeb880da0:google.hevc.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:53.734 E/OMXNodeInstance(  446): setConfig(0xeb880da0:google.hevc.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:53.734 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:53.734 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:53.761 E/SoftHEVC(  446): Fatal Error : 0x43dd
+10-19 21:11:53.762 E/ACodec  ( 2427): [OMX.google.hevc.decoder] ERROR(0x80001019)
+10-19 21:11:53.762 E/ACodec  ( 2427): signalError(omxError 0x80001019, internalError -2147483648)
+10-19 21:11:53.762 E/MediaCodec( 2427): Codec reported err 0x80001019, actionCode 0, while in state 6
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427): Video codec error
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):   java.lang.IllegalStateException
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:53.767 E/MediaCodecVideoRenderer( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427): Playback error
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):   androidx.media3.exoplayer.ExoPlaybackException: MediaCodecVideoRenderer error, index=0, format=Format(1/256, null, video/mp2t, video/hevc, hvc1.2.4.L150.90, -1, null, [3840, 2160, -1.0, ColorInfo(Unset color space, Limited range, Unset color transfer, false, 10bit Luma, 10bit Chroma)], [-1, -1, -1]), format_supported=NO_EXCEEDS_CAPABILITIES
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.createRendererException(BaseRenderer.java:586)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1011)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):   Caused by: androidx.media3.exoplayer.video.MediaCodecVideoDecoderException: Decoder failed: OMX.google.hevc.decoder
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.createDecoderException(MediaCodecVideoRenderer.java:2777)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1005)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):   Caused by: java.lang.IllegalStateException
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:11:53.767 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427): Reset failed.
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):   java.lang.IllegalStateException
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_stop(Native Method)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.stop(MediaCodec.java:2251)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.release(SynchronousMediaCodecAdapter.java:172)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.releaseCodec(MediaCodecRenderer.java:893)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.onReset(MediaCodecRenderer.java:870)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.onReset(MediaCodecVideoRenderer.java:1220)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.reset(BaseRenderer.java:270)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.maybeResetRenderer(RendererHolder.java:767)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.reset(RendererHolder.java:757)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.resetInternal(ExoPlayerImplInternal.java:2096)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.stopInternal(ExoPlayerImplInternal.java:2042)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:970)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:11:53.770 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:11:55.627 I/AyuTour ( 2427): zap1 now=UHD Test HEVC message=Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen
+10-19 21:11:55.708 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:11:55.709 E/OMXNodeInstance(  446): getParameter(0xeb880da0:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:55.709 E/OMXNodeInstance(  446): setConfig(0xeb880da0:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:55.709 E/OMXNodeInstance(  446): getConfig(0xeb880da0:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:55.709 E/OMXNodeInstance(  446): getConfig(0xeb880da0:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:55.794 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:55.794 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:55.794 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:55.794 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:55.795 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:55.795 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:55.806 E/OMXNodeInstance(  446): getConfig(0xeb880da0:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:55.828 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:55.828 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:56.056 I/AyuTour ( 2427): zap: ready=true startup_ms=294 now=HLS Test
+10-19 21:11:57.285 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:11:57.286 E/OMXNodeInstance(  446): getParameter(0xeb880160:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:57.286 E/OMXNodeInstance(  446): setConfig(0xeb880160:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:57.287 E/OMXNodeInstance(  446): getConfig(0xeb880160:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:57.287 E/OMXNodeInstance(  446): getConfig(0xeb880160:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:57.432 E/OMXNodeInstance(  446): getConfig(0xeb880160:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:57.798 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:11:57.799 E/OMXNodeInstance(  446): getParameter(0xeb880e10:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:57.830 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:57.830 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:11:57.831 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:57.894 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:57.894 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:57.894 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:57.894 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:57.895 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:57.895 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:57.922 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:11:57.922 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:11:58.032 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:11:58.223 I/AyuTour ( 2427): zap_burst: ready=true moved=3 expected=3 now=Wackelige Leitung
+10-19 21:12:02.817 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:12:02.886 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (59823)
+10-19 21:12:03.451 E/Layer   (  346): [Surface(name=Task=12)/@0x82e6918 - animation-leash#0] No local sync point found
+10-19 21:12:03.451 E/Layer   (  346): [Surface(name=Task=12)/@0x82e6918 - animation-leash#0] No local sync point found
+10-19 21:12:03.451 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:12:03.451 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:12:03.677 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:12:03.677 E/EGL_emulation( 2427): tid 2643: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:12:05.235 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:12:05.240 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (61743)
+10-19 21:12:05.585 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +304ms
+10-19 21:12:05.716 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:12:05.741 E/OMXNodeInstance(  446): getExtensionIndex(0xeb880da0:google.hevc.decoder, OMX.google.android.index.enableAndroidNativeBuffers) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:05.741 E/ACodec  ( 2427): [OMX.google.hevc.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:12:05.741 E/OMXNodeInstance(  446): getParameter(0xeb880da0:google.hevc.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:05.741 E/OMXNodeInstance(  446): setConfig(0xeb880da0:google.hevc.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:05.741 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:05.741 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:12:05.753 E/SoftHEVC(  446): Fatal Error : 0x43dd
+10-19 21:12:05.753 E/ACodec  ( 2427): [OMX.google.hevc.decoder] ERROR(0x80001019)
+10-19 21:12:05.753 E/ACodec  ( 2427): signalError(omxError 0x80001019, internalError -2147483648)
+10-19 21:12:05.753 E/MediaCodec( 2427): Codec reported err 0x80001019, actionCode 0, while in state 6
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427): Video codec error
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):   java.lang.IllegalStateException
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:12:05.763 E/MediaCodecVideoRenderer( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427): Playback error
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):   androidx.media3.exoplayer.ExoPlaybackException: MediaCodecVideoRenderer error, index=0, format=Format(1/256, null, video/mp2t, video/hevc, hvc1.2.4.L150.90, -1, null, [3840, 2160, -1.0, ColorInfo(Unset color space, Limited range, Unset color transfer, false, 10bit Luma, 10bit Chroma)], [-1, -1, -1]), format_supported=NO_EXCEEDS_CAPABILITIES
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.createRendererException(BaseRenderer.java:586)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1011)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):   Caused by: androidx.media3.exoplayer.video.MediaCodecVideoDecoderException: Decoder failed: OMX.google.hevc.decoder
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.createDecoderException(MediaCodecVideoRenderer.java:2777)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1005)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):   Caused by: java.lang.IllegalStateException
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:12:05.763 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427): Reset failed.
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):   java.lang.IllegalStateException
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_stop(Native Method)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.stop(MediaCodec.java:2251)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.release(SynchronousMediaCodecAdapter.java:172)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.releaseCodec(MediaCodecRenderer.java:893)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.onReset(MediaCodecRenderer.java:870)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.onReset(MediaCodecVideoRenderer.java:1220)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.reset(BaseRenderer.java:270)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.maybeResetRenderer(RendererHolder.java:767)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.reset(RendererHolder.java:757)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.resetInternal(ExoPlayerImplInternal.java:2096)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.stopInternal(ExoPlayerImplInternal.java:2042)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:970)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:12:05.765 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:12:06.710 E/OMXNodeInstance(  446): getExtensionIndex(0xeb880da0:google.hevc.decoder, OMX.google.android.index.enableAndroidNativeBuffers) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:06.710 E/ACodec  ( 2427): [OMX.google.hevc.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:12:06.710 E/OMXNodeInstance(  446): getParameter(0xeb880da0:google.hevc.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:06.711 E/OMXNodeInstance(  446): setConfig(0xeb880da0:google.hevc.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:06.711 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:06.711 E/OMXNodeInstance(  446): getConfig(0xeb880da0:google.hevc.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:12:06.715 E/SoftHEVC(  446): Fatal Error : 0x43dd
+10-19 21:12:06.715 E/ACodec  ( 2427): [OMX.google.hevc.decoder] ERROR(0x80001019)
+10-19 21:12:06.715 E/ACodec  ( 2427): signalError(omxError 0x80001019, internalError -2147483648)
+10-19 21:12:06.715 E/MediaCodec( 2427): Codec reported err 0x80001019, actionCode 0, while in state 6
+10-19 21:12:06.719 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:06.719 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:06.719 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:06.719 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:06.720 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:06.720 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427): Video codec error
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):   java.lang.IllegalStateException
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:12:06.723 E/MediaCodecVideoRenderer( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427): Playback error
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):   androidx.media3.exoplayer.ExoPlaybackException: MediaCodecVideoRenderer error, index=0, format=Format(1/256, null, video/mp2t, video/hevc, hvc1.2.4.L150.90, -1, null, [3840, 2160, -1.0, ColorInfo(Unset color space, Limited range, Unset color transfer, false, 10bit Luma, 10bit Chroma)], [-1, -1, -1]), format_supported=NO_EXCEEDS_CAPABILITIES
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.createRendererException(BaseRenderer.java:586)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1011)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.render(MediaCodecVideoRenderer.java:1453)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.render(RendererHolder.java:425)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.doSomeWork(ExoPlayerImplInternal.java:1484)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:765)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):   Caused by: androidx.media3.exoplayer.video.MediaCodecVideoDecoderException: Decoder failed: OMX.google.hevc.decoder
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.createDecoderException(MediaCodecVideoRenderer.java:2777)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:1005)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):   Caused by: java.lang.IllegalStateException
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_dequeueOutputBuffer(Native Method)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.dequeueOutputBuffer(MediaCodec.java:3452)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.dequeueOutputBufferIndex(SynchronousMediaCodecAdapter.java:113)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.drainOutputBuffer(MediaCodecRenderer.java:2253)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.render(MediaCodecRenderer.java:981)
+10-19 21:12:06.723 E/ExoPlayerImplInternal( 2427):       ... 7 more
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427): Reset failed.
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):   java.lang.IllegalStateException
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.native_stop(Native Method)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at android.media.MediaCodec.stop(MediaCodec.java:2251)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.SynchronousMediaCodecAdapter.release(SynchronousMediaCodecAdapter.java:172)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.releaseCodec(MediaCodecRenderer.java:893)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.mediacodec.MediaCodecRenderer.onReset(MediaCodecRenderer.java:870)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.video.MediaCodecVideoRenderer.onReset(MediaCodecVideoRenderer.java:1220)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.BaseRenderer.reset(BaseRenderer.java:270)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.maybeResetRenderer(RendererHolder.java:767)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.RendererHolder.reset(RendererHolder.java:757)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.resetInternal(ExoPlayerImplInternal.java:2096)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.stopInternal(ExoPlayerImplInternal.java:2042)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at androidx.media3.exoplayer.ExoPlayerImplInternal.handleMessage(ExoPlayerImplInternal.java:970)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at android.os.Handler.dispatchMessage(Handler.java:102)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at android.os.Looper.loop(Looper.java:223)
+10-19 21:12:06.724 E/ExoPlayerImplInternal( 2427):       at android.os.HandlerThread.run(HandlerThread.java:67)
+10-19 21:12:07.393 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:12:08.030 I/ActivityManager(  508): Start proc 2687:android.process.acore/u0a63 for content provider {com.android.providers.contacts/com.android.providers.contacts.VoicemailContentProvider}
+10-19 21:12:38.719 I/AyuTour ( 2427): live[1] UHD Test HEVC: ready=false startup_ms=0 0x0 fps=0.0 codec= decoder=OMX.google.hevc.decoder dropped=0 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen
+10-19 21:12:38.759 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:12:38.763 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (84266)
+10-19 21:12:38.765 I/ActivityManager(  508): Killing 2068:com.android.deskclock/u0a108 (adj 985): empty #17
+10-19 21:12:38.881 I/ActivityTaskManager(  508): Displayed de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity: +119ms
+10-19 21:12:39.153 E/Layer   (  346): [Surface(name=Task=15)/@0x7717ab8 - animation-leash#0] No local sync point found
+10-19 21:12:39.153 E/Layer   (  346): [Surface(name=Task=15)/@0x7717ab8 - animation-leash#0] No local sync point found
+10-19 21:12:39.153 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:12:39.153 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:12:40.553 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:12:40.557 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (86620)
+10-19 21:12:40.880 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:12:40.883 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +314ms
+10-19 21:12:40.916 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:12:40.916 E/OMXNodeInstance(  446): getParameter(0xeb880160:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:40.916 E/OMXNodeInstance(  446): setConfig(0xeb880160:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:40.917 E/OMXNodeInstance(  446): getConfig(0xeb880160:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:40.917 E/OMXNodeInstance(  446): getConfig(0xeb880160:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:12:41.102 E/OMXNodeInstance(  446): getConfig(0xeb880160:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:12:41.120 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:41.120 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:41.120 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:41.120 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:41.121 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:41.121 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:41.150 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:12:41.150 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:12:42.166 E/OMXNodeInstance(  446): setConfig(0xeb880160:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:12:43.539 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:12:49.319 I/AyuTour ( 2427): live[2] HLS Test: ready=true startup_ms=377 1280x720 fps=25.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=0 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=null
+10-19 21:12:49.497 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:12:49.505 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (120143)
+10-19 21:12:50.114 E/Layer   (  346): [Surface(name=Task=16)/@0xabcdec7 - animation-leash#0] No local sync point found
+10-19 21:12:50.114 E/Layer   (  346): [Surface(name=Task=16)/@0xabcdec7 - animation-leash#0] No local sync point found
+10-19 21:12:50.114 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:12:50.114 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:12:50.304 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:12:50.304 E/EGL_emulation( 2427): tid 2751: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:12:51.986 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:12:51.988 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (121937)
+10-19 21:12:52.183 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:12:52.183 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:12:52.183 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:12:52.183 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:12:52.240 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +246ms
+10-19 21:12:52.416 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:12:52.461 E/EffectHalHidl(  358): Buffer provider callbacks are not supported
+10-19 21:12:54.145 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:13:00.516 I/AyuTour ( 2427): live[3] Atmos Ton Test: ready=true startup_ms=0 0x0 fps=0.0 codec= decoder= dropped=0 hdr= audio=/0ch audio_decoder=ffmpegLavc60.3.100-eac3 message=null
+10-19 21:13:00.559 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:13:00.563 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (130884)
+10-19 21:13:00.805 E/Layer   (  346): [Surface(name=Task=18)/@0x2b41bc3 - animation-leash#0] No local sync point found
+10-19 21:13:00.805 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:00.834 E/Layer   (  346): [Surface(name=Task=18)/@0x2b41bc3 - animation-leash#0] No local sync point found
+10-19 21:13:00.834 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:02.597 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:13:02.605 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (133368)
+10-19 21:13:02.920 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +262ms
+10-19 21:13:03.030 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:13:03.050 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:13:03.051 E/OMXNodeInstance(  446): getParameter(0xeb881510:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:03.051 E/OMXNodeInstance(  446): setConfig(0xeb881510:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:03.051 E/OMXNodeInstance(  446): getConfig(0xeb881510:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:03.051 E/OMXNodeInstance(  446): getConfig(0xeb881510:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:03.127 E/OMXNodeInstance(  446): getConfig(0xeb881510:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:03.192 E/EffectHalHidl(  358): Buffer provider callbacks are not supported
+10-19 21:13:03.752 E/OMXNodeInstance(  446): setConfig(0xeb881510:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:05.222 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:13:11.303 I/AyuTour ( 2427): live[4] EAC3 Ton Test: ready=true startup_ms=302 1280x720 fps=25.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=0 hdr= audio=eac3/6ch audio_decoder=ffmpegLavc60.3.100-eac3 message=null
+10-19 21:13:11.379 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:13:11.386 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (141943)
+10-19 21:13:11.580 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:13:11.580 E/EGL_emulation( 2427): tid 2797: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:13:11.858 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:11.858 E/Layer   (  346): [Surface(name=Task=21)/@0xd093bf8 - animation-leash#0] No local sync point found
+10-19 21:13:11.915 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:11.915 E/Layer   (  346): [Surface(name=Task=21)/@0xd093bf8 - animation-leash#0] No local sync point found
+10-19 21:13:13.255 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:13:13.258 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (143986)
+10-19 21:13:13.482 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +222ms
+10-19 21:13:13.546 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:13:13.676 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:13:13.678 E/OMXNodeInstance(  446): getParameter(0xeb880e10:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:13.712 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:13.712 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:13.712 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:13.738 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:13.738 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:13.738 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:13.738 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:13.739 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:13.739 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:13.792 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:13.889 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:13.889 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:14.765 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:16.122 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:13:22.185 I/AyuTour ( 2427): live[5] Wackelige Leitung: ready=true startup_ms=340 1920x1080 fps=0.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=652 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=null
+10-19 21:13:22.283 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:13:22.326 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (152766)
+10-19 21:13:22.607 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:13:22.607 E/EGL_emulation( 2427): tid 2825: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:13:23.019 E/Layer   (  346): [Surface(name=Task=23)/@0x23b6f08 - animation-leash#0] No local sync point found
+10-19 21:13:23.019 E/Layer   (  346): [Surface(name=Task=23)/@0x23b6f08 - animation-leash#0] No local sync point found
+10-19 21:13:23.019 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:23.019 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:24.443 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:13:24.447 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (154638)
+10-19 21:13:24.641 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +195ms
+10-19 21:13:24.829 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:13:24.855 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:13:24.855 E/OMXNodeInstance(  446): getParameter(0xeb880a20:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:24.855 E/OMXNodeInstance(  446): setConfig(0xeb880a20:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:24.855 E/OMXNodeInstance(  446): getConfig(0xeb880a20:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:24.855 E/OMXNodeInstance(  446): getConfig(0xeb880a20:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:24.947 E/OMXNodeInstance(  446): getConfig(0xeb880a20:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:24.948 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:24.948 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:24.948 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:24.948 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:24.949 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:24.949 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:24.970 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:24.970 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:25.182 I/AyuTour ( 2427): catchup: channel=DE | Xtream 4K days=3 url=/timeshift/ayu/test/30/2026-10-19:20-13/102.ts ready=true
+10-19 21:13:25.191 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:13:25.202 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (163706)
+10-19 21:13:25.403 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:13:25.403 E/EGL_emulation( 2427): tid 2848: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:13:25.868 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:25.868 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:13:25.868 E/Layer   (  346): [Surface(name=Task=25)/@0xe641d0 - animation-leash#0] No local sync point found
+10-19 21:13:25.868 E/Layer   (  346): [Surface(name=Task=25)/@0xe641d0 - animation-leash#0] No local sync point found
+10-19 21:13:26.114 I/AyuTour ( 2427): reminder: set=true stored=true removed=true
+10-19 21:13:26.136 I/AyuTour ( 2427): parental: before=8 locked=6 wrong_pin_accepted=false unlocked=8
+10-19 21:13:27.586 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:13:27.644 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:13:27.648 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (165827)
+10-19 21:13:28.126 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +313ms
+10-19 21:13:28.130 E/IPCThreadState(  420): binder thread pool (1 threads) starved for 162 ms
+10-19 21:13:28.395 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:13:28.432 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:13:28.432 E/OMXNodeInstance(  446): getParameter(0xeb880010:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:28.432 E/OMXNodeInstance(  446): setConfig(0xeb880010:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:28.432 E/OMXNodeInstance(  446): getConfig(0xeb880010:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:28.432 E/OMXNodeInstance(  446): getConfig(0xeb880010:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:28.594 E/OMXNodeInstance(  446): getConfig(0xeb880010:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:13:28.606 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:28.606 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:28.607 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:28.607 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:28.607 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:28.608 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:28.661 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:13:28.661 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:13:29.751 E/OMXNodeInstance(  446): setConfig(0xeb880010:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:13:31.474 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:13:52.244 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:13:52.245 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:13:52.245 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:13:52.245 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:13:59.417 I/AyuTour ( 2427): afr_tunneling: playing_s=30 fps=0.0 measured=false messages=[]
+10-19 21:13:59.420 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:13:59.498 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (166582)
+10-19 21:13:59.835 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:13:59.844 E/EGL_emulation( 2427): tid 2878: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:14:00.168 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:14:00.168 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:14:00.168 E/Layer   (  346): [Surface(name=Task=27)/@0x4ec0146 - animation-leash#0] No local sync point found
+10-19 21:14:00.168 E/Layer   (  346): [Surface(name=Task=27)/@0x4ec0146 - animation-leash#0] No local sync point found
+10-19 21:14:01.802 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:14:01.806 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (169028)
+10-19 21:14:02.031 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:14:02.088 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +229ms
+10-19 21:14:02.122 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:14:02.122 E/OMXNodeInstance(  446): getParameter(0xeb880e10:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:02.129 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:02.129 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:02.132 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:14:02.423 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:14:02.429 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:02.429 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:02.429 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:02.429 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:02.430 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:02.430 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:02.536 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:02.536 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:03.373 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:04.226 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:14:52.279 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:14:52.279 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:14:52.279 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:14:52.279 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:14:53.077 I/AyuTour ( 2427): flaky: playing_s=50 buffering_s=0 cushion=false message=null
+10-19 21:14:53.078 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:14:53.106 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (200878)
+10-19 21:14:53.650 E/Layer   (  346): [Surface(name=Task=28)/@0xc4316c4 - animation-leash#0] No local sync point found
+10-19 21:14:53.650 E/Layer   (  346): [Surface(name=Task=28)/@0xc4316c4 - animation-leash#0] No local sync point found
+10-19 21:14:53.650 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:14:53.650 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:14:53.935 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:14:53.935 E/EGL_emulation( 2427): tid 2907: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:14:54.292 I/AyuTour ( 2427): opensubtitles: check=[true:OpenSubtitles: API-Key gültig (ohne Anmeldung nur wenige Downloads pro Tag)] inception_de=5 matrix_en=50
+10-19 21:14:55.799 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:14:55.806 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (203186)
+10-19 21:14:56.093 I/AyuTour ( 2427): vod launched state=RESUMED
+10-19 21:14:56.098 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +292ms
+10-19 21:14:56.220 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:14:56.228 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:14:56.228 E/OMXNodeInstance(  446): getParameter(0xeb880a20:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:56.228 E/OMXNodeInstance(  446): setConfig(0xeb880a20:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:56.228 E/OMXNodeInstance(  446): getConfig(0xeb880a20:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:56.229 E/OMXNodeInstance(  446): getConfig(0xeb880a20:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:14:56.325 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:56.326 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:56.327 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:56.327 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:56.327 E/OMXNodeInstance(  446): getConfig(0xeb880a20:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:14:56.328 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:56.328 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:56.444 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:14:56.445 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:14:57.429 E/OMXNodeInstance(  446): setConfig(0xeb880a20:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:14:57.801 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:14:59.766 I/AyuTour ( 2427): vod DE - Xtream Film (2023) [FHD]: ready=true text_tracks=1 subtitles_off_by_default=true
+10-19 21:15:06.346 I/AyuTour ( 2427): vod subtitle_enabled=true dropped=0
+10-19 21:15:06.548 I/ActivityManager(  508): Start proc 2932:de.ayutv:mt/u0a130 for service {de.ayutv/de.ayutv.data.translate.TranslationService}
+10-19 21:15:34.583 I/AyuTour ( 2427): translate_id: ok=true target=id cue=- Dimana dia? - Aku tidak tahu. statuses=[Übersetze Englisch → Indonesisch mit DnA-Übersetzer (auf dem Gerät), Lade Übersetzer Englisch → Indonesisch: 0 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 5 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 10 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 15 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 20 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 25 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 30 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 35 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 40 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 45 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 50 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 55 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 60 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 65 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 70 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 75 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 80 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 85 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 90 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 95 % (einmalig ca. 115 MB), Starte Übersetzer Englisch → Indonesisch … (frei: 1852 MB)]
+10-19 21:15:52.340 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:15:52.340 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:15:52.340 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:15:52.340 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:15:57.147 I/AyuTour ( 2427): translate_de: target=de cue=Danke für alles.
+10-19 21:15:59.197 I/AyuTour ( 2427): vod after_seek position_ms=90833 message=null
+10-19 21:15:59.317 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:15:59.322 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (254486)
+10-19 21:15:59.746 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:15:59.746 E/EGL_emulation( 2427): tid 2970: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:15:59.932 E/Layer   (  346): [Surface(name=Task=31)/@0x920e51a - animation-leash#0] No local sync point found
+10-19 21:15:59.932 E/Layer   (  346): [Surface(name=Task=31)/@0x920e51a - animation-leash#0] No local sync point found
+10-19 21:15:59.932 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:15:59.932 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:16:01.741 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:16:01.744 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (257186)
+10-19 21:16:01.747 I/ActivityManager(  508): Killing 2101:com.android.dynsystem/1000 (adj 985): empty #17
+10-19 21:16:02.208 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +422ms
+10-19 21:16:02.431 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:16:02.549 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:16:02.549 E/OMXNodeInstance(  446): getParameter(0xeb880320:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:02.549 E/OMXNodeInstance(  446): setConfig(0xeb880320:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:02.550 E/OMXNodeInstance(  446): getConfig(0xeb880320:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:02.550 E/OMXNodeInstance(  446): getConfig(0xeb880320:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:16:02.564 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:02.564 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:02.564 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:02.564 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:02.565 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:02.565 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:02.589 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:02.589 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:02.676 E/OMXNodeInstance(  446): getConfig(0xeb880320:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:16:03.071 E/OMXNodeInstance(  446): setConfig(0xeb880320:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:04.064 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:16:23.458 I/AyuTour ( 2427): subtitle_sync: ok=true timing=SubtitleTiming(ratio=1.0, offsetMs=-2500) cue=Bonjour numéro 28 statuses=[Untertitel automatisch angepasst (-2,5 s)]
+10-19 21:16:23.462 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:16:23.497 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (320702)
+10-19 21:16:23.934 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:16:23.934 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:16:23.934 E/Layer   (  346): [Surface(name=Task=33)/@0x108c231 - animation-leash#0] No local sync point found
+10-19 21:16:23.935 E/Layer   (  346): [Surface(name=Task=33)/@0x108c231 - animation-leash#0] No local sync point found
+10-19 21:16:24.009 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:16:24.009 E/EGL_emulation( 2427): tid 3005: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:16:25.759 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:16:25.762 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (323124)
+10-19 21:16:26.005 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +245ms
+10-19 21:16:26.238 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:16:26.280 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:16:26.281 E/OMXNodeInstance(  446): getParameter(0xeb880010:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:26.281 E/OMXNodeInstance(  446): setConfig(0xeb880010:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:26.281 E/OMXNodeInstance(  446): getConfig(0xeb880010:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:26.281 E/OMXNodeInstance(  446): getConfig(0xeb880010:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:16:26.316 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:26.316 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:26.316 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:26.316 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:26.316 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:26.316 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:26.364 E/OMXNodeInstance(  446): getConfig(0xeb880010:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:16:26.379 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:16:26.379 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:16:26.661 E/OMXNodeInstance(  446): setConfig(0xeb880010:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:16:28.233 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:16:52.403 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:16:52.403 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:16:52.403 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:16:52.403 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:17:52.462 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:17:52.462 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:17:52.490 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:17:52.490 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:18:52.522 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:18:52.522 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:18:52.525 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:18:52.525 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+--------- beginning of kernel
+10-19 21:19:52.587 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:19:52.587 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:19:52.593 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:19:52.593 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:20:24.121 I/AyuTour ( 2427): wrong_subtitles: rejected=true synced=false statuses=[Diese Untertitel gehören zu einem anderen Film. Suche passende …, Keine passenden Untertitel in Italienisch gefunden]
+10-19 21:20:24.130 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:20:24.179 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (344877)
+10-19 21:20:24.183 I/ActivityManager(  508): Killing 1790:com.android.managedprovisioning/u0a73 (adj 985): empty #17
+10-19 21:20:24.500 E/IPCThreadState(  420): binder thread pool (1 threads) starved for 156 ms
+10-19 21:20:24.553 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:20:24.553 E/EGL_emulation( 2427): tid 3033: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:20:24.579 I/ActivityTaskManager(  508): Displayed de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity: +213ms
+10-19 21:20:24.590 I/ActivityTaskManager(  508): Activity reported stop, but no longer stopping: ActivityRecord{ba8894d u0 de.ayutv/.player.PlayerActivity t34 f}}
+10-19 21:20:24.834 E/Layer   (  346): [Surface(name=Task=35)/@0xd3778 - animation-leash#0] No local sync point found
+10-19 21:20:24.834 E/Layer   (  346): [Surface(name=Task=35)/@0xd3778 - animation-leash#0] No local sync point found
+10-19 21:20:24.834 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:24.834 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:26.417 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:20:26.422 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (347142)
+10-19 21:20:26.815 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +259ms
+10-19 21:20:26.925 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:20:26.948 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:20:26.949 E/OMXNodeInstance(  446): getParameter(0xeb880e10:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:26.949 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:26.950 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:26.950 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:20:27.054 E/OMXNodeInstance(  446): getConfig(0xeb880e10:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:20:27.061 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:20:27.061 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:20:27.061 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:20:27.061 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:20:27.062 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:20:27.062 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:20:27.082 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:20:27.083 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:20:28.124 E/OMXNodeInstance(  446): setConfig(0xeb880e10:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:28.955 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:20:29.296 I/AyuTour ( 2427): episode Folge 1: ready=true message=null
+10-19 21:20:29.399 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:20:29.410 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (585559)
+10-19 21:20:29.808 I/ActivityTaskManager(  508): Displayed de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity: +306ms
+10-19 21:20:29.968 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:20:29.968 E/EGL_emulation( 2427): tid 3064: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:20:30.051 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:30.051 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:30.051 E/Layer   (  346): [Surface(name=Task=37)/@0xdd54be - animation-leash#0] No local sync point found
+10-19 21:20:30.051 E/Layer   (  346): [Surface(name=Task=37)/@0xdd54be - animation-leash#0] No local sync point found
+10-19 21:20:30.315 I/AyuTour ( 2427): audio_tests=5
+10-19 21:20:31.817 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:20:31.820 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (587802)
+10-19 21:20:32.111 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +264ms
+10-19 21:20:32.261 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:20:32.283 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:20:32.283 E/OMXNodeInstance(  446): getParameter(0xeb881200:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:32.284 E/OMXNodeInstance(  446): setConfig(0xeb881200:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:32.284 E/OMXNodeInstance(  446): getConfig(0xeb881200:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:32.290 E/OMXNodeInstance(  446): getConfig(0xeb881200:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:20:32.385 E/OMXNodeInstance(  446): getConfig(0xeb881200:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:20:33.035 E/OMXNodeInstance(  446): setConfig(0xeb881200:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:34.090 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:20:37.538 I/AyuTour ( 2427): audio Tontest TrueHD 5.1 (2025): ready=true advanced_ms=4916 audio=true-hd/6ch decoder=ffmpegLavc60.3.100-truehd tracks=[audio/true-hd] message=null status=null
+10-19 21:20:37.539 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:20:37.547 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (590793)
+10-19 21:20:37.793 I/ActivityTaskManager(  508): Displayed de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity: +250ms
+10-19 21:20:37.819 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:20:37.819 E/EGL_emulation( 2427): tid 3089: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:20:38.051 E/Layer   (  346): [Surface(name=Task=39)/@0x91b06e4 - animation-leash#0] No local sync point found
+10-19 21:20:38.051 E/Layer   (  346): [Surface(name=Task=39)/@0x91b06e4 - animation-leash#0] No local sync point found
+10-19 21:20:38.051 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:38.051 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:39.633 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:20:39.651 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (593200)
+10-19 21:20:39.906 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +271ms
+10-19 21:20:40.127 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:20:40.150 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:20:40.151 E/OMXNodeInstance(  446): getParameter(0xeb881510:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:40.169 E/OMXNodeInstance(  446): setConfig(0xeb881510:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:40.169 E/OMXNodeInstance(  446): getConfig(0xeb881510:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:40.169 E/OMXNodeInstance(  446): getConfig(0xeb881510:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:20:40.233 E/OMXNodeInstance(  446): getConfig(0xeb881510:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:20:40.306 E/EffectHalHidl(  358): Buffer provider callbacks are not supported
+10-19 21:20:40.807 E/OMXNodeInstance(  446): setConfig(0xeb881510:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:20:42.215 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:20:45.378 I/AyuTour ( 2427): audio Tontest DTS 5.1 erzeugt (2025): ready=true advanced_ms=5050 audio=vnd.dts/6ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts] message=null status=null
+10-19 21:20:45.380 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:20:45.419 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (598927)
+10-19 21:20:45.673 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:20:45.673 E/EGL_emulation( 2427): tid 3116: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:20:45.933 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:45.933 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:45.933 E/Layer   (  346): [Surface(name=Task=41)/@0x752b4eb - animation-leash#0] No local sync point found
+10-19 21:20:45.933 E/Layer   (  346): [Surface(name=Task=41)/@0x752b4eb - animation-leash#0] No local sync point found
+10-19 21:20:47.341 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:20:47.344 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (601032)
+10-19 21:20:47.700 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +285ms
+10-19 21:20:47.791 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:20:50.039 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:20:52.601 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:20:52.601 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:20:52.639 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:20:52.639 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:20:52.931 I/AyuTour ( 2427): audio Tontest DTS-HD MA (2025): ready=true advanced_ms=4848 audio=/0ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts.hd] message=null status=null
+10-19 21:20:52.933 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:20:52.944 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (606799)
+10-19 21:20:53.385 E/Layer   (  346): [Surface(name=Task=43)/@0x2c917d1 - animation-leash#0] No local sync point found
+10-19 21:20:53.385 E/Layer   (  346): [Surface(name=Task=43)/@0x2c917d1 - animation-leash#0] No local sync point found
+10-19 21:20:53.385 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:53.385 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:20:54.687 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:20:54.691 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (608724)
+10-19 21:20:54.857 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +141ms
+10-19 21:20:55.010 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:20:57.562 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:21:00.097 I/AyuTour ( 2427): audio Tontest DTS-X (2025): ready=true advanced_ms=4909 audio=/0ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts.hd] message=null status=null
+10-19 21:21:00.099 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:21:00.108 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (614324)
+10-19 21:21:00.532 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:21:00.533 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:21:00.533 E/Layer   (  346): [Surface(name=Task=45)/@0x35bc25 - animation-leash#0] No local sync point found
+10-19 21:21:00.533 E/Layer   (  346): [Surface(name=Task=45)/@0x35bc25 - animation-leash#0] No local sync point found
+10-19 21:21:01.829 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:21:01.833 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (616071)
+10-19 21:21:02.099 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +265ms
+10-19 21:21:02.293 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:21:04.736 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:21:07.422 I/AyuTour ( 2427): audio Tontest DTS echt (2025): ready=true advanced_ms=4805 audio=/0ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts] message=null status=null
+10-19 21:21:07.424 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:21:07.428 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (621488)
+10-19 21:21:07.703 E/Layer   (  346): [Surface(name=Task=46)/@0xce06575 - animation-leash#0] No local sync point found
+10-19 21:21:07.703 E/Layer   (  346): [Surface(name=Task=46)/@0xce06575 - animation-leash#0] No local sync point found
+10-19 21:21:07.703 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:21:07.703 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:21:10.066 I/AyuTour ( 2427): mt de: first_ms=910 per_sentence_ms=440 result=Hallo, wie geht's? | Ich sagte doch, wir hätten nie herkommen sollen. | - Wo ist er?/- Ich weiß es nicht. progress_events=1
+10-19 21:21:11.532 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:21:15.779 I/AyuTour ( 2427): mt pl (en-mul): Dziękuję za wszystko.
+10-19 21:21:15.780 I/AyuTour ( 2427): mt installed=[en-de, en-id, en-mul] bytes=519690332
+10-19 21:21:17.285 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:21:17.287 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (623214)
+10-19 21:21:17.479 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +142ms
+10-19 21:21:17.652 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:21:17.660 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:21:17.660 E/OMXNodeInstance(  446): getParameter(0xeb8806a0:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:17.660 E/OMXNodeInstance(  446): setConfig(0xeb8806a0:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:17.660 E/OMXNodeInstance(  446): getConfig(0xeb8806a0:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:17.660 E/OMXNodeInstance(  446): getConfig(0xeb8806a0:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:21:17.750 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:17.750 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:17.750 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:17.750 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:17.751 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:17.751 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:17.770 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:17.770 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:17.876 E/OMXNodeInstance(  446): getConfig(0xeb8806a0:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:21:18.978 E/OMXNodeInstance(  446): setConfig(0xeb8806a0:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:20.902 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:21:24.266 I/AyuTour ( 2427): file_translation: ok=true cue=Wo ist mein Bruder? target=null statuses=[Übersetze Englisch → Deutsch mit DnA-Übersetzer (auf dem Gerät), Starte Übersetzer Englisch → Deutsch … (frei: 2025 MB)]
+10-19 21:21:24.270 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:21:24.277 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (628808)
+10-19 21:21:24.660 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:21:24.660 E/EGL_emulation( 2427): tid 3215: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:21:24.667 I/ActivityTaskManager(  508): Displayed de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity: +314ms
+10-19 21:21:24.904 E/Layer   (  346): [Surface(name=Task=49)/@0xd2545d1 - animation-leash#0] No local sync point found
+10-19 21:21:24.904 E/Layer   (  346): [Surface(name=Task=49)/@0xd2545d1 - animation-leash#0] No local sync point found
+10-19 21:21:24.904 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:21:24.904 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:21:26.820 I/AyuTour ( 2427): translator_selftest: Texterkennung ok: „Where is my brother?“ (1461 ms) | Übersetzung Deutsch ok: „Wo ist mein Bruder?“ (473 ms, inkl. Laden) | Rechenkern: ONNX Runtime | Speicher Übersetzer: höchstens 496 MB, belegt 93 MB | Prozessor: Android virtual processor
+10-19 21:21:27.328 I/ActivityManager(  508): Process de.ayutv:mt (pid 2932) has died: cch+5 CEM 
+10-19 21:21:28.343 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:21:28.829 I/ActivityManager(  508): Start proc 3232:de.ayutv:mt/u0a130 for service {de.ayutv/de.ayutv.data.translate.TranslationService}
+10-19 21:21:34.443 I/AyuTour ( 2427): translator_selftest_kern: Texterkennung ok: „Where is my brother?“ (713 ms) | Übersetzung Spanisch ok: „¿Dónde está mi hermano?“ (4906 ms, inkl. Laden) | Rechenkern: DnA-Rechenkern (ohne native Bibliothek) | Speicher Übersetzer: höchstens 463 MB, belegt 59 MB | Prozessor: Android virtual processor
+10-19 21:21:34.951 I/ActivityManager(  508): Process de.ayutv:mt (pid 3232) has died: cch+5 CEM 
+10-19 21:21:37.948 I/ActivityTaskManager(  508): START u0 {flg=0x10008000 cmp=de.ayutv/.player.PlayerActivity (has extras)} from uid 10130
+10-19 21:21:37.954 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (638667)
+10-19 21:21:38.247 I/ActivityTaskManager(  508): Displayed de.ayutv/.player.PlayerActivity: +288ms
+10-19 21:21:38.327 E/android.hardware.audio.service.ranchu(  286): device/generic/goldfish/audio/primary_device.cpp:getParameters:234 failure: Result::NOT_SUPPORTED
+10-19 21:21:38.381 E/ACodec  ( 2427): [OMX.android.goldfish.h264.decoder] setPortMode on output to DynamicANWBuffer failed w/ err -1010
+10-19 21:21:38.381 E/OMXNodeInstance(  446): getParameter(0xeb8805c0:android.goldfish.h264.decoder, ??(0x6f600011)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:38.381 E/OMXNodeInstance(  446): setConfig(0xeb8805c0:android.goldfish.h264.decoder, ConfigPriority(0x6f800002)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:38.381 E/OMXNodeInstance(  446): getConfig(0xeb8805c0:android.goldfish.h264.decoder, ConfigAndroidVendorExtension(0x6f100004)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:38.381 E/OMXNodeInstance(  446): getConfig(0xeb8805c0:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:21:38.452 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:38.452 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:38.452 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:38.452 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:38.453 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:38.453 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:38.490 E/OMXNodeInstance(  446): getConfig(0xeb8805c0:android.goldfish.h264.decoder, ??(0x7f000003)) ERROR: UnsupportedSetting(0x80001019)
+10-19 21:21:38.529 E/FMQ     (  453): grantorIdx must be less than 3
+10-19 21:21:38.529 E/FMQ     ( 2427): grantorIdx must be less than 3
+10-19 21:21:38.828 I/AyuTour ( 2427): bitmap_translation tracks=[en/application/pgs]
+10-19 21:21:39.157 I/ActivityManager(  508): Start proc 3285:de.ayutv:mt/u0a130 for service {de.ayutv/de.ayutv.data.translate.TranslationService}
+10-19 21:21:39.616 E/OMXNodeInstance(  446): setConfig(0xeb8805c0:android.goldfish.h264.decoder, ConfigOperatingRate(0x6f800003)) ERROR: UnsupportedIndex(0x8000101a)
+10-19 21:21:41.555 E/TaskPersister(  508): File error accessing recents directory (directory doesn't exist?).
+10-19 21:21:52.659 E/wifi_forwarder(  477): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:wififorward' service: Invalid argument
+10-19 21:21:52.659 E/wifi_forwarder(  477): RemoteConnection failed to initialize: RemoteConnection failed to open pipe
+10-19 21:21:52.681 E/netmgr  (  466): qemu_pipe_open_ns:62: Could not connect to the 'pipe:qemud:network' service: Invalid argument
+10-19 21:21:52.681 E/netmgr  (  466): Failed to open QEMU pipe 'qemud:network': Invalid argument
+10-19 21:22:16.818 I/AyuTour ( 2427): bitmap_translation: ok=true cue=Ich sagte doch, wir hätten nie herkommen sollen. seen=[Ich sagte doch, wir hätten nie herkommen sollen.] statuses=[Übersetze Bild-Untertitel Englisch → Deutsch mit DnA-Übersetzer (auf dem Gerät), Starte Übersetzer Englisch → Deutsch … (frei: 2002 MB)]
+10-19 21:22:16.820 I/AyuTour ( 2427): bitmap_translation mt_process=de.ayutv:mt pid=3285
+10-19 21:22:16.871 I/ActivityManager(  508): Process de.ayutv:mt (pid 3285) has died: vis TRNB
+10-19 21:22:16.872 W/ActivityManager(  508): Scheduling restart of crashed service de.ayutv/.data.translate.TranslationService in 1000ms for connection
+10-19 21:22:17.881 I/ActivityManager(  508): Start proc 3308:de.ayutv:mt/u0a130 for service {de.ayutv/de.ayutv.data.translate.TranslationService}
+10-19 21:22:22.847 I/AyuTour ( 2427): translator_killed: film_alive=true status=Starte Übersetzer Englisch → Deutsch … (frei: 1997 MB) statuses=[Starte Übersetzer Englisch → Deutsch … (frei: 2002 MB), Starte Übersetzer Englisch → Deutsch … (frei: 1997 MB)]
+10-19 21:22:22.851 I/ActivityTaskManager(  508): START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10000000 cmp=de.ayutv.test/androidx.test.core.app.InstrumentationActivityInvoker$EmptyActivity} from uid 10130
+10-19 21:22:22.863 W/ActivityTaskManager(  508): Tried to set launchTime (0) < mLastActivityLaunchTime (645657)
+10-19 21:22:23.227 E/EGL_emulation( 2427): eglQueryContext 32c0  EGL_BAD_ATTRIBUTE
+10-19 21:22:23.227 E/EGL_emulation( 2427): tid 3337: eglQueryContext(2019): error 0x3004 (EGL_BAD_ATTRIBUTE)
+10-19 21:22:23.259 E/Layer   (  346): [Surface(name=Task=51)/@0xa3f2268 - animation-leash#0] No local sync point found
+10-19 21:22:23.259 E/Layer   (  346): [Surface(name=Task=51)/@0xa3f2268 - animation-leash#0] No local sync point found
+10-19 21:22:23.259 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:22:23.259 E/Layer   (  346): [Surface(name=Task=1)/@0xc0d24f7 - animation-leash#0] No local sync point found
+10-19 21:22:24.866 I/AyuTour ( 2427): big: import_ms=1210 channels_total=3008 programmes_total=36120 now_playing_all_ms=37 now_found=3003 sync=Idle
+10-19 21:22:25.254 I/AyuTour ( 2427): phone_setup: url=http://10.0.2.16:8095/939618 get=200 has_form=true post=200 user=ayu-ci report=✓ OpenSubtitles: API-Key gültig (ohne Anmeldung nur wenige Downloads pro Tag)
+10-19 21:22:25.285 I/AyuTour ( 2427): search_all: channels=3000 programmes=0 ms=26
+10-19 21:22:25.296 I/AyuTour ( 2427): search_history=[tagesschau, Sender]
+10-19 21:22:25.332 I/AyuTour ( 2427): playlist_toggle: before=3008 off=8 search_off=0 on=3008
+10-19 21:22:25.332 I/AyuTour ( 2427): done failures=0
+10-19 21:22:25.337 I/ActivityManager(  508): Force stopping de.ayutv appid=10130 user=0: finished inst
+10-19 21:22:25.338 I/ActivityManager(  508): Killing 2427:de.ayutv/u0a130 (adj 0): stop de.ayutv due to finished inst
+10-19 21:22:25.338 I/ActivityManager(  508): Killing 3308:de.ayutv:mt/u0a130 (adj 905): stop de.ayutv due to finished inst
+10-19 21:22:25.371 W/ActivityManager(  508): setHasOverlayUi called on unknown pid: 2427

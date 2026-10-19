@@ -1,0 +1,50 @@
+db_version=3 playlists_before=0
+regex: plain=Hallo Welt title=Der Film year=2020
+import_ms=55 channels=6 programmes=72 sync=Idle
+xtream: wrong_login_rejected=true login=ok import_ms=63 channels_total=8 movies=9 series=1 episodes=2 sync=Idle
+live[0] HD Test 50fps: ready=true startup_ms=602 1920x1080 fps=0.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=517 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=null
+zap1 now=UHD Test HEVC message=Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen
+zap: ready=true startup_ms=294 now=HLS Test
+zap_burst: ready=true moved=3 expected=3 now=Wackelige Leitung
+live[1] UHD Test HEVC: ready=false startup_ms=0 0x0 fps=0.0 codec= decoder=OMX.google.hevc.decoder dropped=0 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=Dieses Gerät kann HEVC 10 Bit in 4K nicht abspielen
+live[2] HLS Test: ready=true startup_ms=377 1280x720 fps=25.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=0 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=null
+live[3] Atmos Ton Test: ready=true startup_ms=0 0x0 fps=0.0 codec= decoder= dropped=0 hdr= audio=/0ch audio_decoder=ffmpegLavc60.3.100-eac3 message=null
+live[4] EAC3 Ton Test: ready=true startup_ms=302 1280x720 fps=25.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=0 hdr= audio=eac3/6ch audio_decoder=ffmpegLavc60.3.100-eac3 message=null
+live[5] Wackelige Leitung: ready=true startup_ms=340 1920x1080 fps=0.0 codec=avc decoder=OMX.android.goldfish.h264.decoder dropped=652 hdr= audio=mp4a-latm/1ch audio_decoder=c2.android.aac.decoder message=null
+catchup: channel=DE | Xtream 4K days=3 url=/timeshift/ayu/test/30/2026-10-19:20-13/102.ts ready=true
+reminder: set=true stored=true removed=true
+parental: before=8 locked=6 wrong_pin_accepted=false unlocked=8
+afr_tunneling: playing_s=30 fps=0.0 measured=false messages=[]
+flaky: playing_s=50 buffering_s=0 cushion=false message=null
+opensubtitles: check=[true:OpenSubtitles: API-Key gültig (ohne Anmeldung nur wenige Downloads pro Tag)] inception_de=5 matrix_en=50
+vod launched state=RESUMED
+vod DE - Xtream Film (2023) [FHD]: ready=true text_tracks=1 subtitles_off_by_default=true
+vod subtitle_enabled=true dropped=0
+translate_id: ok=true target=id cue=- Dimana dia? - Aku tidak tahu. statuses=[Übersetze Englisch → Indonesisch mit DnA-Übersetzer (auf dem Gerät), Lade Übersetzer Englisch → Indonesisch: 0 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 5 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 10 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 15 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 20 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 25 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 30 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 35 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 40 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 45 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 50 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 55 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 60 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 65 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 70 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 75 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 80 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 85 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 90 % (einmalig ca. 115 MB), Lade Übersetzer Englisch → Indonesisch: 95 % (einmalig ca. 115 MB), Starte Übersetzer Englisch → Indonesisch … (frei: 1852 MB)]
+translate_de: target=de cue=Danke für alles.
+vod after_seek position_ms=90833 message=null
+subtitle_sync: ok=true timing=SubtitleTiming(ratio=1.0, offsetMs=-2500) cue=Bonjour numéro 28 statuses=[Untertitel automatisch angepasst (-2,5 s)]
+wrong_subtitles: rejected=true synced=false statuses=[Diese Untertitel gehören zu einem anderen Film. Suche passende …, Keine passenden Untertitel in Italienisch gefunden]
+episode Folge 1: ready=true message=null
+audio_tests=5
+audio Tontest TrueHD 5.1 (2025): ready=true advanced_ms=4916 audio=true-hd/6ch decoder=ffmpegLavc60.3.100-truehd tracks=[audio/true-hd] message=null status=null
+audio Tontest DTS 5.1 erzeugt (2025): ready=true advanced_ms=5050 audio=vnd.dts/6ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts] message=null status=null
+audio Tontest DTS-HD MA (2025): ready=true advanced_ms=4848 audio=/0ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts.hd] message=null status=null
+audio Tontest DTS-X (2025): ready=true advanced_ms=4909 audio=/0ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts.hd] message=null status=null
+audio Tontest DTS echt (2025): ready=true advanced_ms=4805 audio=/0ch decoder=ffmpegLavc60.3.100-dca tracks=[audio/vnd.dts] message=null status=null
+mt de: first_ms=910 per_sentence_ms=440 result=Hallo, wie geht's? | Ich sagte doch, wir hätten nie herkommen sollen. | - Wo ist er?/- Ich weiß es nicht. progress_events=1
+mt pl (en-mul): Dziękuję za wszystko.
+mt installed=[en-de, en-id, en-mul] bytes=519690332
+file_translation: ok=true cue=Wo ist mein Bruder? target=null statuses=[Übersetze Englisch → Deutsch mit DnA-Übersetzer (auf dem Gerät), Starte Übersetzer Englisch → Deutsch … (frei: 2025 MB)]
+translator_selftest: Texterkennung ok: „Where is my brother?“ (1461 ms) | Übersetzung Deutsch ok: „Wo ist mein Bruder?“ (473 ms, inkl. Laden) | Rechenkern: ONNX Runtime | Speicher Übersetzer: höchstens 496 MB, belegt 93 MB | Prozessor: Android virtual processor
+translator_selftest_kern: Texterkennung ok: „Where is my brother?“ (713 ms) | Übersetzung Spanisch ok: „¿Dónde está mi hermano?“ (4906 ms, inkl. Laden) | Rechenkern: DnA-Rechenkern (ohne native Bibliothek) | Speicher Übersetzer: höchstens 463 MB, belegt 59 MB | Prozessor: Android virtual processor
+bitmap_translation tracks=[en/application/pgs]
+bitmap_translation: ok=true cue=Ich sagte doch, wir hätten nie herkommen sollen. seen=[Ich sagte doch, wir hätten nie herkommen sollen.] statuses=[Übersetze Bild-Untertitel Englisch → Deutsch mit DnA-Übersetzer (auf dem Gerät), Starte Übersetzer Englisch → Deutsch … (frei: 2002 MB)]
+bitmap_translation mt_process=de.ayutv:mt pid=3285
+translator_killed: film_alive=true status=Starte Übersetzer Englisch → Deutsch … (frei: 1997 MB) statuses=[Starte Übersetzer Englisch → Deutsch … (frei: 2002 MB), Starte Übersetzer Englisch → Deutsch … (frei: 1997 MB)]
+big: import_ms=1210 channels_total=3008 programmes_total=36120 now_playing_all_ms=37 now_found=3003 sync=Idle
+phone_setup: url=http://10.0.2.16:8095/939618 get=200 has_form=true post=200 user=ayu-ci report=✓ OpenSubtitles: API-Key gültig (ohne Anmeldung nur wenige Downloads pro Tag)
+search_all: channels=3000 programmes=0 ms=26
+search_history=[tagesschau, Sender]
+playlist_toggle: before=3008 off=8 search_off=0 on=3008
+done failures=0
