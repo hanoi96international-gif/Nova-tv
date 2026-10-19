@@ -1,0 +1,32 @@
+name: Explore
+
+on:
+  push:
+    branches: ["explore/**"]
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  # Original-Modelle (ONNX) als Release-Dateien bereitstellen, um sie lokal untersuchen zu können.
+  sources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Laden und hochladen
+        run: |
+          set -e
+          gh release view models-src >/dev/null 2>&1 || gh release create models-src --prerelease --title "Original-Modelle (Untersuchung)" --notes "Nur zur Entwicklung."
+          mkdir -p out && cd out
+          for pair in en-es en-mul en-de; do
+            for f in config.json tokenizer.json onnx/encoder_model_quantized.onnx onnx/decoder_model_merged_quantized.onnx; do
+              curl -sSfL -o "opus-mt-$pair.$(basename $f)" "https://huggingface.co/Xenova/opus-mt-$pair/resolve/main/$f"
+            done
+          done
+          curl -sSfL -o rec.onnx https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/rec.onnx
+          curl -sSfL -o dict.txt https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/dict.txt
+          ls -la
+          gh release upload models-src * --clobber -R ${{ github.repository }}
