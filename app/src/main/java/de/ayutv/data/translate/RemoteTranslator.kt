@@ -41,6 +41,11 @@ class RemoteTranslator(private val context: Context) : Translator {
     @Volatile
     var onProgress: (String) -> Unit = {}
 
+    /** Höchster Speicherverbrauch des Übersetzer-Prozesses (MB), zuletzt gemeldet. */
+    @Volatile
+    var lastPeakMb: Long? = null
+        private set
+
     @Volatile
     private var service: Messenger? = null
     private var connection: ServiceConnection? = null
@@ -95,6 +100,7 @@ class RemoteTranslator(private val context: Context) : Translator {
                 replyTo = replies
             })
             val reply = answer.await()
+            if (reply.containsKey(PEAK)) lastPeakMb = reply.getLong(PEAK)
             reply.getString(ERROR)?.let { throw IOException(it) }
             return reply
         } catch (e: RemoteException) {
@@ -185,6 +191,7 @@ class RemoteTranslator(private val context: Context) : Translator {
         const val PIXELS = "pixels"
         const val RESULT = "result"
         const val ERROR = "error"
+        const val PEAK = "peak"
         const val STEP_FILE = "mt_step.txt"
     }
 }

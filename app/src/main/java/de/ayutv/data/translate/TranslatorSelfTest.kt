@@ -32,6 +32,7 @@ object TranslatorSelfTest {
         } catch (e: Exception) {
             parts += "Übersetzung: ${e.message ?: e.javaClass.simpleName}"
         }
+        remote.lastPeakMb?.let { parts += "Speicher Übersetzer: höchstens $it MB" }
         return parts.joinToString("\n")
     }
 

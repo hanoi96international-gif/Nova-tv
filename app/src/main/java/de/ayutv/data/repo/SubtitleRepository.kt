@@ -174,13 +174,19 @@ class SubtitleRepository(
         settings: AppSettings,
         progress: (String) -> Unit = {},
     ): Result? = withContext(Dispatchers.IO) {
-        cachedAny(key, except = target)?.let { file ->
+        fun cachedResult(file: File): Result {
             val language = file.name.removeSuffix(".srt").substringAfterLast('.')
-            return@withContext Result(file, Source.CACHE, language = language.takeIf { it.length in 2..3 && it != "xx" })
+            return Result(file, Source.CACHE, language = language.takeIf { it.length in 2..3 && it != "xx" })
         }
+        // Englisch zuerst: Dafür gibt es direkte Modelle in fast jede Sprache. Aus einer anderen Sprache
+        // ginge es über Englisch, mit zwei Modellen und doppeltem Speicherbedarf.
+        if (target != "en") cached(key, "en")?.let { return@withContext cachedResult(it) }
+        if (settings.onlineSubtitlesEnabled && target != "en") {
+            progress("Lade Vorlage für die Übersetzung …")
+            runCatching { download(key, videoUrl, title, "en", settings) }.getOrNull()?.let { return@withContext it }
+        }
+        cachedAny(key, except = target)?.let { return@withContext cachedResult(it) }
         if (!settings.onlineSubtitlesEnabled) return@withContext null
-        progress("Lade Vorlage für die Übersetzung …")
-        if (target != "en") download(key, videoUrl, title, "en", settings)?.let { return@withContext it }
         download(key, videoUrl, title, null, settings)
     }
 

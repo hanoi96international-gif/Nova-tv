@@ -29,6 +29,8 @@ class OnDeviceTranslator(
     private val freeMemoryMb: () -> Long? = { null },
     /** Rechen-Threads pro Modell. Neben 4K-Wiedergabe 1: Bild und Ton gehen vor. */
     private val threads: Int = THREADS,
+    /** Speichersparmodus für Geräte mit wenig RAM. */
+    private val lowMemory: () -> Boolean = { false },
 ) : Translator {
     /** Meldet jeden Schritt in nativem Code vorher (und null danach): Bei einem Absturz ist klar, wo. */
     @Volatile
@@ -112,7 +114,7 @@ class OnDeviceTranslator(
         onProgress("Starte Übersetzer ${describe(pair)} …" + (freeMb?.let { " (frei: $it MB)" } ?: ""))
         val model = try {
             trace("Übersetzer $pair startet")
-            OpusMtModel(folder, env, threads).also { trace(null) }
+            OpusMtModel(folder, env, threads, lowMemory()).also { trace(null) }
         } catch (e: Exception) {
             // Beschädigte Datei (z. B. Strom weg beim Laden): beim nächsten Mal neu herunterladen.
             folder.deleteRecursively()

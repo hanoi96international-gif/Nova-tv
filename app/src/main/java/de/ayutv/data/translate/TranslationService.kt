@@ -42,7 +42,7 @@ class TranslationService : Service() {
             .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = 1).apply {
+        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = 1, lowMemory = ::lowMemory).apply {
             onProgress = ::progress
             trace = ::step
         }
@@ -95,6 +95,7 @@ class TranslationService : Service() {
             } catch (e: Exception) {
                 Bundle().apply { putString(RemoteTranslator.ERROR, e.message ?: e.javaClass.simpleName) }
             }
+            peakMemoryMb()?.let { result.putLong(RemoteTranslator.PEAK, it) }
             runCatching { replyTo.send(Message.obtain(null, what, id, 0).apply { this.data = result }) }
         }
     }
@@ -109,6 +110,19 @@ class TranslationService : Service() {
             if (text == null) file.delete() else file.writeText("$text · frei ${freeMemoryMb() ?: "?"} MB · ${android.os.Build.SUPPORTED_ABIS.firstOrNull()}")
         }
     }
+
+    /** Speichersparmodus: auf schwachen Geräten; Datei "mt_lowmem" mit on/off erzwingt (Tests). */
+    private fun lowMemory(): Boolean = when (runCatching { java.io.File(filesDir, "mt_lowmem").readText().trim() }.getOrNull()) {
+        "on" -> true
+        "off" -> false
+        else -> de.ayutv.data.DeviceInfo.isWeak(this)
+    }
+
+    /** Höchster Speicherverbrauch dieses Prozesses bisher (VmHWM), in MB. */
+    private fun peakMemoryMb(): Long? = runCatching {
+        java.io.File("/proc/self/status").readLines().first { it.startsWith("VmHWM:") }
+            .filter(Char::isDigit).toLong() / 1024
+    }.getOrNull()
 
     private fun freeMemoryMb(): Long? = runCatching {
         val info = android.app.ActivityManager.MemoryInfo()

@@ -17,7 +17,7 @@ import java.nio.LongBuffer
  * Encoder liest den Satz einmal, der Decoder erzeugt die Übersetzung Wort für Wort und nutzt dabei
  * den Zwischenspeicher (KV-Cache) der vorigen Schritte, damit jeder Schritt nur ein Token rechnet.
  */
-class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Closeable {
+class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int, lowMemory: Boolean = false) : Closeable {
     val tokenizer = UnigramTokenizer.load(File(dir, TOKENIZER))
     private val eos: Int
     private val pad: Int
@@ -47,6 +47,9 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
             setMemoryPatternOptimization(false)
             // Ohne Speicher-Arena: belegt nur, was gerade gebraucht wird (wenig RAM neben 4K-Wiedergabe).
             setCPUArenaAllocator(false)
+            // Wenig RAM (Fire TV Stick neben 4K): Gewichte nicht zusätzlich umgepackt im Speicher halten.
+            // Etwas langsamer, braucht aber deutlich weniger Arbeitsspeicher.
+            if (lowMemory) addConfigEntry("session.disable_prepacking", "1")
             // Rechen-Threads nicht aktiv warten lassen: sonst nehmen sie dem Video-Decoder CPU weg.
             addConfigEntry("session.intra_op.allow_spinning", "0")
             addConfigEntry("session.inter_op.allow_spinning", "0")
