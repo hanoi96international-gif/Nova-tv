@@ -42,7 +42,9 @@ class TranslationService : Service() {
             .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = 1, lowMemory = ::lowMemory).apply {
+        // Rechenkern: zwei Threads (mit Hintergrund-Vorrang), er braucht kaum Speicher. ONNX Runtime: einer.
+        val threads = if (Engine.select(filesDir) == Engine.Kind.KERN) 2 else 1
+        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = threads, lowMemory = ::lowMemory).apply {
             onProgress = ::progress
             trace = ::step
         }

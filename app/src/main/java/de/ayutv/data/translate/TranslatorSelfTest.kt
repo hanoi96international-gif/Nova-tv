@@ -32,6 +32,8 @@ object TranslatorSelfTest {
         } catch (e: Exception) {
             parts += "Übersetzung: ${e.message ?: e.javaClass.simpleName}"
         }
+        parts += "Rechenkern: ${remote.engine.label}"
+        remote.lastNativeCrash()?.let { parts += "Letzter Absturz: ${it.lines().take(4).joinToString(" | ")}" }
         remote.lastPeakMb?.let { peak -> parts += "Speicher Übersetzer: höchstens $peak MB, belegt ${remote.lastAnonMb ?: "?"} MB" }
         cpu()?.let { parts += "Prozessor: $it" }
         return parts.joinToString("\n")

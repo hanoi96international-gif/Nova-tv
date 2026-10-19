@@ -5,6 +5,8 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.os.Process
 import android.util.Log
+import de.ayutv.data.translate.kern.Session
+import de.ayutv.data.translate.kern.Tensor
 import de.ayutv.player.EmbeddedSubtitles
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
@@ -31,17 +33,17 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
     @Volatile
     var trace: (String?) -> Unit = {}
 
+    private val baseDir = baseDir
     private val dir = File(baseDir, "ocr")
-    private val variantFile = File(baseDir, VARIANT_FILE)
     private val env by lazy { OrtEnvironment.getEnvironment().also { runCatching { it.setTelemetry(false) } } }
-    private var session: OrtSession? = null
+    private var session: Recognizer? = null
     private var alphabet: List<String> = emptyList()
     private val lock = Mutex()
     private val dispatcher = Executors.newSingleThreadExecutor { runnable ->
-        Thread({
+        Thread(null, {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
             runnable.run()
-        }, "dna-ocr")
+        }, "dna-ocr", 16L * 1024 * 1024)
     }.asCoroutineDispatcher()
 
     val installed: Boolean get() = FILES.all { (name, size) -> File(dir, name).length() == size }
@@ -60,34 +62,60 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         }
     }
 
-    private suspend fun model(): OrtSession = lock.withLock {
+    /** Rechnet das Modell: Eingabe [1, 3, 48, Breite], Ausgabe je Zeitschritt die Zeichen-Wahrscheinlichkeiten. */
+    private interface Recognizer : java.io.Closeable {
+        fun scores(input: FloatArray, width: Int): Array<FloatArray>
+    }
+
+    private inner class OrtRecognizer(private val model: OrtSession) : Recognizer {
+        override fun scores(input: FloatArray, width: Int): Array<FloatArray> =
+            OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, HEIGHT.toLong(), width.toLong())).use { tensor ->
+                model.run(mapOf(model.inputNames.first() to tensor)).use { result ->
+                    @Suppress("UNCHECKED_CAST")
+                    (result[0].value as Array<Array<FloatArray>>)[0]
+                }
+            }
+
+        override fun close() = model.close()
+    }
+
+    private class KernRecognizer(file: File) : Recognizer {
+        private val model = Session(file, KERN_THREADS)
+
+        override fun scores(input: FloatArray, width: Int): Array<FloatArray> {
+            val out = model.run(mapOf(model.inputNames.first() to Tensor.floats(intArrayOf(1, 3, HEIGHT, width), input))).values.first()
+            val steps = out.shape[1]
+            val classes = out.shape[2]
+            val data = out.floats
+            return Array(steps) { t -> data.copyOfRange(t * classes, (t + 1) * classes) }
+        }
+
+        override fun close() = model.close()
+    }
+
+    private suspend fun model(): Recognizer = lock.withLock {
         session?.let { return@withLock it }
         if (!installed) download()
         alphabet = File(dir, DICT).readLines(Charsets.UTF_8).map { it.trimEnd('\r', '\n') }
-        val variant = variant(variantFile)
-        if (variant >= VARIANTS) throw IOException("Texterkennung stürzt auf diesem Gerät ab (alle Varianten probiert)")
-        val options = OrtSession.SessionOptions().apply {
-            // Ein Thread (der eigene, mit Hintergrund-Vorrang): kein Thread-Pool, der dem Video Rechenzeit nimmt.
-            setIntraOpNumThreads(1)
-            setMemoryPatternOptimization(false)
-            setCPUArenaAllocator(false)
-            addConfigEntry("session.intra_op.allow_spinning", "0")
-            addConfigEntry("session.inter_op.allow_spinning", "0")
-            // Stürzt das Modell auf einem Gerät ab (32-Bit-ARM), beim nächsten Mal vorsichtiger rechnen:
-            // 1. normal, 2. ohne Graph-Optimierungen, 3. mit XNNPACK statt der eigenen Rechenkerne.
-            when (variant) {
-                0 -> setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
-                1 -> setOptimizationLevel(OrtSession.SessionOptions.OptLevel.NO_OPT)
-                else -> {
-                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT)
-                    addXnnpack(mapOf("intra_op_num_threads" to "1"))
-                }
-            }
-        }
-        currentVariant = variant + 1
+        kind = Engine.select(baseDir)
         try {
-            trace("Texterkennung (Variante $currentVariant) startet")
-            env.createSession(File(dir, MODEL).path, options).also { session = it; trace(null) }
+            val recognizer = if (kind == Engine.Kind.KERN) {
+                KernRecognizer(File(dir, MODEL))
+            } else {
+                val options = OrtSession.SessionOptions().apply {
+                    // Ein Thread (der eigene, mit Hintergrund-Vorrang): kein Thread-Pool, der dem Video Rechenzeit nimmt.
+                    setIntraOpNumThreads(1)
+                    setMemoryPatternOptimization(false)
+                    setCPUArenaAllocator(false)
+                    addConfigEntry("session.intra_op.allow_spinning", "0")
+                    addConfigEntry("session.inter_op.allow_spinning", "0")
+                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
+                }
+                trace("Texterkennung startet")
+                OrtRecognizer(env.createSession(File(dir, MODEL).path, options)).also { trace(null) }
+            }
+            session = recognizer
+            recognizer
         } catch (e: Exception) {
             dir.deleteRecursively()
             throw IOException("Texterkennung defekt, wird neu geladen: ${e.message}", e)
@@ -127,7 +155,7 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         return result
     }
 
-    private fun line(model: OrtSession, image: EmbeddedSubtitles.GrayImage, top: Int, bottom: Int): String {
+    private fun line(model: Recognizer, image: EmbeddedSubtitles.GrayImage, top: Int, bottom: Int): String {
         // Waagrecht auf die Schrift zuschneiden.
         var left = image.width
         var right = -1
@@ -165,14 +193,8 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         }
         val input = FloatArray(3 * plane.size)
         for (c in 0 until 3) plane.copyInto(input, c * plane.size)
-        trace("Texterkennung (Variante $currentVariant) rechnet (Zeile ${width}×$HEIGHT)")
-        OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, HEIGHT.toLong(), width.toLong())).use { tensor ->
-            model.run(mapOf(model.inputNames.first() to tensor)).also { trace(null) }.use { result ->
-                @Suppress("UNCHECKED_CAST")
-                val scores = (result[0].value as Array<Array<FloatArray>>)[0]
-                return decode(scores)
-            }
-        }
+        trace("Texterkennung rechnet (Zeile ${width}×$HEIGHT)")
+        return decode(model.scores(input, width).also { trace(null) })
     }
 
     /** CTC: je Zeitschritt das wahrscheinlichste Zeichen, Wiederholungen und Leerstellen (0) entfernen. */
@@ -206,28 +228,14 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         Log.i(TAG, "Texterkennung geladen")
     }
 
-    private var currentVariant = 1
+    /** Womit zuletzt gerechnet wurde. */
+    @Volatile
+    var kind: Engine.Kind? = null
+        private set
 
     companion object {
-        private const val VARIANT_FILE = "ocr_variant.txt"
-        private const val VARIANTS = 3
-
-        /** Gewählte Variante; nach einem App-Update wieder von vorn (neue ONNX-Version kann es lösen). */
-        private fun variant(file: File): Int = runCatching {
-            val (variant, version) = file.readText().trim().split(' ')
-            if (version.toInt() == de.ayutv.BuildConfig.VERSION_CODE) variant.toInt() else 0
-        }.getOrDefault(0)
-
-        /** Texterkennung ist auf diesem Gerät in allen Varianten abgestürzt (bis zum nächsten App-Update). */
-        fun unavailable(baseDir: File): Boolean = variant(File(baseDir, VARIANT_FILE)) >= VARIANTS
-
-        /** Nach einem Absturz in der Texterkennung: nächstes Mal die nächste Variante. Gibt sie zurück (1-basiert), null = keine mehr. */
-        fun markCrash(baseDir: File): Int? {
-            val file = File(baseDir, VARIANT_FILE)
-            val next = variant(file) + 1
-            runCatching { file.writeText("$next ${de.ayutv.BuildConfig.VERSION_CODE}") }
-            return (next + 1).takeIf { next < VARIANTS }
-        }
+        /** Threads des Rechenkerns für die Texterkennung (Hintergrund-Vorrang, Bild und Ton gehen vor). */
+        private const val KERN_THREADS = 2
 
         private const val TAG = "DnAOcr"
         private const val BASE = "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin"
