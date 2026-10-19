@@ -12,7 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: ci/explore/ocr.sh explore-out || true
+      - run: ci/explore/opensubs.sh explore-out || true
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
       - name: Ergebnisse veröffentlichen
         if: always()
         run: |
