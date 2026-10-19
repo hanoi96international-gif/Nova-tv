@@ -48,6 +48,12 @@ data class SubtitleCandidate(
     val translated: Boolean = false,
     /** TMDB-Kennung des Films, zu dem die Datei gehört (Suche nach tmdb_id liefert manchmal Fremdes). */
     val tmdbId: Long? = null,
+    /** Film/Folge, zu der die Datei gehört, und deren Jahr und Art ("Movie", "Episode"). */
+    val featureId: Long? = null,
+    val year: Int? = null,
+    val featureType: String? = null,
+    /** Platz in der Antwort von OpenSubtitles (deren Relevanz, vor unserer Sortierung nach Qualität). */
+    val rank: Int = 0,
 )
 
 object OpenSubtitlesParsing {
@@ -60,10 +66,11 @@ object OpenSubtitlesParsing {
     fun searchResults(body: String): List<SubtitleCandidate> {
         val root = json.parseToJsonElement(body) as? JsonObject ?: return emptyList()
         val data = root["data"] as? JsonArray ?: return emptyList()
-        return data.mapNotNull { item ->
-            val attributes = (item as? JsonObject)?.get("attributes") as? JsonObject ?: return@mapNotNull null
-            val file = (attributes["files"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return@mapNotNull null
-            val fileId = file.primitive("file_id")?.longOrNull ?: return@mapNotNull null
+        return data.mapIndexedNotNull { index, item ->
+            val attributes = (item as? JsonObject)?.get("attributes") as? JsonObject ?: return@mapIndexedNotNull null
+            val feature = attributes["feature_details"] as? JsonObject
+            val file = (attributes["files"] as? JsonArray)?.firstOrNull() as? JsonObject ?: return@mapIndexedNotNull null
+            val fileId = file.primitive("file_id")?.longOrNull ?: return@mapIndexedNotNull null
             SubtitleCandidate(
                 fileId = fileId,
                 language = attributes.primitive("language")?.contentOrNull.orEmpty(),
@@ -73,15 +80,39 @@ object OpenSubtitlesParsing {
                 hearingImpaired = attributes.primitive("hearing_impaired")?.booleanOrNull ?: false,
                 translated = attributes.primitive("ai_translated")?.booleanOrNull == true ||
                     attributes.primitive("machine_translated")?.booleanOrNull == true,
-                tmdbId = (attributes["feature_details"] as? JsonObject)?.primitive("tmdb_id")?.longOrNull,
+                tmdbId = feature?.primitive("tmdb_id")?.longOrNull,
+                featureId = feature?.primitive("feature_id")?.longOrNull,
+                year = feature?.primitive("year")?.longOrNull?.toInt(),
+                featureType = feature?.primitive("feature_type")?.contentOrNull,
+                rank = index,
             )
-        }.sortedWith(
-            compareByDescending<SubtitleCandidate> { it.hashMatch }
-                .thenBy { it.translated }
-                .thenBy { it.hearingImpaired }
-                .thenByDescending { it.downloads }
-        )
+        }.sortedWith(QUALITY)
     }
+
+    /**
+     * Die Titelsuche liefert Untertitel zu mehreren Filmen, die nur ungefähr passen. Erst den richtigen
+     * Film wählen (Reihenfolge von OpenSubtitles = Relevanz; Jahr muss passen, Filme vor Serienfolgen),
+     * dann nur dessen Dateien zurückgeben, nach Qualität sortiert. Passt kein Film zum Jahr: nichts.
+     */
+    fun bestFeature(candidates: List<SubtitleCandidate>, year: Int?, wantMovie: Boolean = true): List<SubtitleCandidate> {
+        if (candidates.isEmpty()) return emptyList()
+        fun key(c: SubtitleCandidate): Any = c.featureId ?: c.tmdbId ?: "?${c.rank}"
+        val features = candidates.groupBy(::key)
+        val suitable = features.values.filter { files ->
+            val first = files.minBy { it.rank }
+            year == null || first.year == null || kotlin.math.abs(first.year - year) <= 1
+        }
+        val chosen = suitable.minWithOrNull(
+            compareBy<List<SubtitleCandidate>> { files -> if (wantMovie && files.first().featureType.equals("Episode", true)) 1 else 0 }
+                .thenBy { files -> files.minOf { it.rank } }
+        ) ?: return emptyList()
+        return chosen.sortedWith(QUALITY)
+    }
+
+    private val QUALITY = compareByDescending<SubtitleCandidate> { it.hashMatch }
+        .thenBy { it.translated }
+        .thenBy { it.hearingImpaired }
+        .thenByDescending { it.downloads }
 
     fun downloadLink(body: String): String? =
         (json.parseToJsonElement(body) as? JsonObject)?.primitive("link")?.contentOrNull

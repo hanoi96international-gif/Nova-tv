@@ -140,13 +140,19 @@ class SubtitleRepository(
                 }).filter { it.fileId !in bad && (it.tmdbId == null || it.tmdbId.toString() == tmdb) }
             }
             if (candidates.isEmpty()) {
-                val (cleanTitle, year) = OpenSubtitlesParsing.cleanTitle(info?.originalTitle ?: title)
+                val (cleanTitle, titleYear) = OpenSubtitlesParsing.cleanTitle(info?.originalTitle ?: title)
                 if (cleanTitle.length < 2) return null
-                candidates = search(apiKey, buildMap {
+                val year = titleYear ?: info?.year
+                val episode = ":e:" in key
+                val found = search(apiKey, buildMap {
                     put("query", cleanTitle)
                     if (language != null) put("languages", language)
-                    (year ?: info?.year)?.let { put("year", it.toString()) }
+                    year?.let { put("year", it.toString()) }
+                    if (!episode) put("type", "movie")
                 }).filter { it.fileId !in bad }
+                // Nur Dateien des einen passenden Films, nicht die beliebtesten aller ähnlich heißenden.
+                candidates = OpenSubtitlesParsing.bestFeature(found, year, wantMovie = !episode)
+                Log.i(TAG, "Titelsuche „$cleanTitle“ ($year): ${found.size} Treffer, gewählt: ${candidates.firstOrNull()?.release}")
             }
         }
         val best = candidates.firstOrNull() ?: return null
