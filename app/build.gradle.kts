@@ -117,7 +117,8 @@ dependencies {
     // QR-Code für die Einrichtung per Handy
     implementation("com.google.zxing:core:3.5.4")
     // Übersetzung auf dem Gerät (OPUS-MT als ONNX)
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
+    // Version per -PortVersion überschreibbar (Erkundung: welche Version läuft auf 32-Bit-ARM).
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:${(project.findProperty("ortVersion") as String?) ?: "1.30.0"}")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 

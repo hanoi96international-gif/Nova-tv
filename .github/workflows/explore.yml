@@ -1,0 +1,48 @@
+name: Explore
+
+on:
+  push:
+    branches: ["explore/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  # Welche ONNX-Runtime-Version läuft auf 32-Bit-ARM (Fire TV Stick 4K)? Selbsttest je Version.
+  ort:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        ort: ["1.30.0", "1.22.0", "1.20.0", "1.18.0", "1.16.3"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+      - name: KVM aktivieren
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: APKs bauen
+        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest -PortVersion=${{ matrix.ort }}
+      - name: Selbsttest mit 32-Bit-ARM
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          ram-size: 3072M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
+          disable-animations: true
+          script: ci/run-arm-selftest.sh
+      - name: Ergebnis
+        if: always()
+        run: |
+          echo "ORT ${{ matrix.ort }}"
+          cat arm-out/arm.txt || true
+          grep -h "Fatal signal\|backtrace:\| #0[0-4] " arm-out/logcat.txt | head -20 || true
