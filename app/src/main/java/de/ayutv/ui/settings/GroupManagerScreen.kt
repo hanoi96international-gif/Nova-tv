@@ -48,6 +48,11 @@ import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.components.TvTextField
 import de.ayutv.ui.theme.AyuColors
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.LaunchedEffect
+import androidx.tv.material3.OutlinedButtonDefaults
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 
 private val GroupKind.label
     get() = when (this) {
@@ -72,6 +77,15 @@ fun GroupManagerScreen(playlist: PlaylistEntity, onBack: () -> Unit) {
     val series by remember(playlist.id) { content.groupToggles(playlist.id, GroupKind.SERIES) }.collectAsStateWithLifecycle(emptyList())
 
     var kind by remember { mutableStateOf(GroupKind.LIVE) }
+    val firstButton = remember { FocusRequester() }
+    // Beim Öffnen gleich auf den ersten Bereich, sobald die Gruppen geladen sind.
+    val anyLoaded = live.isNotEmpty() || vod.isNotEmpty() || series.isNotEmpty()
+    LaunchedEffect(anyLoaded) {
+        if (anyLoaded) repeat(5) {
+            if (runCatching { firstButton.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
     var filter by remember { mutableStateOf("") }
 
     val all = when (kind) {
@@ -107,7 +121,17 @@ fun GroupManagerScreen(playlist: PlaylistEntity, onBack: () -> Unit) {
                 }
                 if (list.isNotEmpty()) {
                     val label = "${k.label} (${list.count { !it.hidden }}/${list.size})"
-                    if (k == kind) Button(onClick = { kind = k }) { Text(label) } else OutlinedButton(onClick = { kind = k }) { Text(label) }
+                    // Immer derselbe Knopf-Typ (nur die Farbe wechselt): sonst würde der fokussierte Knopf ersetzt
+                    // und der Fokus ginge beim Umschalten verloren.
+                    OutlinedButton(
+                        onClick = { kind = k },
+                        modifier = if (k == GroupKind.entries.first { kk -> kk.hasGroups(live, vod, series) }) Modifier.focusRequester(firstButton) else Modifier,
+                        colors = if (k == kind) {
+                            OutlinedButtonDefaults.colors(containerColor = AyuColors.AccentSoft, contentColor = Color.White)
+                        } else {
+                            OutlinedButtonDefaults.colors()
+                        },
+                    ) { Text(label) }
                 }
             }
         }
@@ -183,4 +207,10 @@ private fun GroupRow(group: GroupToggle, onToggle: () -> Unit) {
             Text("${group.count}", color = AyuColors.TextSecondary, fontSize = 13.sp)
         }
     }
+}
+
+private fun GroupKind.hasGroups(live: List<GroupToggle>, vod: List<GroupToggle>, series: List<GroupToggle>) = when (this) {
+    GroupKind.LIVE -> live.isNotEmpty()
+    GroupKind.VOD -> vod.isNotEmpty()
+    GroupKind.SERIES -> series.isNotEmpty()
 }

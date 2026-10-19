@@ -40,7 +40,7 @@ class XtreamClient(
     fun vodUrl(streamId: String, extension: String) = "$base/movie/${enc(username)}/${enc(password)}/$streamId.$extension"
     fun episodeUrl(episodeId: String, extension: String) = "$base/series/${enc(username)}/${enc(password)}/$episodeId.$extension"
 
-    private fun apiUrl(action: String?, vararg extra: Pair<String, String>): String {
+    fun apiUrl(action: String?, vararg extra: Pair<String, String>): String {
         val builder = "$base/player_api.php".toHttpUrl().newBuilder()
             .addQueryParameter("username", username)
             .addQueryParameter("password", password)

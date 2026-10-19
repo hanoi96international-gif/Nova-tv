@@ -32,7 +32,11 @@ import de.ayutv.data.AppSettings
 import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
 import okhttp3.OkHttpClient
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.util.Locale
+import javax.net.SocketFactory
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
@@ -67,6 +71,8 @@ object PlayerFactory {
         val streamClient = http.newBuilder()
             .readTimeout(if (live) 8L else 12L, TimeUnit.SECONDS)
             .connectTimeout(8, TimeUnit.SECONDS)
+            // Großer Empfangspuffer: WLAN-Aussetzer werden schon im Netzwerk abgefedert.
+            .socketFactory(LargeBufferSocketFactory)
             .build()
         val httpFactory = OkHttpDataSource.Factory(streamClient)
         val resolving = ResolvingDataSource.Factory(httpFactory) { spec ->
@@ -112,9 +118,10 @@ object PlayerFactory {
         }
 
         val (minBuffer, maxBuffer, startBuffer, rebuffer) = when (settings.bufferProfile) {
-            BufferProfile.FAST -> listOf(2_000, 30_000, 500, 1_500)
-            BufferProfile.BALANCED -> listOf(6_000, 40_000, 1_000, 2_500)
-            BufferProfile.STABLE -> listOf(15_000, 60_000, 2_500, 5_000)
+            // Nach einem Hänger erst mit etwas Vorrat weiterspielen: verhindert Serien kurzer Ruckler.
+            BufferProfile.FAST -> listOf(3_000, 30_000, 600, 2_500)
+            BufferProfile.BALANCED -> listOf(8_000, 45_000, 1_200, 4_000)
+            BufferProfile.STABLE -> listOf(15_000, 60_000, 2_500, 6_000)
         }
         // Speicher-Obergrenze: Ein 4K-Stream mit 25 Mbit/s bräuchte für 60 s rund 190 MB Heap.
         // Auf Sticks mit 1,5–2 GB RAM führt das nach längerem Schauen zu Abstürzen. Das Limit gilt
@@ -148,12 +155,37 @@ object PlayerFactory {
                 true,
             )
             .setHandleAudioBecomingNoisy(true)
+            // WLAN während der Wiedergabe wach halten: Fire TV schaltet es sonst in den Stromsparmodus,
+            // eine häufige Ursache für kurze Hänger bei Live-TV.
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         // Mit eigener Bildwiederholraten-Anpassung keine zweite Stelle, die per Surface.setFrameRate
         // mitredet: Sonst können sich beide Anforderungen gegenseitig umschalten.
         if (settings.matchFrameRate) player.setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
         return Built(player, headers, trackSelector)
     }
+}
+
+/** Sockets mit 2 MB Empfangspuffer (vor dem Verbinden gesetzt, damit TCP ein großes Fenster aushandelt). */
+private object LargeBufferSocketFactory : SocketFactory() {
+    private const val RECEIVE_BUFFER = 2 * 1024 * 1024
+    private val base: SocketFactory = getDefault()
+
+    private fun Socket.tuned() = apply { runCatching { receiveBufferSize = RECEIVE_BUFFER } }
+
+    override fun createSocket(): Socket = base.createSocket().tuned()
+    override fun createSocket(host: String?, port: Int): Socket = createSocket().apply { connect(InetSocketAddress(host, port)) }
+    override fun createSocket(host: String?, port: Int, localHost: InetAddress?, localPort: Int): Socket =
+        createSocket().apply {
+            bind(InetSocketAddress(localHost, localPort))
+            connect(InetSocketAddress(host, port))
+        }
+    override fun createSocket(host: InetAddress?, port: Int): Socket = createSocket().apply { connect(InetSocketAddress(host, port)) }
+    override fun createSocket(address: InetAddress?, port: Int, localAddress: InetAddress?, localPort: Int): Socket =
+        createSocket().apply {
+            bind(InetSocketAddress(localAddress, localPort))
+            connect(InetSocketAddress(address, port))
+        }
 }
 
 /**
@@ -217,19 +249,37 @@ class FrameRateMatcher(private val activity: Activity) {
     fun match(frameRate: Float): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || frameRate <= 0f || switching) return false
         val display = activity.windowManager.defaultDisplay ?: return false
+        val modes = display.supportedModes.map { DisplayModeInfo(it.modeId, it.physicalWidth, it.physicalHeight, it.refreshRate) }
         val current = display.mode
-        val sameSize = display.supportedModes.filter {
-            it.physicalWidth == current.physicalWidth && it.physicalHeight == current.physicalHeight
-        }
-        val targets = if (frameRate in 24.5f..30.5f) listOf(frameRate * 2, frameRate) else listOf(frameRate, frameRate * 2)
-        val best = targets.firstNotNullOfOrNull { target -> sameSize.firstOrNull { matches(it.refreshRate, target) } } ?: return false
-        if (best.modeId == current.modeId || best.modeId == requestedModeId) return false
-        requestedModeId = best.modeId
-        startSwitch(best.modeId)
+        val best = pickMode(modes, DisplayModeInfo(current.modeId, current.physicalWidth, current.physicalHeight, current.refreshRate), frameRate)
+            ?: return false
+        if (best == current.modeId || best == requestedModeId) return false
+        requestedModeId = best
+        startSwitch(best)
         val attributes = activity.window.attributes
-        attributes.preferredDisplayModeId = best.modeId
+        attributes.preferredDisplayModeId = best
         activity.window.attributes = attributes
         return true
+    }
+
+    data class DisplayModeInfo(val id: Int, val width: Int, val height: Int, val refreshRate: Float)
+
+    companion object {
+        /**
+         * Passender Anzeigemodus für [frameRate], bei gleicher Auflösung (kein Umschalten zwischen 4K und 1080p).
+         * 25/30 fps bevorzugt mit 50/60 Hz, Filme (23,976/24) exakt. Je Ziel der nächstliegende Modus,
+         * damit 23,976 und 24 Hz nicht verwechselt werden. null = nichts Passendes (oder schon richtig).
+         */
+        fun pickMode(modes: List<DisplayModeInfo>, current: DisplayModeInfo, frameRate: Float): Int? {
+            if (frameRate <= 0f) return null
+            val sameSize = modes.filter { it.width == current.width && it.height == current.height }
+            val targets = if (frameRate in 24.5f..30.5f) listOf(frameRate * 2, frameRate) else listOf(frameRate, frameRate * 2)
+            for (target in targets) {
+                val best = sameSize.filter { abs(it.refreshRate - target) < 0.05f }.minByOrNull { abs(it.refreshRate - target) }
+                if (best != null) return best.id
+            }
+            return null
+        }
     }
 
     fun reset() {
@@ -255,7 +305,7 @@ class FrameRateMatcher(private val activity: Activity) {
                 if (id != displayId || activity.windowManager.defaultDisplay.mode.modeId != modeId) return
                 // Modus steht, der Fernseher braucht aber noch einen Moment für das neue HDMI-Signal.
                 timeout?.let { handler.removeCallbacks(it) }
-                handler.postDelayed({ finishSwitch() }, SETTLE_MS)
+                handler.postDelayed({ finishSwitch() }, Timing.SETTLE_MS)
             }
         }
         listener = l
@@ -263,7 +313,7 @@ class FrameRateMatcher(private val activity: Activity) {
         // Manche Geräte melden den Wechsel nicht (oder lehnen ihn ab): spätestens dann weiterspielen.
         val t = Runnable { finishSwitch() }
         timeout = t
-        handler.postDelayed(t, MAX_SWITCH_MS)
+        handler.postDelayed(t, Timing.MAX_SWITCH_MS)
     }
 
     private fun finishSwitch() {
@@ -278,9 +328,7 @@ class FrameRateMatcher(private val activity: Activity) {
         }
     }
 
-    private fun matches(refreshRate: Float, frameRate: Float) = abs(refreshRate - frameRate) < 0.05f
-
-    private companion object {
+    private object Timing {
         const val SETTLE_MS = 1_200L
         const val MAX_SWITCH_MS = 5_000L
     }

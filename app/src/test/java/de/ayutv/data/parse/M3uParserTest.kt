@@ -34,6 +34,22 @@ class M3uParserTest {
     }
 
     @Test
+    fun unquotedAndSingleQuotedAttributes() {
+        val (_, entries) = parse(
+            """
+            #EXTM3U
+            #EXTINF:-1 tvg-id=zdf.de group-title='DE Vollprogramm' tvg-chno=2,ZDF HD
+            http://host/live/u/p/2.ts
+            """.trimIndent()
+        )
+        val e = entries.single()
+        assertEquals("ZDF HD", e.name)
+        assertEquals("zdf.de", e.tvgId)
+        assertEquals("DE Vollprogramm", e.groupTitle)
+        assertEquals(2, e.number)
+    }
+
+    @Test
     fun commaInsideQuotedAttributeDoesNotSplitName() {
         val (_, entries) = parse(
             """

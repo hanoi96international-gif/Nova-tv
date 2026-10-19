@@ -94,6 +94,10 @@ class PlayerActivity : ComponentActivity() {
     /** Endgültiger Fehler: Bild schwarz statt des letzten Bildes vom vorigen Sender. */
     var fatalError by mutableStateOf(false); private set
     var showTech by mutableStateOf(false); private set
+    /** Gepufferte Sekunden (nur aktualisiert, solange die Stream-Info sichtbar ist). */
+    var bufferedMs by mutableLongStateOf(0L); private set
+    /** Live: Wiedergabe läuft gerade minimal langsamer, um wieder Vorrat aufzubauen. */
+    var cushionActive by mutableStateOf(false); private set
     var stats by mutableStateOf(StreamStats()); private set
     var vodTitle by mutableStateOf(""); private set
     var positionMs by mutableLongStateOf(0L); private set
@@ -123,6 +127,7 @@ class PlayerActivity : ComponentActivity() {
     private var zapStartedAt = 0L
     private var everReady = false
     private var fpsSample: Pair<Long, Long>? = null
+    private val liveEndings = ArrayDeque<Long>()
     /** Bis hierhin gelten Fehler als Folge des HDMI-Moduswechsels (Bildwiederholrate), nicht des Streams. */
     private var displaySwitchGraceUntil = 0L
     private var displaySwitchErrors = 0
@@ -218,6 +223,7 @@ class PlayerActivity : ComponentActivity() {
         val p = player ?: return
         userAgent?.let { headers?.userAgent = it }
         p.trackSelectionParameters = parameters
+        if (isLive) p.repeatMode = Player.REPEAT_MODE_ONE
         if (item != null) {
             if (isLive) p.setMediaItem(item) else p.setMediaItem(item, position)
             p.prepare()
@@ -258,6 +264,8 @@ class PlayerActivity : ComponentActivity() {
                 lastFrames = frames ?: -1
                 val limit = if (isLive) LIVE_STALL_SECONDS else VOD_STALL_SECONDS
                 estimateFrameRate(p)
+                if (isLive) keepLiveCushion(p)
+                if (showTech) bufferedMs = p.totalBufferedDuration
                 val now = SystemClock.elapsedRealtime()
                 if (stalledSeconds >= limit && now - lastReconnect > 20_000) {
                     stalledSeconds = 0
@@ -292,6 +300,25 @@ class PlayerActivity : ComponentActivity() {
             }
             resumeAfterSwitch = false
         }
+    }
+
+    /**
+     * Live-Streams kommen in Echtzeit an: Der Puffer wächst von selbst nie, jeder Netz-Schluckauf
+     * friert das Bild ein. Ist der Vorrat knapp, läuft die Wiedergabe unhörbar 3 % langsamer, bis
+     * wieder genug gepuffert ist (Tonhöhe bleibt gleich). Bei durchgereichtem Dolby/DTS und im
+     * Tunneling-Modus ignoriert das Gerät die Geschwindigkeit; dann bleibt alles wie bisher.
+     */
+    private fun keepLiveCushion(p: ExoPlayer) {
+        // Im Tunneling-Modus steuert die Hardware den Takt; dort nichts verändern.
+        if (!p.isPlaying || trackSelector?.parameters?.tunnelingEnabled == true) return
+        val buffered = p.totalBufferedDuration
+        val wanted = when {
+            !cushionActive && buffered < CUSHION_LOW_MS -> true
+            cushionActive && buffered > CUSHION_HIGH_MS -> false
+            else -> return
+        }
+        cushionActive = wanted
+        p.setPlaybackSpeed(if (wanted) CUSHION_SPEED else 1f)
     }
 
     private fun displaySwitching() = frameRateMatcher.switching || SystemClock.elapsedRealtime() < displaySwitchGraceUntil
@@ -391,9 +418,19 @@ class PlayerActivity : ComponentActivity() {
         return "Dieses Gerät kann $codec$bits$resolution nicht abspielen"
     }
 
-    private fun reconnect(reason: String) {
+    private fun onLiveStreamEnded() {
+        val now = SystemClock.elapsedRealtime()
+        liveEndings.addLast(now)
+        while (liveEndings.isNotEmpty() && now - liveEndings.first() > 60_000) liveEndings.removeFirst()
+        // Endet der Stream ständig sofort wieder, ist er wirklich weg: dann langsamer probieren und es sagen.
+        val delayMs = if (liveEndings.size > 5) 3_000L else 200L
+        if (liveEndings.size > 5) message = "Sender liefert nichts, versuche es weiter …"
+        handler.postDelayed({ if (player?.playbackState == Player.STATE_ENDED) reconnect(null) }, delayMs)
+    }
+
+    private fun reconnect(reason: String?) {
         val p = player ?: return
-        message = reason
+        if (reason != null) message = reason
         val position = p.currentPosition
         p.stop()
         if (isLive) p.seekToDefaultPosition() else p.seekTo(position)
@@ -413,12 +450,19 @@ class PlayerActivity : ComponentActivity() {
         message = null
         zapStartedAt = SystemClock.elapsedRealtime()
         stats = StreamStats()
+        if (cushionActive) {
+            cushionActive = false
+            p.setPlaybackSpeed(1f)
+        }
         headers?.userAgent = channel.userAgent ?: settings.userAgent
         // Bildwiederholrate NICHT zurücksetzen: Sonst schaltet der Fernseher bei jedem Zappen zweimal
         // um (zurück auf Standard, dann wieder auf 50 Hz) und wird jedes Mal kurz schwarz.
 
         val url = adaptLiveUrl(channel.url)
         p.setMediaItem(mediaItem(url, guessMime(url)))
+        // Schließt der Server die Verbindung (bei IPTV alltäglich), baut der Player die nächste schon
+        // auf, während der Puffer noch läuft: nahtlos weiter statt Standbild und Neustart.
+        p.repeatMode = Player.REPEAT_MODE_ONE
         p.prepare()
         p.playWhenReady = true
         showOverlay(Overlay.INFO)
@@ -869,6 +913,9 @@ class PlayerActivity : ComponentActivity() {
                 if (!isLive) maybeAutoSubtitles()
             }
             if (state == Player.STATE_ENDED && !isLive) finish()
+            // Live-Streams enden nie wirklich: Schließt der Server die Verbindung „sauber“, hält der
+            // Player das für das Ende und bliebe stehen. Sofort und ohne Meldung neu verbinden.
+            if (state == Player.STATE_ENDED && isLive) onLiveStreamEnded()
             if (state == Player.STATE_BUFFERING && everReady) onRebuffer()
         }
 
@@ -1124,6 +1171,10 @@ class PlayerActivity : ComponentActivity() {
         frameRateMatcher.reset()
         player?.release()
         player = null
+        // Keinen Verweis auf diese Activity im App-weiten Übersetzer behalten, und dessen Modelle
+        // (zusammen gut 200 MB) freigeben: Auf dem Stick wird der Speicher sonst für die nächste Wiedergabe knapp.
+        Translators.onDevice.onProgress = {}
+        container.scope.launch { Translators.onDevice.release() }
     }
 
     companion object {
@@ -1135,6 +1186,9 @@ class PlayerActivity : ComponentActivity() {
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 8
         private const val VIDEO_FREEZE_SECONDS = 6
+        private const val CUSHION_LOW_MS = 2_500L
+        private const val CUSHION_HIGH_MS = 5_000L
+        private const val CUSHION_SPEED = 0.97f
         private const val VOD_STALL_SECONDS = 20
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"

@@ -49,6 +49,10 @@ class XmltvParserTest {
         assertEquals(0L, XmltvTime.parse("19700101000000 +0000"))
         assertEquals(0L, XmltvTime.parse("19700101000000"))
         assertEquals(3_600_000L, XmltvTime.parse("19700101000000 -0100"))
+        // Ohne Sekunden und mit Doppelpunkt in der Zeitzone (kommt bei vielen Anbietern vor)
+        assertEquals(-3_600_000L, XmltvTime.parse("197001010000 +0100"))
+        assertEquals(-3_600_000L, XmltvTime.parse("19700101000000 +01:00"))
+        assertEquals(-5_400_000L, XmltvTime.parse("19700101000000 +0130"))
         assertEquals(951_782_400_000L, XmltvTime.parse("20000229000000 +0000"))
         assertNull(XmltvTime.parse("kaputt"))
     }

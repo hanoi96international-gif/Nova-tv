@@ -61,6 +61,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "get_series_info": EPISODES.get(query.get("series_id", ""), {}),
             }
             return self.send_json(responses.get(action, []))
+        if url.path == "/flaky.ts":
+            return self.serve_flaky()
         if url.path == "/xmltv.php":
             self.path = "/epg.xml"
             return self.serve_file()
@@ -71,6 +73,40 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_error(404)
             self.path = "/" + target
         return self.serve_file()
+
+    def serve_flaky(self):
+        """Wie ein wackeliger IPTV-Server: liefert hd50.ts in Echtzeit (nach kurzem Startschub) und
+        trennt die Verbindung nach 15 Sekunden. Der Player muss neu verbinden, ohne hängen zu bleiben."""
+        import time
+        path = os.path.join(ROOT, "hd50.ts")
+        size = os.path.getsize(path)
+        rate = size / 90.0  # Bytes pro Sekunde (90 s Video)
+        start = 0
+        m = re.match(r"bytes=(\d+)-", self.headers.get("Range", ""))
+        if m:
+            start = int(m.group(1)) % size
+        self.send_response(200)
+        self.send_header("Content-Type", "video/mp2t")
+        self.end_headers()
+        began = time.time()
+        sent = 0
+        burst = rate * 2  # 2 Sekunden Startschub wie bei echten Servern
+        with open(path, "rb") as f:
+            f.seek(start)
+            try:
+                while time.time() - began < 15:
+                    chunk = f.read(32 * 1024)
+                    if not chunk:
+                        f.seek(0)
+                        continue
+                    self.wfile.write(chunk)
+                    sent += len(chunk)
+                    ahead = (sent - burst) / rate - (time.time() - began)
+                    if ahead > 0:
+                        time.sleep(ahead)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+        self.close_connection = True
 
     def do_HEAD(self):
         self.head_only = True

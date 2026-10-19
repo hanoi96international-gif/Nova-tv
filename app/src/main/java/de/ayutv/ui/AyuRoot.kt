@@ -29,6 +29,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -90,22 +93,29 @@ fun AyuRoot() {
     var addingPlaylist by remember { mutableStateOf(false) }
     var openSeries by remember { mutableStateOf<SeriesEntity?>(null) }
     var managingGroups by remember { mutableStateOf<PlaylistEntity?>(null) }
+    // Nach „Zurück“ verschwindet der fokussierte Inhalt: dann den Fokus gezielt in die Navigation setzen.
+    var navTick by remember { mutableIntStateOf(0) }
+    // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
+    val sectionState = rememberSaveableStateHolder()
 
     Box(Modifier.fillMaxSize().background(AyuColors.Background)) {
         val list = playlists
         when {
             list == null -> Unit
             list.isEmpty() || addingPlaylist -> AddPlaylistScreen(
-                onDone = { addingPlaylist = false },
-                onCancel = if (list.isEmpty()) null else ({ addingPlaylist = false }),
+                onDone = { addingPlaylist = false; navTick++ },
+                onCancel = if (list.isEmpty()) null else ({ addingPlaylist = false; navTick++ }),
             )
-            managingGroups != null -> GroupManagerScreen(managingGroups!!, onBack = { managingGroups = null })
+            managingGroups != null -> GroupManagerScreen(managingGroups!!, onBack = { managingGroups = null; navTick++ })
             else -> {
-                BackHandler(enabled = section != Section.HOME) { section = Section.HOME }
+                BackHandler(enabled = section != Section.HOME) {
+                    section = Section.HOME
+                    navTick++
+                }
                 // Die Navigation liegt über dem Inhalt: Aufklappen verschiebt nichts und löst kein Neu-Layout aus.
                 Box(Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxSize().padding(start = NAV_COLLAPSED)) {
-                        when (section) {
+                        sectionState.SaveableStateProvider(section.name) { when (section) {
                             Section.HOME -> HomeScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.LIVE -> LiveScreen()
                             Section.GUIDE -> GuideScreen()
@@ -116,9 +126,9 @@ fun AyuRoot() {
                                 onAddPlaylist = { addingPlaylist = true },
                                 onManageGroups = { managingGroups = it },
                             )
-                        }
+                        } }
                     }
-                    SideNav(sections = sections, selected = section, onSelect = { section = it })
+                    SideNav(sections = sections, selected = section, refocusTick = navTick, onSelect = { section = it })
                 }
             }
         }
@@ -128,7 +138,7 @@ fun AyuRoot() {
 /** Schmale Leiste mit Symbolen, die sich beim Fokussieren mit Beschriftung aufklappt. */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun SideNav(sections: List<Section>, selected: Section, onSelect: (Section) -> Unit) {
+private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int, onSelect: (Section) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val width by animateDpAsState(if (expanded) NAV_EXPANDED else NAV_COLLAPSED, label = "nav")
     val initialFocus = remember { FocusRequester() }
@@ -186,5 +196,10 @@ private fun SideNav(sections: List<Section>, selected: Section, onSelect: (Secti
         Spacer(Modifier.height(8.dp))
     }
 
-    LaunchedEffect(Unit) { runCatching { initialFocus.requestFocus() } }
+    LaunchedEffect(refocusTick) {
+        repeat(5) {
+            if (runCatching { initialFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
 }

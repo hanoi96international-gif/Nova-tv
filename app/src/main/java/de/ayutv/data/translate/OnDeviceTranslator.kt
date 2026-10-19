@@ -114,12 +114,18 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
             val target = File(folder, local)
             if (target.length() > 0) continue
             val part = File(folder, "$local.part")
-            val request = Request.Builder().url("$BASE/opus-mt-$pair/resolve/main/$remote").build()
+            // Nach einem WLAN-Abbruch dort weitermachen, wo der Download aufgehört hat.
+            val have = part.length()
+            val request = Request.Builder().url("$BASE/opus-mt-$pair/resolve/main/$remote")
+                .apply { if (have > 0) header("Range", "bytes=$have-") }
+                .build()
             http.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) throw IOException("Übersetzungsmodell nicht erreichbar (HTTP ${response.code})")
+                val append = response.code == 206
+                if (append) done += have
                 var lastPercent = -1
                 response.body.byteStream().use { input ->
-                    part.outputStream().use { output ->
+                    java.io.FileOutputStream(part, append).use { output ->
                         val buffer = ByteArray(256 * 1024)
                         while (true) {
                             val n = input.read(buffer)
@@ -145,10 +151,21 @@ class OnDeviceTranslator(baseDir: File, private val http: OkHttpClient) : Transl
 
     fun installedPairs(): List<String> = dir.listFiles().orEmpty().filter { isInstalled(it) }.map { it.name }.sorted()
 
-    suspend fun deleteAll() = lock.withLock {
-        loaded.values.forEach { it.close() }
-        loaded.clear()
-        dir.deleteRecursively()
+    /** Auf dem Übersetzer-Thread: Modelle werden nie freigegeben, während gerade mit ihnen gerechnet wird. */
+    suspend fun deleteAll() = withContext(dispatcher) {
+        lock.withLock {
+            loaded.values.forEach { it.close() }
+            loaded.clear()
+            dir.deleteRecursively()
+        }
+    }
+
+    /** Speicher freigeben (Player geschlossen oder System knapp an Speicher). Modelle bleiben auf der Platte. */
+    suspend fun release() = withContext(dispatcher) {
+        lock.withLock {
+            loaded.values.forEach { it.close() }
+            loaded.clear()
+        }
     }
 
     private fun describe(pair: String): String {

@@ -50,6 +50,8 @@ import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.compose.LocalPlatformContext
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.ui.theme.AyuColors
@@ -118,8 +120,12 @@ fun ChannelLogo(url: String?, name: String, modifier: Modifier = Modifier) {
                 color = AyuColors.TextSecondary,
             )
         } else {
+            // Eine feste Dekodiergröße für alle Stellen (Liste, Raster, Info): jedes Logo nur einmal
+            // dekodiert und einmal im Speicher, egal in welcher Größe es gerade gezeigt wird.
+            val context = LocalPlatformContext.current
+            val request = remember(url) { ImageRequest.Builder(context).data(url).size(240, 144).memoryCacheKey(url).build() }
             AsyncImage(
-                model = url,
+                model = request,
                 contentDescription = name,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize().padding(6.dp),

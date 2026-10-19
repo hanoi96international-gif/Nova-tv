@@ -34,7 +34,10 @@ data class M3uEntry(
  * im Speicher zu halten. Große Playlists mit 100k Einträgen bleiben so auf dem Fire TV Stick handhabbar.
  */
 object M3uParser {
-    private val attributeRegex = Regex("""([A-Za-z0-9_-]+)\s*=\s*"([^"]*)"""")
+    // Werte in doppelten, einfachen oder ganz ohne Anführungszeichen (tvg-id=ard.de) – alles kommt in Playlists vor.
+    private val attributeRegex = Regex("""([A-Za-z0-9_-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s",']+))""")
+
+    private fun MatchResult.attributeValue(): String = groups[2]?.value ?: groups[3]?.value ?: groups[4]?.value.orEmpty()
 
     fun parse(reader: BufferedReader, onEntry: (M3uEntry) -> Unit): M3uHeader {
         val epgUrls = mutableListOf<String>()
@@ -52,7 +55,7 @@ object M3uParser {
                     for (match in attributeRegex.findAll(line)) {
                         val key = match.groupValues[1].lowercase()
                         if (key == "url-tvg" || key == "x-tvg-url" || key == "tvg-url") {
-                            match.groupValues[2].split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach(epgUrls::add)
+                            match.attributeValue().split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach(epgUrls::add)
                         }
                     }
                 }
@@ -89,7 +92,7 @@ object M3uParser {
 
         val attributes = HashMap<String, String>()
         for (match in attributeRegex.findAll(attributePart)) {
-            attributes[match.groupValues[1].lowercase()] = match.groupValues[2].trim()
+            attributes[match.groupValues[1].lowercase()] = match.attributeValue().trim()
         }
         val displayName = name.ifEmpty { attributes["tvg-name"].orEmpty() }.ifEmpty { url.substringAfterLast('/') }
         return M3uEntry(displayName, url, attributes, group, userAgent)

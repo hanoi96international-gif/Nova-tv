@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,7 @@ import de.ayutv.ui.components.EmptyHint
 import de.ayutv.ui.components.formatTime
 import de.ayutv.ui.components.rememberMinuteTicker
 import de.ayutv.ui.theme.AyuColors
+import de.ayutv.ui.theme.AyuFocus
 
 private const val MINUTE = 60_000L
 private const val HALF_HOUR = 30 * MINUTE
@@ -85,8 +87,10 @@ fun GuideScreen() {
     LaunchedEffect(channels, windowStart) { programmes = content.programmesInRange(channels, windowStart, windowEnd) }
 
     val earliest = System.currentTimeMillis() / HALF_HOUR * HALF_HOUR - 2 * HALF_HOUR
-    val shift: (Int) -> Unit = { steps ->
-        windowStart = (windowStart + steps * HALF_HOUR).coerceAtLeast(earliest)
+    // Liefert false, wenn sich nichts verschieben lässt: Dann geht „links“ normal weiter (zur Navigation).
+    val shift: (Int) -> Boolean = { steps ->
+        val target = (windowStart + steps * HALF_HOUR).coerceAtLeast(earliest)
+        (target != windowStart).also { if (it) windowStart = target }
     }
 
     Column(Modifier.fillMaxSize().padding(top = 20.dp)) {
@@ -157,7 +161,7 @@ private fun GuideRow(
     windowStart: Long,
     windowEnd: Long,
     now: Long,
-    onShift: (Int) -> Unit,
+    onShift: (Int) -> Boolean,
     onPlay: () -> Unit,
 ) {
     Row(Modifier.height(ROW_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
@@ -173,23 +177,28 @@ private fun GuideRow(
 
         val cells = remember(programmes, windowStart) { layoutCells(programmes, windowStart, windowEnd) }
         if (cells.isEmpty()) {
-            GuideCell("Keine Programmdaten", null, DP_PER_MINUTE * (WINDOW / MINUTE).toInt(), live = true, first = true, last = true, onShift, onPlay)
+            GuideCell("Keine Programmdaten", null, DP_PER_MINUTE * (WINDOW / MINUTE).toInt(), live = true, first = false, last = false, onShift, onPlay)
         } else {
+            val firstIndex = cells.indexOfFirst { it.programme != null }
+            val lastIndex = cells.indexOfLast { it.programme != null }
             cells.forEachIndexed { index, cell ->
-                if (cell.programme == null) {
+                val p = cell.programme
+                if (p == null) {
                     Spacer(Modifier.width(cell.width))
                 } else {
-                    val p = cell.programme ?: return@forEachIndexed
-                    GuideCell(
-                        title = p.title.ifEmpty { "Ohne Titel" },
-                        time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
-                        width = cell.width,
-                        live = p.start <= now && p.stop > now,
-                        first = index == cells.indexOfFirst { it.programme != null },
-                        last = index == cells.indexOfLast { it.programme != null },
-                        onShift = onShift,
-                        onClick = onPlay,
-                    )
+                    // Nach Sendung geschlüsselt: Beim Verschieben des Zeitfensters bleibt der Fokus auf ihr.
+                    key(p.id) {
+                        GuideCell(
+                            title = p.title.ifEmpty { "Ohne Titel" },
+                            time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
+                            width = cell.width,
+                            live = p.start <= now && p.stop > now,
+                            first = index == firstIndex,
+                            last = index == lastIndex,
+                            onShift = onShift,
+                            onClick = onPlay,
+                        )
+                    }
                 }
             }
         }
@@ -220,7 +229,7 @@ private fun GuideCell(
     live: Boolean,
     first: Boolean,
     last: Boolean,
-    onShift: (Int) -> Unit,
+    onShift: (Int) -> Boolean,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -234,8 +243,8 @@ private fun GuideCell(
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when {
-                    first && event.key == Key.DirectionLeft -> { onShift(-1); true }
-                    last && event.key == Key.DirectionRight -> { onShift(+1); true }
+                    first && event.key == Key.DirectionLeft -> onShift(-1)
+                    last && event.key == Key.DirectionRight -> onShift(+1)
                     else -> false
                 }
             },
@@ -244,6 +253,7 @@ private fun GuideCell(
             containerColor = if (live) AyuColors.SurfaceRaised else AyuColors.Surface,
             focusedContainerColor = AyuColors.AccentSoft,
         ),
+        border = AyuFocus.border,
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
         Box(Modifier.fillMaxSize().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
@@ -256,7 +266,7 @@ private fun GuideCell(
                     color = if (live || focused) AyuColors.TextPrimary else AyuColors.TextSecondary,
                 )
                 if (time != null && width > 90.dp) {
-                    Text(time, fontSize = 11.sp, color = AyuColors.TextSecondary, maxLines = 1, style = MaterialTheme.typography.labelSmall)
+                    Text(time, fontSize = 12.sp, color = AyuColors.TextSecondary, maxLines = 1)
                 }
             }
         }

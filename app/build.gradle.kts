@@ -15,8 +15,8 @@ android {
         // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
         minSdk = 24
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.7.0"
+        versionCode = 10
+        versionName = "0.8.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
@@ -111,7 +111,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
     // Untertitel-Übersetzung auf dem Gerät: kostenlos, ohne Konto, Sprachpakete werden einmalig geladen.
     // QR-Code für die Einrichtung per Handy
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
     // Übersetzung auf dem Gerät (OPUS-MT als ONNX)
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.30.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")

@@ -209,6 +209,47 @@ class DeviceTourTest {
             }
         } }
 
+        // 3a. Bildwiederholrate anpassen + Tunneling eingeschaltet: darf nie hängen oder sich neu starten
+        channels.firstOrNull { it.name == "HD Test 50fps" }?.let { hd -> section("afr_tunneling") {
+            runBlocking { container.settings.update { it.copy(matchFrameRate = true, tunneling = true) } }
+            try {
+                launchPlayer(PlayerActivity.liveIntent(app, hd.key, null)).use { scenario ->
+                    waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                    var playing = 0
+                    val messages = mutableSetOf<String>()
+                    repeat(30) {
+                        Thread.sleep(1_000)
+                        if (scenario.read { it.player?.isPlaying } == true) playing++
+                        scenario.read { it.message }?.let(messages::add)
+                    }
+                    val stats = scenario.read { it.stats }
+                    log("afr_tunneling: playing_s=$playing fps=${stats.frameRate} measured=${stats.frameRateMeasured} messages=$messages")
+                    assertTrue("Mit Bildwiederholrate/Tunneling nur $playing von 30 s gelaufen", playing >= 27)
+                }
+            } finally {
+                runBlocking { container.settings.update { it.copy(matchFrameRate = false, tunneling = false) } }
+            }
+        } }
+
+        // 3b. Wackelige Leitung: Server liefert in Echtzeit und trennt alle 15 s. Das Bild muss weiterlaufen.
+        channels.firstOrNull { it.name == "Wackelige Leitung" }?.let { flaky -> section("flaky") {
+            launchPlayer(PlayerActivity.liveIntent(app, flaky.key, null)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                // Gezählt wird, in wie vielen der 50 Sekunden das Bild tatsächlich lief.
+                var playing = 0
+                var buffering = 0
+                repeat(50) {
+                    Thread.sleep(1_000)
+                    when {
+                        scenario.read { it.player?.isPlaying } == true -> playing++
+                        scenario.read { it.player?.playbackState } == Player.STATE_BUFFERING -> buffering++
+                    }
+                }
+                log("flaky: playing_s=$playing buffering_s=$buffering cushion=${scenario.read { it.cushionActive }} message=${scenario.read { it.message }}")
+                assertTrue("Live-Stream hängt bei Verbindungsabbrüchen ($playing von 50 s gelaufen)", playing >= 45)
+            }
+        } }
+
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
         // OpenSubtitles (eingebauter Schlüssel): Zugang gültig, Suche nach einem bekannten Film liefert Treffer.
@@ -388,6 +429,14 @@ class DeviceTourTest {
             val results = runBlocking { container.content.search("Sender") }
             log("search_all: channels=${results.channels.size} programmes=${results.programmes.size} ms=${System.currentTimeMillis() - startedSearch}")
             assertTrue("Suche begrenzt: ${results.channels.size}", results.channels.size >= 3000)
+            runBlocking {
+                container.settings.rememberSearch("Tagesschau")
+                container.settings.rememberSearch("Sender")
+                container.settings.rememberSearch("tagesschau")
+            }
+            val history = runBlocking { container.settings.searchHistory.first() }
+            log("search_history=$history")
+            assertTrue("Suchverlauf falsch: $history", history.take(2) == listOf("tagesschau", "Sender"))
         }
 
         // Playlist ausschalten: verschwindet überall, Daten bleiben; wieder einschalten: alles wieder da

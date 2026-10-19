@@ -271,7 +271,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
-            TechLine(activity.stats)
+            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive)
         }
         Spacer(Modifier.height(10.dp))
         Text(
@@ -306,7 +306,7 @@ private fun VodControls(activity: PlayerActivity) {
         }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
-            TechLine(activity.stats)
+            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive)
         }
         Spacer(Modifier.height(10.dp))
         Text(
@@ -318,8 +318,9 @@ private fun VodControls(activity: PlayerActivity) {
 }
 
 @Composable
-private fun TechLine(stats: StreamStats) {
+private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean) {
     val parts = buildList {
+        add("Puffer %.1f s".format(bufferedMs / 1000f) + if (cushion) " (wird aufgefüllt)" else "")
         if (stats.width > 0) add("${stats.width}×${stats.height}")
         if (stats.frameRate > 0) add("%.2f fps".format(stats.frameRate) + if (stats.frameRateMeasured) " (gemessen)" else "")
         if (stats.videoCodec.isNotEmpty()) add(stats.videoCodec)

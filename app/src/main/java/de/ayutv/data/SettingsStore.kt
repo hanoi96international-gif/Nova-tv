@@ -86,6 +86,8 @@ data class AppSettings(
 
 private val Context.dataStore by preferencesDataStore(name = "settings")
 
+private const val SEARCH_HISTORY_SIZE = 12
+
 class SettingsStore(private val context: Context) {
     private object Keys {
         val buffer = stringPreferencesKey("buffer_profile")
@@ -109,6 +111,26 @@ class SettingsStore(private val context: Context) {
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { it.toSettings() }
+
+    private val searchHistoryKey = stringPreferencesKey("search_history")
+
+    /** Letzte Suchbegriffe, neueste zuerst. */
+    val searchHistory: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        prefs[searchHistoryKey].orEmpty().split('\n').filter { it.isNotBlank() }
+    }
+
+    suspend fun rememberSearch(query: String) {
+        val q = query.trim().takeIf { it.length >= 2 } ?: return
+        context.dataStore.edit { prefs ->
+            val old = prefs[searchHistoryKey].orEmpty().split('\n').filter { it.isNotBlank() }
+            prefs[searchHistoryKey] = (listOf(q) + old.filterNot { it.equals(q, ignoreCase = true) })
+                .take(SEARCH_HISTORY_SIZE).joinToString("\n")
+        }
+    }
+
+    suspend fun clearSearchHistory() {
+        context.dataStore.edit { it.remove(searchHistoryKey) }
+    }
 
     suspend fun current(): AppSettings = settings.first()
 

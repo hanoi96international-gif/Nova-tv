@@ -14,6 +14,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.Semaphore
+import java.net.InetAddress
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import java.io.BufferedInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -37,23 +43,51 @@ class PhoneSetupServer(private val container: AppContainer) {
 
     private var scope: CoroutineScope? = null
     private var socket: ServerSocket? = null
-    private val pin = (100_000 + SecureRandom().nextInt(900_000)).toString()
+    @Volatile
+    private var pin = newPin()
+    private val failures = AtomicInteger()
+    private val clients = Semaphore(MAX_CLIENTS)
+
+    private fun newPin() = (100_000 + SecureRandom().nextInt(900_000)).toString()
+
+    private fun rotatePin() {
+        pin = newPin()
+        failures.set(0)
+        _state.value = _state.value.copy(url = _state.value.url?.substringBeforeLast('/')?.let { "$it/$pin" })
+    }
 
     fun start() {
         if (scope != null) return
-        val newScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        // Ein fehlerhafter oder abgebrochener Browser-Aufruf darf nie die App beenden.
+        val newScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e -> Log.w(TAG, "Setup-Client", e) })
         scope = newScope
         newScope.launch {
-            val server = runCatching { ServerSocket(PORT) }.recoverCatching { ServerSocket(0) }.getOrElse {
+            val ip = localAddress()
+            // Nur im Heimnetz lauschen (nicht auf allen Schnittstellen).
+            val bind = ip?.let { InetAddress.getByName(it) }
+            val server = runCatching { ServerSocket(PORT, 8, bind) }.recoverCatching { ServerSocket(0, 8, bind) }.getOrElse {
                 _state.value = State(error = "Einrichtung per Handy nicht möglich: ${it.message}")
                 return@launch
             }
             socket = server
-            val ip = localAddress()
             _state.value = State(url = ip?.let { "http://$it:${server.localPort}/$pin" }, error = if (ip == null) "Kein WLAN/LAN gefunden" else null)
             while (true) {
                 val client = runCatching { server.accept() }.getOrNull() ?: break
-                launch { client.use { handle(it) } }
+                if (!clients.tryAcquire()) {
+                    runCatching { client.close() }
+                    continue
+                }
+                launch {
+                    try {
+                        client.use { handle(it) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Anfrage verworfen", e)
+                    } finally {
+                        clients.release()
+                    }
+                }
             }
         }
     }
@@ -74,14 +108,19 @@ class PhoneSetupServer(private val container: AppContainer) {
         while (true) {
             val header = readLine(input) ?: return
             if (header.isEmpty()) break
-            if (header.startsWith("Content-Length:", ignoreCase = true)) length = header.substringAfter(':').trim().toIntOrNull() ?: 0
+            if (header.startsWith("Content-Length:", ignoreCase = true)) {
+                length = header.substringAfter(':').trim().toIntOrNull()?.coerceIn(0, MAX_BODY) ?: 0
+            }
         }
         if (path.substringBefore('?').trimEnd('/') != "/$pin") {
+            // Falsche PIN: bremsen, damit sie sich nicht durchprobieren lässt; nach vielen Fehlversuchen neue PIN.
+            delay(1_000)
+            if (failures.incrementAndGet() > MAX_FAILURES) rotatePin()
             respond(client, 404, "<h1>Falsche Adresse</h1><p>Bitte die Adresse genau so eingeben, wie sie auf dem Fernseher steht.</p>")
             return
         }
         if (method == "POST") {
-            val body = ByteArray(length.coerceAtMost(64 * 1024)).also { readFully(input, it) }.toString(Charsets.UTF_8)
+            val body = ByteArray(length).also { readFully(input, it) }.toString(Charsets.UTF_8)
             val form = parseForm(body)
             val report = save(form)
             respond(client, 200, page(container.settings.current(), report))
@@ -182,7 +221,12 @@ class PhoneSetupServer(private val container: AppContainer) {
         val status = if (code == 200) "OK" else "Not Found"
         runCatching {
             client.getOutputStream().apply {
-                write("HTTP/1.1 $code $status\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${bytes.size}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n".toByteArray())
+                write(
+                    ("HTTP/1.1 $code $status\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${bytes.size}\r\n" +
+                        "Cache-Control: no-store\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer\r\n" +
+                        "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'\r\n" +
+                        "Connection: close\r\n\r\n").toByteArray()
+                )
                 write(bytes)
                 flush()
             }
@@ -211,7 +255,9 @@ class PhoneSetupServer(private val container: AppContainer) {
 
     private fun parseForm(body: String): Map<String, String> = body.split('&').mapNotNull { pair ->
         val name = pair.substringBefore('=', "").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
-        URLDecoder.decode(name, "UTF-8") to URLDecoder.decode(pair.substringAfter('=', ""), "UTF-8")
+        val key = runCatching { URLDecoder.decode(name, "UTF-8") }.getOrNull() ?: return@mapNotNull null
+        val value = runCatching { URLDecoder.decode(pair.substringAfter('=', ""), "UTF-8") }.getOrNull() ?: return@mapNotNull null
+        key to value
     }.toMap()
 
     private fun esc(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
@@ -227,5 +273,8 @@ class PhoneSetupServer(private val container: AppContainer) {
     private companion object {
         const val TAG = "PhoneSetup"
         const val PORT = 8095
+        const val MAX_BODY = 64 * 1024
+        const val MAX_CLIENTS = 4
+        const val MAX_FAILURES = 20
     }
 }

@@ -1,5 +1,10 @@
 package de.ayutv.ui.theme
 
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.ClickableSurfaceBorder
+import androidx.tv.material3.Border
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
@@ -12,7 +17,8 @@ object AyuColors {
     val Surface = Color(0xFF151B23)
     val SurfaceRaised = Color(0xFF1E2631)
     val Accent = Color(0xFF3DA9FC)
-    val AccentSoft = Color(0xFF1B4A6E)
+    // Fokusfläche: hell genug, dass man auf dem Fernseher sofort sieht, wo man ist.
+    val AccentSoft = Color(0xFF235F8E)
     val Live = Color(0xFFE5484D)
     val TextPrimary = Color(0xFFF2F5F8)
     val TextSecondary = Color(0xFF9AA7B4)
@@ -38,4 +44,12 @@ fun AyuTheme(content: @Composable () -> Unit) {
         // Ohne umgebende Surface wäre Text sonst schwarz auf dunklem Hintergrund.
         CompositionLocalProvider(LocalContentColor provides AyuColors.TextPrimary, content = content)
     }
+}
+
+/** Gut sichtbare Fokusmarkierung für Listen und Raster: heller Rahmen zusätzlich zur Fokusfarbe. */
+object AyuFocus {
+    val border: ClickableSurfaceBorder
+        @Composable get() = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(2.dp, AyuColors.Accent)),
+        )
 }
