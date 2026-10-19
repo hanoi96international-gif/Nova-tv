@@ -746,6 +746,15 @@ class PlayerActivity : ComponentActivity() {
                 subtitleStatus = onlineProblem ?: "Keine Untertitel in $label gefunden (Übersetzung ist in den Einstellungen aus)"
                 return@launch
             }
+            // 3a. Schwaches Gerät mit eingebetteten Untertiteln, die direkt (ein Modell, ohne Umweg über
+            //     Englisch) übersetzbar sind: die nehmen, sie sind zeitgenau und brauchen am wenigsten Speicher.
+            val embeddedLanguage = embeddedSource?.let { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) } ?: "en"
+            val direct = de.ayutv.data.translate.OnDeviceTranslator.route(embeddedLanguage, Languages.normalize(language) ?: language)?.size == 1
+            if (heavy && embeddedSource != null && direct && !de.ayutv.data.translate.SubtitleOcr.unavailable(filesDir)) {
+                onlineProblem?.let { subtitleStatus = it }
+                startLiveTranslation(language, embeddedSource)
+                return@launch
+            }
             // 3b. Schwaches Gerät: vorhandene Untertitel einer anderen Sprache übersetzen (nur der
             //     Übersetzer, keine Texterkennung). Sie werden an der eingebetteten Spur ausgerichtet.
             if (heavy && request != null) {
@@ -794,6 +803,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun attachLoaded(language: String, result: SubtitleRepository.Result) {
+        lastOnlineProblem = null
         subtitleFiles[language] = result.file
         loadedLanguages = subtitleFiles.keys.toList()
         if (!showLoaded(language)) return
@@ -1128,15 +1138,19 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /** Letzter Grund, warum Untertitel aus dem Internet nicht geladen werden konnten (steht im Untertitel-Menü). */
+    var lastOnlineProblem by mutableStateOf<String?>(null); private set
+
     /** Fehler von OpenSubtitles verständlich machen, vor allem das Tageslimit. */
     private fun describeOnlineProblem(error: Throwable): String {
         val text = error.message.orEmpty()
-        return if ("allowed" in text && ("subtitles" in text || "download" in text)) {
+        Log.w(SUBTITLE_TAG, "OpenSubtitles: $text")
+        return (if ("allowed" in text && ("subtitles" in text || "download" in text)) {
             "OpenSubtitles-Tageslimit erreicht (ohne Konto 5, mit kostenlosem Konto 20 Downloads pro Tag). " +
                 "Konto eintragen: Einstellungen → Einrichtung per Handy"
         } else {
             "OpenSubtitles: ${text.ifEmpty { error.javaClass.simpleName }}"
-        }
+        }).also { lastOnlineProblem = "$it (Originalmeldung: ${text.take(160)})" }
     }
 
     private fun formatShift(ms: Long): String = String.format(Locale.GERMAN, "%+.1f s", ms / 1000f)

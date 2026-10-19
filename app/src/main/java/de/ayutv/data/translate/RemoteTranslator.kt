@@ -41,6 +41,19 @@ class RemoteTranslator(private val context: Context) : Translator {
     @Volatile
     var onProgress: (String) -> Unit = {}
 
+    /** Höchster Speicherverbrauch des Übersetzer-Prozesses (MB), zuletzt gemeldet. */
+    @Volatile
+    var lastPeakMb: Long? = null
+        private set
+
+    /** Echter Arbeitsspeicher des Übersetzer-Prozesses (MB, ohne eingeblendete Modelldateien). */
+    @Volatile
+    var lastAnonMb: Long? = null
+        private set
+
+    /** Übersetzer vorbereiten, die während eines Films keinen Platz hatten. Gibt die Sprachpaare zurück. */
+    suspend fun preparePending(): List<String> = call(PREPARE, Bundle()).getStringArrayList(RESULT).orEmpty()
+
     @Volatile
     private var service: Messenger? = null
     private var connection: ServiceConnection? = null
@@ -95,6 +108,8 @@ class RemoteTranslator(private val context: Context) : Translator {
                 replyTo = replies
             })
             val reply = answer.await()
+            if (reply.containsKey(PEAK)) lastPeakMb = reply.getLong(PEAK)
+            if (reply.containsKey(ANON)) lastAnonMb = reply.getLong(ANON)
             reply.getString(ERROR)?.let { throw IOException(it) }
             return reply
         } catch (e: RemoteException) {
@@ -185,6 +200,9 @@ class RemoteTranslator(private val context: Context) : Translator {
         const val PIXELS = "pixels"
         const val RESULT = "result"
         const val ERROR = "error"
+        const val PEAK = "peak"
+        const val ANON = "anon"
+        const val PREPARE = 4
         const val STEP_FILE = "mt_step.txt"
     }
 }

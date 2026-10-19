@@ -42,7 +42,7 @@ class TranslationService : Service() {
             .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = 1).apply {
+        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = 1, lowMemory = ::lowMemory).apply {
             onProgress = ::progress
             trace = ::step
         }
@@ -80,6 +80,9 @@ class TranslationService : Service() {
                         val target = data.getString(RemoteTranslator.TARGET).orEmpty()
                         putStringArrayList(RemoteTranslator.RESULT, ArrayList(translator.translate(texts, target, data.getString(RemoteTranslator.SOURCE))))
                     }
+                    RemoteTranslator.PREPARE -> Bundle().apply {
+                        putStringArrayList(RemoteTranslator.RESULT, ArrayList(translator.preparePending()))
+                    }
                     RemoteTranslator.RECOGNIZE -> Bundle().apply {
                         val image = EmbeddedSubtitles.GrayImage(
                             data.getInt(RemoteTranslator.WIDTH),
@@ -95,6 +98,8 @@ class TranslationService : Service() {
             } catch (e: Exception) {
                 Bundle().apply { putString(RemoteTranslator.ERROR, e.message ?: e.javaClass.simpleName) }
             }
+            memoryMb("VmHWM")?.let { result.putLong(RemoteTranslator.PEAK, it) }
+            memoryMb("RssAnon")?.let { result.putLong(RemoteTranslator.ANON, it) }
             runCatching { replyTo.send(Message.obtain(null, what, id, 0).apply { this.data = result }) }
         }
     }
@@ -109,6 +114,22 @@ class TranslationService : Service() {
             if (text == null) file.delete() else file.writeText("$text · frei ${freeMemoryMb() ?: "?"} MB · ${android.os.Build.SUPPORTED_ABIS.firstOrNull()}")
         }
     }
+
+    /** Speichersparmodus: auf schwachen Geräten; Datei "mt_lowmem" mit on/off erzwingt (Tests). */
+    private fun lowMemory(): Boolean = when (runCatching { java.io.File(filesDir, "mt_lowmem").readText().trim() }.getOrNull()) {
+        "on" -> true
+        "off" -> false
+        else -> de.ayutv.data.DeviceInfo.isWeak(this)
+    }
+
+    /**
+     * Speicher dieses Prozesses in MB: VmHWM = Höchststand insgesamt (auch eingeblendete Dateien, die
+     * Android jederzeit freigeben kann), RssAnon = echter Arbeitsspeicher, den nur dieser Prozess belegt.
+     */
+    private fun memoryMb(field: String): Long? = runCatching {
+        java.io.File("/proc/self/status").readLines().first { it.startsWith("$field:") }
+            .filter(Char::isDigit).toLong() / 1024
+    }.getOrNull()
 
     private fun freeMemoryMb(): Long? = runCatching {
         val info = android.app.ActivityManager.MemoryInfo()

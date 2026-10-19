@@ -17,7 +17,7 @@ import java.nio.LongBuffer
  * Encoder liest den Satz einmal, der Decoder erzeugt die Übersetzung Wort für Wort und nutzt dabei
  * den Zwischenspeicher (KV-Cache) der vorigen Schritte, damit jeder Schritt nur ein Token rechnet.
  */
-class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Closeable {
+class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int, lowMemory: Boolean = false) : Closeable {
     val tokenizer = UnigramTokenizer.load(File(dir, TOKENIZER))
     private val eos: Int
     private val pad: Int
@@ -27,7 +27,9 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
     private val encoder: OrtSession
     private val decoder: OrtSession
     private val pastNames: List<String>
-    private val options = OrtSession.SessionOptions()
+    private val options = ArrayList<OrtSession.SessionOptions>()
+    /** Eingeblendete Modelldateien (ORT-Format); müssen so lange leben wie die Sitzungen. */
+    private val mapped = ArrayList<java.nio.MappedByteBuffer>()
 
     init {
         val config = Json.parseToJsonElement(File(dir, CONFIG).readText()) as JsonObject
@@ -37,7 +39,22 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
         start = int("decoder_start_token_id")
         heads = int("decoder_attention_heads")
         headDim = int("d_model") / heads
-        options.apply {
+        fun session(file: File): OrtSession {
+            val sessionOptions = OrtSession.SessionOptions().apply { configure(threads, lowMemory) }
+            options += sessionOptions
+            // Vorbereitet (ORT-Format): Datei nur einblenden statt einlesen. Sonst klassisch laden.
+            if (!OrtLoader.isPrepared(env, file)) return env.createSession(file.path, sessionOptions)
+            val (session, buffer) = OrtLoader.open(env, file, sessionOptions)
+            mapped += buffer
+            return session
+        }
+        encoder = session(File(dir, ENCODER))
+        decoder = session(File(dir, DECODER))
+        pastNames = decoder.inputNames.filter { it.startsWith("past_key_values") }
+    }
+
+    private fun OrtSession.SessionOptions.configure(threads: Int, lowMemory: Boolean) {
+        apply {
             setIntraOpNumThreads(threads)
             setInterOpNumThreads(1)
             setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL)
@@ -47,13 +64,13 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
             setMemoryPatternOptimization(false)
             // Ohne Speicher-Arena: belegt nur, was gerade gebraucht wird (wenig RAM neben 4K-Wiedergabe).
             setCPUArenaAllocator(false)
+            // Wenig RAM (Fire TV Stick neben 4K): Gewichte nicht zusätzlich umgepackt im Speicher halten.
+            // Etwas langsamer, braucht aber deutlich weniger Arbeitsspeicher.
+            if (lowMemory) addConfigEntry("session.disable_prepacking", "1")
             // Rechen-Threads nicht aktiv warten lassen: sonst nehmen sie dem Video-Decoder CPU weg.
             addConfigEntry("session.intra_op.allow_spinning", "0")
             addConfigEntry("session.inter_op.allow_spinning", "0")
         }
-        encoder = env.createSession(File(dir, ENCODER).path, options)
-        decoder = env.createSession(File(dir, DECODER).path, options)
-        pastNames = decoder.inputNames.filter { it.startsWith("past_key_values") }
     }
 
     /** Übersetzt einen Satz. [prefix]: Sprachkennung für Modelle mit mehreren Zielsprachen (">>fra<<"). */
@@ -137,7 +154,8 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
     override fun close() {
         encoder.close()
         decoder.close()
-        options.close()
+        options.forEach { it.close() }
+        mapped.clear()
     }
 
     companion object {

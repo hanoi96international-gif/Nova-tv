@@ -27,13 +27,22 @@ class ArmSelfTest {
         }
         val failures = mutableListOf<String>()
         log("abis=${Build.SUPPORTED_ABIS.joinToString()} libs=${app.applicationInfo.nativeLibraryDir}")
-        for ((round, language) in listOf("de", "es", "id", "es", "fr").withIndex()) {
+        // Je Runde ein frischer Übersetzer-Prozess, damit der Speicher-Höchststand (VmHWM) pro Einstellung gilt:
+        // normal gegen Speichersparmodus (wie auf dem Fire TV Stick neben einem 4K-Film).
+        val am = app.getSystemService(android.app.ActivityManager::class.java)
+        val rounds = listOf("de" to "off", "es" to "off", "es" to "on", "id" to "off", "id" to "on", "fr" to "on")
+        for ((round, setup) in rounds.withIndex()) {
+            val (language, lowMemory) = setup
+            File(app.filesDir, "mt_lowmem").writeText(lowMemory)
             val result = runBlocking { TranslatorSelfTest.run(language) }
             Translators.remote.release()
-            log("round $round $language: ${result.replace("\n", " | ")}")
-            failures += result.lines().filterNot { "ok" in it }
-            Thread.sleep(2_000)
+            log("round $round $language lowmem=$lowMemory: ${result.replace("\n", " | ")}")
+            failures += result.lines().filterNot { "ok" in it || it.startsWith("Speicher") }
+            Thread.sleep(1_000)
+            am.runningAppProcesses.orEmpty().filter { it.processName.endsWith(":mt") }.forEach { android.os.Process.killProcess(it.pid) }
+            Thread.sleep(1_500)
         }
+        File(app.filesDir, "mt_lowmem").delete()
         org.junit.Assert.assertTrue("Auf 32-Bit-ARM fehlgeschlagen: $failures", failures.isEmpty())
     }
 }
