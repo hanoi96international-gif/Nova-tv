@@ -64,7 +64,10 @@ object CrashReport {
         }
         val part = if (bad.processName.endsWith(":mt")) "Übersetzer" else "App"
         val time = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(bad.timestamp))
-        return "$part um $time: $what · ${bad.pss / 1024} MB belegt" + (bad.description?.let { "\n$it" } ?: "")
+        // Nativer Absturz: Signal und Stelle aus dem eigenen Protokoll (falls noch vorhanden).
+        val native = if (bad.reason == ApplicationExitInfo.REASON_CRASH_NATIVE) NativeCrashLog.capture(context.filesDir) else null
+        return "$part um $time: $what · ${bad.pss / 1024} MB belegt" + (bad.description?.let { "\n$it" } ?: "") +
+            (native?.let { "\n$it" } ?: "")
     }
 
     private val BAD = setOf(

@@ -51,6 +51,12 @@ class RemoteTranslator(private val context: Context) : Translator {
     var lastAnonMb: Long? = null
         private set
 
+    /** Womit der Übersetzer-Prozess rechnet. */
+    val engine: Engine.Kind get() = Engine.select(context.filesDir)
+
+    /** Zuletzt aufgezeichneter nativer Absturz (Signal, Stelle), oder null. */
+    fun lastNativeCrash(): String? = de.ayutv.NativeCrashLog.last(context.filesDir)
+
     /** Übersetzer vorbereiten, die während eines Films keinen Platz hatten. Gibt die Sprachpaare zurück. */
     suspend fun preparePending(): List<String> = call(PREPARE, Bundle()).getStringArrayList(RESULT).orEmpty()
 
@@ -172,20 +178,22 @@ class RemoteTranslator(private val context: Context) : Translator {
         val why = when (info?.reason) {
             null -> "vom System (vermutlich zu wenig Speicher)"
             ApplicationExitInfo.REASON_LOW_MEMORY -> "zu wenig Speicher"
-            ApplicationExitInfo.REASON_CRASH_NATIVE -> "Absturz im Modell (nativ)"
+            ApplicationExitInfo.REASON_CRASH_NATIVE -> "Absturz im Modell (nativ, Signal ${info.status})"
             ApplicationExitInfo.REASON_CRASH -> "Programmfehler"
             ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "zu viel Rechenlast"
             else -> "Grund ${info.reason}"
         }
-        // Absturz beim Rechnen der Texterkennung: beim nächsten Versuch eine vorsichtigere Variante.
-        val retry = if (step?.startsWith("Texterkennung") == true &&
-            (info == null || info.reason == ApplicationExitInfo.REASON_CRASH_NATIVE || info.reason == ApplicationExitInfo.REASON_CRASH)
-        ) {
-            SubtitleOcr.markCrash(context.filesDir)?.let { " · nächster Versuch mit Variante $it" } ?: " · Texterkennung auf diesem Gerät aus"
+        // Nativer Absturz in ONNX Runtime: Ursache aus dem Protokoll lesen und ab jetzt den Rechenkern nehmen.
+        val native = info?.reason == ApplicationExitInfo.REASON_CRASH_NATIVE || (info == null && step != null)
+        val detail = if (native) de.ayutv.NativeCrashLog.capture(context.filesDir) else null
+        val retry = if (native && step != null && Engine.select(context.filesDir) == Engine.Kind.ORT) {
+            Engine.markOrtCrash(context.filesDir)
+            " · ab jetzt mit dem DnA-Rechenkern (ohne native Bibliothek)"
         } else {
             ""
         }
-        return "Übersetzer wurde beendet: $why" + (step?.let { " bei: $it" } ?: "") + retry
+        val cause = detail?.let(de.ayutv.NativeCrashLog::summary)?.takeIf { it.isNotEmpty() }?.let { " ($it)" }.orEmpty()
+        return "Übersetzer wurde beendet: $why$cause" + (step?.let { " bei: $it" } ?: "") + retry
     }
 
     internal companion object {

@@ -13,7 +13,7 @@ import java.io.File
 
 /**
  * Wie auf dem Fire TV Stick 4K: App mit 32-Bit-ARM-Bibliotheken (im Emulator per ARM-Übersetzung).
- * Prüft Texterkennung und Übersetzung mehrfach, damit auch die Ersatz-Varianten nach einem Absturz laufen.
+ * Prüft Texterkennung und Übersetzung mit dem DnA-Rechenkern für mehrere Sprachen.
  */
 @RunWith(AndroidJUnit4::class)
 class ArmSelfTest {
@@ -27,22 +27,20 @@ class ArmSelfTest {
         }
         val failures = mutableListOf<String>()
         log("abis=${Build.SUPPORTED_ABIS.joinToString()} libs=${app.applicationInfo.nativeLibraryDir}")
-        // Je Runde ein frischer Übersetzer-Prozess, damit der Speicher-Höchststand (VmHWM) pro Einstellung gilt:
-        // normal gegen Speichersparmodus (wie auf dem Fire TV Stick neben einem 4K-Film).
+        // Je Runde ein frischer Übersetzer-Prozess (Speicher-Höchststand je Runde). Auf 32 Bit rechnet von
+        // selbst der DnA-Rechenkern (ONNX Runtime stürzt auf dem echten Fire TV Stick 4K ab).
         val am = app.getSystemService(android.app.ActivityManager::class.java)
-        val rounds = listOf("de" to "off", "es" to "off", "es" to "on", "id" to "off", "id" to "on", "fr" to "on")
-        for ((round, setup) in rounds.withIndex()) {
-            val (language, lowMemory) = setup
-            File(app.filesDir, "mt_lowmem").writeText(lowMemory)
+        File(app.filesDir, "mt_engine").delete()
+        for ((round, language) in listOf("de", "es", "id", "fr").withIndex()) {
             val result = runBlocking { TranslatorSelfTest.run(language) }
             Translators.remote.release()
-            log("round $round $language lowmem=$lowMemory: ${result.replace("\n", " | ")}")
-            failures += result.lines().filterNot { "ok" in it || it.startsWith("Speicher") || it.startsWith("Prozessor") }
+            log("round $round $language: ${result.replace("\n", " | ")}")
+            failures += result.lines().filterNot { "ok" in it || it.startsWith("Speicher") || it.startsWith("Prozessor") || it.startsWith("Rechenkern") }
+            if ("Rechenkern: DnA" !in result) failures += "Runde $round: nicht mit dem DnA-Rechenkern gerechnet"
             Thread.sleep(1_000)
             am.runningAppProcesses.orEmpty().filter { it.processName.endsWith(":mt") }.forEach { android.os.Process.killProcess(it.pid) }
             Thread.sleep(1_500)
         }
-        File(app.filesDir, "mt_lowmem").delete()
         org.junit.Assert.assertTrue("Auf 32-Bit-ARM fehlgeschlagen: $failures", failures.isEmpty())
     }
 }

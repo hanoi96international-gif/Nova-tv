@@ -7,7 +7,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
-import java.io.Closeable
 import java.io.File
 import java.nio.FloatBuffer
 import java.nio.LongBuffer
@@ -17,8 +16,8 @@ import java.nio.LongBuffer
  * Encoder liest den Satz einmal, der Decoder erzeugt die Übersetzung Wort für Wort und nutzt dabei
  * den Zwischenspeicher (KV-Cache) der vorigen Schritte, damit jeder Schritt nur ein Token rechnet.
  */
-class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int, lowMemory: Boolean = false) : Closeable {
-    val tokenizer = UnigramTokenizer.load(File(dir, TOKENIZER))
+class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int, lowMemory: Boolean = false) : TranslationModel {
+    override val tokenizer = UnigramTokenizer.load(File(dir, TOKENIZER))
     private val eos: Int
     private val pad: Int
     private val start: Int
@@ -73,8 +72,7 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int, lowM
         }
     }
 
-    /** Übersetzt einen Satz. [prefix]: Sprachkennung für Modelle mit mehreren Zielsprachen (">>fra<<"). */
-    fun translate(text: String, prefix: Int? = null): String {
+    override fun translate(text: String, prefix: Int?): String {
         val ids = ArrayList<Long>()
         prefix?.let { ids += it.toLong() }
         tokenizer.encode(text).take(MAX_INPUT_TOKENS).forEach { ids += it.toLong() }

@@ -90,6 +90,15 @@ class DeviceTourTest {
         return ActivityScenario.launch(intent)
     }
 
+    /** Übersetzer-Prozess beenden, damit er beim nächsten Aufruf frisch startet (z. B. mit anderem Rechenkern). */
+    private fun killTranslator() {
+        de.ayutv.data.repo.Translators.remote.release()
+        Thread.sleep(500)
+        val am = app.getSystemService(android.app.ActivityManager::class.java)
+        am.runningAppProcesses.orEmpty().filter { it.processName.endsWith(":mt") }.forEach { android.os.Process.killProcess(it.pid) }
+        Thread.sleep(1_500)
+    }
+
     private fun waitFor(timeoutMs: Long, condition: () -> Boolean): Boolean {
         val end = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < end) {
@@ -525,7 +534,23 @@ class DeviceTourTest {
             val result = runBlocking { de.ayutv.data.translate.TranslatorSelfTest.run("de") }
             de.ayutv.data.repo.Translators.remote.release()
             log("translator_selftest: ${result.replace("\n", " | ")}")
-            assertTrue("Selbsttest fehlgeschlagen: $result", result.lines().filterNot { it.startsWith("Speicher") || it.startsWith("Prozessor") }.all { "ok" in it })
+            assertTrue("Selbsttest fehlgeschlagen: $result", result.lines().filterNot { it.startsWith("Speicher") || it.startsWith("Prozessor") || it.startsWith("Rechenkern") }.all { "ok" in it })
+        }
+
+        // 5c3. Derselbe Selbsttest mit dem DnA-Rechenkern (reines Kotlin, wie auf 32-Bit-Geräten)
+        section("translator_selftest_kern") {
+            val override = File(app.filesDir, "mt_engine").apply { writeText("kern") }
+            try {
+                killTranslator()
+                val result = runBlocking { de.ayutv.data.translate.TranslatorSelfTest.run("es") }
+                de.ayutv.data.repo.Translators.remote.release()
+                log("translator_selftest_kern: ${result.replace("\n", " | ")}")
+                assertTrue("Rechenkern nicht verwendet: $result", "Rechenkern: DnA" in result)
+                assertTrue("Selbsttest (Rechenkern) fehlgeschlagen: $result", result.lines().filterNot { it.startsWith("Speicher") || it.startsWith("Prozessor") || it.startsWith("Rechenkern") }.all { "ok" in it })
+            } finally {
+                override.delete()
+                killTranslator()
+            }
         }
 
         // 5d. Film nur mit Bild-Untertiteln (PGS wie auf Blu-ray): mitlesen, Texterkennung, Übersetzung mit Vorlauf

@@ -32,6 +32,11 @@ class OnDeviceTranslator(
     /** Speichersparmodus für Geräte mit wenig RAM. */
     private val lowMemory: () -> Boolean = { false },
 ) : Translator {
+    private val baseDir = baseDir
+
+    /** Womit gerechnet wird (kann nach einem Absturz von ONNX Runtime wechseln). */
+    val engine: Engine.Kind get() = Engine.select(baseDir)
+
     /** Meldet jeden Schritt in nativem Code vorher (und null danach): Bei einem Absturz ist klar, wo. */
     @Volatile
     var trace: (String?) -> Unit = {}
@@ -44,15 +49,15 @@ class OnDeviceTranslator(
 
     private val dir = File(baseDir, "mt")
     private val env by lazy { OrtEnvironment.getEnvironment().also { runCatching { it.setTelemetry(false) } } }
-    private val loaded = LinkedHashMap<String, OpusMtModel>()
+    private val loaded = LinkedHashMap<String, TranslationModel>()
     private val lock = Mutex()
     private val dispatcher = Executors.newSingleThreadExecutor { runnable ->
-        Thread({
-            // Etwas weniger Vorrang als die Wiedergabe: Ton und Bild gehen immer vor.
-            // Hintergrund-Vorrang: Bild und Ton gehen immer vor (Übersetzung hat 30–60 s Vorlauf).
+        // Hintergrund-Vorrang: Bild und Ton gehen immer vor (Übersetzung hat 30–60 s Vorlauf).
+        // Großer Stapel: manche Geräte geben neuen Threads sehr wenig, die Rechenkerne brauchen mehr.
+        Thread(null, {
             Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
             runnable.run()
-        }, "dna-translate")
+        }, "dna-translate", STACK)
     }.asCoroutineDispatcher()
 
     data class Hop(val pair: String, val token: String? = null)
@@ -73,7 +78,7 @@ class OnDeviceTranslator(
         }
     }
 
-    private fun translateText(text: String, models: List<Pair<Hop, OpusMtModel>>): String {
+    private fun translateText(text: String, models: List<Pair<Hop, TranslationModel>>): String {
         val lines = text.replace(TAGS, "").lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (lines.isEmpty() || models.isEmpty()) return text
         // Dialog ("- Hallo.\n- Hi.") Zeile für Zeile, sonst den ganzen Satz über Zeilenumbrüche hinweg.
@@ -94,17 +99,19 @@ class OnDeviceTranslator(
     }
 
     /** Lädt (einmalig herunter und) in den Speicher. Höchstens zwei Modelle gleichzeitig (Brücke über Englisch). */
-    private suspend fun model(pair: String): OpusMtModel = lock.withLock {
+    private suspend fun model(pair: String): TranslationModel = lock.withLock {
         loaded.remove(pair)?.let { model ->
             loaded[pair] = model
             return@withLock model
         }
         val folder = File(dir, pair)
-        if (!isInstalled(folder)) download(pair, folder)
+        val kind = engine
+        if (!isInstalled(folder, kind)) download(pair, folder, kind)
         while (loaded.size >= 2) {
             val eldest = loaded.keys.first()
             loaded.remove(eldest)?.close()
         }
+        if (kind == Engine.Kind.KERN) return@withLock loadKern(pair, folder)
         // Einmalig ins speichersparende ORT-Format umwandeln. Das braucht kurz viel Speicher: Läuft gerade
         // ein Film und reicht er nicht, nach dem Film nachholen (statt vom System beendet zu werden).
         val freeMb = freeMemoryMb()
@@ -136,6 +143,21 @@ class OnDeviceTranslator(
         model
     }
 
+    /** Mit dem Rechenkern: ONNX-Dateien direkt einblenden, keine Vorbereitung, kaum Arbeitsspeicher. */
+    private fun loadKern(pair: String, folder: File): TranslationModel {
+        // Fürs ONNX-Runtime-Format umgewandelte Dateien braucht der Rechenkern nicht (je ~110 MB Platz).
+        folder.listFiles()?.filter { it.name.endsWith(".ort") || it.name.endsWith(".ort.part") }?.forEach { it.delete() }
+        onProgress("Starte Übersetzer ${describe(pair)} …")
+        val model = try {
+            KernMtModel(folder, threads)
+        } catch (e: Exception) {
+            folder.deleteRecursively()
+            throw IOException("Übersetzungsmodell defekt, wird neu geladen: ${e.message}", e)
+        }
+        loaded[pair] = model
+        return model
+    }
+
     /** Für später vormerken: Nach dem Film wird der Übersetzer im Hintergrund vorbereitet. */
     private fun pendingPreparation(pair: String) {
         runCatching { File(dir, PENDING_FILE).appendText("$pair\n") }
@@ -144,17 +166,22 @@ class OnDeviceTranslator(
     /** Vorgemerkte Sprachpaare vorbereiten (ohne Film, genug Speicher). Gibt die erledigten zurück. */
     suspend fun preparePending(): List<String> = withContext(dispatcher) {
         val file = File(dir, PENDING_FILE)
+        // Der Rechenkern braucht keine Vorbereitung.
+        if (engine == Engine.Kind.KERN) {
+            file.delete()
+            return@withContext emptyList()
+        }
         val pairs = file.takeIf { it.isFile }?.readLines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
         file.delete()
         pairs.filter { pair -> runCatching { model(pair) }.isSuccess }.also { release() }
     }
 
-    /** Vollständig da: Konfiguration, Tokenizer und je Teilmodell die ORT-Datei oder die ONNX-Datei. */
-    private fun isInstalled(folder: File) = FILES.keys.all { local ->
-        File(folder, local).length() > 0 || (local in MODEL_FILES && OrtLoader.hasPrepared(File(folder, local)))
+    /** Vollständig da: Konfiguration, Tokenizer und je Teilmodell die ONNX-Datei (oder für ONNX Runtime die ORT-Datei). */
+    private fun isInstalled(folder: File, kind: Engine.Kind = engine) = FILES.keys.all { local ->
+        File(folder, local).length() > 0 || (kind == Engine.Kind.ORT && local in MODEL_FILES && OrtLoader.hasPrepared(File(folder, local)))
     }
 
-    private fun download(pair: String, folder: File) {
+    private fun download(pair: String, folder: File, kind: Engine.Kind) {
         if (dir.apply { mkdirs() }.usableSpace < MIN_FREE_BYTES) throw IOException("Zu wenig Speicher für das Übersetzungsmodell (ca. 120 MB nötig)")
         folder.mkdirs()
         val label = describe(pair)
@@ -164,7 +191,7 @@ class OnDeviceTranslator(
             if (File(folder, local).length() > 0) continue
             // Modelle zuerst fertig umgewandelt (ORT-Format) aus dem DnA-TV-Release: Das Umwandeln selbst
             // bräuchte ~500 MB und klappt auf einem Fire TV Stick nicht. Gibt es keins, das ONNX-Original.
-            val prepared = if (local in MODEL_FILES) OrtLoader.prepared(env, File(folder, local)) else null
+            val prepared = if (local in MODEL_FILES && kind == Engine.Kind.ORT) OrtLoader.prepared(env, File(folder, local)) else null
             if (prepared != null && prepared.length() > 0) continue
             val sources = listOfNotNull(
                 prepared?.let { "$RELEASES/models-ort-${env.version}/opus-mt-$pair.${local.substringBefore('.')}.ort" to it },
@@ -231,7 +258,7 @@ class OnDeviceTranslator(
     /** Belegter Speicher aller geladenen Sprachmodelle. */
     fun installedBytes(): Long = dir.walk().filter { it.isFile }.sumOf { it.length() }
 
-    fun installedPairs(): List<String> = dir.listFiles().orEmpty().filter { isInstalled(it) }.map { it.name }.sorted()
+    fun installedPairs(): List<String> = engine.let { kind -> dir.listFiles().orEmpty().filter { isInstalled(it, kind) }.map { it.name }.sorted() }
 
     /** Auf dem Übersetzer-Thread: Modelle werden nie freigegeben, während gerade mit ihnen gerechnet wird. */
     suspend fun deleteAll() = withContext(dispatcher) {
@@ -265,13 +292,15 @@ class OnDeviceTranslator(
         private const val PENDING_FILE = "prepare_pending.txt"
 
         /** Wartet ein Übersetzer darauf, ohne laufenden Film vorbereitet zu werden? */
-        fun hasPendingPreparation(baseDir: File): Boolean = File(File(baseDir, "mt"), PENDING_FILE).isFile
+        fun hasPendingPreparation(baseDir: File): Boolean =
+            File(File(baseDir, "mt"), PENDING_FILE).isFile && Engine.select(baseDir) == Engine.Kind.ORT
         private const val TAG = "OnDeviceTranslator"
         private const val BASE = "https://huggingface.co/Xenova"
         /** Fertig umgewandelte Modelle (ORT-Format, Workflow „Models“) als Release-Dateien von DnA-TV. */
         private const val RELEASES = "https://github.com/hanoi96international-gif/Nova-tv/releases/download"
         private val MODEL_FILES = setOf(OpusMtModel.ENCODER, OpusMtModel.DECODER)
         private const val THREADS = 2
+        private const val STACK = 16L * 1024 * 1024
         private const val MIN_FREE_BYTES = 200L * 1024 * 1024
         private const val TOTAL_BYTES_ESTIMATE = 115_000_000L
         private val TAGS = Regex("""<[^>]+>|\{\\[^}]*\}""")

@@ -746,15 +746,6 @@ class PlayerActivity : ComponentActivity() {
                 subtitleStatus = onlineProblem ?: "Keine Untertitel in $label gefunden (Übersetzung ist in den Einstellungen aus)"
                 return@launch
             }
-            // 3a. Schwaches Gerät mit eingebetteten Untertiteln, die direkt (ein Modell, ohne Umweg über
-            //     Englisch) übersetzbar sind: die nehmen, sie sind zeitgenau und brauchen am wenigsten Speicher.
-            val embeddedLanguage = embeddedSource?.let { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) } ?: "en"
-            val direct = de.ayutv.data.translate.OnDeviceTranslator.route(embeddedLanguage, Languages.normalize(language) ?: language)?.size == 1
-            if (heavy && embeddedSource != null && direct && !de.ayutv.data.translate.SubtitleOcr.unavailable(filesDir)) {
-                onlineProblem?.let { subtitleStatus = it }
-                startLiveTranslation(language, embeddedSource)
-                return@launch
-            }
             // 3b. Schwaches Gerät: vorhandene Untertitel einer anderen Sprache übersetzen (nur der
             //     Übersetzer, keine Texterkennung). Sie werden an der eingebetteten Spur ausgerichtet.
             if (heavy && request != null) {
@@ -767,9 +758,9 @@ class PlayerActivity : ComponentActivity() {
                     return@launch
                 }
             }
-            // 3c. Bild-Untertitel auf dem Gerät lesen und übersetzen (nicht, wenn die Texterkennung
-            //     hier schon in allen Varianten abgestürzt ist)
-            if (embeddedSource != null && !de.ayutv.data.translate.SubtitleOcr.unavailable(filesDir)) {
+            // 3c. Bild-Untertitel auf dem Gerät lesen und übersetzen (auf schwachen Geräten erst jetzt:
+            //     Texterkennung ist dort langsam, eine fertige Textvorlage zu übersetzen geht schneller)
+            if (embeddedSource != null) {
                 startLiveTranslation(language, embeddedSource)
                 return@launch
             }
