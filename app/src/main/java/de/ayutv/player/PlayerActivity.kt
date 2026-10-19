@@ -43,6 +43,7 @@ import de.ayutv.AyuApp
 import de.ayutv.data.AppSettings
 import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
+import de.ayutv.data.DeviceInfo
 import de.ayutv.data.Languages
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.db.ChannelEntity
@@ -717,11 +718,14 @@ class PlayerActivity : ComponentActivity() {
         subtitleJob = lifecycleScope.launch {
             // 2. Eingebettete Untertitel einer anderen Sprache übersetzen (auch Bild-Untertitel per
             //    Texterkennung): passen immer exakt zur Datei, keine Verschiebung möglich.
-            if (settings.translationEnabled) {
-                bestTranslationSource(allowForced = false)?.let { source ->
-                    startLiveTranslation(language, source)
-                    return@launch
-                }
+            //    Auf schwachen Geräten (32 Bit, wenig RAM) laufen Texterkennung und Übersetzung neben 4K
+            //    nicht zuverlässig: Dort zuerst fertige Untertitel (werden automatisch ausgerichtet).
+            val embeddedSource = if (settings.translationEnabled) bestTranslationSource(allowForced = false) else null
+            val heavy = embeddedSource != null && embeddedSource.let { (g, i) -> g.getTrackFormat(i).isBitmapSubtitle() } &&
+                DeviceInfo.isWeak(this@PlayerActivity)
+            if (embeddedSource != null && !heavy) {
+                startLiveTranslation(language, embeddedSource)
+                return@launch
             }
             // 3. Gespeicherte Datei oder Untertitel in der Zielsprache von OpenSubtitles (werden automatisch ausgerichtet)
             if (request != null) {
@@ -736,6 +740,11 @@ class PlayerActivity : ComponentActivity() {
             }
             if (!settings.translationEnabled) {
                 subtitleStatus = "Keine Untertitel in $label gefunden (Übersetzung ist in den Einstellungen aus)"
+                return@launch
+            }
+            // 3b. Nichts Fertiges gefunden: Bild-Untertitel doch auf dem Gerät lesen und übersetzen
+            if (embeddedSource != null) {
+                startLiveTranslation(language, embeddedSource)
                 return@launch
             }
             // 4. Nur erzwungene eingebettete Untertitel: besser als nichts
@@ -906,8 +915,8 @@ class PlayerActivity : ComponentActivity() {
                     Log.w(SUBTITLE_TAG, "Übersetzung mit Vorlauf fehlgeschlagen", e)
                     aheadTranslations[next.startMs] = next.text.orEmpty()
                     if (++failures >= 3) {
-                        subtitleStatus = "Übersetzung nicht möglich: ${e.message ?: e.javaClass.simpleName}"
                         stopLiveTranslation()
+                        fallbackToLoaded(target, e.message ?: e.javaClass.simpleName)
                         break
                     }
                 }
@@ -1041,6 +1050,29 @@ class PlayerActivity : ComponentActivity() {
             subtitleStatus = "Untertitel automatisch angepasst (${formatShift(fit.timing.offsetMs + subtitleDelayMs)}" +
                 (if (fit.timing.ratio != 1.0) ", Bildrate korrigiert" else "") + ")"
             saveTiming()
+        }
+    }
+
+    /**
+     * Übersetzung auf dem Gerät gescheitert (Speicher, Absturz im Modell): fertige Untertitel in der
+     * Sprache nehmen. Sie werden an der eingebetteten Spur automatisch ausgerichtet.
+     */
+    private fun fallbackToLoaded(language: String, reason: String) {
+        val request = vod
+        if (request == null) {
+            subtitleStatus = "Übersetzung nicht möglich: $reason"
+            return
+        }
+        subtitleJob?.cancel()
+        subtitleJob = lifecycleScope.launch {
+            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings) }
+                .onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
+            if (found != null) {
+                attachLoaded(language, found)
+                subtitleStatus = "Übersetzung auf dem Gerät nicht möglich ($reason). Nehme fertige Untertitel, automatisch ausgerichtet"
+            } else {
+                subtitleStatus = "Übersetzung nicht möglich: $reason"
+            }
         }
     }
 
