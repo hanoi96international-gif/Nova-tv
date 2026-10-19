@@ -140,7 +140,19 @@ class PlaylistRepository(
         db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
     }
 
+    /** Playlists, die gerade geladen werden: ein zweiter Klick auf „Aktualisieren“ startet keinen zweiten Import. */
+    private val syncing = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
+
     suspend fun sync(playlistId: Long, withEpg: Boolean = true) {
+        if (!syncing.add(playlistId)) return
+        try {
+            syncNow(playlistId, withEpg)
+        } finally {
+            syncing.remove(playlistId)
+        }
+    }
+
+    private suspend fun syncNow(playlistId: Long, withEpg: Boolean) {
         val playlist = db.playlists().byId(playlistId) ?: return
         val ok = mutex.withLock {
             prepareImportClient()

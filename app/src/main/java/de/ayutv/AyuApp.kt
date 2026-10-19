@@ -9,6 +9,7 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import kotlinx.coroutines.launch
+import de.ayutv.data.repo.SyncWorker
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -34,6 +35,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             container.parental.applyLocks()
             container.playlists.syncAll()
         }
+        runCatching { SyncWorker.schedule(this) }
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
         container.scope.launch { container.reminders.rescheduleAll() }
     }
