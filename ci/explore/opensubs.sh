@@ -2,9 +2,13 @@
 # Erkundung: Findet die OpenSubtitles-Suche der App spanische Untertitel für „Harry Potter und der Halbblutprinz“?
 OUT=${1:-explore-out}; mkdir -p "$OUT"
 API=https://api.opensubtitles.com/api/v1
-q() { curl -s -A "DnA-TV v0.15" -H "Api-Key: $OPENSUBTITLES_API_KEY" "$API/subtitles?$1" | python3 -c "
+q() { curl -sL -A "DnA-TV v0.15" -H "Api-Key: $OPENSUBTITLES_API_KEY" -w "\nHTTP %{http_code}" "$API/subtitles?$1" > /tmp/r.txt; tail -1 /tmp/r.txt; sed '$d' /tmp/r.txt | python3 -c "
 import json,sys
-d=json.load(sys.stdin)
+raw=sys.stdin.read()
+try:
+    d=json.loads(raw)
+except Exception:
+    print('KEIN JSON:', raw[:300]); sys.exit()
 items=d.get('data',[])
 print('total', d.get('total_count'), 'msg', d.get('message'))
 for it in items[:5]:
