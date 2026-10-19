@@ -446,6 +446,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
             item { MenuHeader("Untertitel-Zeit") }
             item { OptionRow("Früher einblenden (−0,5 s)", selected = false) { activity.shiftSubtitles(-500) } }
             item { OptionRow("Später einblenden (+0,5 s)", selected = false) { activity.shiftSubtitles(500) } }
+            item { OptionRow("Falsche Untertitel – andere laden", selected = false) { activity.reportWrongSubtitles() } }
             item { MenuHint(syncHint(activity)) }
         }
         if (!activity.isLive) {

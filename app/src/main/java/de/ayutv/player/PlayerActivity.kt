@@ -1115,6 +1115,12 @@ class PlayerActivity : ComponentActivity() {
 
     private var replacedSubtitles = 0
 
+    /** Von Hand aus dem Menü: Die eingeblendeten Untertitel gehören nicht zu diesem Film. */
+    fun reportWrongSubtitles() {
+        closeOverlay()
+        replaceWrongSubtitles()
+    }
+
     private fun replaceWrongSubtitles() {
         val request = vod ?: return
         val language = externalLanguage ?: return

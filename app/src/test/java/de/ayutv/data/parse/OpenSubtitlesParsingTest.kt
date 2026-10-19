@@ -23,6 +23,21 @@ class OpenSubtitlesParsingTest {
     }
 
     @Test
+    fun titleSearchPicksTheRelevantFilmNotTheMostPopular() {
+        // Wie bei einer Titelsuche: zuerst der gesuchte Film, dahinter ein beliebterer Film mit ähnlichem Namen.
+        val body = """{"data":[
+          {"attributes":{"language":"id","download_count":50,"feature_details":{"feature_id":1,"year":2009,"feature_type":"Movie"},"files":[{"file_id":11}]}},
+          {"attributes":{"language":"id","download_count":90000,"feature_details":{"feature_id":2,"year":2001,"feature_type":"Movie"},"files":[{"file_id":22}]}},
+          {"attributes":{"language":"id","download_count":300,"feature_details":{"feature_id":1,"year":2009,"feature_type":"Movie"},"files":[{"file_id":12}]}}
+        ]}"""
+        val found = OpenSubtitlesParsing.searchResults(body)
+        assertEquals(listOf(12L, 11L), OpenSubtitlesParsing.bestFeature(found, 2009).map { it.fileId })
+        assertEquals(listOf(12L, 11L), OpenSubtitlesParsing.bestFeature(found, null).map { it.fileId })
+        // Jahr passt zu keinem Treffer: lieber nichts als ein falscher Film.
+        assertEquals(emptyList<Long>(), OpenSubtitlesParsing.bestFeature(found, 1985).map { it.fileId })
+    }
+
+    @Test
     fun readsTmdbIdOfFeature() {
         val body = """{"data":[{"attributes":{"language":"es","feature_details":{"tmdb_id":767,"title":"Harry Potter"},
             "files":[{"file_id":1}]}},{"attributes":{"language":"es","feature_details":{"tmdb_id":9999},"files":[{"file_id":2}]}}]}"""
