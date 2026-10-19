@@ -25,12 +25,15 @@ class ArmSelfTest {
             Log.i("AyuArm", text)
             out.appendText(text + "\n")
         }
+        val failures = mutableListOf<String>()
         log("abis=${Build.SUPPORTED_ABIS.joinToString()} libs=${app.applicationInfo.nativeLibraryDir}")
         for ((round, language) in listOf("de", "es", "id", "es", "fr").withIndex()) {
             val result = runBlocking { TranslatorSelfTest.run(language) }
             Translators.remote.release()
             log("round $round $language: ${result.replace("\n", " | ")}")
+            failures += result.lines().filterNot { "ok" in it }
             Thread.sleep(2_000)
         }
+        org.junit.Assert.assertTrue("Auf 32-Bit-ARM fehlgeschlagen: $failures", failures.isEmpty())
     }
 }

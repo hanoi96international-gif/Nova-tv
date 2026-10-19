@@ -13,4 +13,5 @@ timeout 2400 adb shell am instrument -w -e class de.ayutv.ArmSelfTest de.ayutv.t
 adb exec-out run-as de.ayutv cat files/ci/arm.txt > arm-out/arm.txt || true
 adb exec-out run-as de.ayutv cat files/mt_step.txt > arm-out/last_step.txt 2>/dev/null || true
 adb logcat -d -v time AyuArm:I DnAOcr:I AndroidRuntime:E DEBUG:F libc:F '*:F' ActivityManager:I > arm-out/logcat.txt 2>&1 || true
-exit 0
+# Selbsttest fehlgeschlagen (Absturz oder Fehler auf 32-Bit-ARM): Job rot.
+grep -q "^OK (" arm-out/instrument.txt
