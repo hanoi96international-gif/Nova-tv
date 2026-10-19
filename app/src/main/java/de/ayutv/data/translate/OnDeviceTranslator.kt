@@ -105,11 +105,23 @@ class OnDeviceTranslator(
             val eldest = loaded.keys.first()
             loaded.remove(eldest)?.close()
         }
-        // Reicht der Speicher neben der laufenden Wiedergabe nicht, ehrlich sagen statt vom System beendet zu werden.
-        val needMb = folder.walk().filter { it.isFile }.sumOf { it.length() } * 13 / 10 / 1_000_000
+        // Einmalig ins speichersparende ORT-Format umwandeln. Das braucht kurz viel Speicher: Läuft gerade
+        // ein Film und reicht er nicht, nach dem Film nachholen (statt vom System beendet zu werden).
         val freeMb = freeMemoryMb()
-        if (freeMb != null && freeMb < needMb) {
-            throw IOException("Zu wenig freier Arbeitsspeicher für den Übersetzer (frei $freeMb MB, nötig ca. $needMb MB)")
+        val models = listOf(File(folder, OpusMtModel.ENCODER), File(folder, OpusMtModel.DECODER))
+        if (models.any { !OrtLoader.isPrepared(env, it) }) {
+            val needMb = models.sumOf { it.length() } * 3 / 1_000_000
+            if (freeMb != null && freeMb < needMb) {
+                pendingPreparation(pair)
+                throw IOException(
+                    "Übersetzer ${describe(pair)} wird einmalig vorbereitet, sobald kein Film läuft (jetzt frei $freeMb MB, " +
+                        "nötig ca. $needMb MB). Sofort: Film beenden, Einstellungen → Untertitel → Übersetzer testen"
+                )
+            }
+            onProgress("Bereite Übersetzer ${describe(pair)} einmalig vor …")
+            trace("Übersetzer $pair wird vorbereitet")
+            models.forEach { file -> OrtLoader.prepare(env, file) { setIntraOpNumThreads(threads) } }
+            trace(null)
         }
         onProgress("Starte Übersetzer ${describe(pair)} …" + (freeMb?.let { " (frei: $it MB)" } ?: ""))
         val model = try {
@@ -122,6 +134,19 @@ class OnDeviceTranslator(
         }
         loaded[pair] = model
         model
+    }
+
+    /** Für später vormerken: Nach dem Film wird der Übersetzer im Hintergrund vorbereitet. */
+    private fun pendingPreparation(pair: String) {
+        runCatching { File(dir, PENDING_FILE).appendText("$pair\n") }
+    }
+
+    /** Vorgemerkte Sprachpaare vorbereiten (ohne Film, genug Speicher). Gibt die erledigten zurück. */
+    suspend fun preparePending(): List<String> = withContext(dispatcher) {
+        val file = File(dir, PENDING_FILE)
+        val pairs = file.takeIf { it.isFile }?.readLines()?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct().orEmpty()
+        file.delete()
+        pairs.filter { pair -> runCatching { model(pair) }.isSuccess }.also { release() }
     }
 
     private fun isInstalled(folder: File) = FILES.keys.all { File(folder, it).length() > 0 }
@@ -208,6 +233,10 @@ class OnDeviceTranslator(
 
     companion object {
         const val NAME = "DnA-Übersetzer (auf dem Gerät)"
+        private const val PENDING_FILE = "prepare_pending.txt"
+
+        /** Wartet ein Übersetzer darauf, ohne laufenden Film vorbereitet zu werden? */
+        fun hasPendingPreparation(baseDir: File): Boolean = File(File(baseDir, "mt"), PENDING_FILE).isFile
         private const val TAG = "OnDeviceTranslator"
         private const val BASE = "https://huggingface.co/Xenova"
         private const val THREADS = 2

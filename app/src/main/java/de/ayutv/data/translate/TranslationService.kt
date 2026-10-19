@@ -80,6 +80,9 @@ class TranslationService : Service() {
                         val target = data.getString(RemoteTranslator.TARGET).orEmpty()
                         putStringArrayList(RemoteTranslator.RESULT, ArrayList(translator.translate(texts, target, data.getString(RemoteTranslator.SOURCE))))
                     }
+                    RemoteTranslator.PREPARE -> Bundle().apply {
+                        putStringArrayList(RemoteTranslator.RESULT, ArrayList(translator.preparePending()))
+                    }
                     RemoteTranslator.RECOGNIZE -> Bundle().apply {
                         val image = EmbeddedSubtitles.GrayImage(
                             data.getInt(RemoteTranslator.WIDTH),
@@ -95,7 +98,8 @@ class TranslationService : Service() {
             } catch (e: Exception) {
                 Bundle().apply { putString(RemoteTranslator.ERROR, e.message ?: e.javaClass.simpleName) }
             }
-            peakMemoryMb()?.let { result.putLong(RemoteTranslator.PEAK, it) }
+            memoryMb("VmHWM")?.let { result.putLong(RemoteTranslator.PEAK, it) }
+            memoryMb("RssAnon")?.let { result.putLong(RemoteTranslator.ANON, it) }
             runCatching { replyTo.send(Message.obtain(null, what, id, 0).apply { this.data = result }) }
         }
     }
@@ -118,9 +122,12 @@ class TranslationService : Service() {
         else -> de.ayutv.data.DeviceInfo.isWeak(this)
     }
 
-    /** Höchster Speicherverbrauch dieses Prozesses bisher (VmHWM), in MB. */
-    private fun peakMemoryMb(): Long? = runCatching {
-        java.io.File("/proc/self/status").readLines().first { it.startsWith("VmHWM:") }
+    /**
+     * Speicher dieses Prozesses in MB: VmHWM = Höchststand insgesamt (auch eingeblendete Dateien, die
+     * Android jederzeit freigeben kann), RssAnon = echter Arbeitsspeicher, den nur dieser Prozess belegt.
+     */
+    private fun memoryMb(field: String): Long? = runCatching {
+        java.io.File("/proc/self/status").readLines().first { it.startsWith("$field:") }
             .filter(Char::isDigit).toLong() / 1024
     }.getOrNull()
 
