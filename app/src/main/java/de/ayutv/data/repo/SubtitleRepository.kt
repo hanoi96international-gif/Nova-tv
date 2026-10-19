@@ -136,7 +136,8 @@ class SubtitleRepository(
                 candidates = search(apiKey, buildMap {
                     put("tmdb_id", tmdb)
                     if (language != null) put("languages", language)
-                }).filter { it.fileId !in bad }
+                    // Manche Treffer gehören zu einem anderen Titel (z. B. eine Serienfolge): aussortieren.
+                }).filter { it.fileId !in bad && (it.tmdbId == null || it.tmdbId.toString() == tmdb) }
             }
             if (candidates.isEmpty()) {
                 val (cleanTitle, year) = OpenSubtitlesParsing.cleanTitle(info?.originalTitle ?: title)

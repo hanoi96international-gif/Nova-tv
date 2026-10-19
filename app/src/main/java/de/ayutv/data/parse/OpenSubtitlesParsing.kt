@@ -46,6 +46,8 @@ data class SubtitleCandidate(
     val hearingImpaired: Boolean,
     /** Von OpenSubtitles per KI oder Maschine übersetzt (statt von Menschen erstellt). */
     val translated: Boolean = false,
+    /** TMDB-Kennung des Films, zu dem die Datei gehört (Suche nach tmdb_id liefert manchmal Fremdes). */
+    val tmdbId: Long? = null,
 )
 
 object OpenSubtitlesParsing {
@@ -71,6 +73,7 @@ object OpenSubtitlesParsing {
                 hearingImpaired = attributes.primitive("hearing_impaired")?.booleanOrNull ?: false,
                 translated = attributes.primitive("ai_translated")?.booleanOrNull == true ||
                     attributes.primitive("machine_translated")?.booleanOrNull == true,
+                tmdbId = (attributes["feature_details"] as? JsonObject)?.primitive("tmdb_id")?.longOrNull,
             )
         }.sortedWith(
             compareByDescending<SubtitleCandidate> { it.hashMatch }
