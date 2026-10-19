@@ -13,6 +13,7 @@ import de.ayutv.data.translate.OnDeviceTranslator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -34,7 +35,9 @@ class AppContainer(context: Context) {
     val playlists = PlaylistRepository(db, http, settings, context.cacheDir)
     val content = ContentRepository(db, http)
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
-    val subtitles = SubtitleRepository(http, context.filesDir)
+    val subtitles = SubtitleRepository(http, context.filesDir).also { repo ->
+        scope.launch(Dispatchers.IO) { repo.purgeLegacyCache() }
+    }
 
     val reminders = Reminders(context)
     val parental = ParentalControl(context, db)
