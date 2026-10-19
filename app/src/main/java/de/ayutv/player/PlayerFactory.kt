@@ -213,7 +213,8 @@ private class StreamMediaSourceFactory(
 
     override fun createMediaSource(mediaItem: MediaItem): MediaSource {
         val config = mediaItem.localConfiguration
-        return if (config?.mimeType == MimeTypes.APPLICATION_M3U8 && config.subtitleConfigurations.isEmpty()) {
+        val plainHls = config != null && config.mimeType == MimeTypes.APPLICATION_M3U8 && config.subtitleConfigurations.isEmpty()
+        return if (plainHls) {
             hls.createMediaSource(mediaItem)
         } else {
             default.createMediaSource(mediaItem)
