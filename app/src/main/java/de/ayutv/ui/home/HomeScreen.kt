@@ -77,7 +77,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         contentPadding = PaddingValues(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        item {
+        item(key = "header", contentType = "header") {
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     Text("Willkommen zurück", style = MaterialTheme.typography.headlineMedium)
@@ -88,7 +88,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         }
 
         if (nothingYet) {
-            item {
+            item(key = "empty", contentType = "hint") {
                 EmptyHint(
                     "Alles bereit",
                     "Öffne Live TV oder Filme. Was du schaust, merkt sich DnA-TV und schlägt dir hier Passendes vor.",
@@ -97,7 +97,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         }
 
         if (continueWatching.isNotEmpty()) {
-            item {
+            item(key = "continue", contentType = "posterRow") {
                 PosterRow("Weiter schauen") {
                     items(continueWatching, key = { it.key }) { entry ->
                         PosterCard(
@@ -118,13 +118,13 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         }
 
         if (recentChannels.isNotEmpty()) {
-            item {
+            item(key = "recent", contentType = "channelRow") {
                 ChannelRow("Zuletzt gesehen", recentChannels, nowMap, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
             }
         }
 
         if (favorites.isNotEmpty()) {
-            item {
+            item(key = "favorites", contentType = "channelRow") {
                 ChannelRow(
                     "Favoriten",
                     favorites,
@@ -136,13 +136,13 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         }
 
         recommendations.forEach { rec ->
-            item(key = "rec-${rec.title}") {
+            item(key = "rec-${rec.title}", contentType = "channelRow") {
                 ChannelRow(rec.title, rec.channels, nowMap, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
             }
         }
 
         if (recentMovies.isNotEmpty()) {
-            item {
+            item(key = "movies", contentType = "posterRow") {
                 PosterRow("Neue Filme") {
                     items(recentMovies, key = { it.key }) { movie ->
                         PosterCard(
@@ -162,7 +162,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         }
 
         if (recentSeries.isNotEmpty()) {
-            item {
+            item(key = "series", contentType = "posterRow") {
                 PosterRow("Neue Serien") {
                     items(recentSeries, key = { it.key }) { series ->
                         PosterCard(title = series.name, image = series.cover, onClick = { onOpenSeries(series) })

@@ -56,6 +56,7 @@ import de.ayutv.ui.components.EmptyHint
 import de.ayutv.ui.components.formatTime
 import de.ayutv.ui.components.rememberMinuteTicker
 import de.ayutv.ui.theme.AyuColors
+import de.ayutv.ui.theme.AyuFocus
 
 private const val MINUTE = 60_000L
 private const val HALF_HOUR = 30 * MINUTE
@@ -252,6 +253,7 @@ private fun GuideCell(
             containerColor = if (live) AyuColors.SurfaceRaised else AyuColors.Surface,
             focusedContainerColor = AyuColors.AccentSoft,
         ),
+        border = AyuFocus.border,
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
         Box(Modifier.fillMaxSize().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {

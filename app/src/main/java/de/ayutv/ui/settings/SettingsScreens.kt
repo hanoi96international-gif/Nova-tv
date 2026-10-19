@@ -56,6 +56,7 @@ import de.ayutv.ui.components.SectionTitle
 import de.ayutv.ui.components.SyncBanner
 import de.ayutv.ui.components.TvTextField
 import de.ayutv.ui.theme.AyuColors
+import de.ayutv.ui.theme.AyuFocus
 import kotlinx.coroutines.Job
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.background
@@ -72,6 +73,8 @@ import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.tv.material3.Border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.runtime.key
+import androidx.compose.ui.text.style.TextAlign
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -97,6 +100,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     }
     var keyReport by remember { mutableStateOf<String?>(null) }
     var page by rememberSaveable { mutableStateOf(SettingsPage.PLAYLISTS) }
+    // Bereich erst nach kurzem Verweilen wechseln: Beim schnellen Durchscrollen wird nicht jede Seite aufgebaut.
+    var pendingPage by remember { mutableStateOf<SettingsPage?>(null) }
+    LaunchedEffect(pendingPage) {
+        val target = pendingPage ?: return@LaunchedEffect
+        delay(200)
+        page = target
+    }
+    val pageFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
 
     fun update(transform: (AppSettings) -> AppSettings) {
         scope.launch { container.settings.update(transform) }
@@ -116,18 +127,26 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         Column(
             // focusRestorer: Von rechts zurück landet der Fokus auf dem gewählten Bereich, nicht auf dem
             // gerade daneben liegenden (der sonst sofort umschalten würde).
-            Modifier.width(250.dp).fillMaxHeight().focusRestorer()
+            // fallback: Beim ersten Betreten (noch nichts gemerkt) auf den gewählten Bereich, nicht auf den nächstgelegenen.
+            Modifier.width(250.dp).fillMaxHeight().focusRestorer(pageFocus.getValue(page))
                 .background(AyuColors.Surface.copy(alpha = 0.5f)).padding(vertical = 32.dp, horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text("Einstellungen", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 10.dp, bottom = 18.dp))
             SettingsPage.entries.forEach { entry ->
-                PageButton(entry, selected = page == entry) { page = entry }
+                PageButton(
+                    entry,
+                    selected = page == entry,
+                    focusRequester = pageFocus.getValue(entry),
+                    onFocus = { pendingPage = entry },
+                    onClick = { pendingPage = null; page = entry },
+                )
             }
             Spacer(Modifier.weight(1f))
             Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 12.sp, modifier = Modifier.padding(start = 10.dp))
         }
-        LazyColumn(
+        // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
+        key(page) { LazyColumn(
             modifier = Modifier.weight(1f).fillMaxHeight(),
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -379,7 +398,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                 }
             }
-        }
+        } }
     }
 
     BackHandler(enabled = confirmDelete != null) { confirmDelete = null }
@@ -451,10 +470,7 @@ private fun PlaylistRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Schalter vorne: Welche Playlists aktiv sind, entscheidet der Nutzer selbst.
-        OutlinedButton(
-            onClick = onToggle,
-            colors = if (playlist.enabled) ButtonDefaults.colors(containerColor = AyuColors.AccentSoft) else ButtonDefaults.colors(),
-        ) { Text(if (playlist.enabled) "● Aktiv" else "○ Aus") }
+        ActiveToggle(playlist.enabled, onToggle)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(
@@ -489,6 +505,7 @@ private fun SettingRow(title: String, value: String, description: String, modifi
         modifier = modifier.fillMaxWidth(),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
         colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.AccentSoft),
+        border = AyuFocus.border,
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f),
     ) {
         Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -723,10 +740,10 @@ private enum class SettingsPage(val title: String, val description: String, val 
 }
 
 @Composable
-private fun PageButton(page: SettingsPage, selected: Boolean, onSelect: () -> Unit) {
+private fun PageButton(page: SettingsPage, selected: Boolean, focusRequester: FocusRequester, onFocus: () -> Unit, onClick: () -> Unit) {
     Surface(
-        onClick = onSelect,
-        modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onSelect() },
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).onFocusChanged { if (it.isFocused) onFocus() },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = if (selected) AyuColors.AccentSoft.copy(alpha = 0.45f) else Color.Transparent,
@@ -738,5 +755,33 @@ private fun PageButton(page: SettingsPage, selected: Boolean, onSelect: () -> Un
             Text(page.icon, fontSize = 16.sp, modifier = Modifier.width(30.dp))
             Text(page.title, fontSize = 16.sp, color = if (selected) Color.White else AyuColors.TextSecondary)
         }
+    }
+}
+
+/** Gut sichtbarer An/Aus-Schalter: grün = aktiv, grau = aus, im Fokus mit weißem Rahmen. */
+@Composable
+private fun ActiveToggle(enabled: Boolean, onToggle: () -> Unit) {
+    val active = Color(0xFF2E9E5B)
+    Surface(
+        onClick = onToggle,
+        modifier = Modifier.width(120.dp),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (enabled) active else AyuColors.Surface,
+            focusedContainerColor = if (enabled) active else AyuColors.SurfaceRaised,
+            contentColor = Color.White,
+            focusedContentColor = Color.White,
+        ),
+        border = ClickableSurfaceDefaults.border(
+            focusedBorder = Border(BorderStroke(3.dp, Color.White), shape = RoundedCornerShape(20.dp)),
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
+    ) {
+        Text(
+            if (enabled) "● Aktiv" else "○ Aus",
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            textAlign = TextAlign.Center,
+            fontSize = 15.sp,
+        )
     }
 }

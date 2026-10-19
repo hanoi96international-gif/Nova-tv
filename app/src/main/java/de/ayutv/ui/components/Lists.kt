@@ -43,6 +43,7 @@ import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.repo.SyncState
 import de.ayutv.ui.theme.AyuColors
+import de.ayutv.ui.theme.AyuFocus
 import kotlinx.coroutines.delay
 
 /** Zeile in Senderlisten (Live-TV-Ansicht und Senderliste im Player). */
@@ -68,6 +69,7 @@ fun ChannelListItem(
             containerColor = if (selected) AyuColors.AccentSoft.copy(alpha = 0.45f) else Color.Transparent,
             focusedContainerColor = AyuColors.AccentSoft,
         ),
+        border = AyuFocus.border,
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -136,6 +138,7 @@ fun CategoryColumn(
                     containerColor = if (entry.id == selected) AyuColors.SurfaceRaised else Color.Transparent,
                     focusedContainerColor = AyuColors.AccentSoft,
                 ),
+                border = AyuFocus.border,
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             ) {
                 Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
