@@ -251,6 +251,30 @@ class DeviceTourTest {
             assertTrue("Erinnerung funktioniert nicht", set && stored && removed)
         }
 
+        // 2d. Kindersicherung: Gruppe sperren → verschwindet; mit PIN entsperren → wieder da
+        section("parental") {
+            val parental = container.parental
+            val ciPlaylist = runBlocking { container.db.playlists().all() }.first { it.name == "CI-Test" }
+            val group = de.ayutv.data.parental.ParentalControl.LockedGroup(ciPlaylist.id, de.ayutv.data.db.GroupKind.LIVE, "Test Ton")
+            val before = runBlocking { container.content.zapList(null, false) }.size
+            val wrong: Boolean
+            val locked: Int
+            val unlocked: Int
+            runBlocking {
+                parental.setPin("1234")
+                parental.setLocked(group, true)
+                parental.lock()
+                locked = container.content.zapList(null, false).size
+                wrong = parental.unlock("0000")
+                parental.unlock("1234")
+                unlocked = container.content.zapList(null, false).size
+                parental.setLocked(group, false)
+                parental.removePin("1234")
+            }
+            log("parental: before=$before locked=$locked wrong_pin_accepted=$wrong unlocked=$unlocked")
+            assertTrue("Kindersicherung wirkt nicht", locked < before && !wrong && unlocked == before)
+        }
+
         // 3a. Bildwiederholrate anpassen + Tunneling eingeschaltet: darf nie hängen oder sich neu starten
         channels.firstOrNull { it.name == "HD Test 50fps" }?.let { hd -> section("afr_tunneling") {
             runBlocking { container.settings.update { it.copy(matchFrameRate = true, tunneling = true) } }

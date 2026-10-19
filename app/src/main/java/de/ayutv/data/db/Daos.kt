@@ -284,3 +284,12 @@ interface HiddenGroupDao {
     @Query("SELECT COUNT(*) FROM hidden_groups")
     fun observeHiddenCount(): Flow<Int>
 }
+
+@Dao
+interface LockedGroupDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(groups: List<LockedGroupEntity>)
+
+    @Query("DELETE FROM locked_groups")
+    suspend fun clear()
+}

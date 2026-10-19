@@ -8,6 +8,7 @@ import de.ayutv.data.repo.PlaylistRepository
 import de.ayutv.data.repo.SubtitleRepository
 import de.ayutv.data.repo.Translators
 import de.ayutv.data.reminders.Reminders
+import de.ayutv.data.parental.ParentalControl
 import de.ayutv.data.translate.OnDeviceTranslator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ class AppContainer(context: Context) {
     val subtitles = SubtitleRepository(http, context.filesDir)
 
     val reminders = Reminders(context)
+    val parental = ParentalControl(context, db)
 
     init {
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)

@@ -17,6 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         FavoriteEntity::class,
         HistoryEntity::class,
         HiddenGroupEntity::class,
+        LockedGroupEntity::class,
     ],
     views = [VisibleChannelView::class, VisibleVodView::class, VisibleSeriesView::class],
     version = 3,
@@ -31,12 +32,18 @@ abstract class AyuDatabase : RoomDatabase() {
     abstract fun favorites(): FavoriteDao
     abstract fun history(): HistoryDao
     abstract fun hiddenGroups(): HiddenGroupDao
+    abstract fun lockedGroups(): LockedGroupDao
 
     companion object {
         /** 1 → 2: Playlists ein-/ausschaltbar. Views neu anlegen, damit sie ausgeschaltete Playlists ausblenden. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `playlists` ADD COLUMN `enabled` INTEGER NOT NULL DEFAULT 1")
+                // Die Views verweisen inzwischen auf locked_groups (kommt mit Version 3): Tabelle schon hier anlegen.
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `locked_groups` (`playlistId` INTEGER NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, PRIMARY KEY(`playlistId`, `kind`, `name`))"
+                )
                 recreateViews(db)
             }
         }
@@ -47,6 +54,11 @@ abstract class AyuDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `channels` ADD COLUMN `catchupType` TEXT")
                 db.execSQL("ALTER TABLE `channels` ADD COLUMN `catchupSource` TEXT")
                 db.execSQL("ALTER TABLE `playlists` ADD COLUMN `timezone` TEXT")
+                // Kindersicherung
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `locked_groups` (`playlistId` INTEGER NOT NULL, `kind` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, PRIMARY KEY(`playlistId`, `kind`, `name`))"
+                )
                 // Die Views lesen "SELECT *": neu anlegen, damit sie die neuen Spalten sicher enthalten.
                 recreateViews(db)
             }

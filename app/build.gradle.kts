@@ -87,6 +87,8 @@ dependencies {
     implementation("androidx.tv:tv-material:1.1.0")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    // Kindersicherung: sperren, sobald die App in den Hintergrund geht
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
     // Kompiliert beim Sideloaden die mitgelieferten Baseline-Profile von Compose: flüssigere UI ab dem ersten Start.
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 

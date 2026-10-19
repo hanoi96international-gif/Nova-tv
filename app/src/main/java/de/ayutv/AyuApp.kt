@@ -9,6 +9,9 @@ import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
 import kotlinx.coroutines.launch
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import okio.Path.Companion.toOkioPath
 
 class AyuApp : Application(), SingletonImageLoader.Factory {
@@ -19,7 +22,18 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         container = AppContainer(this)
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.
-        container.scope.launch { container.playlists.syncAll() }
+        // Kindersicherung: Verlässt man die App (Home-Taste, anderes Programm), ist wieder alles gesperrt.
+        // So ist die Sperre auch beim nächsten Start sofort aktiv.
+        ProcessLifecycleOwner.get().lifecycle.addObserver(LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && container.parental.unlocked.value) {
+                container.scope.launch { container.parental.lock() }
+            }
+        })
+        // Kindersicherung: Nach jedem Start ist wieder alles gesperrt (vor allem anderen anwenden).
+        container.scope.launch {
+            container.parental.applyLocks()
+            container.playlists.syncAll()
+        }
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
         container.scope.launch { container.reminders.rescheduleAll() }
     }
