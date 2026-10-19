@@ -20,6 +20,8 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         container = AppContainer(this)
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.
         container.scope.launch { container.playlists.syncAll() }
+        // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
+        container.scope.launch { container.reminders.rescheduleAll() }
     }
 
     /** Logos und Poster: kleiner Speicher-Cache (Fire TV Stick hat wenig RAM), großer Disk-Cache. */

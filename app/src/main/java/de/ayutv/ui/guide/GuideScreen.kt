@@ -60,6 +60,7 @@ import de.ayutv.ui.theme.AyuFocus
 import kotlinx.coroutines.launch
 import de.ayutv.ui.live.FAVORITES_GROUP
 import de.ayutv.data.repo.Catchup
+import de.ayutv.data.reminders.Reminder
 import de.ayutv.data.db.PlaylistEntity
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -79,7 +80,7 @@ private val ROW_HEIGHT = 58.dp
  * EPG-Raster mit festem Zeitfenster (2 Stunden). Links am ersten bzw. rechts am letzten Eintrag
  * einer Zeile verschiebt das Fenster um 30 Minuten. Geladen werden nur die Sendungen der gewählten Gruppe.
  * Oben steht die Vorschau der markierten Sendung, eine rote Linie zeigt „jetzt“. Vergangene Sendungen
- * von Sendern mit Archiv (⟲) lassen sich direkt abspielen.
+ * von Sendern mit Archiv (↺) lassen sich direkt abspielen.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -114,9 +115,14 @@ fun GuideScreen() {
         val target = (windowStart + steps * HALF_HOUR).coerceAtLeast(earliest)
         (target != windowStart).also { if (it) windowStart = target }
     }
+    val reminders by container.reminders.all.collectAsStateWithLifecycle(emptyList())
+    val reminderIds = remember(reminders) { reminders.mapTo(HashSet()) { it.id } }
     val play: (ChannelEntity, ProgrammeEntity?) -> Unit = { channel, programme ->
         val now = System.currentTimeMillis()
-        if (programme != null && programme.stop <= now) {
+        if (programme != null && programme.start > now) {
+            // Kommende Sendung: Erinnerung setzen bzw. wieder entfernen.
+            scope.launch { container.reminders.toggle(Reminder(channel.key, channel.name, programme.title, programme.start)) }
+        } else if (programme != null && programme.stop <= now) {
             scope.launch {
                 val url = content.catchupUrl(channel, programme)
                 if (url != null) PlayerActivity.startCatchup(context, channel, programme, url)
@@ -142,7 +148,7 @@ fun GuideScreen() {
         }
 
         Spacer(Modifier.height(10.dp))
-        ProgrammePreview(focused, playlists, minute, Modifier.padding(horizontal = 24.dp))
+        ProgrammePreview(focused, playlists, reminderIds, minute, Modifier.padding(horizontal = 24.dp))
         Spacer(Modifier.height(8.dp))
         Row(Modifier.padding(start = 24.dp)) {
             Spacer(Modifier.width(CHANNEL_COLUMN + 4.dp))
@@ -175,6 +181,7 @@ fun GuideScreen() {
                         windowStart = windowStart,
                         windowEnd = windowEnd,
                         now = minute,
+                        reminderIds = reminderIds,
                         onShift = shift,
                         onFocusProgramme = { focused.value = channel to it },
                         onPlay = { programme -> play(channel, programme) },
@@ -213,7 +220,13 @@ private fun GroupChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 /** Titel, Zeit und Beschreibung der markierten Sendung; bei Archiv-Sendungen der Hinweis zum Abspielen. */
 @Composable
-private fun ProgrammePreview(state: State<Pair<ChannelEntity, ProgrammeEntity>?>, playlists: List<PlaylistEntity>, now: Long, modifier: Modifier) {
+private fun ProgrammePreview(
+    state: State<Pair<ChannelEntity, ProgrammeEntity>?>,
+    playlists: List<PlaylistEntity>,
+    reminderIds: Set<String>,
+    now: Long,
+    modifier: Modifier,
+) {
     val (channel, programme) = state.value ?: (null to null)
     Column(modifier.fillMaxWidth().height(78.dp)) {
         if (channel == null || programme == null) {
@@ -224,9 +237,10 @@ private fun ProgrammePreview(state: State<Pair<ChannelEntity, ProgrammeEntity>?>
         val archive = past && Catchup.url(playlists.firstOrNull { it.id == channel.playlistId }, channel, programme.start, programme.stop) != null
         val status = when {
             programme.start <= now && programme.stop > now -> "● JETZT"
-            archive -> "⟲ Aus dem Archiv abspielen"
+            archive -> "↺ OK: aus dem Archiv abspielen"
             past -> "Vorbei"
-            else -> "Später"
+            "${channel.key}@${programme.start}" in reminderIds -> "🔔 Erinnerung an · OK: entfernen"
+            else -> "OK: Erinnerung setzen"
         }
         Text(
             "${channel.name} · ${formatTime(programme.start)} – ${formatTime(programme.stop)} · $status",
@@ -248,6 +262,7 @@ private fun GuideRow(
     windowStart: Long,
     windowEnd: Long,
     now: Long,
+    reminderIds: Set<String>,
     onShift: (Int) -> Boolean,
     onFocusProgramme: (ProgrammeEntity) -> Unit,
     onPlay: (ProgrammeEntity?) -> Unit,
@@ -260,7 +275,7 @@ private fun GuideRow(
             ChannelLogo(channel.logo, channel.name, Modifier.size(width = 48.dp, height = 32.dp))
             Spacer(Modifier.width(10.dp))
             Text(
-                channel.name + if (channel.catchupDays > 0) " ⟲" else "",
+                channel.name + if (channel.catchupDays > 0) " ↺" else "",
                 fontSize = 14.sp,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -283,7 +298,8 @@ private fun GuideRow(
                     key(p.id) {
                         val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
                         GuideCell(
-                            title = (if (archive) "⟲ " else "") + p.title.ifEmpty { "Ohne Titel" },
+                            title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
+                                p.title.ifEmpty { "Ohne Titel" },
                             time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
                             width = cell.width,
                             live = p.start <= now && p.stop > now,

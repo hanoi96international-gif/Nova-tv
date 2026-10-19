@@ -160,7 +160,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
         Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary)
         if (channel.catchupDays > 0) {
             Text(
-                "⟲ Archiv: ${channel.catchupDays} ${if (channel.catchupDays == 1) "Tag" else "Tage"} – im TV-Guide zurückblättern",
+                "↺ Archiv: ${channel.catchupDays} ${if (channel.catchupDays == 1) "Tag" else "Tage"} – im TV-Guide zurückblättern",
                 color = AyuColors.Accent,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 4.dp),

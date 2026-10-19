@@ -230,6 +230,27 @@ class DeviceTourTest {
             }
         }
 
+        // 2c. Erinnerung setzen, auslösen (Benachrichtigung) und wieder entfernen
+        section("reminder") {
+            val channel = runBlocking { container.content.zapList(null, false) }.first()
+            val reminder = de.ayutv.data.reminders.Reminder(channel.key, channel.name, "Tagesschau", System.currentTimeMillis() + 3_600_000L)
+            val set = runBlocking { container.reminders.toggle(reminder) }
+            val stored = runBlocking { container.reminders.isSet(reminder.channelKey, reminder.start) }
+            instrumentation.runOnMainSync {
+                de.ayutv.data.reminders.ReminderReceiver().onReceive(
+                    app,
+                    android.content.Intent(app, de.ayutv.data.reminders.ReminderReceiver::class.java)
+                        .setAction(de.ayutv.data.reminders.Reminders.ACTION_REMIND)
+                        .putExtra(de.ayutv.data.reminders.Reminders.EXTRA_CHANNEL, reminder.channelKey)
+                        .putExtra(de.ayutv.data.reminders.Reminders.EXTRA_CHANNEL_NAME, reminder.channelName)
+                        .putExtra(de.ayutv.data.reminders.Reminders.EXTRA_TITLE, reminder.title),
+                )
+            }
+            val removed = !runBlocking { container.reminders.toggle(reminder) }
+            log("reminder: set=$set stored=$stored removed=$removed")
+            assertTrue("Erinnerung funktioniert nicht", set && stored && removed)
+        }
+
         // 3a. Bildwiederholrate anpassen + Tunneling eingeschaltet: darf nie hängen oder sich neu starten
         channels.firstOrNull { it.name == "HD Test 50fps" }?.let { hd -> section("afr_tunneling") {
             runBlocking { container.settings.update { it.copy(matchFrameRate = true, tunneling = true) } }
