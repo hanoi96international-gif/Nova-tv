@@ -27,6 +27,10 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
     @Volatile
     var onProgress: (String) -> Unit = {}
 
+    /** Meldet jeden Schritt in nativem Code vorher (und null danach): Bei einem Absturz ist klar, wo. */
+    @Volatile
+    var trace: (String?) -> Unit = {}
+
     private val dir = File(baseDir, "ocr")
     private val env by lazy { OrtEnvironment.getEnvironment().also { runCatching { it.setTelemetry(false) } } }
     private var session: OrtSession? = null
@@ -34,7 +38,7 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
     private val lock = Mutex()
     private val dispatcher = Executors.newSingleThreadExecutor { runnable ->
         Thread({
-            Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT + Process.THREAD_PRIORITY_LESS_FAVORABLE)
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
             runnable.run()
         }, "dna-ocr")
     }.asCoroutineDispatcher()
@@ -60,15 +64,17 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         if (!installed) download()
         alphabet = File(dir, DICT).readLines(Charsets.UTF_8).map { it.trimEnd('\r', '\n') }
         val options = OrtSession.SessionOptions().apply {
-            setIntraOpNumThreads(2)
-            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            // Ein Thread (der eigene, mit Hintergrund-Vorrang): kein Thread-Pool, der dem Video Rechenzeit nimmt.
+            setIntraOpNumThreads(1)
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
             setMemoryPatternOptimization(false)
             setCPUArenaAllocator(false)
             addConfigEntry("session.intra_op.allow_spinning", "0")
             addConfigEntry("session.inter_op.allow_spinning", "0")
         }
         try {
-            env.createSession(File(dir, MODEL).path, options).also { session = it }
+            trace("Texterkennung startet")
+            env.createSession(File(dir, MODEL).path, options).also { session = it; trace(null) }
         } catch (e: Exception) {
             dir.deleteRecursively()
             throw IOException("Texterkennung defekt, wird neu geladen: ${e.message}", e)
@@ -146,8 +152,9 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         }
         val input = FloatArray(3 * plane.size)
         for (c in 0 until 3) plane.copyInto(input, c * plane.size)
+        trace("Texterkennung rechnet (Zeile ${width}×$HEIGHT)")
         OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, HEIGHT.toLong(), width.toLong())).use { tensor ->
-            model.run(mapOf(model.inputNames.first() to tensor)).use { result ->
+            model.run(mapOf(model.inputNames.first() to tensor)).also { trace(null) }.use { result ->
                 @Suppress("UNCHECKED_CAST")
                 val scores = (result[0].value as Array<Array<FloatArray>>)[0]
                 return decode(scores)

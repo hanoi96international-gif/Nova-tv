@@ -41,7 +41,8 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
             setIntraOpNumThreads(threads)
             setInterOpNumThreads(1)
             setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL)
-            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            // EXTENDED statt ALL: ohne Layout-Umbauten, die auf manchen ARM-Geräten Probleme machen.
+            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
             // Formen ändern sich bei jedem Schritt: Speicher-Vorplanung bringt nichts.
             setMemoryPatternOptimization(false)
             // Ohne Speicher-Arena: belegt nur, was gerade gebraucht wird (wenig RAM neben 4K-Wiedergabe).

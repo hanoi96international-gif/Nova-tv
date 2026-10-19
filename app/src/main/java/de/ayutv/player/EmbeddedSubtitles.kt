@@ -38,7 +38,26 @@ class EmbeddedSubtitles {
     class Entry(val startMs: Long, @Volatile var endMs: Long, @Volatile var text: String?, @Volatile var image: GrayImage?)
 
     /** Graustufen-Bild einer Bild-Untertitel-Einblendung: hell = Schrift, dunkel = Rand/Hintergrund. */
-    class GrayImage(val width: Int, val height: Int, val pixels: ByteArray)
+    class GrayImage(val width: Int, val height: Int, val pixels: ByteArray) {
+        companion object {
+            /** Helligkeit × Deckkraft: Schrift hell, Rand und Hintergrund dunkel. */
+            fun of(bitmap: Bitmap): GrayImage {
+                val pixels = ByteArray(bitmap.width * bitmap.height)
+                val row = IntArray(bitmap.width)
+                for (y in 0 until bitmap.height) {
+                    bitmap.getPixels(row, 0, bitmap.width, 0, y, bitmap.width, 1)
+                    for (x in 0 until bitmap.width) pixels[y * bitmap.width + x] = gray(row[x])
+                }
+                return GrayImage(bitmap.width, bitmap.height, pixels)
+            }
+
+            internal fun gray(argb: Int): Byte {
+                val a = argb ushr 24
+                val luma = (299 * (argb shr 16 and 0xFF) + 587 * (argb shr 8 and 0xFF) + 114 * (argb and 0xFF)) / 1000
+                return (luma * a / 255).toByte()
+            }
+        }
+    }
 
     private class Track(val format: Format) {
         val entries = TreeMap<Long, Entry>()
@@ -140,12 +159,7 @@ class EmbeddedSubtitles {
             for (y in 0 until bitmap.height) {
                 bitmap.getPixels(row, 0, bitmap.width, 0, y, bitmap.width, 1)
                 val offset = (top + y) * width
-                for (x in 0 until bitmap.width) {
-                    val c = row[x]
-                    val a = c ushr 24
-                    val luma = (299 * (c shr 16 and 0xFF) + 587 * (c shr 8 and 0xFF) + 114 * (c and 0xFF)) / 1000
-                    pixels[offset + x] = (luma * a / 255).toByte()
-                }
+                for (x in 0 until bitmap.width) pixels[offset + x] = GrayImage.gray(row[x])
             }
             top += bitmap.height + gap
         }

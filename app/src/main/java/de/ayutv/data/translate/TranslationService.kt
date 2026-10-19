@@ -42,8 +42,14 @@ class TranslationService : Service() {
             .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb).apply { onProgress = ::progress }
-        ocr = SubtitleOcr(filesDir, http).apply { onProgress = ::progress }
+        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = 1).apply {
+            onProgress = ::progress
+            trace = ::step
+        }
+        ocr = SubtitleOcr(filesDir, http).apply {
+            onProgress = ::progress
+            trace = ::step
+        }
     }
 
     override fun onBind(intent: Intent): IBinder = messenger.binder
@@ -90,6 +96,17 @@ class TranslationService : Service() {
                 Bundle().apply { putString(RemoteTranslator.ERROR, e.message ?: e.javaClass.simpleName) }
             }
             runCatching { replyTo.send(Message.obtain(null, what, id, 0).apply { this.data = result }) }
+        }
+    }
+
+    /**
+     * Aktuellen Schritt in eine Datei schreiben, bevor nativer Code läuft. Stürzt der Prozess dabei ab,
+     * liest der Player die Datei und kann sagen, welches Modell bei welchem Schritt abgestürzt ist.
+     */
+    private fun step(text: String?) {
+        runCatching {
+            val file = java.io.File(filesDir, RemoteTranslator.STEP_FILE)
+            if (text == null) file.delete() else file.writeText("$text · frei ${freeMemoryMb() ?: "?"} MB · ${android.os.Build.SUPPORTED_ABIS.firstOrNull()}")
         }
     }
 

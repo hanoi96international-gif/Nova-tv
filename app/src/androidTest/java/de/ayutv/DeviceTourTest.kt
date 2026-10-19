@@ -494,6 +494,14 @@ class DeviceTourTest {
             }
         }
 
+        // 5c2. Selbsttest aus den Einstellungen: Texterkennung und Übersetzung im Übersetzer-Prozess
+        section("translator_selftest") {
+            val result = runBlocking { de.ayutv.data.translate.TranslatorSelfTest.run("de") }
+            de.ayutv.data.repo.Translators.remote.release()
+            log("translator_selftest: ${result.replace('\n', ' | ')}")
+            assertTrue("Selbsttest fehlgeschlagen: $result", result.lines().all { "ok" in it })
+        }
+
         // 5d. Film nur mit Bild-Untertiteln (PGS wie auf Blu-ray): mitlesen, Texterkennung, Übersetzung mit Vorlauf
         section("bitmap_translation") {
             val movie = runBlocking { container.db.vod().search("Bilduntertitel", 5) }.firstOrNull() ?: error("PGS-Testfilm fehlt")
