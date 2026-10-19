@@ -140,11 +140,14 @@ object PlayerFactory {
         // Speicher-Obergrenze: Ein 4K-Stream mit 25 Mbit/s bräuchte für 60 s rund 190 MB Heap.
         // Auf Sticks mit 1,5–2 GB RAM führt das nach längerem Schauen zu Abstürzen. Das Limit gilt
         // vor den Zeitwerten; Streams mit normaler Bitrate erreichen ihre Zeitziele trotzdem.
-        val maxBytes = when (settings.bufferProfile) {
+        val profileBytes = when (settings.bufferProfile) {
             BufferProfile.FAST -> 40 * MB
             BufferProfile.BALANCED -> 64 * MB
             BufferProfile.STABLE -> 100 * MB
         }
+        // Sticks mit 1,5–2 GB RAM: Bei 100 MB Puffer beendet das System die App während eines 4K-Films
+        // wegen Speichermangel (auf einem Fire TV Stick 4K beobachtet). 64 MB reichen auch für 4K-Remuxe.
+        val maxBytes = if (de.ayutv.data.DeviceInfo.isWeak(context)) minOf(profileBytes, 64 * MB) else profileBytes
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(minBuffer, maxBuffer, startBuffer, rebuffer)
             .setTargetBufferBytes(maxBytes)

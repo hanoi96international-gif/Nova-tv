@@ -162,7 +162,15 @@ class RemoteTranslator(private val context: Context) : Translator {
             ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "zu viel Rechenlast"
             else -> "Grund ${info.reason}"
         }
-        return "Übersetzer wurde beendet: $why" + (step?.let { " bei: $it" } ?: "")
+        // Absturz beim Rechnen der Texterkennung: beim nächsten Versuch eine vorsichtigere Variante.
+        val retry = if (step?.startsWith("Texterkennung") == true &&
+            (info == null || info.reason == ApplicationExitInfo.REASON_CRASH_NATIVE || info.reason == ApplicationExitInfo.REASON_CRASH)
+        ) {
+            SubtitleOcr.markCrash(context.filesDir)?.let { " · nächster Versuch mit Variante $it" } ?: " · Texterkennung auf diesem Gerät aus"
+        } else {
+            ""
+        }
+        return "Übersetzer wurde beendet: $why" + (step?.let { " bei: $it" } ?: "") + retry
     }
 
     internal companion object {

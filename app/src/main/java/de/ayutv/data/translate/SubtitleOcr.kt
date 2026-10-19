@@ -32,6 +32,7 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
     var trace: (String?) -> Unit = {}
 
     private val dir = File(baseDir, "ocr")
+    private val variantFile = File(baseDir, VARIANT_FILE)
     private val env by lazy { OrtEnvironment.getEnvironment().also { runCatching { it.setTelemetry(false) } } }
     private var session: OrtSession? = null
     private var alphabet: List<String> = emptyList()
@@ -63,17 +64,29 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         session?.let { return@withLock it }
         if (!installed) download()
         alphabet = File(dir, DICT).readLines(Charsets.UTF_8).map { it.trimEnd('\r', '\n') }
+        val variant = variant(variantFile)
+        if (variant >= VARIANTS) throw IOException("Texterkennung stürzt auf diesem Gerät ab (alle Varianten probiert)")
         val options = OrtSession.SessionOptions().apply {
             // Ein Thread (der eigene, mit Hintergrund-Vorrang): kein Thread-Pool, der dem Video Rechenzeit nimmt.
             setIntraOpNumThreads(1)
-            setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
             setMemoryPatternOptimization(false)
             setCPUArenaAllocator(false)
             addConfigEntry("session.intra_op.allow_spinning", "0")
             addConfigEntry("session.inter_op.allow_spinning", "0")
+            // Stürzt das Modell auf einem Gerät ab (32-Bit-ARM), beim nächsten Mal vorsichtiger rechnen:
+            // 1. normal, 2. ohne Graph-Optimierungen, 3. mit XNNPACK statt der eigenen Rechenkerne.
+            when (variant) {
+                0 -> setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT)
+                1 -> setOptimizationLevel(OrtSession.SessionOptions.OptLevel.NO_OPT)
+                else -> {
+                    setOptimizationLevel(OrtSession.SessionOptions.OptLevel.BASIC_OPT)
+                    addXnnpack(mapOf("intra_op_num_threads" to "1"))
+                }
+            }
         }
+        currentVariant = variant + 1
         try {
-            trace("Texterkennung startet")
+            trace("Texterkennung (Variante $currentVariant) startet")
             env.createSession(File(dir, MODEL).path, options).also { session = it; trace(null) }
         } catch (e: Exception) {
             dir.deleteRecursively()
@@ -152,7 +165,7 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         }
         val input = FloatArray(3 * plane.size)
         for (c in 0 until 3) plane.copyInto(input, c * plane.size)
-        trace("Texterkennung rechnet (Zeile ${width}×$HEIGHT)")
+        trace("Texterkennung (Variante $currentVariant) rechnet (Zeile ${width}×$HEIGHT)")
         OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, HEIGHT.toLong(), width.toLong())).use { tensor ->
             model.run(mapOf(model.inputNames.first() to tensor)).also { trace(null) }.use { result ->
                 @Suppress("UNCHECKED_CAST")
@@ -193,17 +206,36 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         Log.i(TAG, "Texterkennung geladen")
     }
 
-    private companion object {
-        const val TAG = "DnAOcr"
-        const val BASE = "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin"
-        const val MODEL = "rec.onnx"
-        const val DICT = "dict.txt"
-        val FILES = listOf(MODEL to 7_862_832L, DICT to 1_634L)
-        const val HEIGHT = 48
-        const val MAX_WIDTH = 2_000
-        const val INK = 140
-        const val MAX_GAP = 5
-        const val MIN_LINE = 8
-        const val PAD = 4
+    private var currentVariant = 1
+
+    companion object {
+        private const val VARIANT_FILE = "ocr_variant.txt"
+        private const val VARIANTS = 3
+
+        /** Gewählte Variante; nach einem App-Update wieder von vorn (neue ONNX-Version kann es lösen). */
+        private fun variant(file: File): Int = runCatching {
+            val (variant, version) = file.readText().trim().split(' ')
+            if (version.toInt() == de.ayutv.BuildConfig.VERSION_CODE) variant.toInt() else 0
+        }.getOrDefault(0)
+
+        /** Nach einem Absturz in der Texterkennung: nächstes Mal die nächste Variante. Gibt sie zurück (1-basiert), null = keine mehr. */
+        fun markCrash(baseDir: File): Int? {
+            val file = File(baseDir, VARIANT_FILE)
+            val next = variant(file) + 1
+            runCatching { file.writeText("$next ${de.ayutv.BuildConfig.VERSION_CODE}") }
+            return (next + 1).takeIf { next < VARIANTS }
+        }
+
+        private const val TAG = "DnAOcr"
+        private const val BASE = "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin"
+        private const val MODEL = "rec.onnx"
+        private const val DICT = "dict.txt"
+        private val FILES = listOf(MODEL to 7_862_832L, DICT to 1_634L)
+        private const val HEIGHT = 48
+        private const val MAX_WIDTH = 2_000
+        private const val INK = 140
+        private const val MAX_GAP = 5
+        private const val MIN_LINE = 8
+        private const val PAD = 4
     }
 }
