@@ -417,6 +417,32 @@ class DeviceTourTest {
                 assertTrue("Untertitel nicht automatisch ausgerichtet", synced)
             }
         }
+
+        // 4e. Untertitel eines ganz anderen Films (zufällige Zeiten): als falsch erkennen und verwerfen.
+        if (movie != null) section("wrong_subtitles") {
+            val random = java.util.Random(11)
+            var t = 2_000L
+            val cues = (0 until 260).map { i ->
+                val start = t
+                t += 1_500L + random.nextInt(5_500)
+                de.ayutv.data.parse.SrtCue(
+                    "%02d:%02d:%02d,%03d".format(start / 3_600_000, start / 60_000 % 60, start / 1_000 % 60, start % 1_000),
+                    "%02d:%02d:%02d,%03d".format((start + 1_200) / 3_600_000, (start + 1_200) / 60_000 % 60, (start + 1_200) / 1_000 % 60, (start + 1_200) % 1_000),
+                    "Falscher Film $i",
+                )
+            }
+            container.subtitles.saveTranslation(movie.key, "it", cues)
+            val request = VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.player?.seekTo(0) }
+                scenario.onActivity { it.showLoaded("it") }
+                val rejected = waitFor(420_000) { scenario.read { a -> a.statusHistory.any { "anderen Film" in it } } }
+                log("wrong_subtitles: rejected=$rejected synced=${scenario.read { it.subtitleAutoSynced }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(3)}")
+                assertTrue("Falsche Untertitel nicht erkannt", rejected)
+                assertTrue("Falsche Untertitel wurden 'ausgerichtet'", scenario.read { !it.subtitleAutoSynced })
+            }
+        }
         // 5. Serienfolge über Xtream abspielen
         episodes.firstOrNull()?.let { (episode, url) -> section("episode") {
             val series = seriesList.first()

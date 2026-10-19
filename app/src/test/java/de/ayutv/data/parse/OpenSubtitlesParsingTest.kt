@@ -50,5 +50,8 @@ class OpenSubtitlesParsingTest {
         assertEquals("Inception" to 2010, OpenSubtitlesParsing.cleanTitle("DE - Inception (2010) [4K]"))
         assertEquals("The Matrix" to 1999, OpenSubtitlesParsing.cleanTitle("The.Matrix.1999.2160p.HDR"))
         assertEquals("Oppenheimer" to null, OpenSubtitlesParsing.cleanTitle("EN | Oppenheimer UHD"))
+        // So nennt ein Anbieter seine 4K-Filme: Der Vorsatz darf nicht in die Suche geraten.
+        assertEquals("Harry Potter und der Halbblutprinz" to null, OpenSubtitlesParsing.cleanTitle("4K-DE - Harry Potter und der Halbblutprinz"))
+        assertEquals("Dune" to 2021, OpenSubtitlesParsing.cleanTitle("[DE] |MULTI| Dune (2021)"))
     }
 }

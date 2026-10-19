@@ -13,7 +13,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.put
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -113,23 +117,36 @@ class SubtitleRepository(
             null
         }
 
+        // Früher als falsch erkannte Dateien (passten nicht zum Film) nie wieder nehmen.
+        val bad = language?.let { badFileIds(key, it) }.orEmpty()
         var source = Source.HASH
         var candidates: List<SubtitleCandidate> = emptyList()
         if (hash != null) {
             candidates = search(apiKey, buildMap {
                 put("moviehash", hash)
                 if (language != null) put("languages", language)
-            }).filter { it.hashMatch }
+            }).filter { it.hashMatch && it.fileId !in bad }
         }
         if (candidates.isEmpty()) {
             source = Source.TITLE
-            val (cleanTitle, year) = OpenSubtitlesParsing.cleanTitle(title)
-            if (cleanTitle.length < 2) return null
-            candidates = search(apiKey, buildMap {
-                put("query", cleanTitle)
-                if (language != null) put("languages", language)
-                if (year != null) put("year", year.toString())
-            })
+            // Genau dieser Film statt Titelsuche: TMDB-Kennung und Originaltitel vom Xtream-Anbieter.
+            // "Harry Potter und der Halbblutprinz" findet sonst irgendeinen Harry-Potter-Teil.
+            val info = runCatching { xtreamInfo(videoUrl, settings.userAgent) }.getOrNull()
+            info?.tmdbId?.let { tmdb ->
+                candidates = search(apiKey, buildMap {
+                    put("tmdb_id", tmdb)
+                    if (language != null) put("languages", language)
+                }).filter { it.fileId !in bad }
+            }
+            if (candidates.isEmpty()) {
+                val (cleanTitle, year) = OpenSubtitlesParsing.cleanTitle(info?.originalTitle ?: title)
+                if (cleanTitle.length < 2) return null
+                candidates = search(apiKey, buildMap {
+                    put("query", cleanTitle)
+                    if (language != null) put("languages", language)
+                    (year ?: info?.year)?.let { put("year", it.toString()) }
+                }).filter { it.fileId !in bad }
+            }
         }
         val best = candidates.firstOrNull() ?: return null
         val link = downloadLink(apiKey, best.fileId, settings) ?: return null
@@ -139,6 +156,7 @@ class SubtitleRepository(
             if (!response.isSuccessful) throw IOException("Untertitel-Download: HTTP ${response.code}")
             writeAtomically(target, response.body.string())
         }
+        runCatching { sourceFile(key, actualLanguage).writeText(best.fileId.toString()) }
         return Result(target, source, language = actualLanguage)
     }
 
@@ -174,6 +192,46 @@ class SubtitleRepository(
             put("languages", language)
             if (year != null) put("year", year.toString())
         }).size
+    }
+
+    /**
+     * Die gespeicherten Untertitel passen nicht zum Film (andere Fassung oder ganz anderer Film):
+     * löschen und die Datei für diesen Film sperren, damit die nächste Suche einen anderen Treffer nimmt.
+     */
+    fun markWrong(key: String, language: String) {
+        sourceFile(key, language).takeIf { it.isFile }?.readText()?.trim()?.toLongOrNull()?.let { fileId ->
+            runCatching { badFile(key, language).appendText("$fileId\n") }
+        }
+        listOf(cacheFile(key, language), sourceFile(key, language), timingFile(key, language)).forEach { it.delete() }
+    }
+
+    private fun badFileIds(key: String, language: String): Set<Long> =
+        badFile(key, language).takeIf { it.isFile }?.readLines()?.mapNotNull { it.trim().toLongOrNull() }?.toSet().orEmpty()
+
+    /** TMDB-Kennung, Originaltitel und Jahr eines Xtream-Films (player_api get_vod_info). */
+    private data class MovieInfo(val tmdbId: String?, val originalTitle: String?, val year: Int?)
+
+    private fun xtreamInfo(videoUrl: String, userAgent: String): MovieInfo? {
+        val match = XTREAM_MOVIE.find(videoUrl) ?: return null
+        val (base, user, pass, id) = match.destructured
+        val url = "$base/player_api.php".toHttpUrl().newBuilder()
+            .addQueryParameter("username", user)
+            .addQueryParameter("password", pass)
+            .addQueryParameter("action", "get_vod_info")
+            .addQueryParameter("vod_id", id)
+            .build()
+        val quick = http.newBuilder().callTimeout(6, TimeUnit.SECONDS).build()
+        val body = quick.newCall(Request.Builder().url(url).header("User-Agent", userAgent).build()).execute().use { response ->
+            if (!response.isSuccessful) return null
+            response.body.string()
+        }
+        val info = (Json.parseToJsonElement(body) as? JsonObject)?.get("info") as? JsonObject ?: return null
+        fun text(vararg names: String) = names.firstNotNullOfOrNull { name ->
+            (info[name] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() && it != "0" }
+        }
+        val tmdb = text("tmdb_id", "tmdb")?.takeIf { it.all(Char::isDigit) }
+        val year = text("releasedate", "release_date", "year")?.let { Regex("""(19|20)\d\d""").find(it)?.value?.toInt() }
+        return MovieInfo(tmdb, text("o_name", "original_name", "name"), year).also { Log.i(TAG, "Film beim Anbieter: $it") }
     }
 
     /** Fertig übersetzte Untertitel speichern: Beim nächsten Mal stehen sie sofort bereit. */
@@ -310,6 +368,10 @@ class SubtitleRepository(
 
     private fun safeName(key: String) = key.replace(Regex("[^A-Za-z0-9_-]"), "_").takeLast(120)
 
+    private fun sourceFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".src")
+
+    private fun badFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".bad")
+
     private fun timingFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".sync")
 
     private fun cacheFile(key: String, language: String): File {
@@ -323,6 +385,7 @@ class SubtitleRepository(
         const val TOKEN_TTL = 23 * 3_600_000L
         const val LOGIN_RETRY = 10 * 60_000L
         const val API = "https://api.opensubtitles.com/api/v1"
+        val XTREAM_MOVIE = Regex("""^(https?://[^/]+)/movie/([^/]+)/([^/]+)/(\d+)(?:\.\w+)?$""")
         val JSON = "application/json".toMediaType()
     }
 }

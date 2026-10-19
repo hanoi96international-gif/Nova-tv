@@ -218,7 +218,7 @@ class PlayerActivity : ComponentActivity() {
                 val resume = container.content.resumePosition(request.key)
                 // Datei-Hash, bevor der Player verbindet (danach nie parallel): Damit findet OpenSubtitles
                 // Untertitel, die zeitgenau zu genau dieser Datei passen.
-                if (settings.onlineSubtitlesEnabled && settings.subtitlesAutoOn && request.kind != HistoryKind.CATCHUP) {
+                if (settings.onlineSubtitlesEnabled && request.kind != HistoryKind.CATCHUP) {
                     container.subtitles.prepareHash(request.url, settings.userAgent)
                 }
                 startVod(request, resume)
@@ -1041,8 +1041,14 @@ class PlayerActivity : ComponentActivity() {
         val references = referenceStarts.toList()
         val starts = externalCues.map { it.start }
         syncJob = lifecycleScope.launch {
-            val fit = withContext(Dispatchers.Default) { SubtitleSync.estimate(references, starts) } ?: return@launch
+            val fit = withContext(Dispatchers.Default) { SubtitleSync.estimate(references, starts) }
             if (externalLanguage == null) return@launch
+            if (fit == null) {
+                // Nach vielen Einblendungen immer noch kein gemeinsamer Takt: Die Datei gehört zu einem
+                // anderen Film (oder einer ganz anderen Fassung). Verwerfen und den nächsten Treffer laden.
+                if (references.size >= WRONG_FILE_REFERENCES && !subtitleAutoSynced && externalTexts == null) replaceWrongSubtitles()
+                return@launch
+            }
             val here = subtitleTimeAt(player?.currentPosition ?: 0L)
             if (abs(fit.timing.toVideo(here) - subtitleTiming.toVideo(here)) < 150) return@launch
             subtitleTiming = fit.timing
@@ -1073,6 +1079,31 @@ class PlayerActivity : ComponentActivity() {
             } else {
                 subtitleStatus = "Übersetzung nicht möglich: $reason"
             }
+        }
+    }
+
+    private var replacedSubtitles = 0
+
+    private fun replaceWrongSubtitles() {
+        val request = vod ?: return
+        val language = externalLanguage ?: return
+        if (replacedSubtitles >= 3) {
+            subtitleStatus = "Keine passenden Untertitel gefunden. Zeit im Menü unter „Untertitel-Zeit“ selbst einstellen"
+            return
+        }
+        replacedSubtitles++
+        Log.i(SUBTITLE_TAG, "Untertitel $language passen nicht zum Film, suche andere")
+        container.subtitles.markWrong(request.key, language)
+        subtitleFiles.remove(language)
+        loadedLanguages = subtitleFiles.keys.toList()
+        stopLiveTranslation()
+        subtitleStatus = "Diese Untertitel gehören zu einem anderen Film. Suche passende …"
+        subtitleJob?.cancel()
+        subtitleJob = lifecycleScope.launch {
+            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings) }
+                .onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
+            if (found != null) attachLoaded(language, found)
+            else subtitleStatus = "Keine passenden Untertitel in ${Languages.label(language)} gefunden"
         }
     }
 
@@ -1636,6 +1667,8 @@ class PlayerActivity : ComponentActivity() {
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 8
         private const val FIRST_CONNECT_STALL_SECONDS = 15
+        /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
+        private const val WRONG_FILE_REFERENCES = 60
         private const val VIDEO_FREEZE_SECONDS = 6
         private const val CUSHION_LOW_MS = 2_500L
         private const val CUSHION_HIGH_MS = 5_000L
