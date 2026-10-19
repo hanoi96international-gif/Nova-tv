@@ -42,7 +42,7 @@ class TranslationService : Service() {
             .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-        translator = OnDeviceTranslator(filesDir, http).apply { onProgress = ::progress }
+        translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb).apply { onProgress = ::progress }
         ocr = SubtitleOcr(filesDir, http).apply { onProgress = ::progress }
     }
 
@@ -92,6 +92,12 @@ class TranslationService : Service() {
             runCatching { replyTo.send(Message.obtain(null, what, id, 0).apply { this.data = result }) }
         }
     }
+
+    private fun freeMemoryMb(): Long? = runCatching {
+        val info = android.app.ActivityManager.MemoryInfo()
+        getSystemService(android.app.ActivityManager::class.java).getMemoryInfo(info)
+        info.availMem / 1_000_000
+    }.getOrNull()
 
     private fun progress(text: String) {
         val target = client ?: return

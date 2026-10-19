@@ -44,6 +44,8 @@ class OpusMtModel(dir: File, private val env: OrtEnvironment, threads: Int) : Cl
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
             // Formen ändern sich bei jedem Schritt: Speicher-Vorplanung bringt nichts.
             setMemoryPatternOptimization(false)
+            // Ohne Speicher-Arena: belegt nur, was gerade gebraucht wird (wenig RAM neben 4K-Wiedergabe).
+            setCPUArenaAllocator(false)
             // Rechen-Threads nicht aktiv warten lassen: sonst nehmen sie dem Video-Decoder CPU weg.
             addConfigEntry("session.intra_op.allow_spinning", "0")
             addConfigEntry("session.inter_op.allow_spinning", "0")

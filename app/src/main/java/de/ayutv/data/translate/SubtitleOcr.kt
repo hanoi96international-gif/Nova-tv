@@ -62,6 +62,8 @@ class SubtitleOcr(baseDir: File, private val http: OkHttpClient) {
         val options = OrtSession.SessionOptions().apply {
             setIntraOpNumThreads(2)
             setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT)
+            setMemoryPatternOptimization(false)
+            setCPUArenaAllocator(false)
             addConfigEntry("session.intra_op.allow_spinning", "0")
             addConfigEntry("session.inter_op.allow_spinning", "0")
         }
