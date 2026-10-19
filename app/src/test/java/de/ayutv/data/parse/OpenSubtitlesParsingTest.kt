@@ -23,6 +23,13 @@ class OpenSubtitlesParsingTest {
     }
 
     @Test
+    fun readsTmdbIdOfFeature() {
+        val body = """{"data":[{"attributes":{"language":"es","feature_details":{"tmdb_id":767,"title":"Harry Potter"},
+            "files":[{"file_id":1}]}},{"attributes":{"language":"es","feature_details":{"tmdb_id":9999},"files":[{"file_id":2}]}}]}"""
+        assertEquals(listOf(767L, 9999L), OpenSubtitlesParsing.searchResults(body).map { it.tmdbId })
+    }
+
+    @Test
     fun ranksHashMatchesFirstAndSkipsBrokenEntries() {
         val body = """
             {"total_count":3,"data":[
