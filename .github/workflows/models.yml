@@ -1,0 +1,30 @@
+name: Models
+
+# Übersetzungsmodelle im ORT-Format für die App bereitstellen (Release "models-ort-<Version>").
+on:
+  push:
+    branches: ["models/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ORT_VERSION: "1.22.0"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q onnxruntime==${ORT_VERSION} huggingface_hub
+      - name: Release anlegen
+        run: |
+          gh release view models-ort-${ORT_VERSION} >/dev/null 2>&1 || gh release create models-ort-${ORT_VERSION} \
+            --prerelease --title "Übersetzungsmodelle (ORT ${ORT_VERSION})" \
+            --notes "OPUS-MT (Universität Helsinki, CC BY 4.0) über Xenova/ONNX, ins ORT-Format umgewandelt für ONNX Runtime ${ORT_VERSION}. Lädt die App bei Bedarf."
+      - name: Umwandeln und hochladen
+        run: python3 ci/models/convert.py ci/models/pairs.txt models-ort-${ORT_VERSION}
