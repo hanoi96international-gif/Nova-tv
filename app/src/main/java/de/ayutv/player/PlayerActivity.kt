@@ -840,6 +840,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun saveProgress() {
         val request = vod ?: return
+        // Archiv-Sendungen gehören nicht zu „Weiter schauen“.
+        if (request.kind == HistoryKind.CATCHUP) return
         val p = player ?: return
         val position = p.currentPosition
         if (position < 5_000) return
@@ -1229,6 +1231,19 @@ class PlayerActivity : ComponentActivity() {
             context.startActivity(liveIntent(context, channelKey, group, favoritesOnly))
 
         fun startVod(context: Context, request: VodRequest) = context.startActivity(vodIntent(context, request))
+
+        /** Vergangene Sendung aus dem Archiv des Anbieters: läuft wie ein Film (spulbar). */
+        fun startCatchup(context: Context, channel: ChannelEntity, programme: ProgrammeEntity, url: String) = startVod(
+            context,
+            VodRequest(
+                key = "catchup:${channel.key}:${programme.start}",
+                kind = HistoryKind.CATCHUP,
+                title = programme.title.ifEmpty { channel.name },
+                subtitle = "${channel.name} · Archiv · ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(programme.start))}",
+                image = channel.logo,
+                url = url,
+            ),
+        )
 
         private fun Intent.getVodRequest(): VodRequest? {
             val key = getStringExtra(EXTRA_VOD_KEY) ?: return null

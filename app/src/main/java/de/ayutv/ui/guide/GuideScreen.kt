@@ -57,10 +57,19 @@ import de.ayutv.ui.components.formatTime
 import de.ayutv.ui.components.rememberMinuteTicker
 import de.ayutv.ui.theme.AyuColors
 import de.ayutv.ui.theme.AyuFocus
+import kotlinx.coroutines.launch
+import de.ayutv.ui.live.FAVORITES_GROUP
+import de.ayutv.data.repo.Catchup
+import de.ayutv.data.db.PlaylistEntity
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.State
+import androidx.compose.runtime.rememberCoroutineScope
 
 private const val MINUTE = 60_000L
 private const val HALF_HOUR = 30 * MINUTE
 private const val WINDOW = 4 * HALF_HOUR
+private const val DAY = 24 * 60 * MINUTE
 // 1080p-Fernseher haben 960 dp Breite: Navigation + Senderspalte + 2 Stunden à 5 dp/min passen genau.
 private val DP_PER_MINUTE = 5.dp
 private val CHANNEL_COLUMN = 190.dp
@@ -69,28 +78,53 @@ private val ROW_HEIGHT = 58.dp
 /**
  * EPG-Raster mit festem Zeitfenster (2 Stunden). Links am ersten bzw. rechts am letzten Eintrag
  * einer Zeile verschiebt das Fenster um 30 Minuten. Geladen werden nur die Sendungen der gewählten Gruppe.
+ * Oben steht die Vorschau der markierten Sendung, eine rote Linie zeigt „jetzt“. Vergangene Sendungen
+ * von Sendern mit Archiv (⟲) lassen sich direkt abspielen.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GuideScreen() {
-    val content = LocalContainer.current.content
+    val container = LocalContainer.current
+    val content = container.content
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val groups by content.groups.collectAsStateWithLifecycle(emptyList())
+    val favorites by content.favoriteChannels.collectAsStateWithLifecycle(emptyList())
+    val playlists by container.playlists.playlists.collectAsStateWithLifecycle(emptyList())
     var group by rememberSaveable { mutableStateOf<String?>(null) }
-    val activeGroup = group ?: groups.firstOrNull()?.name
-    val channels by remember(activeGroup) { content.channelsIn(activeGroup) }.collectAsStateWithLifecycle(emptyList())
+    // Ohne eigene Wahl: Favoriten zuerst (wie in Live TV), sonst die erste Gruppe.
+    val activeGroup = group ?: if (favorites.isNotEmpty()) FAVORITES_GROUP else groups.firstOrNull()?.name
+    val channels by remember(activeGroup) {
+        if (activeGroup == FAVORITES_GROUP) content.favoriteChannels else content.channelsIn(activeGroup)
+    }.collectAsStateWithLifecycle(emptyList())
     val minute by rememberMinuteTicker()
+    // Nur die Vorschau liest diesen Zustand: Fokuswechsel im Raster bauen das Raster nicht neu auf.
+    val focused = remember { mutableStateOf<Pair<ChannelEntity, ProgrammeEntity>?>(null) }
 
     var windowStart by remember { mutableLongStateOf(System.currentTimeMillis() / HALF_HOUR * HALF_HOUR) }
     val windowEnd = windowStart + WINDOW
     var programmes by remember { mutableStateOf<Map<String, List<ProgrammeEntity>>>(emptyMap()) }
     LaunchedEffect(channels, windowStart) { programmes = content.programmesInRange(channels, windowStart, windowEnd) }
 
-    val earliest = System.currentTimeMillis() / HALF_HOUR * HALF_HOUR - 2 * HALF_HOUR
+    // Mit Archiv lässt sich so weit zurückblättern, wie der Anbieter aufzeichnet (höchstens 7 Tage).
+    val archiveDays = remember(channels) { channels.maxOfOrNull { it.catchupDays }?.coerceIn(0, 7) ?: 0 }
+    val earliest = System.currentTimeMillis() / HALF_HOUR * HALF_HOUR - maxOf(2 * HALF_HOUR, archiveDays * DAY)
     // Liefert false, wenn sich nichts verschieben lässt: Dann geht „links“ normal weiter (zur Navigation).
     val shift: (Int) -> Boolean = { steps ->
         val target = (windowStart + steps * HALF_HOUR).coerceAtLeast(earliest)
         (target != windowStart).also { if (it) windowStart = target }
+    }
+    val play: (ChannelEntity, ProgrammeEntity?) -> Unit = { channel, programme ->
+        val now = System.currentTimeMillis()
+        if (programme != null && programme.stop <= now) {
+            scope.launch {
+                val url = content.catchupUrl(channel, programme)
+                if (url != null) PlayerActivity.startCatchup(context, channel, programme, url)
+                else PlayerActivity.startLive(context, channel.key, channel.groupTitle)
+            }
+        } else {
+            PlayerActivity.startLive(context, channel.key, channel.groupTitle)
+        }
     }
 
     Column(Modifier.fillMaxSize().padding(top = 20.dp)) {
@@ -99,25 +133,19 @@ fun GuideScreen() {
             contentPadding = PaddingValues(horizontal = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (favorites.isNotEmpty()) {
+                item(key = FAVORITES_GROUP) { GroupChip("★ Favoriten", activeGroup == FAVORITES_GROUP) { group = FAVORITES_GROUP } }
+            }
             items(groups, key = { it.name }) { g ->
-                val selected = g.name == activeGroup
-                Surface(
-                    onClick = { group = g.name },
-                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
-                    colors = ClickableSurfaceDefaults.colors(
-                        containerColor = if (selected) AyuColors.AccentSoft else AyuColors.Surface,
-                        focusedContainerColor = AyuColors.Accent,
-                        focusedContentColor = Color.Black,
-                    ),
-                ) {
-                    Text(g.name, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontSize = 14.sp, maxLines = 1)
-                }
+                GroupChip(g.name, g.name == activeGroup) { group = g.name }
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
+        ProgrammePreview(focused, playlists, minute, Modifier.padding(horizontal = 24.dp))
+        Spacer(Modifier.height(8.dp))
         Row(Modifier.padding(start = 24.dp)) {
-            Spacer(Modifier.width(CHANNEL_COLUMN))
+            Spacer(Modifier.width(CHANNEL_COLUMN + 4.dp))
             for (i in 0 until 4) {
                 Text(
                     formatTime(windowStart + i * HALF_HOUR),
@@ -134,22 +162,81 @@ fun GuideScreen() {
             return@Column
         }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().focusRestorer(),
-            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            items(channels, key = { it.key }) { channel ->
-                GuideRow(
-                    channel = channel,
-                    programmes = channel.epgId?.let { programmes[it] }.orEmpty(),
-                    windowStart = windowStart,
-                    windowEnd = windowEnd,
-                    now = minute,
-                    onShift = shift,
-                    onPlay = { PlayerActivity.startLive(context, channel.key, channel.groupTitle) },
+        Box(Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().focusRestorer(),
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                items(channels, key = { it.key }, contentType = { "guideRow" }) { channel ->
+                    GuideRow(
+                        channel = channel,
+                        programmes = channel.epgId?.let { programmes[it] }.orEmpty(),
+                        windowStart = windowStart,
+                        windowEnd = windowEnd,
+                        now = minute,
+                        onShift = shift,
+                        onFocusProgramme = { focused.value = channel to it },
+                        onPlay = { programme -> play(channel, programme) },
+                    )
+                }
+            }
+            // „Jetzt“-Linie über dem Raster
+            val nowOffset = (minute - windowStart) / MINUTE
+            if (nowOffset in 0 until WINDOW / MINUTE) {
+                Box(
+                    Modifier
+                        .offset(x = 24.dp + CHANNEL_COLUMN + 4.dp + DP_PER_MINUTE * nowOffset.toInt())
+                        .width(2.dp)
+                        .fillMaxHeight()
+                        .background(AyuColors.Live),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GroupChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) AyuColors.AccentSoft else AyuColors.Surface,
+            focusedContainerColor = AyuColors.Accent,
+            focusedContentColor = Color.Black,
+        ),
+    ) {
+        Text(label, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), fontSize = 14.sp, maxLines = 1)
+    }
+}
+
+/** Titel, Zeit und Beschreibung der markierten Sendung; bei Archiv-Sendungen der Hinweis zum Abspielen. */
+@Composable
+private fun ProgrammePreview(state: State<Pair<ChannelEntity, ProgrammeEntity>?>, playlists: List<PlaylistEntity>, now: Long, modifier: Modifier) {
+    val (channel, programme) = state.value ?: (null to null)
+    Column(modifier.fillMaxWidth().height(78.dp)) {
+        if (channel == null || programme == null) {
+            Text("Sendung auswählen: Vorschau erscheint hier", color = AyuColors.TextSecondary, fontSize = 14.sp)
+            return@Column
+        }
+        val past = programme.stop <= now
+        val archive = past && Catchup.url(playlists.firstOrNull { it.id == channel.playlistId }, channel, programme.start, programme.stop) != null
+        val status = when {
+            programme.start <= now && programme.stop > now -> "● JETZT"
+            archive -> "⟲ Aus dem Archiv abspielen"
+            past -> "Vorbei"
+            else -> "Später"
+        }
+        Text(
+            "${channel.name} · ${formatTime(programme.start)} – ${formatTime(programme.stop)} · $status",
+            color = if (archive || !past) AyuColors.Accent else AyuColors.TextSecondary,
+            fontSize = 13.sp,
+            maxLines = 1,
+        )
+        Text(programme.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        programme.description?.takeIf { it.isNotBlank() }?.let {
+            Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -162,7 +249,8 @@ private fun GuideRow(
     windowEnd: Long,
     now: Long,
     onShift: (Int) -> Boolean,
-    onPlay: () -> Unit,
+    onFocusProgramme: (ProgrammeEntity) -> Unit,
+    onPlay: (ProgrammeEntity?) -> Unit,
 ) {
     Row(Modifier.height(ROW_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
         Row(
@@ -171,13 +259,18 @@ private fun GuideRow(
         ) {
             ChannelLogo(channel.logo, channel.name, Modifier.size(width = 48.dp, height = 32.dp))
             Spacer(Modifier.width(10.dp))
-            Text(channel.name, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                channel.name + if (channel.catchupDays > 0) " ⟲" else "",
+                fontSize = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         Spacer(Modifier.width(4.dp))
 
         val cells = remember(programmes, windowStart) { layoutCells(programmes, windowStart, windowEnd) }
         if (cells.isEmpty()) {
-            GuideCell("Keine Programmdaten", null, DP_PER_MINUTE * (WINDOW / MINUTE).toInt(), live = true, first = false, last = false, onShift, onPlay)
+            GuideCell("Keine Programmdaten", null, DP_PER_MINUTE * (WINDOW / MINUTE).toInt(), live = true, first = false, last = false, onShift, {}) { onPlay(null) }
         } else {
             val firstIndex = cells.indexOfFirst { it.programme != null }
             val lastIndex = cells.indexOfLast { it.programme != null }
@@ -188,15 +281,17 @@ private fun GuideRow(
                 } else {
                     // Nach Sendung geschlüsselt: Beim Verschieben des Zeitfensters bleibt der Fokus auf ihr.
                     key(p.id) {
+                        val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
                         GuideCell(
-                            title = p.title.ifEmpty { "Ohne Titel" },
+                            title = (if (archive) "⟲ " else "") + p.title.ifEmpty { "Ohne Titel" },
                             time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
                             width = cell.width,
                             live = p.start <= now && p.stop > now,
                             first = index == firstIndex,
                             last = index == lastIndex,
                             onShift = onShift,
-                            onClick = onPlay,
+                            onFocused = { onFocusProgramme(p) },
+                            onClick = { onPlay(p) },
                         )
                     }
                 }
@@ -230,6 +325,7 @@ private fun GuideCell(
     first: Boolean,
     last: Boolean,
     onShift: (Int) -> Boolean,
+    onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -239,7 +335,10 @@ private fun GuideCell(
             .width(width)
             .fillMaxHeight()
             .padding(end = 2.dp)
-            .onFocusChanged { focused = it.isFocused }
+            .onFocusChanged {
+                focused = it.isFocused
+                if (it.isFocused) onFocused()
+            }
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                 when {

@@ -89,6 +89,10 @@ class ContentRepository(
         return ids.chunked(SQL_CHUNK).flatMap { db.programmes().inRange(it, from, to) }.groupBy { it.channelEpgId }
     }
 
+    /** Archiv-Adresse einer vergangenen Sendung oder null (Sender ohne Archiv, zu alt). */
+    suspend fun catchupUrl(channel: ChannelEntity, programme: ProgrammeEntity): String? =
+        Catchup.url(db.playlists().byId(channel.playlistId), channel, programme.start, programme.stop)
+
     suspend fun upcoming(channel: ChannelEntity, limit: Int = 8): List<ProgrammeEntity> {
         val id = channel.epgId?.takeIf(String::isNotEmpty) ?: return emptyList()
         // Nutzen mehrere Playlists dieselben EPG-IDs, käme jede Sendung mehrfach: die eigene Playlist

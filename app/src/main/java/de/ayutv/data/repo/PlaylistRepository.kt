@@ -136,7 +136,8 @@ class PlaylistRepository(
             val fresh = db.playlists().byId(playlist.id) ?: continue
             if (force || now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
         }
-        db.programmes().deleteEndedBefore(now - 6 * HOUR)
+        val archiveDays = db.channels().maxCatchupDaysAll().coerceIn(0, MAX_ARCHIVE_DAYS)
+        db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
     }
 
     suspend fun sync(playlistId: Long, withEpg: Boolean = true) {
@@ -201,6 +202,8 @@ class PlaylistRepository(
                             number = entry.number ?: position,
                             catchupDays = entry.catchupDays,
                             userAgent = entry.userAgent,
+                            catchupType = entry.catchupType,
+                            catchupSource = entry.catchupSource,
                         )
                         if (channels.size >= BATCH) db.channels().insertAll(channels.drain())
                     }
@@ -295,7 +298,9 @@ class PlaylistRepository(
             vodFile?.let(::discard)
             seriesFile?.let(::discard)
         }
-        return playlist.copy(lastSync = System.currentTimeMillis())
+        // Zeitzone des Servers merken: Archiv-Adressen werden in Serverzeit angegeben.
+        val timezone = runCatching { client.account()?.timezone }.getOrNull() ?: playlist.timezone
+        return playlist.copy(lastSync = System.currentTimeMillis(), timezone = timezone)
     }
 
     suspend fun syncEpg(playlistId: Long) {
@@ -331,7 +336,9 @@ class PlaylistRepository(
         shift: Long,
     ) {
         val now = System.currentTimeMillis()
-        val from = now - 2 * HOUR
+        // Mit Archiv (Catch-up) auch vergangene Tage behalten, sonst nur die letzten 2 Stunden.
+        val archiveDays = db.channels().maxCatchupDays(playlist.id).coerceIn(0, MAX_ARCHIVE_DAYS)
+        val from = now - maxOf(2 * HOUR, archiveDays * 24 * HOUR)
         val until = now + EPG_DAYS * 24 * HOUR
         val parser = XmltvParser(Xml.newPullParser())
         // Sender ohne tvg-id lassen sich erst nach dem Lesen der <channel>-Liste zuordnen,
@@ -430,6 +437,7 @@ class PlaylistRepository(
         private const val BATCH = 1000
         private const val HOUR = 3_600_000L
         private const val EPG_DAYS = 4L
+        private const val MAX_ARCHIVE_DAYS = 7
         private const val CONTENT_MAX_AGE = 12 * HOUR
         private const val EPG_MAX_AGE = 8 * HOUR
     }

@@ -209,6 +209,27 @@ class DeviceTourTest {
             }
         } }
 
+        // 2b. Archiv (Catch-up): Xtream-Sender mit Archiv, vergangene Sendung abspielen
+        section("catchup") {
+            val archived = runBlocking { container.content.zapList(null, false) }.firstOrNull { it.catchupDays > 0 }
+                ?: error("Kein Sender mit Archiv importiert")
+            val now = System.currentTimeMillis()
+            val programme = de.ayutv.data.db.ProgrammeEntity(
+                playlistId = archived.playlistId, channelEpgId = archived.epgId ?: "x",
+                start = now - 3_600_000L, stop = now - 1_800_000L, title = "Archiv-Test", description = null, category = null,
+            )
+            val url = runBlocking { container.content.catchupUrl(archived, programme) } ?: error("Keine Archiv-Adresse")
+            val intent = PlayerActivity.vodIntent(
+                app,
+                VodRequest("catchup:test", HistoryKind.CATCHUP, programme.title, archived.name, null, url),
+            )
+            launchPlayer(intent).use { scenario ->
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                log("catchup: channel=${archived.name} days=${archived.catchupDays} url=${url.substringAfter("8000")} ready=$ready")
+                assertTrue("Archiv spielt nicht ab", ready && "/timeshift/" in url)
+            }
+        }
+
         // 3a. Bildwiederholrate anpassen + Tunneling eingeschaltet: darf nie hängen oder sich neu starten
         channels.firstOrNull { it.name == "HD Test 50fps" }?.let { hd -> section("afr_tunneling") {
             runBlocking { container.settings.update { it.copy(matchFrameRate = true, tunneling = true) } }

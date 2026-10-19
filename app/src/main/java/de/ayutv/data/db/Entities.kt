@@ -22,6 +22,8 @@ data class PlaylistEntity(
     val lastEpgSync: Long = 0,
     /** Ausgeschaltete Playlists bleiben gespeichert, erscheinen aber nirgends (Sender, Filme, Suche). */
     @ColumnInfo(defaultValue = "1") val enabled: Boolean = true,
+    /** Zeitzone des Xtream-Servers (für Archiv-Adressen, die in Serverzeit angegeben werden). */
+    val timezone: String? = null,
 )
 
 /**
@@ -44,6 +46,9 @@ data class ChannelEntity(
     val number: Int,
     val catchupDays: Int = 0,
     val userAgent: String? = null,
+    /** Archiv-Art aus der M3U (default, append, shift, flussonic, xc) und die Vorlage dafür. */
+    val catchupType: String? = null,
+    val catchupSource: String? = null,
 )
 
 @Entity(
@@ -100,7 +105,7 @@ data class FavoriteEntity(
     val addedAt: Long,
 )
 
-enum class HistoryKind { LIVE, VOD, EPISODE }
+enum class HistoryKind { LIVE, VOD, EPISODE, CATCHUP }
 
 @Entity(tableName = "history", indices = [Index("watchedAt")])
 data class HistoryEntity(

@@ -19,7 +19,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         HiddenGroupEntity::class,
     ],
     views = [VisibleChannelView::class, VisibleVodView::class, VisibleSeriesView::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AyuDatabase : RoomDatabase() {
@@ -41,6 +41,17 @@ abstract class AyuDatabase : RoomDatabase() {
             }
         }
 
+        /** 2 → 3: Archiv (Catch-up): Art und Vorlage je Sender, Server-Zeitzone je Playlist. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `channels` ADD COLUMN `catchupType` TEXT")
+                db.execSQL("ALTER TABLE `channels` ADD COLUMN `catchupSource` TEXT")
+                db.execSQL("ALTER TABLE `playlists` ADD COLUMN `timezone` TEXT")
+                // Die Views lesen "SELECT *": neu anlegen, damit sie die neuen Spalten sicher enthalten.
+                recreateViews(db)
+            }
+        }
+
         private fun recreateViews(db: SupportSQLiteDatabase) {
             listOf(
                 "visible_channels" to VISIBLE_CHANNELS_SQL,
@@ -57,7 +68,7 @@ abstract class AyuDatabase : RoomDatabase() {
                 // WAL erzwingen: Die Oberfläche kann lesen, während im Hintergrund EPG geschrieben wird.
                 // Fire TV Sticks melden sich oft als "low RAM", dann würde Room sonst TRUNCATE wählen.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 // Nur für unbekannte Versionssprünge: Playlists sollen Updates sonst immer überstehen.
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()

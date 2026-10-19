@@ -53,7 +53,7 @@ data class XtreamEpisode(
     val durationSeconds: Long,
 )
 
-data class XtreamAccount(val status: String?, val expiresAt: Long?, val maxConnections: Int?)
+data class XtreamAccount(val status: String?, val expiresAt: Long?, val maxConnections: Int?, val timezone: String? = null)
 
 /**
  * Xtream-Panels liefern Zahlen mal als String, mal als Zahl, mal als null. Deshalb wird hier
@@ -68,7 +68,8 @@ object XtreamParsing {
         val root = json.decodeFromStream<JsonElement>(input) as? JsonObject ?: return null
         val user = root["user_info"] as? JsonObject ?: return null
         if (user.int("auth") == 0) return null
-        return XtreamAccount(user.str("status"), user.long("exp_date")?.times(1000), user.int("max_connections"))
+        val server = root["server_info"] as? JsonObject
+        return XtreamAccount(user.str("status"), user.long("exp_date")?.times(1000), user.int("max_connections"), server?.str("timezone"))
     }
 
     fun categories(input: InputStream): Map<String, String> {
