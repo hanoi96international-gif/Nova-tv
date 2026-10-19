@@ -320,6 +320,21 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
                     }
                     item {
+                        var testResult by remember { mutableStateOf("Prüft Texterkennung und Übersetzung auf diesem Gerät") }
+                        SettingRow(
+                            "Übersetzer testen",
+                            "",
+                            testResult,
+                        ) {
+                            testResult = "Läuft … (beim ersten Mal werden die Modelle geladen)"
+                            scope.launch {
+                                testResult = de.ayutv.data.translate.TranslatorSelfTest.run(settings.subtitleLanguage)
+                                // Übersetzer-Prozess wieder beenden: Speicher frei für die Wiedergabe.
+                                Translators.remote.release()
+                            }
+                        }
+                    }
+                    item {
                         var modelInfo by remember { mutableStateOf("") }
                         LaunchedEffect(Unit) {
                             modelInfo = withContext(Dispatchers.IO) {

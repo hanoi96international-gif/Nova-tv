@@ -27,7 +27,13 @@ class OnDeviceTranslator(
     private val http: OkHttpClient,
     /** Freier Arbeitsspeicher in MB (null = unbekannt), um vor dem Laden eines Modells zu prüfen. */
     private val freeMemoryMb: () -> Long? = { null },
+    /** Rechen-Threads pro Modell. Neben 4K-Wiedergabe 1: Bild und Ton gehen vor. */
+    private val threads: Int = THREADS,
 ) : Translator {
+    /** Meldet jeden Schritt in nativem Code vorher (und null danach): Bei einem Absturz ist klar, wo. */
+    @Volatile
+    var trace: (String?) -> Unit = {}
+
     override val name = NAME
 
     /** Fortschritt beim einmaligen Laden eines Sprachmodells (für die Anzeige im Player). */
@@ -41,7 +47,8 @@ class OnDeviceTranslator(
     private val dispatcher = Executors.newSingleThreadExecutor { runnable ->
         Thread({
             // Etwas weniger Vorrang als die Wiedergabe: Ton und Bild gehen immer vor.
-            Process.setThreadPriority(Process.THREAD_PRIORITY_DEFAULT + Process.THREAD_PRIORITY_LESS_FAVORABLE)
+            // Hintergrund-Vorrang: Bild und Ton gehen immer vor (Übersetzung hat 30–60 s Vorlauf).
+            Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND)
             runnable.run()
         }, "dna-translate")
     }.asCoroutineDispatcher()
@@ -76,7 +83,8 @@ class OnDeviceTranslator(
             } else {
                 models.fold(segment) { current, (hop, model) ->
                     val token = hop.token?.let { model.tokenizer.id(it) }
-                    model.translate(current, token).ifBlank { current }
+                    trace("Übersetzer ${hop.pair} rechnet (${current.length} Zeichen)")
+                    model.translate(current, token).ifBlank { current }.also { trace(null) }
                 }
             }
         }
@@ -103,7 +111,8 @@ class OnDeviceTranslator(
         }
         onProgress("Starte Übersetzer ${describe(pair)} …" + (freeMb?.let { " (frei: $it MB)" } ?: ""))
         val model = try {
-            OpusMtModel(folder, env, THREADS)
+            trace("Übersetzer $pair startet")
+            OpusMtModel(folder, env, threads).also { trace(null) }
         } catch (e: Exception) {
             // Beschädigte Datei (z. B. Strom weg beim Laden): beim nächsten Mal neu herunterladen.
             folder.deleteRecursively()

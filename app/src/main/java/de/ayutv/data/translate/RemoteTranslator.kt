@@ -22,6 +22,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -142,23 +143,26 @@ class RemoteTranslator(private val context: Context) : Translator {
         pending.clear()
     }
 
-    /** Warum das System den Übersetzer beendet hat (ab Android 11 bekannt). */
+    /** Warum das System den Übersetzer beendet hat (ab Android 11 bekannt) und woran er gerade gerechnet hat. */
     private fun exitReason(): String {
-        val fallback = "Übersetzer wurde vom System beendet (vermutlich zu wenig Speicher)"
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return fallback
-        val info = runCatching {
+        // Schreibt der Übersetzer-Prozess vor jedem nativen Schritt (Modell starten, rechnen).
+        val step = File(context.filesDir, STEP_FILE).let { file ->
+            file.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() }.also { file.delete() }
+        }
+        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) runCatching {
             context.getSystemService(ActivityManager::class.java)
                 ?.getHistoricalProcessExitReasons(context.packageName, 0, 5)
                 ?.firstOrNull { it.processName.endsWith(":mt") }
-        }.getOrNull() ?: return fallback
-        val why = when (info.reason) {
+        }.getOrNull() else null
+        val why = when (info?.reason) {
+            null -> "vom System (vermutlich zu wenig Speicher)"
             ApplicationExitInfo.REASON_LOW_MEMORY -> "zu wenig Speicher"
             ApplicationExitInfo.REASON_CRASH_NATIVE -> "Absturz im Modell (nativ)"
             ApplicationExitInfo.REASON_CRASH -> "Programmfehler"
             ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "zu viel Rechenlast"
             else -> "Grund ${info.reason}"
         }
-        return "Übersetzer wurde beendet: $why (${info.pss / 1024} MB belegt)"
+        return "Übersetzer wurde beendet: $why" + (step?.let { " bei: $it" } ?: "")
     }
 
     internal companion object {
@@ -173,5 +177,6 @@ class RemoteTranslator(private val context: Context) : Translator {
         const val PIXELS = "pixels"
         const val RESULT = "result"
         const val ERROR = "error"
+        const val STEP_FILE = "mt_step.txt"
     }
 }
