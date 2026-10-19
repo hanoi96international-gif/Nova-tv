@@ -22,6 +22,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.IOException
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Besorgt Untertitel in jeder Sprache.
@@ -47,6 +49,30 @@ class SubtitleRepository(
     enum class Source { CACHE, HASH, TITLE, TRANSLATED }
 
     data class Result(val file: File, val source: Source, val translator: String? = null, val language: String? = null)
+
+    /** Gemerkte zeitliche Lage geladener Untertitel: automatisch erkannt ([ratio], [offsetMs]) plus von Hand ([manualMs]). */
+    data class SavedTiming(val ratio: Double, val offsetMs: Long, val manualMs: Long)
+
+    fun timing(key: String, language: String): SavedTiming? = runCatching {
+        val parts = timingFile(key, language).takeIf { it.isFile }?.readText()?.trim()?.split(' ') ?: return null
+        SavedTiming(parts[0].toDouble(), parts[1].toLong(), parts[2].toLong())
+    }.getOrNull()
+
+    fun saveTiming(key: String, language: String, timing: SavedTiming) {
+        runCatching { timingFile(key, language).writeText(String.format(Locale.ROOT, "%.6f %d %d", timing.ratio, timing.offsetMs, timing.manualMs)) }
+    }
+
+    /**
+     * Datei-Hash vor dem Start des Films berechnen (zwei kurze Anfragen nacheinander, solange noch
+     * keine Wiedergabe-Verbindung offen ist). Während der Wiedergabe wird nie zusätzlich verbunden.
+     */
+    suspend fun prepareHash(videoUrl: String, userAgent: String) = withContext(Dispatchers.IO) {
+        if (hashCache.containsKey(videoUrl)) return@withContext
+        val quick = http.newBuilder().callTimeout(1500, TimeUnit.MILLISECONDS).build()
+        hashCache[videoUrl] = runCatching { movieHash(quick, videoUrl, userAgent) }
+            .onFailure { Log.i(TAG, "Kein Datei-Hash möglich: ${it.message}") }
+            .getOrNull() ?: ""
+    }
 
     fun cached(key: String, language: String): File? =
         cacheFile(key, language).takeIf { it.isFile && it.length() > 0 }
@@ -75,10 +101,11 @@ class SubtitleRepository(
         // Kein Datei-Hash während der Wiedergabe: Er bräuchte zwei zusätzliche Verbindungen zum
         // IPTV-Anbieter. Bei Zugängen mit nur einer erlaubten Verbindung kann das den laufenden Film
         // abbrechen. Gesucht wird deshalb nach Titel und Jahr.
-        val hash: String? = if (HASH_DURING_PLAYBACK) {
+        // Vor dem Start berechnet (prepareHash): Treffer passen zeitgenau zu genau dieser Datei.
+        val hash: String? = hashCache[videoUrl]?.ifEmpty { null } ?: if (HASH_DURING_PLAYBACK) {
             // ConcurrentHashMap erlaubt kein null: "" steht für "kein Hash möglich".
             hashCache.getOrPut(videoUrl) {
-                runCatching { movieHash(videoUrl, settings.userAgent) }
+                runCatching { movieHash(http, videoUrl, settings.userAgent) }
                     .onFailure { Log.i(TAG, "Kein Datei-Hash möglich: ${it.message}") }
                     .getOrNull() ?: ""
             }.ifEmpty { null }
@@ -179,20 +206,20 @@ class SubtitleRepository(
     }
 
     /** Größe per Range-Anfrage ermitteln, dann Anfang und Ende laden. Ohne Range-Support kein Hash. */
-    private fun movieHash(url: String, userAgent: String): String? {
-        val (size, head) = range(url, userAgent, 0L, MovieHash.CHUNK - 1L) ?: return null
+    private fun movieHash(client: OkHttpClient, url: String, userAgent: String): String? {
+        val (size, head) = range(client, url, userAgent, 0L, MovieHash.CHUNK - 1L) ?: return null
         if (size < MovieHash.CHUNK * 2) return null
-        val (_, tail) = range(url, userAgent, size - MovieHash.CHUNK, size - 1) ?: return null
+        val (_, tail) = range(client, url, userAgent, size - MovieHash.CHUNK, size - 1) ?: return null
         return MovieHash.compute(size, head, tail)
     }
 
-    private fun range(url: String, userAgent: String, from: Long, to: Long): Pair<Long, ByteArray>? {
+    private fun range(client: OkHttpClient, url: String, userAgent: String, from: Long, to: Long): Pair<Long, ByteArray>? {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", userAgent)
             .header("Range", "bytes=$from-$to")
             .build()
-        http.newCall(request).execute().use { response ->
+        client.newCall(request).execute().use { response ->
             // Ignoriert der Server Range (200), würde der ganze Film geladen werden, also abbrechen.
             if (response.code != 206) return null
             val total = response.header("Content-Range")?.substringAfter('/')?.trim()?.toLongOrNull() ?: return null
@@ -282,6 +309,8 @@ class SubtitleRepository(
         .header("Accept", "application/json")
 
     private fun safeName(key: String) = key.replace(Regex("[^A-Za-z0-9_-]"), "_").takeLast(120)
+
+    private fun timingFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".sync")
 
     private fun cacheFile(key: String, language: String): File {
         val dir = File(cacheDir, "subtitles").apply { mkdirs() }

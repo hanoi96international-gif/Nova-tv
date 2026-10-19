@@ -60,7 +60,7 @@ import kotlin.math.abs
 object PlayerFactory {
     private const val MB = 1024 * 1024
 
-    class Built(val player: ExoPlayer, val headers: HeaderProvider, val trackSelector: DefaultTrackSelector)
+    class Built(val player: ExoPlayer, val headers: HeaderProvider, val trackSelector: DefaultTrackSelector, val subtitles: EmbeddedSubtitles)
 
     /** Der User-Agent kann sich pro Sender unterscheiden (#EXTVLCOPT), ohne den Player neu zu bauen. */
     class HeaderProvider(@Volatile var userAgent: String)
@@ -92,9 +92,13 @@ object PlayerFactory {
 
         val tsFlags = DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
             DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
-        val extractors = DefaultExtractorsFactory()
-            .setTsExtractorFlags(tsFlags)
-            .setConstantBitrateSeekingEnabled(true)
+        // Eingebettete Untertitel schon beim Laden mitlesen (für Übersetzung mit Vorlauf).
+        val subtitles = EmbeddedSubtitles()
+        val extractors = subtitles.tap(
+            DefaultExtractorsFactory()
+                .setTsExtractorFlags(tsFlags)
+                .setConstantBitrateSeekingEnabled(true)
+        )
 
         val renderers = AyuRenderersFactory(context, forcePcm)
             .setEnableDecoderFallback(true)
@@ -174,7 +178,7 @@ object PlayerFactory {
         // Filme: zum nächsten Keyframe springen statt exakt. Bei 4K HEVC mit langen GOPs spart das
         // pro Sprung Sekunden Dekodieren.
         if (!live) player.setSeekParameters(SeekParameters.CLOSEST_SYNC)
-        return Built(player, headers, trackSelector)
+        return Built(player, headers, trackSelector, subtitles)
     }
 }
 
@@ -185,7 +189,7 @@ object PlayerFactory {
  */
 private class StreamMediaSourceFactory(
     dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
-    extractors: DefaultExtractorsFactory,
+    extractors: androidx.media3.extractor.ExtractorsFactory,
     tsFlags: Int,
     live: Boolean,
 ) : MediaSource.Factory {
@@ -337,6 +341,9 @@ class FrameRateMatcher(private val activity: Activity) {
     }
 
     data class DisplayModeInfo(val id: Int, val width: Int, val height: Int, val refreshRate: Float)
+
+    @Suppress("DEPRECATION")
+    fun currentRefreshRate(): Float = runCatching { activity.windowManager.defaultDisplay.refreshRate }.getOrDefault(0f)
 
     companion object {
         /**
