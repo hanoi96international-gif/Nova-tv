@@ -32,16 +32,30 @@ def render(text, fg=(255,255,255), bg=(0,0,0,0)):
     d = ImageDraw.Draw(img)
     d.text((20, 8), text, font=font, fill=fg + (255,), stroke_width=3, stroke_fill=(0,0,0,255))
     return img
+import urllib.request
+print("ALL MONKT FILES", [f for f in list_repo_files("monkt/paddleocr-onnx")])
+lat = "/tmp/latin_dict.txt"
+for url in ["https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/release/2.7/ppocr/utils/dict/latin_dict.txt",
+            "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/latin_dict.txt"]:
+    try:
+        urllib.request.urlretrieve(url, lat); print("DICT OK", url, os.path.getsize(lat)); break
+    except Exception as e:
+        print("DICT ERR", url, e)
 for repo, model, dictf in [
     ("monkt/paddleocr-onnx", "languages/latin/rec.onnx", "languages/latin/dict.txt"),
-    ("monkt/paddleocr-onnx", "languages/english/rec.onnx", "languages/english/dict.txt"),
+    ("docato/PaddleOCR_Mobile_Models", "onnx/latin_PP-OCRv3_mobile_rec_infer.onnx", None),
 ]:
     try:
-        m = hf_hub_download(repo, model); dpath = hf_hub_download(repo, dictf)
+        m = hf_hub_download(repo, model); dpath = hf_hub_download(repo, dictf) if dictf else lat
     except Exception as e:
         print("DL ERR", model, e); continue
+    import onnx
+    g = onnx.load(m)
+    print("OPS", model, sorted(set(n.op_type for n in g.graph.node)), "opset", [o.version for o in g.opset_import])
     chars = [l.rstrip("\n") for l in open(dpath, encoding="utf-8")]
     print("MODEL", model, os.path.getsize(m), "dict", len(chars), repr("".join(chars[:80])), "has_space", " " in chars)
+    for level in [ort.GraphOptimizationLevel.ORT_DISABLE_ALL]:
+        pass
     s = ort.InferenceSession(m)
     for i in s.get_inputs(): print("  in", i.name, i.shape, i.type)
     for o in s.get_outputs(): print("  out", o.name, o.shape, o.type)
