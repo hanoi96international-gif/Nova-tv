@@ -23,11 +23,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
@@ -35,6 +37,7 @@ import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import de.ayutv.AyuApp
 import de.ayutv.data.AppSettings
@@ -122,6 +125,8 @@ class PlayerActivity : ComponentActivity() {
 
     private var vod: VodRequest? = null
     private var previousChannel: ChannelEntity? = null
+    /** Sender, den der Player gerade wirklich spielt ([current] zeigt beim schnellen Zappen schon das Ziel). */
+    private var playing: ChannelEntity? = null
     private var retries = 0
     private var triedHls = false
     private var zapStartedAt = 0L
@@ -135,6 +140,15 @@ class PlayerActivity : ComponentActivity() {
     private var progressJob: Job? = null
     private var numberJob: Job? = null
     private var watchdogJob: Job? = null
+    private var infoJob: Job? = null
+    private var zapJob: Job? = null
+    private var lastZapAt = 0L
+    private var zapTarget: ChannelEntity? = null
+    private var seekJob: Job? = null
+    private var pendingSeekMs = C.TIME_UNSET
+    private var lastAudioErrorAt = 0L
+    /** Zählt jeden neuen Stream (Sender, Neuverbindung, neuer Player): Der Watchdog fängt dann von vorn an. */
+    private var streamGeneration = 0
     /** Nachgeladene/übersetzte Untertitel nach Sprache. Alle hängen gleichzeitig am Film, Umschalten ist sofort. */
     private val subtitleFiles = LinkedHashMap<String, File>()
     private var autoSubtitleTried = false
@@ -179,20 +193,22 @@ class PlayerActivity : ComponentActivity() {
                 val key = intent.getStringExtra(EXTRA_CHANNEL_KEY)
                 val group = intent.getStringExtra(EXTRA_GROUP)
                 val favoritesOnly = intent.getBooleanExtra(EXTRA_FAVORITES, false)
-                channels = container.content.zapList(group, favoritesOnly)
                 listTitle = when {
                     favoritesOnly -> "★ Favoriten"
                     group != null -> group
                     else -> "Alle Sender"
                 }
-                val start = key?.let { k -> channels.firstOrNull { it.key == k } ?: container.content.channel(k) }
-                    ?: channels.firstOrNull()
+                // Erst den Sender starten, dann die (evtl. zehntausende Einträge lange) Zapp-Liste laden.
+                val direct = key?.let { container.content.channel(it) }
+                if (direct != null) playChannel(direct)
+                val list = container.content.zapList(group, favoritesOnly)
+                val start = direct ?: list.firstOrNull()
                 if (start == null) {
                     finish()
                     return@launch
                 }
-                if (channels.none { it.key == start.key }) channels = listOf(start) + channels
-                playChannel(start)
+                if (direct == null) playChannel(start)
+                channels = if (list.none { it.key == start.key }) listOf(start) + list else list
             }
         }
     }
@@ -207,6 +223,8 @@ class PlayerActivity : ComponentActivity() {
         forcePcmActive = forcePcm
         built.player.addListener(playerListener)
         built.player.addAnalyticsListener(analyticsListener)
+        cushionActive = false
+        streamGeneration++
         player = built.player
     }
 
@@ -238,44 +256,63 @@ class PlayerActivity : ComponentActivity() {
     private fun startWatchdog() {
         watchdogJob?.cancel()
         watchdogJob = lifecycleScope.launch {
-            var lastPosition = -1L
-            var stalledSeconds = 0
-            var lastReconnect = 0L
-            var lastFrames = -1L
-            var framesAdvancing = false
-            var frozenVideoSeconds = 0
-            while (isActive) {
-                delay(1_000)
-                val p = player ?: continue
-                if (displaySwitching()) {
-                    stalledSeconds = 0
-                    continue
-                }
-                val active = p.playWhenReady && p.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
-                val waiting = active && p.playbackState == Player.STATE_BUFFERING
-                val frozen = active && p.playbackState == Player.STATE_READY && p.currentPosition == lastPosition
-                lastPosition = p.currentPosition
-                stalledSeconds = if (waiting || frozen) stalledSeconds + 1 else 0
-                // Bild steht, Ton läuft weiter (Decoder hängt): an den Decoder-Zählern erkennen.
-                // Nur wenn die Zähler auf diesem Gerät überhaupt laufen (sonst nie eingreifen).
-                val frames = if (p.videoFormat != null) p.videoDecoderCounters?.run { ensureUpdated(); renderedOutputBufferCount.toLong() } else null
-                if (frames != null && lastFrames in 0 until frames) framesAdvancing = true
-                frozenVideoSeconds = if (frames != null && frames == lastFrames && framesAdvancing && p.isPlaying) frozenVideoSeconds + 1 else 0
-                lastFrames = frames ?: -1
-                val limit = if (isLive) LIVE_STALL_SECONDS else VOD_STALL_SECONDS
-                estimateFrameRate(p)
-                if (isLive) keepLiveCushion(p)
-                if (showTech) bufferedMs = p.totalBufferedDuration
-                val now = SystemClock.elapsedRealtime()
-                if (stalledSeconds >= limit && now - lastReconnect > 20_000) {
-                    stalledSeconds = 0
-                    lastReconnect = now
-                    reconnect("Stream hängt, verbinde neu …")
-                } else if (frozenVideoSeconds >= VIDEO_FREEZE_SECONDS && now - lastReconnect > 20_000) {
-                    frozenVideoSeconds = 0
-                    lastReconnect = now
-                    reconnect("Bild hängt, verbinde neu …")
-                }
+            // Nur im Vordergrund: Im Hintergrund ist der Live-Stream ohnehin gestoppt.
+            repeatOnLifecycle(Lifecycle.State.STARTED) { watch() }
+        }
+    }
+
+    private suspend fun watch() {
+        var lastPosition = -1L
+        var stalledSeconds = 0
+        var lastReconnect = 0L
+        var lastFrames = -1L
+        var framesAdvancing = false
+        var frozenVideoSeconds = 0
+        var seenGeneration = -1
+        while (true) {
+            delay(1_000)
+            val p = player ?: continue
+            if (seenGeneration != streamGeneration) {
+                seenGeneration = streamGeneration
+                stalledSeconds = 0
+                frozenVideoSeconds = 0
+                lastFrames = -1
+                framesAdvancing = false
+                lastPosition = -1
+            }
+            if (displaySwitching()) {
+                stalledSeconds = 0
+                continue
+            }
+            val active = p.playWhenReady && p.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
+            val waiting = active && p.playbackState == Player.STATE_BUFFERING
+            val frozen = active && p.playbackState == Player.STATE_READY && p.currentPosition == lastPosition
+            lastPosition = p.currentPosition
+            stalledSeconds = if (waiting || frozen) stalledSeconds + 1 else 0
+            // Bild steht, Ton läuft weiter (Decoder hängt): an den Decoder-Zählern erkennen.
+            // Nur wenn die Zähler auf diesem Gerät überhaupt laufen (sonst nie eingreifen).
+            val frames = if (p.videoFormat != null) p.videoDecoderCounters?.run { ensureUpdated(); renderedOutputBufferCount.toLong() } else null
+            if (frames != null && lastFrames in 0 until frames) framesAdvancing = true
+            frozenVideoSeconds = if (frames != null && frames == lastFrames && framesAdvancing && p.isPlaying) frozenVideoSeconds + 1 else 0
+            lastFrames = frames ?: -1
+            // Beim ersten Verbinden hat der Loader eigene Wiederholversuche: die nicht abwürgen.
+            val limit = when {
+                !everReady -> FIRST_CONNECT_STALL_SECONDS
+                isLive -> LIVE_STALL_SECONDS
+                else -> VOD_STALL_SECONDS
+            }
+            estimateFrameRate(p)
+            if (isLive) keepLiveCushion(p)
+            if (showTech) bufferedMs = p.totalBufferedDuration
+            val now = SystemClock.elapsedRealtime()
+            if (stalledSeconds >= limit && now - lastReconnect > 20_000) {
+                stalledSeconds = 0
+                lastReconnect = now
+                reconnect("Stream hängt, verbinde neu …")
+            } else if (frozenVideoSeconds >= VIDEO_FREEZE_SECONDS && now - lastReconnect > 20_000) {
+                frozenVideoSeconds = 0
+                lastReconnect = now
+                reconnect("Bild hängt, verbinde neu …")
             }
         }
     }
@@ -304,13 +341,16 @@ class PlayerActivity : ComponentActivity() {
 
     /**
      * Live-Streams kommen in Echtzeit an: Der Puffer wächst von selbst nie, jeder Netz-Schluckauf
-     * friert das Bild ein. Ist der Vorrat knapp, läuft die Wiedergabe unhörbar 3 % langsamer, bis
+     * friert das Bild ein. Ist der Vorrat knapp, läuft die Wiedergabe unhörbar 1,5 % langsamer, bis
      * wieder genug gepuffert ist (Tonhöhe bleibt gleich). Bei durchgereichtem Dolby/DTS und im
      * Tunneling-Modus ignoriert das Gerät die Geschwindigkeit; dann bleibt alles wie bisher.
      */
     private fun keepLiveCushion(p: ExoPlayer) {
         // Im Tunneling-Modus steuert die Hardware den Takt; dort nichts verändern.
         if (!p.isPlaying || trackSelector?.parameters?.tunnelingEnabled == true) return
+        // HLS mit Zielabstand zum Live-Rand: Media3 regelt die Geschwindigkeit selbst, nicht dazwischenfunken.
+        val window = p.currentTimeline.takeUnless { it.isEmpty }?.getWindow(p.currentMediaItemIndex, Timeline.Window())
+        if (window?.liveConfiguration?.targetOffsetMs?.let { it != C.TIME_UNSET } == true) return
         val buffered = p.totalBufferedDuration
         val wanted = when {
             !cushionActive && buffered < CUSHION_LOW_MS -> true
@@ -431,9 +471,25 @@ class PlayerActivity : ComponentActivity() {
     private fun reconnect(reason: String?) {
         val p = player ?: return
         if (reason != null) message = reason
+        streamGeneration++
         val position = p.currentPosition
         p.stop()
         if (isLive) p.seekToDefaultPosition() else p.seekTo(position)
+        p.prepare()
+        p.playWhenReady = true
+    }
+
+    private fun originalUrl(): String? = vod?.url ?: playing?.let { adaptLiveUrl(it.url) }
+
+    private fun retryLater() {
+        val generation = streamGeneration
+        handler.postDelayed({ if (generation == streamGeneration) restartStream() }, 800L * retries.coerceAtLeast(1))
+    }
+
+    /** Nach Fehler oder Hintergrund neu starten: Live am Live-Rand (wichtig für HLS), Filme an derselben Stelle. */
+    private fun restartStream() {
+        val p = player ?: return
+        if (isLive) p.seekToDefaultPosition()
         p.prepare()
         p.playWhenReady = true
     }
@@ -442,8 +498,15 @@ class PlayerActivity : ComponentActivity() {
 
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
-        current?.takeIf { it.key != channel.key }?.let { previousChannel = it }
+        playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
+        playing = channel
         current = channel
+        // Verzögerte Wiederholungen und Rückrufe vom vorigen Sender dürfen den neuen nicht treffen.
+        handler.removeCallbacksAndMessages(null)
+        zapJob?.cancel()
+        zapJob = null
+        zapTarget = null
+        streamGeneration++
         resetStreamState()
         retries = 0
         triedHls = false
@@ -467,19 +530,53 @@ class PlayerActivity : ComponentActivity() {
         p.playWhenReady = true
         showOverlay(Overlay.INFO)
 
-        lifecycleScope.launch {
-            container.content.recordLive(channel)
+        loadChannelInfo(channel)
+        container.scope.launch { container.content.recordLive(channel) }
+    }
+
+    /** EPG und Favorit für die Infoleiste; eine ältere Abfrage überschreibt nie die des neuen Senders. */
+    private fun loadChannelInfo(channel: ChannelEntity) {
+        infoJob?.cancel()
+        infoJob = lifecycleScope.launch {
             nowNext = container.content.upcoming(channel, 3)
             isFavorite = container.db.favorites().isFavorite(channel.key)
         }
     }
 
+    /**
+     * Einmal drücken schaltet sofort um. Schnell hintereinander gedrückt wandert nur die Anzeige mit,
+     * umgeschaltet wird kurz nach dem letzten Druck: Sonst öffnet jeder Druck eine Verbindung, und
+     * Anbieter mit nur einer erlaubten Verbindung sperren kurz (403).
+     */
     private fun zap(step: Int) {
         val list = channels
-        val now = current ?: return
+        val from = zapTarget ?: current ?: return
         if (list.size < 2) return
-        val index = list.indexOfFirst { it.key == now.key }.coerceAtLeast(0)
-        playChannel(list[(index + step + list.size) % list.size])
+        val index = list.indexOfFirst { it.key == from.key }.coerceAtLeast(0)
+        val target = list[(index + step + list.size) % list.size]
+        val now = SystemClock.elapsedRealtime()
+        val burst = now - lastZapAt < ZAP_BURST_MS
+        lastZapAt = now
+        if (!burst && zapJob == null) {
+            playChannel(target)
+            return
+        }
+        zapTarget = target
+        previewChannel(target)
+        zapJob?.cancel()
+        zapJob = lifecycleScope.launch {
+            delay(ZAP_COMMIT_MS)
+            zapJob = null
+            zapTarget = null
+            playChannel(target)
+        }
+    }
+
+    /** Infoleiste zeigt schon den Zielsender, der Player bleibt noch beim alten. */
+    private fun previewChannel(channel: ChannelEntity) {
+        current = channel
+        showOverlay(Overlay.INFO)
+        loadChannelInfo(channel)
     }
 
     private fun adaptLiveUrl(url: String): String =
@@ -502,8 +599,13 @@ class PlayerActivity : ComponentActivity() {
     private fun onDigit(digit: Int) {
         numberInput = (numberInput + digit).takeLast(4)
         numberJob?.cancel()
+        // Kann keine Sendernummer mit dieser Eingabe weitergehen, sofort umschalten statt 1,5 s zu warten.
+        val typed = numberInput
+        val canGrow = channels.isEmpty() || channels.any { c ->
+            c.number.toString().let { it.length > typed.length && it.startsWith(typed) }
+        }
         numberJob = lifecycleScope.launch {
-            delay(1_500)
+            if (canGrow) delay(1_500)
             val number = numberInput.toIntOrNull()
             numberInput = ""
             val target = number?.let { n -> channels.firstOrNull { it.number == n } ?: container.content.channelByNumber(n) }
@@ -516,6 +618,7 @@ class PlayerActivity : ComponentActivity() {
     private fun startVod(request: VodRequest, resumeMs: Long) {
         val p = player ?: return
         headers?.userAgent = settings.userAgent
+        streamGeneration++
         resetStreamState()
         // Schon einmal geladene Untertitel direkt mitgeben, dann gibt es kein erneutes Puffern.
         subtitleFiles.clear()
@@ -528,7 +631,7 @@ class PlayerActivity : ComponentActivity() {
         progressJob = lifecycleScope.launch {
             var tick = 0
             while (isActive) {
-                positionMs = p.currentPosition
+                if (pendingSeekMs == C.TIME_UNSET) positionMs = p.currentPosition
                 durationMs = p.duration.takeIf { it != C.TIME_UNSET } ?: 0L
                 if (++tick % 15 == 0) saveProgress()
                 delay(1_000)
@@ -815,6 +918,11 @@ class PlayerActivity : ComponentActivity() {
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(group.type, false)
             .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, index))
+            .apply {
+                // Gewählte Tonsprache auch beim nächsten Sender bevorzugen.
+                if (group.type == C.TRACK_TYPE_AUDIO) group.getTrackFormat(index).language?.takeIf { it != "und" }
+                    ?.let { setPreferredAudioLanguages(it, Locale.getDefault().language) }
+            }
             .build()
         if (group.type == C.TRACK_TYPE_TEXT) {
             textDisabled = false
@@ -864,12 +972,24 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Spulen sammelt schnelle Tastendrücke und springt erst 300 ms nach dem letzten: Gedrückt halten
+     * würde sonst 20 Sprünge pro Sekunde und je eine neue Server-Anfrage auslösen. Nie bis ganz ans
+     * Ende, sonst wäre der Film sofort aus.
+     */
     private fun seekBy(deltaMs: Long) {
         val p = player ?: return
-        val duration = p.duration.takeIf { it != C.TIME_UNSET } ?: Long.MAX_VALUE
-        p.seekTo((p.currentPosition + deltaMs).coerceIn(0, duration))
-        positionMs = p.currentPosition
+        val max = p.duration.takeIf { it != C.TIME_UNSET }?.let { (it - 2_000).coerceAtLeast(0) } ?: Long.MAX_VALUE
+        val base = if (pendingSeekMs != C.TIME_UNSET) pendingSeekMs else p.currentPosition
+        pendingSeekMs = (base + deltaMs).coerceIn(0, max)
+        positionMs = pendingSeekMs
         showOverlay(Overlay.CONTROLS)
+        seekJob?.cancel()
+        seekJob = lifecycleScope.launch {
+            delay(300)
+            player?.seekTo(pendingSeekMs)
+            pendingSeekMs = C.TIME_UNSET
+        }
     }
 
     // ---------------------------------------------------------------- Gemeinsam
@@ -957,22 +1077,57 @@ class PlayerActivity : ComponentActivity() {
                     p.seekToDefaultPosition()
                     p.prepare()
                 }
-                // Viele Playlists liefern HLS ohne .m3u8-Endung. Dann einmal explizit als HLS versuchen.
-                !triedHls && (
-                    error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ||
-                        error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED
-                    ) -> {
+                // Viele Playlists liefern HLS ohne .m3u8-Endung. Dann einmal explizit als HLS versuchen,
+                // aber nur vor dem ersten Bild: Später ist ein Lesefehler kaputte Daten, kein falsches Format.
+                !triedHls && !everReady && error.isContainerError() -> {
                     triedHls = true
                     val uri = p.currentMediaItem?.localConfiguration?.uri?.toString() ?: return
                     p.setMediaItem(mediaItem(uri, MimeTypes.APPLICATION_M3U8))
                     p.prepare()
                 }
+                // Auch als HLS nichts: zurück zur ursprünglichen Adresse und normal weiter versuchen.
+                triedHls && !everReady && error.isContainerError() &&
+                    p.currentMediaItem?.localConfiguration?.mimeType == MimeTypes.APPLICATION_M3U8 &&
+                    originalUrl()?.let { guessMime(it) != MimeTypes.APPLICATION_M3U8 } == true -> {
+                    val request = vod
+                    if (request != null) {
+                        p.setMediaItem(vodItem(request), p.currentPosition)
+                    } else {
+                        val url = originalUrl() ?: return
+                        p.setMediaItem(mediaItem(url, guessMime(url)))
+                    }
+                    retries++
+                    retryLater()
+                }
                 // Tunneling ist auf manchen Geräten/Streams instabil: einmalig ohne Tunneling neu starten.
+                // Steht vor dem Ton-Zweig, sonst würde ein Tunneling-Problem als Soundbar-Problem behandelt.
+                trackSelector?.parameters?.tunnelingEnabled == true && error.isDecoderOrAudioError() -> {
+                    trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
+                    message = "Tunneling für diesen Stream deaktiviert, starte neu …"
+                    restartStream()
+                }
                 // Soundbar/Receiver kündigt ein Format an, spielt es aber nicht: Ton im Gerät dekodieren.
+                // Nur wenn wirklich durchgereicht wurde und es wiederholt (oder gleich zu Beginn) scheitert;
+                // ein einzelner Fehler kommt oft vom Aufwachen des Receivers oder einem HDMI-Wechsel.
                 !forcePcmActive && error.isAudioOutputError() -> {
-                    message = "Ton wird jetzt im Gerät dekodiert, starte neu …"
-                    forcePcmActive = true
-                    handler.post { rebuildPlayer(forcePcm = true) }
+                    val sinkFormat = (error.cause as? AudioSink.InitializationException)?.format
+                        ?: (error.cause as? AudioSink.WriteException)?.format
+                    val passthrough = sinkFormat?.sampleMimeType?.let { it != MimeTypes.AUDIO_RAW } == true
+                    val now = SystemClock.elapsedRealtime()
+                    val repeated = now - lastAudioErrorAt < 60_000
+                    lastAudioErrorAt = now
+                    if (passthrough && (repeated || !everReady)) {
+                        message = "Ton wird jetzt im Gerät dekodiert, starte neu …"
+                        forcePcmActive = true
+                        handler.post { rebuildPlayer(forcePcm = true) }
+                    } else if (retries < MAX_RETRIES) {
+                        retries++
+                        message = "Tonausgabe wird neu verbunden …"
+                        handler.postDelayed({ restartStream() }, 1_500)
+                    } else {
+                        fatalError = true
+                        message = "Tonausgabe gestört: Soundbar/Receiver prüfen oder Tonausgabe auf „Immer im Gerät dekodieren“ stellen"
+                    }
                 }
                 // Asynchrones Dekodieren mag nicht jeder Decoder: ohne neu aufbauen und für die
                 // Zukunft merken, damit der Neustart nicht bei jedem Sender wieder passiert.
@@ -983,20 +1138,20 @@ class PlayerActivity : ComponentActivity() {
                     // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
                     handler.post { rebuildPlayer(asyncDecoding = false) }
                 }
-                trackSelector?.parameters?.tunnelingEnabled == true && error.isDecoderOrAudioError() -> {
-                    trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
-                    message = "Tunneling für diesen Stream deaktiviert, starte neu …"
-                    p.prepare()
-                }
                 // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
-                error.isFormatError() && !everReady -> {
+                !everReady && error.isUnsupportedFormat() -> {
+                    fatalError = true
+                    message = unsupportedFormatMessage()
+                }
+                // Decoder-Start gescheitert: oft nur kurz belegt (4K-Decoder beim Zappen). Einmal neu versuchen.
+                error.isFormatError() && !everReady && retries >= 1 -> {
                     fatalError = true
                     message = unsupportedFormatMessage()
                 }
                 retries < MAX_RETRIES -> {
                     retries++
                     message = "Verbindung wird wiederhergestellt … ($retries/$MAX_RETRIES)"
-                    handler.postDelayed({ player?.prepare() }, 800L * retries)
+                    retryLater()
                 }
                 else -> {
                     fatalError = true
@@ -1154,13 +1309,25 @@ class PlayerActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         player?.let { p ->
-            if (p.playbackState == Player.STATE_IDLE) p.prepare()
-            p.playWhenReady = true
+            if (p.playbackState == Player.STATE_IDLE) {
+                streamGeneration++
+                restartStream()
+            } else {
+                p.playWhenReady = true
+            }
         }
     }
 
     override fun onStop() {
         super.onStop()
+        // Noch nicht ausgeführtes Schnell-Zappen verwerfen: im Hintergrund keinen neuen Stream öffnen.
+        if (zapJob != null) {
+            zapJob?.cancel()
+            zapJob = null
+            zapTarget = null
+            current = playing
+            playing?.let(::loadChannelInfo)
+        }
         saveProgress()
         // Live-Streams im Hintergrund nicht weiterladen: spart Bandbreite und eine Verbindung beim Anbieter.
         player?.let { p -> if (isLive) p.stop() else p.pause() }
@@ -1181,16 +1348,20 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val MAX_RETRIES = 3
+        private const val ZAP_BURST_MS = 600L
+        private const val ZAP_COMMIT_MS = 400L
         private const val TAG = "AyuPlayer"
         private val SRT_TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
         private const val DISPLAY_SWITCH_GRACE_MS = 6_000L
         const val SUBTITLE_TAG = "AyuSubtitles"
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 8
+        private const val FIRST_CONNECT_STALL_SECONDS = 15
         private const val VIDEO_FREEZE_SECONDS = 6
         private const val CUSHION_LOW_MS = 2_500L
         private const val CUSHION_HIGH_MS = 5_000L
-        private const val CUSHION_SPEED = 0.97f
+        // Bei 50 Hz bringt 0,985 nur alle ~1,3 s ein doppeltes Bild (0,97 ruckelte bei Schwenks sichtbar).
+        private const val CUSHION_SPEED = 0.985f
         private const val VOD_STALL_SECONDS = 20
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"
@@ -1315,6 +1486,16 @@ private fun androidx.media3.common.Format.isBitmapSubtitle(): Boolean {
     // Seit Media3 1.4 werden Untertitel beim Einlesen umgewandelt; der ursprüngliche Typ steht dann in codecs.
     return sampleMimeType in bitmapTypes || codecs in bitmapTypes
 }
+
+private fun PlaybackException.isUnsupportedFormat(): Boolean = errorCode in setOf(
+    PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+    PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
+)
+
+private fun PlaybackException.isContainerError(): Boolean = errorCode in setOf(
+    PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+    PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+)
 
 private fun PlaybackException.isAudioOutputError(): Boolean = errorCode in setOf(
     PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED,

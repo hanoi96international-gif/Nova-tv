@@ -199,6 +199,19 @@ class DeviceTourTest {
                         scenario.read { it.player?.playbackState == Player.STATE_READY && it.stats.startupMs > 0 }
                     }
                     log("zap: ready=$zapReady startup_ms=${scenario.read { it.stats.startupMs }} now=${scenario.read { it.current?.name }}")
+                    // Schnell dreimal: Anzeige läuft mit, umgeschaltet wird einmal, auf den dritten Sender.
+                    val before = scenario.read { act -> act.channels.indexOfFirst { it.key == act.current?.key } }
+                    repeat(3) { key(KeyEvent.KEYCODE_DPAD_UP); Thread.sleep(150) }
+                    val burstReady = waitFor(15_000) {
+                        scenario.read { act ->
+                            act.player?.currentMediaItem?.localConfiguration?.uri?.toString()?.let { uri ->
+                                act.current?.url?.let { uri.startsWith(it.substringBeforeLast('.')) }
+                            } == true && act.player?.playbackState == Player.STATE_READY
+                        }
+                    }
+                    val after = scenario.read { act -> act.channels.indexOfFirst { it.key == act.current?.key } }
+                    val size = scenario.read { it.channels.size }
+                    log("zap_burst: ready=$burstReady moved=${(after - before + size) % size} expected=${3 % size} now=${scenario.read { it.current?.name }}")
                     key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_200)
                     shot("1${index}_live_channel_list")
                     key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)

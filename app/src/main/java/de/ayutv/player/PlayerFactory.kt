@@ -11,17 +11,27 @@ import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
+import androidx.media3.exoplayer.hls.DefaultHlsExtractorFactory
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
 import androidx.media3.exoplayer.audio.AudioCapabilities
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
@@ -53,7 +63,7 @@ object PlayerFactory {
     class Built(val player: ExoPlayer, val headers: HeaderProvider, val trackSelector: DefaultTrackSelector)
 
     /** Der User-Agent kann sich pro Sender unterscheiden (#EXTVLCOPT), ohne den Player neu zu bauen. */
-    class HeaderProvider(var userAgent: String)
+    class HeaderProvider(@Volatile var userAgent: String)
 
     /** Untertitel sind bei Filmen optional: bevorzugte Sprache ist gesetzt, eingeschaltet nur mit "automatisch an". */
     fun create(
@@ -80,15 +90,15 @@ object PlayerFactory {
         }
         val dataSourceFactory = DefaultDataSource.Factory(context, resolving)
 
+        val tsFlags = DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
+            DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
         val extractors = DefaultExtractorsFactory()
-            .setTsExtractorFlags(
-                DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
-                    DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
-            )
+            .setTsExtractorFlags(tsFlags)
             .setConstantBitrateSeekingEnabled(true)
 
         val renderers = AyuRenderersFactory(context, forcePcm)
             .setEnableDecoderFallback(true)
+            .setMediaCodecSelector(DolbyVisionFallbackSelector)
             // FFmpeg nur als Ergänzung: Was das Gerät selbst kann (oder an den Receiver durchreicht),
             // bleibt beim Gerät; DTS, TrueHD & Co. ohne Receiver übernimmt FFmpeg.
             .setExtensionRendererMode(
@@ -143,10 +153,7 @@ object PlayerFactory {
             .build()
 
         val player = ExoPlayer.Builder(context, renderers)
-            .setMediaSourceFactory(
-                DefaultMediaSourceFactory(dataSourceFactory, extractors)
-                    .setLoadErrorHandlingPolicy(StreamLoadErrorPolicy(live))
-            )
+            .setMediaSourceFactory(StreamMediaSourceFactory(dataSourceFactory, extractors, tsFlags, live))
             .setTrackSelector(trackSelector)
             .setLoadControl(loadControl)
             .setBandwidthMeter(bandwidthMeter)
@@ -154,7 +161,9 @@ object PlayerFactory {
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),
                 true,
             )
-            .setHandleAudioBecomingNoisy(true)
+            // Bei Live-TV nicht pausieren, wenn Android beim Ein-/Ausschalten der Soundbar „Kopfhörer
+            // getrennt“ meldet: Sonst stünde das Bild, bis jemand Play drückt.
+            .setHandleAudioBecomingNoisy(!live)
             // WLAN während der Wiedergabe wach halten: Fire TV schaltet es sonst in den Stromsparmodus,
             // eine häufige Ursache für kurze Hänger bei Live-TV.
             .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -162,8 +171,64 @@ object PlayerFactory {
         // Mit eigener Bildwiederholraten-Anpassung keine zweite Stelle, die per Surface.setFrameRate
         // mitredet: Sonst können sich beide Anforderungen gegenseitig umschalten.
         if (settings.matchFrameRate) player.setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
+        // Filme: zum nächsten Keyframe springen statt exakt. Bei 4K HEVC mit langen GOPs spart das
+        // pro Sprung Sekunden Dekodieren.
+        if (!live) player.setSeekParameters(SeekParameters.CLOSEST_SYNC)
         return Built(player, headers, trackSelector)
     }
+}
+
+/**
+ * HLS mit denselben TS-Einstellungen wie direkte Streams: Ohne die Flags wartet HLS auf einen
+ * IDR-Frame, Sender mit reinen I-Frames starten langsam oder gar nicht. Alles andere (direkte
+ * Streams, DASH, Filme mit nachgeladenen Untertiteln) geht über die Standard-Fabrik.
+ */
+private class StreamMediaSourceFactory(
+    dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
+    extractors: DefaultExtractorsFactory,
+    tsFlags: Int,
+    live: Boolean,
+) : MediaSource.Factory {
+    private val default = DefaultMediaSourceFactory(dataSourceFactory, extractors)
+        .setLoadErrorHandlingPolicy(StreamLoadErrorPolicy(live))
+    private val hls = HlsMediaSource.Factory(dataSourceFactory)
+        .setExtractorFactory(
+            DefaultHlsExtractorFactory(tsFlags, true)
+                // Wie der Standard-Konstruktor: Abhängigkeiten innerhalb der GOP für H.264/H.265 auswerten.
+                .experimentalSetCodecsToParseWithinGopSampleDependencies(C.VIDEO_CODEC_FLAG_H264 or C.VIDEO_CODEC_FLAG_H265)
+        )
+        .setLoadErrorHandlingPolicy(StreamLoadErrorPolicy(live))
+
+    override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider): MediaSource.Factory = apply {
+        default.setDrmSessionManagerProvider(provider)
+        hls.setDrmSessionManagerProvider(provider)
+    }
+
+    override fun setLoadErrorHandlingPolicy(policy: LoadErrorHandlingPolicy): MediaSource.Factory = apply {
+        default.setLoadErrorHandlingPolicy(policy)
+        hls.setLoadErrorHandlingPolicy(policy)
+    }
+
+    override fun getSupportedTypes(): IntArray = default.supportedTypes
+
+    override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+        val config = mediaItem.localConfiguration
+        return if (config?.mimeType == MimeTypes.APPLICATION_M3U8 && config.subtitleConfigurations.isEmpty()) {
+            hls.createMediaSource(mediaItem)
+        } else {
+            default.createMediaSource(mediaItem)
+        }
+    }
+}
+
+/**
+ * Dolby Vision Profil 7 (UHD-Blu-ray-Remuxe) kann kaum ein Gerät als DV dekodieren, die Basisschicht
+ * ist aber normales HEVC/HDR10. HEVC-Decoder hinten anhängen: Kann der DV-Decoder das Profil, gewinnt
+ * er weiter (Media3 sortiert nach Unterstützung), sonst läuft das Bild in HDR10 statt gar nicht.
+ */
+private val DolbyVisionFallbackSelector = MediaCodecSelector { mime, secure, tunneling ->
+    val infos = MediaCodecUtil.getDecoderInfos(mime, secure, tunneling)
+    if (mime == MimeTypes.VIDEO_DOLBY_VISION) infos + MediaCodecUtil.getDecoderInfos(MimeTypes.VIDEO_H265, secure, tunneling) else infos
 }
 
 /** Sockets mit 2 MB Empfangspuffer (vor dem Verbinden gesetzt, damit TCP ein großes Fenster aushandelt). */
@@ -197,6 +262,14 @@ private class StreamLoadErrorPolicy(private val live: Boolean) : DefaultLoadErro
     override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
         val delay = super.getRetryDelayMsFor(loadErrorInfo)
         if (delay == C.TIME_UNSET) return delay
+        // Direkte Streams (kein HLS/DASH): Ein 401/404/410 wird nie gut, sofort melden statt
+        // ~10 s „Lädt …“. 403/429 kommen oft kurz nach dem Zappen (alte Verbindung noch offen).
+        val progressive = loadErrorInfo.mediaLoadData.trackType == C.TRACK_TYPE_UNKNOWN
+        val code = (loadErrorInfo.exception as? HttpDataSource.InvalidResponseCodeException)?.responseCode
+        if (progressive) when (code) {
+            400, 401, 404, 405, 410, 451 -> return C.TIME_UNSET
+            403, 429, 458, 509 -> if (loadErrorInfo.errorCount > 3) return C.TIME_UNSET
+        }
         return minOf(300L * loadErrorInfo.errorCount, 2_000L)
     }
 

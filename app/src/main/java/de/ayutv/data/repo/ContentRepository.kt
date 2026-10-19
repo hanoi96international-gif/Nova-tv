@@ -163,7 +163,16 @@ class ContentRepository(
         db.history().upsert(entry.copy(playCount = existing?.playCount ?: 1))
     }
 
-    suspend fun resumePosition(key: String): Long = db.history().byKey(key)?.positionMs ?: 0L
+    /**
+     * Wo ein Film weiterläuft: ein paar Sekunden vor der letzten Stelle (Wiedereinstieg). Zu Ende
+     * oder fast zu Ende geschaut beginnt er von vorn, statt sofort wieder zu enden.
+     */
+    suspend fun resumePosition(key: String): Long {
+        val entry = db.history().byKey(key) ?: return 0L
+        val nearEnd = entry.durationMs > 0 &&
+            (entry.positionMs >= entry.durationMs * 0.95 || entry.durationMs - entry.positionMs < 120_000)
+        return if (nearEnd) 0L else (entry.positionMs - 3_000).coerceAtLeast(0)
+    }
 
     suspend fun clearHistory() = db.history().clear()
 
