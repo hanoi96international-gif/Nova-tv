@@ -21,12 +21,12 @@ jobs:
           set -e
           gh release view models-src >/dev/null 2>&1 || gh release create models-src --prerelease --title "Original-Modelle (Untersuchung)" --notes "Nur zur Entwicklung."
           mkdir -p out && cd out
-          for pair in en-es en-mul en-de; do
-            for f in config.json tokenizer.json onnx/encoder_model_quantized.onnx onnx/decoder_model_merged_quantized.onnx; do
-              curl -sSfL -o "opus-mt-$pair.$(basename $f)" "https://huggingface.co/Xenova/opus-mt-$pair/resolve/main/$f"
-            done
+          curl -sSfL https://huggingface.co/api/models/monkt/paddleocr-onnx | python3 -c "import json,sys; [print(s['rfilename']) for s in json.load(sys.stdin)['siblings']]" | tee files.txt
+          for f in $(grep -E '^detection/' files.txt); do
+            curl -sSfL -o "$(echo $f | tr '/' '_')" "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/$f"
           done
-          curl -sSfL -o rec.onnx https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/rec.onnx
-          curl -sSfL -o dict.txt https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/latin/dict.txt
+          for f in $(grep -E '^languages/(german|latin)/' files.txt); do
+            curl -sSfL -o "$(echo $f | tr '/' '_')" "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/$f"
+          done
           ls -la
           gh release upload models-src * --clobber -R ${{ github.repository }}
