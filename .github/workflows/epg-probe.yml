@@ -1,0 +1,25 @@
+name: EPG-Probe
+on:
+  push:
+    branches: [epg-probe]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Quellen prüfen
+        run: |
+          set +e
+          curl -sSL -m 60 https://epgshare01.online/epgshare01/ -o index.html
+          echo "== index"; grep -o 'epg_ripper_[A-Z0-9_]*\.xml\.gz' index.html | sort -u | grep -E 'DE|AT|CH|SPORT|DAZN|SKY' 
+          for f in DE1 DE2 DE3 AT1 CH1 SKY1 DAZN1 SPORTS1 UK1; do
+            u="https://epgshare01.online/epgshare01/epg_ripper_${f}.xml.gz"
+            code=$(curl -sSL -m 120 -o "$f.gz" -w '%{http_code}' "$u")
+            echo "== $f http=$code size=$(stat -c %s $f.gz 2>/dev/null)"
+            [ "$code" = 200 ] || continue
+            zcat "$f.gz" > "$f.xml" || continue
+            echo "channels=$(grep -c '<channel ' $f.xml) programmes=$(grep -c '<programme ' $f.xml)"
+            grep -o 'start="[0-9]\{8\}' $f.xml | sort | uniq -c | head -3
+            grep -o '<channel id="[^"]*"' $f.xml | grep -i -E 'sky|dazn|rtl\.|magenta|sport1|eurosport' | head -80
+            grep -o '<display-name[^>]*>[^<]*' $f.xml | grep -i -E 'sky|dazn' | head -40
+          done
