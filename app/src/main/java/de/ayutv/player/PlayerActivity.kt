@@ -194,6 +194,15 @@ class PlayerActivity : ComponentActivity() {
     var syncedBySpeech by mutableStateOf(false); private set
     private var syncedByReference = false
     private var pcmForSpeechTried = false
+    /** Länge und Bildrate des laufenden Films: helfen bei der Wahl der Untertitel-Datei. */
+    private fun filmInfo() = SubtitleRepository.FilmInfo(
+        durationMs = player?.duration?.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L,
+        frameRate = stats.frameRate.takeIf { it > 1f },
+    )
+    /** Die geladenen Untertitel passen nachweislich zur Datei (OpenSubtitles-Hash): nichts umstellen. */
+    private var externalExact = false
+    /** Was die Ausrichtung am Ton gerade tut, in Worten (steht im Untertitel-Menü). */
+    var speechSyncInfo by mutableStateOf<String?>(null); private set
     private var liveSourceLanguage: String? = null
     /** Übersetzung eingebetteter Untertitel mit Vorlauf: Quellspur, Ergebnisse je Einblendung (Startzeit). */
     private var aheadFormat: Format? = null
@@ -778,7 +787,7 @@ class PlayerActivity : ComponentActivity() {
             if (request != null) {
                 if (settings.onlineSubtitlesEnabled) subtitleStatus = "Suche Untertitel ($label) …"
                 val found = runCatching {
-                    container.subtitles.find(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
+                    container.subtitles.find(request.key, request.url, request.title, language, settings, filmInfo()) { subtitleStatus = it }
                 }.onFailure {
                     Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it)
                     onlineProblem = describeOnlineProblem(it)
@@ -796,7 +805,7 @@ class PlayerActivity : ComponentActivity() {
             //     Übersetzer, keine Texterkennung). Sie werden an der eingebetteten Spur ausgerichtet.
             if (heavy && request != null) {
                 val template = runCatching {
-                    container.subtitles.findSource(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
+                    container.subtitles.findSource(request.key, request.url, request.title, language, settings, filmInfo()) { subtitleStatus = it }
                 }.onFailure { if (onlineProblem == null) onlineProblem = describeOnlineProblem(it) }.getOrNull()
                 if (template != null) {
                     startFileTranslation(request, language, template.file, template.language)
@@ -818,7 +827,7 @@ class PlayerActivity : ComponentActivity() {
             // 5. Vorlage (gespeichert oder online) vorausschauend übersetzen
             if (request != null) {
                 val template = runCatching {
-                    container.subtitles.findSource(request.key, request.url, request.title, language, settings) { subtitleStatus = it }
+                    container.subtitles.findSource(request.key, request.url, request.title, language, settings, filmInfo()) { subtitleStatus = it }
                 }.onFailure { Log.w(SUBTITLE_TAG, "Vorlage fehlgeschlagen", it) }.getOrNull()
                 if (template != null) {
                     startFileTranslation(request, language, template.file, template.language)
@@ -844,6 +853,7 @@ class PlayerActivity : ComponentActivity() {
         subtitleFiles[language] = result.file
         loadedLanguages = subtitleFiles.keys.toList()
         if (!showLoaded(language)) return
+        externalExact = result.source == SubtitleRepository.Source.HASH
         subtitleStatus = when (result.source) {
             SubtitleRepository.Source.HASH -> "Untertitel geladen, passend zur Datei"
             SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden)"
@@ -996,6 +1006,7 @@ class PlayerActivity : ComponentActivity() {
     fun stopLiveTranslation() {
         liveTranslateTarget = null
         externalLanguage = null
+        speechSyncInfo = null
         translatedCue = null
         cueJob?.cancel()
         fileTranslationJob?.cancel()
@@ -1051,6 +1062,8 @@ class PlayerActivity : ComponentActivity() {
         subtitleAutoSynced = saved != null && (saved.offsetMs != 0L || saved.ratio != 1.0)
         syncedBySpeech = false
         syncedByReference = false
+        externalExact = false
+        speechSyncInfo = if (subtitleAutoSynced) "Gespeicherte Ausrichtung, wird am Ton nachgeprüft" else null
         textDisabled = false
         selectSyncReference()
         startSpeechSync()
@@ -1148,7 +1161,7 @@ class PlayerActivity : ComponentActivity() {
 
     /**
      * Ohne eingebettete Untertitel als Taktgeber: die geladenen Untertitel am gesprochenen Ton ausrichten.
-     * Alle 30 s mit den letzten 15 Minuten Ton; so folgt die Ausrichtung auch gekürzten Fassungen, in
+     * Alle 20 s mit den letzten 15 Minuten Ton (erstmals nach 2 Minuten); so folgt die Ausrichtung auch gekürzten Fassungen, in
      * denen der Versatz mitten im Film springt. Wird der Ton durchgereicht (Dolby an Soundbar), hört die
      * App nichts mit: dann einmal auf Dekodieren im Gerät umstellen.
      */
@@ -1163,18 +1176,33 @@ class PlayerActivity : ComponentActivity() {
                 val p = player ?: continue
                 if (!p.isPlaying) continue
                 playedMs += SPEECH_CHECK_MS
-                if (syncedByReference) continue
+                if (syncedByReference) {
+                    speechSyncInfo = "An den eingebetteten Untertiteln des Films ausgerichtet"
+                    continue
+                }
                 val heard = heardSpeech.seconds()
                 if (heard < 5) {
-                    if (playedMs >= 2 * SPEECH_CHECK_MS && textTracks().isEmpty() && !forcePcmActive && !pcmForSpeechTried) {
+                    // Ton geht an Soundbar/Receiver: Nur umstellen, wenn die Untertitel nicht schon passen
+                    // (Datei-Hash oder gespeicherte Ausrichtung) – sonst bliebe der Raumklang ohne Not weg.
+                    val needed = !subtitleAutoSynced && !externalExact
+                    if (playedMs >= 2 * SPEECH_CHECK_MS && needed && textTracks().isEmpty() && !forcePcmActive && !pcmForSpeechTried) {
                         pcmForSpeechTried = true
                         Log.i(SUBTITLE_TAG, "Ton wird durchgereicht, dekodiere im Gerät für die Ausrichtung am Ton")
                         subtitleStatus = "Ton wird im Gerät dekodiert, damit sich die Untertitel am Gespräch ausrichten …"
                         rebuildPlayer(forcePcm = true)
                     }
+                    speechSyncInfo = when {
+                        externalExact -> "Untertitel passen zur Datei (keine Ausrichtung nötig)"
+                        playedMs < 2 * SPEECH_CHECK_MS -> "Ausrichtung am Ton startet …"
+                        else -> "Kein Ton zum Mithören (Ton geht direkt an Soundbar/Receiver)"
+                    }
                     continue
                 }
-                if (heard < SpeechSync.MIN_SECONDS || heard == lastHeard) continue
+                if (heard < SpeechSync.MIN_SECONDS) {
+                    if (!subtitleAutoSynced) speechSyncInfo = "Hört zu: ${heard} von ${SpeechSync.MIN_SECONDS} Sekunden Ton"
+                    continue
+                }
+                if (heard == lastHeard) continue
                 lastHeard = heard
                 val position = p.currentPosition
                 val cues = externalCues.map { it.start to it.end }
@@ -1186,7 +1214,20 @@ class PlayerActivity : ComponentActivity() {
                 if (fit != null) {
                     Log.i(SUBTITLE_TAG, "Am Ton ausgerichtet: ${fit.timing} (Güte ${fit.votes / 10.0}, ${window} s Ton)")
                     applyFit(fit.timing, bySpeech = true, toleranceMs = 250)
-                } else if (window >= SPEECH_WRONG_FILE_SECONDS && !subtitleAutoSynced && externalTexts == null) {
+                    val certainty = when {
+                        fit.votes >= 100 -> "sehr sicher"
+                        fit.votes >= 80 -> "sicher"
+                        else -> "ausreichend sicher"
+                    }
+                    speechSyncInfo = "Am Ton ausgerichtet ($certainty), zuletzt geprüft bei ${clock(position)}"
+                } else {
+                    speechSyncInfo = if (subtitleAutoSynced) {
+                        "Ausgerichtet; an dieser Stelle (${clock(position)}) kein klarer Takt, prüft weiter"
+                    } else {
+                        "${window / 60} min Ton geprüft, noch kein eindeutiger Takt – prüft weiter"
+                    }
+                }
+                if (fit == null && window >= SPEECH_WRONG_FILE_SECONDS && !subtitleAutoSynced && externalTexts == null) {
                     // Eine Viertelstunde Gespräch und kein gemeinsamer Takt: Die Datei gehört zu einem anderen Film.
                     replaceWrongSubtitles()
                     return@launch
@@ -1207,7 +1248,7 @@ class PlayerActivity : ComponentActivity() {
         }
         subtitleJob?.cancel()
         subtitleJob = lifecycleScope.launch {
-            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings) }
+            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings, filmInfo()) }
                 .onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
             if (found != null) {
                 attachLoaded(language, found)
@@ -1242,7 +1283,7 @@ class PlayerActivity : ComponentActivity() {
         subtitleStatus = "Diese Untertitel gehören zu einem anderen Film. Suche passende …"
         subtitleJob?.cancel()
         subtitleJob = lifecycleScope.launch {
-            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings) }
+            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, language, settings, filmInfo()) }
                 .onFailure { Log.w(SUBTITLE_TAG, "Suche fehlgeschlagen", it) }.getOrNull()
             if (found != null) attachLoaded(language, found)
             else subtitleStatus = "Keine passenden Untertitel in ${Languages.label(language)} gefunden"
@@ -1835,7 +1876,12 @@ class PlayerActivity : ComponentActivity() {
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
         private const val WRONG_FILE_REFERENCES = 60
-        private const val SPEECH_CHECK_MS = 30_000L
+        private const val SPEECH_CHECK_MS = 20_000L
+
+        private fun clock(ms: Long): String {
+            val s = (ms / 1000).coerceAtLeast(0)
+            return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+        }
         private const val SPEECH_WINDOW_MS = 15 * 60_000L
         /** So viel Ton im Fenster ohne Übereinstimmung: falsche Datei. */
         private const val SPEECH_WRONG_FILE_SECONDS = 14 * 60

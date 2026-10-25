@@ -76,4 +76,28 @@ class OpenSubtitlesParsingTest {
         assertEquals("Harry Potter und der Halbblutprinz" to null, OpenSubtitlesParsing.cleanTitle("4K-DE - Harry Potter und der Halbblutprinz"))
         assertEquals("Dune" to 2021, OpenSubtitlesParsing.cleanTitle("[DE] |MULTI| Dune (2021)"))
     }
+
+    @Test
+    fun episodesFromTitles() {
+        assertEquals(Triple("Dark", 1, 2), OpenSubtitlesParsing.episodeOf("Dark – S1 E2"))
+        assertEquals(Triple("Breaking Bad", 3, 10), OpenSubtitlesParsing.episodeOf("DE - Breaking Bad S03E10"))
+        assertEquals(Triple("Friends", 2, 5), OpenSubtitlesParsing.episodeOf("Friends 2x05"))
+        assertNull(OpenSubtitlesParsing.episodeOf("Dune (2021)"))
+    }
+
+    @Test
+    fun frameRateAndLength() {
+        val a = SubtitleCandidate(1, "de", "a", hashMatch = false, downloads = 900, hearingImpaired = false, fps = 25.0)
+        val b = SubtitleCandidate(2, "de", "b", hashMatch = false, downloads = 100, hearingImpaired = false, fps = 23.976)
+        val c = SubtitleCandidate(3, "de", "c", hashMatch = true, downloads = 1, hearingImpaired = false, fps = 25.0)
+        assertEquals(listOf(3L, 2L, 1L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b, c), 23.976f).map { it.fileId })
+        assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b), null).map { it.fileId })
+
+        val srt = "1\n00:00:01,000 --> 00:00:02,500\nHallo\n\n2\n01:52:10,250 --> 01:52:12,040\nEnde\n"
+        assertEquals(((1 * 60 + 52) * 60 + 12) * 1000L + 40, OpenSubtitlesParsing.lastCueEndMs(srt))
+        // 115-Minuten-Film: Datei bis 112 min passt, bis 60 min (andere Fassung/Film) oder 140 min nicht
+        assertEquals(true, OpenSubtitlesParsing.plausibleLength(112 * 60_000L, 115 * 60_000L))
+        assertEquals(false, OpenSubtitlesParsing.plausibleLength(60 * 60_000L, 115 * 60_000L))
+        assertEquals(false, OpenSubtitlesParsing.plausibleLength(140 * 60_000L, 115 * 60_000L))
+    }
 }

@@ -87,20 +87,24 @@ class SubtitleRepository(
         title: String,
         language: String,
         settings: AppSettings,
+        film: FilmInfo = FilmInfo(),
         progress: (String) -> Unit = {},
     ): Result? = withContext(Dispatchers.IO) {
         cached(key, language)?.let { return@withContext Result(it, Source.CACHE) }
 
         if (settings.onlineSubtitlesEnabled) {
             progress("Suche Untertitel (${Languages.label(language)}) …")
-            download(key, videoUrl, title, language, settings)?.let { return@withContext it }
+            download(key, videoUrl, title, language, settings, film)?.let { return@withContext it }
         }
 
         null
     }
 
+    /** Was der Player über den Film weiß: Länge und Bildrate helfen, die passende Untertitel-Datei zu wählen. */
+    data class FilmInfo(val durationMs: Long = 0, val frameRate: Float? = null)
+
     /** Lädt von OpenSubtitles in [language] (null = beliebige Sprache) und speichert unter der echten Sprache. */
-    private suspend fun download(key: String, videoUrl: String, title: String, language: String?, settings: AppSettings): Result? {
+    private suspend fun download(key: String, videoUrl: String, title: String, language: String?, settings: AppSettings, film: FilmInfo = FilmInfo()): Result? {
         val apiKey = settings.openSubtitlesApiKey.ifEmpty { return null }
         // Kein Datei-Hash während der Wiedergabe: Er bräuchte zwei zusätzliche Verbindungen zum
         // IPTV-Anbieter. Bei Zugängen mit nur einer erlaubten Verbindung kann das den laufenden Film
@@ -139,6 +143,20 @@ class SubtitleRepository(
                     // Manche Treffer gehören zu einem anderen Titel (z. B. eine Serienfolge): aussortieren.
                 }).filter { it.fileId !in bad && (it.tmdbId == null || it.tmdbId.toString() == tmdb) }
             }
+            // Serienfolge („Serie – S1 E2“): genau diese Folge suchen, nicht irgendeine der Serie.
+            val episodeOf = OpenSubtitlesParsing.episodeOf(title)
+            if (candidates.isEmpty() && episodeOf != null) {
+                val (series, season, number) = episodeOf
+                val found = search(apiKey, buildMap {
+                    put("query", series)
+                    put("season_number", season.toString())
+                    put("episode_number", number.toString())
+                    put("type", "episode")
+                    if (language != null) put("languages", language)
+                }).filter { it.fileId !in bad && (it.season == null || it.season == season) && (it.episode == null || it.episode == number) }
+                candidates = OpenSubtitlesParsing.bestFeature(found, null, wantMovie = false)
+                Log.i(TAG, "Folgensuche „$series“ S${season}E$number: ${found.size} Treffer, gewählt: ${candidates.firstOrNull()?.release}")
+            }
             if (candidates.isEmpty()) {
                 val (cleanTitle, titleYear) = OpenSubtitlesParsing.cleanTitle(info?.originalTitle ?: title)
                 if (cleanTitle.length < 2) return null
@@ -155,16 +173,30 @@ class SubtitleRepository(
                 Log.i(TAG, "Titelsuche „$cleanTitle“ ($year): ${found.size} Treffer, gewählt: ${candidates.firstOrNull()?.release}")
             }
         }
-        val best = candidates.firstOrNull() ?: return null
-        val link = downloadLink(apiKey, best.fileId, settings) ?: return null
-        val actualLanguage = language ?: best.language.ifEmpty { "xx" }
-        val target = cacheFile(key, actualLanguage)
-        http.newCall(Request.Builder().url(link).build()).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Untertitel-Download: HTTP ${response.code}")
-            writeAtomically(target, response.body.string())
+        // Gleich gute Dateien: die mit der Bildrate des Films zuerst.
+        candidates = OpenSubtitlesParsing.preferFrameRate(candidates, film.frameRate)
+        // Höchstens zwei Dateien laden (Tageslimit): Passt die Länge der ersten gar nicht zum Film
+        // (andere Fassung, anderer Film), die nächste nehmen.
+        for ((attempt, best) in candidates.take(2).withIndex()) {
+            val link = downloadLink(apiKey, best.fileId, settings) ?: return null
+            val actualLanguage = language ?: best.language.ifEmpty { "xx" }
+            val text = http.newCall(Request.Builder().url(link).build()).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Untertitel-Download: HTTP ${response.code}")
+                response.body.string()
+            }
+            val last = OpenSubtitlesParsing.lastCueEndMs(text)
+            val fits = best.hashMatch || film.durationMs <= 0 || last == null || OpenSubtitlesParsing.plausibleLength(last, film.durationMs)
+            if (!fits && attempt == 0 && candidates.size > 1) {
+                Log.i(TAG, "„${best.release}“ endet bei ${last?.div(60_000)} min, Film dauert ${film.durationMs / 60_000} min: nächste Datei")
+                language?.let { lang -> runCatching { badFile(key, lang).appendText("${best.fileId}\n") } }
+                continue
+            }
+            val target = cacheFile(key, actualLanguage)
+            writeAtomically(target, text)
+            runCatching { sourceFile(key, actualLanguage).writeText(best.fileId.toString()) }
+            return Result(target, source, language = actualLanguage)
         }
-        runCatching { sourceFile(key, actualLanguage).writeText(best.fileId.toString()) }
-        return Result(target, source, language = actualLanguage)
+        return null
     }
 
     /**
@@ -178,6 +210,7 @@ class SubtitleRepository(
         title: String,
         target: String,
         settings: AppSettings,
+        film: FilmInfo = FilmInfo(),
         progress: (String) -> Unit = {},
     ): Result? = withContext(Dispatchers.IO) {
         fun cachedResult(file: File): Result {
@@ -189,11 +222,11 @@ class SubtitleRepository(
         if (target != "en") cached(key, "en")?.let { return@withContext cachedResult(it) }
         if (settings.onlineSubtitlesEnabled && target != "en") {
             progress("Lade Vorlage für die Übersetzung …")
-            runCatching { download(key, videoUrl, title, "en", settings) }.getOrNull()?.let { return@withContext it }
+            runCatching { download(key, videoUrl, title, "en", settings, film) }.getOrNull()?.let { return@withContext it }
         }
         cachedAny(key, except = target)?.let { return@withContext cachedResult(it) }
         if (!settings.onlineSubtitlesEnabled) return@withContext null
-        download(key, videoUrl, title, null, settings)
+        download(key, videoUrl, title, null, settings, film)
     }
 
     /** Anzahl der Treffer bei OpenSubtitles für einen Titel (Selbsttest, lädt nichts herunter). */

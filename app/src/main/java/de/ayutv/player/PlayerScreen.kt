@@ -450,6 +450,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
             item { OptionRow("Später einblenden (+0,5 s)", selected = false) { activity.shiftSubtitles(500) } }
             item { OptionRow("Falsche Untertitel – andere laden", selected = false) { activity.reportWrongSubtitles() } }
             item { MenuHint(syncHint(activity)) }
+            activity.speechSyncInfo?.let { info -> item { MenuHint("Ausrichtung: $info") } }
         }
         if (!activity.isLive) {
             if (preferred !in activity.loadedLanguages) {

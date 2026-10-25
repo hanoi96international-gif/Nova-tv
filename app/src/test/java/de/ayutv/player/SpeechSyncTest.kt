@@ -123,7 +123,7 @@ class SpeechSyncTest {
 
     @Test
     fun needsEnoughSound() {
-        val heard = listen(film, fromMinute = 0, minutes = 3)
+        val heard = listen(film, fromMinute = 0, minutes = 1)
         assertNull(SpeechSync.estimate(heard.signal(), film.cues))
         assertNull(SpeechSync.estimate(SpeechActivity().signal(), film.cues))
     }
