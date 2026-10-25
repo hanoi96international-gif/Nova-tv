@@ -1,5 +1,6 @@
 package de.ayutv.ui.components
 
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -162,7 +163,7 @@ fun ChannelCard(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                now?.title?.ifEmpty { null } ?: "Keine Programminfo",
+                now?.headline()?.ifEmpty { null } ?: "Keine Programminfo",
                 style = MaterialTheme.typography.bodySmall,
                 color = AyuColors.TextSecondary,
                 maxLines = 1,

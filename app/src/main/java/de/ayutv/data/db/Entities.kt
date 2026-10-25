@@ -67,6 +67,8 @@ data class ProgrammeEntity(
     val title: String,
     val description: String?,
     val category: String?,
+    /** XMLTV-Untertitel: bei Fußball die Paarung, bei Serien der Folgentitel. */
+    val subtitle: String? = null,
 )
 
 @Entity(

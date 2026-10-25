@@ -2,6 +2,7 @@
 
 package de.ayutv.player
 
+import de.ayutv.data.parse.headline
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -1851,7 +1852,7 @@ class PlayerActivity : ComponentActivity() {
             VodRequest(
                 key = "catchup:${channel.key}:${programme.start}",
                 kind = HistoryKind.CATCHUP,
-                title = programme.title.ifEmpty { channel.name },
+                title = programme.headline().ifEmpty { channel.name },
                 subtitle = "${channel.name} · Archiv · ${java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(programme.start))}",
                 image = channel.logo,
                 url = url,

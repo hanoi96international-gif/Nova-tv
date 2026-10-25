@@ -126,7 +126,7 @@ interface ProgrammeDao {
     @Query("SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from ORDER BY start LIMIT :limit")
     suspend fun upcoming(epgId: String, from: Long, limit: Int): List<ProgrammeEntity>
 
-    @Query("""SELECT * FROM programmes WHERE title LIKE '%' || :query || '%' AND stop > :now
+    @Query("""SELECT * FROM programmes WHERE (title LIKE '%' || :query || '%' OR subtitle LIKE '%' || :query || '%') AND stop > :now
            AND playlistId IN (SELECT id FROM playlists WHERE enabled = 1) ORDER BY start LIMIT :limit""")
     suspend fun search(query: String, now: Long, limit: Int): List<ProgrammeEntity>
 

@@ -374,13 +374,25 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
-                            "TV-Guide aus dem Internet ergänzen",
-                            onOff(settings.internetGuide),
-                            "Für Sender, die beim Anbieter kein Programm haben (oft Sky, DAZN): freies EPG für Deutschland, " +
-                                "Österreich und die Schweiz (epgshare01), höchstens einmal am Tag geladen. Der Guide wird danach neu geladen.",
+                            "TV-Guide aus dem Internet",
+                            when {
+                                !settings.internetGuide -> "Aus"
+                                settings.preferInternetGuide -> "Bevorzugen"
+                                else -> "Ergänzen"
+                            },
+                            "Freies EPG für Deutschland, Österreich und die Schweiz (epgshare01), höchstens einmal am Tag geladen. " +
+                                "Ergänzen: nur für Sender, die beim Anbieter fehlen (oft Sky, DAZN). Bevorzugen: zuerst aus dem Internet " +
+                                "(meist genauer, z. B. mit Fußball-Paarungen), der Anbieter füllt den Rest. Der Guide wird danach neu geladen.",
                         ) {
                             scope.launch {
-                                container.settings.update { it.copy(internetGuide = !it.internetGuide) }
+                                // Ergänzen → Bevorzugen → Aus → Ergänzen
+                                container.settings.update {
+                                    when {
+                                        !it.internetGuide -> it.copy(internetGuide = true, preferInternetGuide = false)
+                                        it.preferInternetGuide -> it.copy(internetGuide = false, preferInternetGuide = false)
+                                        else -> it.copy(preferInternetGuide = true)
+                                    }
+                                }
                                 epgReloadJob?.cancel()
                                 epgReloadJob = container.scope.launch {
                                     delay(2_500)

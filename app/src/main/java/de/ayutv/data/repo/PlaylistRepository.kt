@@ -344,7 +344,7 @@ class PlaylistRepository(
                 val channels = db.channels().forEpg(playlist.id)
                 val visible = db.channels().visibleIds(playlist.id).toHashSet()
                 val shift = current.epgShiftHours * HOUR
-                withContext(importDispatcher) { importEpg(playlist, own, extra, channels, visible, shift) }
+                withContext(importDispatcher) { importEpg(playlist, own, extra, channels, visible, shift, current.internetGuide && current.preferInternetGuide) }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
@@ -388,13 +388,15 @@ class PlaylistRepository(
         channels: List<EpgChannel>,
         visible: Set<Long>,
         shift: Long,
+        preferExtra: Boolean = false,
     ) {
         val covered = HashSet<Long>()
         val taken = HashSet<String>()
         val counts = ArrayList<Pair<String, Int>>()
         var cleared = false
         var firstError: Exception? = null
-        val sources = own.map { it to false } + extra.map { it to true }
+        // Mit „Internet bevorzugen“ kommt das freie EPG zuerst, der Anbieter füllt nur noch auf.
+        val sources = if (preferExtra) extra.map { it to true } + own.map { it to false } else own.map { it to false } + extra.map { it to true }
         for ((index, entry) in sources.withIndex()) {
             val (url, isPublic) = entry
             val open = channels.filter { it.id !in covered }
@@ -520,6 +522,7 @@ class PlaylistRepository(
                         title = p.title,
                         description = p.description,
                         category = p.category,
+                        subtitle = p.subtitle,
                     )
                     channelsOf[storage]?.let(found::addAll)
                     used += storage
@@ -611,7 +614,7 @@ class PlaylistRepository(
         private const val MAX_MISSING_LISTED = 20_000
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "3"
+        private const val EPG_MATCH_VERSION = "4"
         /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
         private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }

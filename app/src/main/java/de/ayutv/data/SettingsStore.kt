@@ -64,6 +64,8 @@ data class AppSettings(
     val epgShiftHours: Int = 0,
     /** Sender ohne Programm beim Anbieter aus einem freien EPG (Deutschland, Österreich, Schweiz) ergänzen. */
     val internetGuide: Boolean = true,
+    /** Freies EPG zuerst, der Anbieter füllt nur noch auf (bei Sport oft genauere Angaben, z. B. die Paarung). */
+    val preferInternetGuide: Boolean = false,
     /** Sprache, die beim Einschalten der Untertitel gewählt wird (ISO 639-1). */
     val subtitleLanguage: String = "en",
     /** Untertitel sind optional: standardmäßig aus, einschalten im Player über die Menütaste. */
@@ -101,6 +103,7 @@ class SettingsStore(private val context: Context) {
         val zap = booleanPreferencesKey("zap_up_down")
         val epgShift = intPreferencesKey("epg_shift_hours")
         val internetGuide = booleanPreferencesKey("internet_guide")
+        val preferInternetGuide = booleanPreferencesKey("prefer_internet_guide")
         val asyncDecoding = booleanPreferencesKey("async_decoding_v2")
         val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
@@ -149,6 +152,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.zap] = next.zapWithUpDown
             prefs[Keys.epgShift] = next.epgShiftHours
             prefs[Keys.internetGuide] = next.internetGuide
+            prefs[Keys.preferInternetGuide] = next.preferInternetGuide
             prefs[Keys.asyncDecoding] = next.asyncDecoding
             prefs[Keys.audioOutput] = next.audioOutput.name
             prefs[Keys.showGuide] = next.showGuide
@@ -172,6 +176,7 @@ class SettingsStore(private val context: Context) {
         zapWithUpDown = this[Keys.zap] ?: true,
         epgShiftHours = this[Keys.epgShift] ?: 0,
         internetGuide = this[Keys.internetGuide] ?: true,
+        preferInternetGuide = this[Keys.preferInternetGuide] ?: false,
         asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,

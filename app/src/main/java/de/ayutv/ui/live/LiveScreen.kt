@@ -1,5 +1,6 @@
 package de.ayutv.ui.live
 
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -216,7 +217,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
                 fontSize = 13.sp,
             )
             Text(
-                p.title,
+                p.headline(),
                 style = if (index == 0) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -224,7 +225,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
             if (index == 0) {
                 Spacer(Modifier.height(4.dp))
                 ProgressLine(p.progress())
-                p.description?.takeIf { it.isNotBlank() }?.let {
+                de.ayutv.data.parse.ProgrammeText.description(p.description)?.let {
                     Spacer(Modifier.height(6.dp))
                     Text(it, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 5, overflow = TextOverflow.Ellipsis)
                 }

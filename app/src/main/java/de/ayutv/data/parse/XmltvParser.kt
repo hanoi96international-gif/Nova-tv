@@ -10,6 +10,7 @@ data class XmltvProgramme(
     val title: String,
     val description: String?,
     val category: String?,
+    val subtitle: String? = null,
 )
 
 /**
@@ -68,6 +69,7 @@ class XmltvParser(private val parser: XmlPullParser) {
         }
 
         var title: String? = null
+        var subtitle: String? = null
         var description: String? = null
         var category: String? = null
         val depth = parser.depth
@@ -78,13 +80,17 @@ class XmltvParser(private val parser: XmlPullParser) {
             if (event == XmlPullParser.START_TAG) {
                 when (parser.name) {
                     "title" -> if (title == null) title = readText()
+                    "sub-title" -> if (subtitle == null) subtitle = readText()
                     "desc" -> if (description == null) description = readText()
                     "category" -> if (category == null) category = readText()
                     else -> skipElement()
                 }
             }
         }
-        return XmltvProgramme(channel, start, stop, title?.trim().orEmpty(), description?.trim(), category?.trim())
+        return XmltvProgramme(
+            channel, start, stop, title?.trim().orEmpty(), description?.trim(), category?.trim(),
+            subtitle?.trim()?.takeIf { it.isNotEmpty() },
+        )
     }
 
     /** Liest den Text eines Elements und steht danach auf dessen END_TAG. */

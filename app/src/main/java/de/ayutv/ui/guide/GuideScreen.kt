@@ -1,5 +1,6 @@
 package de.ayutv.ui.guide
 
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -121,7 +122,7 @@ fun GuideScreen() {
         val now = System.currentTimeMillis()
         if (programme != null && programme.start > now) {
             // Kommende Sendung: Erinnerung setzen bzw. wieder entfernen.
-            scope.launch { container.reminders.toggle(Reminder(channel.key, channel.name, programme.title, programme.start)) }
+            scope.launch { container.reminders.toggle(Reminder(channel.key, channel.name, programme.headline(), programme.start)) }
         } else if (programme != null && programme.stop <= now) {
             scope.launch {
                 val url = content.catchupUrl(channel, programme)
@@ -248,8 +249,8 @@ private fun ProgrammePreview(
             fontSize = 13.sp,
             maxLines = 1,
         )
-        Text(programme.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        programme.description?.takeIf { it.isNotBlank() }?.let {
+        Text(programme.headline(), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        de.ayutv.data.parse.ProgrammeText.description(programme.description)?.let {
             Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -299,7 +300,7 @@ private fun GuideRow(
                         val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
                         GuideCell(
                             title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
-                                p.title.ifEmpty { "Ohne Titel" },
+                                p.headline().ifEmpty { "Ohne Titel" },
                             time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
                             width = cell.width,
                             live = p.start <= now && p.stop > now,
