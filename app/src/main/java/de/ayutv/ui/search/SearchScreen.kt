@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
 import androidx.tv.material3.Text
 import de.ayutv.data.db.HistoryKind
 import de.ayutv.data.db.ProgrammeEntity

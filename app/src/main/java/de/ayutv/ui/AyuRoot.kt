@@ -51,7 +51,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
+import de.ayutv.ui.components.isTouchDevice
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.tv.material3.Text
 import de.ayutv.AppContainer
 import de.ayutv.data.db.PlaylistEntity
@@ -168,10 +172,15 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
     var expanded by remember { mutableStateOf(false) }
     val width by animateDpAsState(if (expanded) NAV_EXPANDED else NAV_COLLAPSED, label = "nav")
     val initialFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val touch = isTouchDevice
 
     if (expanded) {
-        // Abdunkeln des Inhalts hinter der aufgeklappten Navigation
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)))
+        // Abdunkeln des Inhalts hinter der aufgeklappten Navigation; Tippen daneben klappt sie zu.
+        Box(
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f))
+                .then(if (touch) Modifier.pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } } else Modifier)
+        )
     }
     Column(
         Modifier
@@ -194,7 +203,11 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
         sections.forEach { item ->
             val isSelected = item == selected
             Surface(
-                onClick = { onSelect(item) },
+                onClick = {
+                    onSelect(item)
+                    // Per Touch: nach der Wahl zuklappen (mit der Fernbedienung geht es mit ▶ in den Inhalt).
+                    if (touch) focusManager.clearFocus()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (isSelected) Modifier.focusRequester(initialFocus) else Modifier),

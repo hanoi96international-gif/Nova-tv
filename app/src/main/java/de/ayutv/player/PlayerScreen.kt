@@ -13,7 +13,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import android.view.KeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import de.ayutv.ui.components.isTouchDevice
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,7 +66,7 @@ import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
 import androidx.tv.material3.Text
 import de.ayutv.data.Languages
 import de.ayutv.ui.components.ChannelListItem
@@ -124,6 +129,21 @@ fun PlayerScreen(activity: PlayerActivity) {
             Box(Modifier.fillMaxSize().background(Color.Black))
         }
 
+        val touch = isTouchDevice
+        if (touch) {
+            // Tippen blendet die Leiste ein/aus, doppelt tippen links/rechts spult (Filme).
+            Box(
+                Modifier.fillMaxSize().pointerInput(activity.isLive) {
+                    detectTapGestures(
+                        onTap = { activity.onScreenTap() },
+                        onDoubleTap = if (activity.isLive) null else { offset: Offset ->
+                            activity.pressKey(if (offset.x < size.width / 2) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
+                        },
+                    )
+                }
+            )
+        }
+
         if (activity.buffering && activity.message == null) {
             Text(
                 "Lädt …",
@@ -171,17 +191,23 @@ fun PlayerScreen(activity: PlayerActivity) {
         }
 
         if (!activity.isLive && activity.overlay != Overlay.CONTROLS) {
+            val press = Modifier.pointerInput(Unit) { detectTapGestures { activity.pressKey(KeyEvent.KEYCODE_DPAD_CENTER) } }
             when {
                 activity.nextCardVisible -> activity.nextEpisode?.let { next ->
                     EpisodeCard(
                         title = "Nächste Folge: S${next.episode.season} E${next.episode.episode}  ${next.episode.title}",
                         hint = if (activity.nextCountdown >= 0) "Startet in ${activity.nextCountdown} s  ·  OK jetzt  ·  andere Taste: warten"
                             else "OK: jetzt starten",
-                        modifier = Modifier.align(Alignment.BottomEnd),
+                        modifier = Modifier.align(Alignment.BottomEnd).then(press),
                     )
                 }
-                activity.introVisible -> EpisodeCard("⏭ Intro überspringen", "OK drücken", Modifier.align(Alignment.BottomEnd))
+                activity.introVisible -> EpisodeCard("⏭ Intro überspringen", if (touch) "Tippen" else "OK drücken", Modifier.align(Alignment.BottomEnd).then(press))
             }
+        }
+
+        // Knöpfe statt Fernbedienung, solange die Leiste zu sehen ist.
+        if (touch && (activity.overlay == Overlay.INFO && activity.isLive || activity.overlay == Overlay.CONTROLS && !activity.isLive)) {
+            TouchButtons(activity, Modifier.align(Alignment.TopEnd))
         }
 
         if (activity.ownSubtitles) {
@@ -309,6 +335,40 @@ private fun LiveInfoBar(activity: PlayerActivity) {
     }
 }
 
+/** Bedienknöpfe für den Touchscreen: dieselben Funktionen wie die Tasten der Fernbedienung. */
+@Composable
+private fun TouchButtons(activity: PlayerActivity, modifier: Modifier = Modifier) {
+    val paused = activity.player?.playWhenReady == false
+    Row(
+        modifier.padding(16.dp).clip(RoundedCornerShape(28.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        @Composable
+        fun button(label: String, action: () -> Unit) {
+            Box(
+                Modifier.size(52.dp).clip(RoundedCornerShape(26.dp)).clickable(onClick = action),
+                contentAlignment = Alignment.Center,
+            ) { Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+        }
+        if (activity.isLive) {
+            button("▲") { activity.pressKey(KeyEvent.KEYCODE_CHANNEL_UP) }
+            button("▼") { activity.pressKey(KeyEvent.KEYCODE_CHANNEL_DOWN) }
+            button("☰") { activity.openChannelList() }
+            button("⏪") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_REWIND) }
+            button(if (paused) "▶" else "⏸") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            button("⏩") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD) }
+            button(if (activity.isFavorite) "★" else "☆") { activity.pressKey(KeyEvent.KEYCODE_PROG_RED) }
+        } else {
+            button("⏪") { activity.pressKey(KeyEvent.KEYCODE_DPAD_LEFT) }
+            button(if (paused) "▶" else "⏸") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            button("⏩") { activity.pressKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        }
+        button("CC") { activity.pressKey(KeyEvent.KEYCODE_MENU) }
+        button("✕") { activity.finish() }
+    }
+}
+
 /** Knopf unten rechts (Intro überspringen, nächste Folge): reagiert auf OK, solange die Steuerleiste zu ist. */
 @Composable
 private fun EpisodeCard(title: String, hint: String, modifier: Modifier = Modifier) {
@@ -362,7 +422,15 @@ private fun VodControls(activity: PlayerActivity) {
             activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
         }
         Spacer(Modifier.height(16.dp))
-        ProgressLine(if (duration > 0) position.toFloat() / duration else 0f)
+        // Touch: auf den Balken tippen springt dorthin (großzügige Trefferfläche um die dünne Linie).
+        Box(
+            Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
+                detectTapGestures { offset -> activity.seekToFraction(offset.x / size.width) }
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            ProgressLine(if (duration > 0) position.toFloat() / duration else 0f)
+        }
         Spacer(Modifier.height(6.dp))
         Row {
             Text(formatDuration(position), color = Color.White, fontSize = 14.sp)

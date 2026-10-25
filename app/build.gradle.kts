@@ -86,6 +86,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.7.8")
     implementation("androidx.tv:tv-material:1.1.0")
     implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.core:core:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     // Kindersicherung: sperren, sobald die App in den Hintergrund geht
     implementation("androidx.lifecycle:lifecycle-process:2.11.0")

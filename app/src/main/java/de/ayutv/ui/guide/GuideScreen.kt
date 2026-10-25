@@ -48,7 +48,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
+import de.ayutv.ui.components.isTouchDevice
 import androidx.tv.material3.Text
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.ProgrammeEntity
@@ -158,8 +159,16 @@ fun GuideScreen() {
         Spacer(Modifier.height(10.dp))
         ProgrammePreview(focused, playlists, reminderIds, minute, Modifier.padding(horizontal = 24.dp))
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.padding(start = 24.dp)) {
-            Spacer(Modifier.width(CHANNEL_COLUMN + 4.dp))
+        Row(Modifier.padding(start = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (isTouchDevice) {
+                // Ohne Fernbedienung: Zeitfenster mit Knöpfen verschieben (sonst ◀ am ersten, ▶ am letzten Feld).
+                Row(Modifier.width(CHANNEL_COLUMN + 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    GroupChip("◀ früher", false) { shift(-2) }
+                    GroupChip("später ▶", false) { shift(+2) }
+                }
+            } else {
+                Spacer(Modifier.width(CHANNEL_COLUMN + 4.dp))
+            }
             for (i in 0 until 4) {
                 Text(
                     formatTime(windowStart + i * HALF_HOUR),
@@ -361,6 +370,8 @@ private fun GuideCell(
     var focused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
+        // Tippen: erst Vorschau zeigen (wie Fokussieren mit der Fernbedienung), zweites Tippen spielt.
+        focusFirst = true,
         modifier = Modifier
             .width(width)
             .fillMaxHeight()

@@ -48,6 +48,9 @@ import de.ayutv.data.DeviceInfo
 import de.ayutv.data.Languages
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
+import de.ayutv.hideSystemBars
+import de.ayutv.ui.components.FitToScreen
+import de.ayutv.ui.components.hasTouchscreen
 import de.ayutv.data.parse.IntroSkip
 import de.ayutv.data.repo.ContentRepository
 import de.ayutv.data.db.ChannelEntity
@@ -251,7 +254,8 @@ class PlayerActivity : ComponentActivity() {
         vod = intent.getVodRequest()
         isLive = vod == null
 
-        setContent { AyuTheme { PlayerScreen(this) } }
+        if (hasTouchscreen()) hideSystemBars()
+        setContent { AyuTheme { FitToScreen { PlayerScreen(this) } } }
 
         lifecycleScope.launch {
             settings = container.settings.current()
@@ -1743,6 +1747,28 @@ class PlayerActivity : ComponentActivity() {
             path.endsWith(".mpd") -> MimeTypes.APPLICATION_MPD
             else -> null
         }
+    }
+
+    // ---------------------------------------------------------------- Touch (Handy, Tablet)
+
+    /** Knopf auf dem Bildschirm: wirkt wie dieselbe Taste der Fernbedienung. */
+    fun pressKey(code: Int) {
+        if (player == null) return
+        overlayToken++
+        if (isLive) handleLiveKey(code, 0) else handleVodKey(code, 0)
+    }
+
+    /** Tippen ins Bild blendet die Leiste ein oder aus. */
+    fun onScreenTap() {
+        if (overlay == Overlay.NONE) showOverlay(if (isLive) Overlay.INFO else Overlay.CONTROLS) else closeOverlay()
+    }
+
+    /** Tippen auf den Fortschrittsbalken: dorthin springen. */
+    fun seekToFraction(fraction: Float) {
+        val p = player ?: return
+        val duration = p.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
+        val base = if (pendingSeekMs != C.TIME_UNSET) pendingSeekMs else p.currentPosition
+        seekBy((duration * fraction.coerceIn(0f, 1f)).toLong() - base)
     }
 
     fun showOverlay(target: Overlay) {

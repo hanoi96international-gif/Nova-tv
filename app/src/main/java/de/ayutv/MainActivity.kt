@@ -9,6 +9,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.AyuRoot
+import de.ayutv.ui.components.FitToScreen
+import de.ayutv.ui.components.hasTouchscreen
 import de.ayutv.ui.theme.AyuTheme
 import kotlinx.coroutines.launch
 
@@ -16,9 +18,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val container = (application as AyuApp).container
+        if (hasTouchscreen()) hideSystemBars()
         setContent {
             CompositionLocalProvider(LocalContainer provides container) {
-                AyuTheme { AyuRoot() }
+                AyuTheme { FitToScreen { AyuRoot() } }
             }
         }
         handleSearchIntent(intent)
@@ -66,5 +69,14 @@ class MainActivity : ComponentActivity() {
                 .onSuccess { android.util.Log.i("DnAPrepare", "Vorbereitet: $it") }
             de.ayutv.data.repo.Translators.remote.release()
         }
+    }
+}
+
+/** Handy/Tablet: Vollbild wie auf dem Fernseher, Statusleiste und Navigation nur nach Wischen vom Rand. */
+fun android.app.Activity.hideSystemBars() {
+    androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+    androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).apply {
+        hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 }
