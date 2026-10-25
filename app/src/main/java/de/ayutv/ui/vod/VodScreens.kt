@@ -223,9 +223,9 @@ private fun SeriesDetail(series: SeriesEntity) {
                                 PlayerActivity.startVod(
                                     context,
                                     VodRequest(
-                                        key = "${series.key}:e:${episode.id}",
+                                        key = de.ayutv.data.parse.Episodes.key(series.key, episode.id),
                                         kind = HistoryKind.EPISODE,
-                                        title = "${series.name} – S${episode.season} E${episode.episode}",
+                                        title = de.ayutv.data.parse.Episodes.title(series.name, episode),
                                         subtitle = episode.title,
                                         image = episode.image ?: series.cover,
                                         url = url,

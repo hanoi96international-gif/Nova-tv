@@ -47,6 +47,9 @@ import de.ayutv.data.BufferProfile
 import de.ayutv.data.DeviceInfo
 import de.ayutv.data.Languages
 import de.ayutv.data.LiveFormat
+import de.ayutv.data.parse.Episodes
+import de.ayutv.data.parse.IntroSkip
+import de.ayutv.data.repo.ContentRepository
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.HistoryEntity
 import de.ayutv.data.db.HistoryKind
@@ -203,6 +206,33 @@ class PlayerActivity : ComponentActivity() {
     private var externalExact = false
     /** Was die Ausrichtung am Ton gerade tut, in Worten (steht im Untertitel-Menü). */
     var speechSyncInfo by mutableStateOf<String?>(null); private set
+    /** Zwischenspeicher für den Zeitversatz bei Live-TV (bleibt beim Umbau des Players erhalten). */
+    private val timeshift = TimeshiftHolder()
+    private val recorder by lazy { TimeshiftRecorder(container.http, lifecycleScope) }
+    /** Live: Das Bild kommt aus dem Zwischenspeicher (angehalten oder zeitversetzt). */
+    var timeshifted by mutableStateOf(false); private set
+    /** So weit liegt das Bild hinter dem Live-Bild (ms). */
+    var behindLiveMs by mutableLongStateOf(0L); private set
+    /** So weit lässt sich gerade zurückspulen (ms). */
+    var rewindableMs by mutableLongStateOf(0L); private set
+    /** Sendezeit (im Zwischenspeicher) am Anfang des laufenden zeitversetzten Abschnitts. */
+    private var timeshiftStartMs = 0L
+    private var timeshiftErrors = 0
+    /** Serien: die nächste Folge (im Hintergrund nachgeschlagen), sonst null. */
+    var nextEpisode by mutableStateOf<ContentRepository.NextEpisode?>(null); private set
+    /** Hinweis „Nächste Folge“ (letzte Sekunden und nach dem Ende). */
+    var nextCardVisible by mutableStateOf(false); private set
+    /** Sekunden bis zum automatischen Start der nächsten Folge, -1 = kein Countdown. */
+    var nextCountdown by mutableIntStateOf(-1); private set
+    private var countdownJob: Job? = null
+    /** Knopf „Intro überspringen“ (Serien). */
+    var introVisible by mutableStateOf(false); private set
+    private var introLearned: IntroSkip.Intro? = null
+    private var introUsed = false
+    /** Letztes Überspringen: von wo, wohin (inkl. Korrekturen) und wann, zum Lernen der Intro-Länge. */
+    private var introFrom = -1L
+    private var introTo = 0L
+    private var introAt = 0L
     private var liveSourceLanguage: String? = null
     /** Übersetzung eingebetteter Untertitel mit Vorlauf: Quellspur, Ergebnisse je Einblendung (Startzeit). */
     private var aheadFormat: Format? = null
@@ -272,6 +302,7 @@ class PlayerActivity : ComponentActivity() {
         val built = PlayerFactory.create(
             this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm,
             speech = heardSpeech.takeIf { vod != null },
+            timeshift = timeshift.takeIf { vod == null },
         )
         headers = built.headers
         trackSelector = built.trackSelector
@@ -329,6 +360,7 @@ class PlayerActivity : ComponentActivity() {
         while (true) {
             delay(1_000)
             val p = player ?: continue
+            if (isLive) updateTimeshiftState(p)
             if (seenGeneration != streamGeneration) {
                 seenGeneration = streamGeneration
                 stalledSeconds = 0
@@ -359,7 +391,7 @@ class PlayerActivity : ComponentActivity() {
                 else -> VOD_STALL_SECONDS
             }
             estimateFrameRate(p)
-            if (isLive) keepLiveCushion(p)
+            if (isLive && !timeshifted) keepLiveCushion(p)
             if (showTech) bufferedMs = p.totalBufferedDuration
             val now = SystemClock.elapsedRealtime()
             if (stalledSeconds >= limit && now - lastReconnect > 20_000) {
@@ -388,7 +420,7 @@ class PlayerActivity : ComponentActivity() {
             p?.playWhenReady = false
         } else {
             displaySwitchGraceUntil = SystemClock.elapsedRealtime() + DISPLAY_SWITCH_GRACE_MS
-            if (p != null && (resumeAfterSwitch || isLive) && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            if (p != null && (resumeAfterSwitch || isLive && !timeshifted) && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
                 if (p.playbackState == Player.STATE_IDLE) p.prepare()
                 p.playWhenReady = true
             }
@@ -534,6 +566,11 @@ class PlayerActivity : ComponentActivity() {
 
     private fun reconnect(reason: String?) {
         val p = player ?: return
+        if (timeshifted) {
+            // Zeitversetzt: An derselben Stelle neu ansetzen; am Live-Rand ohne neue Daten zurück zu Live.
+            if (behindLiveMs < LIVE_EDGE_MS) goLive() else enterTimeshift(currentTimeshiftMs(p), play = true)
+            return
+        }
         if (reason != null) message = reason
         streamGeneration++
         val position = p.currentPosition
@@ -616,6 +653,9 @@ class PlayerActivity : ComponentActivity() {
         // um (zurück auf Standard, dann wieder auf 50 Hz) und wird jedes Mal kurz schwarz.
 
         val url = adaptLiveUrl(channel.url)
+        leaveTimeshift()
+        timeshift.buffer?.release()
+        timeshift.buffer = newTimeshiftBuffer(url)
         stopLiveTranslation()
         embedded?.clear()
         p.setMediaItem(mediaItem(url, guessMime(url)))
@@ -628,6 +668,125 @@ class PlayerActivity : ComponentActivity() {
 
         loadChannelInfo(channel)
         container.scope.launch { container.content.recordLive(channel) }
+    }
+
+    // ---------------------------------------------------------------- Zeitversatz (Live anhalten)
+
+    /** Nur direkte TS-Streams lassen sich mitschreiben; HLS hält einfach an. */
+    private fun newTimeshiftBuffer(url: String): TimeshiftBuffer? {
+        if (!settings.liveTimeshift || guessMime(url) == MimeTypes.APPLICATION_M3U8) return null
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return null
+        val dir = File(cacheDir, "timeshift")
+        dir.mkdirs()
+        // Höchstens gut die Hälfte des freien Speichers; ältere Teile werden laufend gelöscht.
+        val usable = dir.usableSpace
+        val maxBytes = minOf(TIMESHIFT_MAX_BYTES, (usable - TIMESHIFT_MIN_BYTES) * 6 / 10)
+        if (maxBytes < TIMESHIFT_MIN_BYTES) return null
+        return TimeshiftBuffer(dir, maxBytes, settings.timeshiftMinutes * 60_000L, url)
+    }
+
+    /** Sendezeit des Bildes, das gerade live gezeigt wird (das Neueste im Speicher minus Puffer des Players). */
+    private fun liveNowMs(p: ExoPlayer, buffer: TimeshiftBuffer): Long =
+        (buffer.latestMs - p.totalBufferedDuration).coerceAtLeast(buffer.oldestMs)
+
+    private fun currentTimeshiftMs(p: ExoPlayer): Long = timeshiftStartMs + p.currentPosition.coerceAtLeast(0)
+
+    /** Live: Pause hält das Bild an, der Sender wird weiter zwischengespeichert. Erneut drücken spielt zeitversetzt weiter. */
+    private fun toggleLivePause(code: Int) {
+        val p = player ?: return
+        if (timeshifted) {
+            p.playWhenReady = when (code) {
+                KeyEvent.KEYCODE_MEDIA_PLAY -> true
+                KeyEvent.KEYCODE_MEDIA_PAUSE -> false
+                else -> !p.playWhenReady
+            }
+        } else if (code != KeyEvent.KEYCODE_MEDIA_PLAY) {
+            val buffer = timeshift.buffer
+            if (buffer != null && buffer.hasData && p.playbackState == Player.STATE_READY) {
+                enterTimeshift(liveNowMs(p, buffer), play = false)
+            } else {
+                // Kein Zwischenspeicher (HLS, zu wenig Speicher, abgeschaltet): einfach anhalten.
+                p.playWhenReady = !p.playWhenReady
+            }
+        } else {
+            p.playWhenReady = true
+        }
+        showOverlay(Overlay.INFO)
+    }
+
+    /** Zurück- oder vorspulen; über das Live-Bild hinaus geht es wieder live. */
+    private fun shiftLive(deltaMs: Long) {
+        val p = player ?: return
+        val buffer = timeshift.buffer
+        if (buffer == null || !buffer.hasData) {
+            message = if (settings.liveTimeshift) "Zurückspulen geht bei diesem Sender nicht" else "Zurückspulen ist in den Einstellungen ausgeschaltet"
+            handler.postDelayed({ message = null }, 2_500)
+            return
+        }
+        val from = if (timeshifted) currentTimeshiftMs(p) else liveNowMs(p, buffer)
+        val target = from + deltaMs
+        if (target >= buffer.latestMs - LIVE_EDGE_MS) {
+            if (timeshifted) goLive()
+        } else {
+            enterTimeshift(target.coerceAtLeast(buffer.oldestMs), play = !timeshifted || p.playWhenReady)
+        }
+        showOverlay(Overlay.INFO)
+    }
+
+    /** Ab Sendezeit [ms] aus dem Zwischenspeicher spielen; die Verbindung zum Anbieter übernimmt [recorder]. */
+    private fun enterTimeshift(ms: Long, play: Boolean) {
+        val p = player ?: return
+        val buffer = timeshift.buffer ?: return
+        buffer.tapping = false
+        val offset = buffer.offsetAt(ms)
+        timeshiftStartMs = buffer.msAt(offset)
+        timeshifted = true
+        streamGeneration++
+        if (cushionActive) {
+            cushionActive = false
+            p.setPlaybackSpeed(1f)
+        }
+        p.repeatMode = Player.REPEAT_MODE_OFF
+        p.setMediaItem(
+            MediaItem.Builder().setUri(TimeshiftBuffer.uri(buffer, offset)).setMimeType(MimeTypes.VIDEO_MP2T).build()
+        )
+        p.prepare()
+        p.playWhenReady = play
+        recorder.start(buffer, headers?.userAgent ?: settings.userAgent)
+        updateTimeshiftState(p)
+    }
+
+    /** Wieder live: Aufnahme beenden, der Player liest selbst vom Anbieter (und schreibt weiter mit). */
+    private fun goLive() {
+        val p = player ?: return
+        val channel = playing ?: return
+        leaveTimeshift()
+        streamGeneration++
+        setLiveItem(p, channel)
+        p.prepare()
+        p.playWhenReady = true
+        updateTimeshiftState(p)
+        showOverlay(Overlay.INFO)
+    }
+
+    private fun leaveTimeshift() {
+        recorder.stop()
+        timeshift.buffer?.tapping = true
+        timeshifted = false
+        timeshiftErrors = 0
+        behindLiveMs = 0
+    }
+
+    private fun setLiveItem(p: ExoPlayer, channel: ChannelEntity) {
+        val url = adaptLiveUrl(channel.url)
+        p.setMediaItem(mediaItem(url, guessMime(url)))
+        p.repeatMode = Player.REPEAT_MODE_ONE
+    }
+
+    private fun updateTimeshiftState(p: ExoPlayer) {
+        val buffer = timeshift.buffer
+        rewindableMs = if (buffer != null && buffer.hasData) buffer.latestMs - buffer.oldestMs else 0L
+        behindLiveMs = if (timeshifted && buffer != null) (buffer.latestMs - currentTimeshiftMs(p)).coerceAtLeast(0) else 0L
     }
 
     /** EPG und Favorit für die Infoleiste; eine ältere Abfrage überschreibt nie die des neuen Senders. */
@@ -727,16 +886,98 @@ class PlayerActivity : ComponentActivity() {
         p.prepare()
         p.playWhenReady = true
         showOverlay(Overlay.CONTROLS)
+        if (request.kind == HistoryKind.EPISODE) prepareEpisodeExtras(request)
         progressJob?.cancel()
         progressJob = lifecycleScope.launch {
             var tick = 0
             while (isActive) {
                 if (pendingSeekMs == C.TIME_UNSET) positionMs = p.currentPosition
                 durationMs = p.duration.takeIf { it != C.TIME_UNSET } ?: 0L
+                if (request.kind == HistoryKind.EPISODE) updateEpisodeCards(request)
                 if (++tick % 15 == 0) saveProgress()
                 delay(1_000)
             }
         }
+    }
+
+    // ---------------------------------------------------------------- Serien
+
+    private fun prepareEpisodeExtras(request: VodRequest) {
+        val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
+        introLearned = container.intros.get(seriesKey)
+        lifecycleScope.launch { nextEpisode = container.content.nextEpisode(request.key) }
+    }
+
+    private fun updateEpisodeCards(request: VodRequest) {
+        val p = player ?: return
+        val position = positionMs
+        introVisible = !introUsed && p.playbackState == Player.STATE_READY && IntroSkip.visible(position, introLearned)
+        // Korrekturen nach dem Überspringen gelten als Intro-Länge.
+        if (introFrom >= 0 && SystemClock.elapsedRealtime() - introAt > IntroSkip.LEARN_WINDOW_MS) {
+            IntroSkip.learn(introFrom, introTo)?.let { intro ->
+                Episodes.seriesKeyOf(request.key)?.let { container.intros.put(it, intro) }
+                introLearned = intro
+            }
+            introFrom = -1
+        }
+        val remaining = durationMs - position
+        nextCardVisible = nextEpisode != null && (nextCountdown >= 0 || durationMs > 0 && remaining in 0..NEXT_CARD_MS)
+    }
+
+    /** OK bei sichtbarem Knopf: Intro überspringen. */
+    private fun skipIntro() {
+        val p = player ?: return
+        val from = p.currentPosition
+        val to = IntroSkip.target(from, introLearned)
+        introUsed = true
+        introVisible = false
+        introFrom = from
+        introTo = to
+        introAt = SystemClock.elapsedRealtime()
+        p.seekTo(to)
+        positionMs = to
+        subtitleStatus = "Intro übersprungen · mit ◀ ▶ nachkorrigieren, DnA-TV merkt es sich für diese Serie"
+    }
+
+    /** Folge zu Ende: nächste Folge anbieten und (wenn eingestellt) nach einem Countdown starten. */
+    private fun onEpisodeEnded(): Boolean {
+        if (nextEpisode == null) return false
+        nextCardVisible = true
+        closeOverlay()
+        if (!settings.autoNextEpisode) return true
+        countdownJob?.cancel()
+        countdownJob = lifecycleScope.launch {
+            for (left in NEXT_COUNTDOWN_SECONDS downTo 1) {
+                nextCountdown = left
+                delay(1_000)
+            }
+            playNextEpisode()
+        }
+        return true
+    }
+
+    private fun cancelCountdown() {
+        countdownJob?.cancel()
+        countdownJob = null
+        nextCountdown = -1
+    }
+
+    fun playNextEpisode() {
+        val next = nextEpisode ?: return
+        cancelCountdown()
+        saveProgress()
+        PlayerActivity.startVod(
+            this,
+            VodRequest(
+                key = Episodes.key(next.series.key, next.episode.id),
+                kind = HistoryKind.EPISODE,
+                title = Episodes.title(next.series.name, next.episode),
+                subtitle = next.episode.title,
+                image = next.episode.image ?: next.series.cover,
+                url = next.url,
+            ),
+        )
+        finish()
     }
 
     /**
@@ -1474,6 +1715,11 @@ class PlayerActivity : ComponentActivity() {
         val base = if (pendingSeekMs != C.TIME_UNSET) pendingSeekMs else p.currentPosition
         pendingSeekMs = (base + deltaMs).coerceIn(0, max)
         positionMs = pendingSeekMs
+        // Kurz nach „Intro überspringen“: Spulen korrigiert, wo das Intro endet.
+        if (introFrom >= 0 && SystemClock.elapsedRealtime() - introAt <= IntroSkip.LEARN_WINDOW_MS) {
+            introTo = pendingSeekMs
+            introAt = SystemClock.elapsedRealtime()
+        }
         showOverlay(Overlay.CONTROLS)
         seekJob?.cancel()
         seekJob = lifecycleScope.launch {
@@ -1509,15 +1755,21 @@ class PlayerActivity : ComponentActivity() {
             buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE
             if (state == Player.STATE_READY) {
                 retries = 0
+                if (timeshifted && player?.isPlaying == true) timeshiftErrors = 0
                 message = null
                 everReady = true
                 fatalError = false
                 if (!isLive) maybeAutoSubtitles()
             }
-            if (state == Player.STATE_ENDED && !isLive) finish()
+            if (state == Player.STATE_ENDED && !isLive) {
+                if (vod?.kind != HistoryKind.EPISODE || !onEpisodeEnded()) finish()
+            }
             // Live-Streams enden nie wirklich: Schließt der Server die Verbindung „sauber“, hält der
             // Player das für das Ende und bliebe stehen. Sofort und ohne Meldung neu verbinden.
-            if (state == Player.STATE_ENDED && isLive) onLiveStreamEnded()
+            if (state == Player.STATE_ENDED && isLive) {
+                // Zwischenspeicher zu Ende (z. B. Speicher voll): live weiter.
+                if (timeshifted) handler.post { goLive() } else onLiveStreamEnded()
+            }
             if (state == Player.STATE_BUFFERING && everReady) onRebuffer()
         }
 
@@ -1550,6 +1802,15 @@ class PlayerActivity : ComponentActivity() {
         override fun onPlayerError(error: PlaybackException) {
             val p = player ?: return
             Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
+            if (timeshifted) {
+                if (++timeshiftErrors <= 2) {
+                    handler.postDelayed({ if (timeshifted) player?.let { enterTimeshift(currentTimeshiftMs(it), play = true) } }, 500)
+                } else {
+                    message = "Zeitversatz gestört – zurück zu Live"
+                    goLive()
+                }
+                return
+            }
             when {
                 // Fehler während des HDMI-Moduswechsels: einfach weiterspielen, nichts umbauen.
                 displaySwitching() && displaySwitchErrors < 3 -> {
@@ -1570,6 +1831,9 @@ class PlayerActivity : ComponentActivity() {
                 // aber nur vor dem ersten Bild: Später ist ein Lesefehler kaputte Daten, kein falsches Format.
                 !triedHls && !everReady && error.isContainerError() -> {
                     triedHls = true
+                    // HLS liest Playlisten und Segmente: das lässt sich nicht als ein TS-Strom mitschreiben.
+                    timeshift.buffer?.release()
+                    timeshift.buffer = null
                     val uri = p.currentMediaItem?.localConfiguration?.uri?.toString() ?: return
                     p.setMediaItem(mediaItem(uri, MimeTypes.APPLICATION_M3U8))
                     p.prepare()
@@ -1760,13 +2024,34 @@ class PlayerActivity : ComponentActivity() {
             return super.dispatchKeyEvent(event)
         }
         if (event.action != KeyEvent.ACTION_DOWN) return isHandledKey(code) || super.dispatchKeyEvent(event)
-        return if (isLive) handleLiveKey(code) else handleVodKey(code, event.repeatCount)
+        return if (isLive) handleLiveKey(code, event.repeatCount) else handleVodKey(code, event.repeatCount)
     }
 
     private fun isHandledKey(code: Int) = code in HANDLED_KEYS || code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9
 
-    private fun handleLiveKey(code: Int): Boolean {
+    private fun handleLiveKey(code: Int, repeat: Int): Boolean {
         val p = player
+        // Gedrückt halten spult immer schneller (wie bei Filmen).
+        val step = when {
+            repeat > 20 -> 120_000L
+            repeat > 5 -> 60_000L
+            else -> 0L
+        }
+        // Zeitversetzt: OK hält an, ◀ ▶ spulen. Umschalten und Menü bleiben wie gewohnt.
+        if (timeshifted) when (code) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                toggleLivePause(code)
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                shiftLive(-(if (step > 0) step else 10_000L))
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                shiftLive(if (step > 0) step else 30_000L)
+                return true
+            }
+        }
         when (code) {
             KeyEvent.KEYCODE_DPAD_UP -> if (settings.zapWithUpDown) zap(+1) else openChannelList()
             KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> zap(+1)
@@ -1784,8 +2069,9 @@ class PlayerActivity : ComponentActivity() {
                 toggleFavorite()
                 showOverlay(Overlay.INFO)
             }
-            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE ->
-                p?.let { it.playWhenReady = !it.playWhenReady }
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> toggleLivePause(code)
+            KeyEvent.KEYCODE_MEDIA_REWIND -> shiftLive(-(if (step > 0) step else 10_000L))
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> shiftLive(if (step > 0) step else 30_000L)
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> onDigit(code - KeyEvent.KEYCODE_0)
             else -> return false
         }
@@ -1799,6 +2085,21 @@ class PlayerActivity : ComponentActivity() {
             repeat > 20 -> 120_000L
             repeat > 5 -> 60_000L
             else -> 0L
+        }
+        // Nach dem Ende einer Folge: OK startet die nächste sofort, alles andere hält den Countdown an.
+        if (p.playbackState == Player.STATE_ENDED && nextCardVisible) {
+            if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) playNextEpisode() else cancelCountdown()
+            return true
+        }
+        if (overlay != Overlay.CONTROLS && (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER)) {
+            if (nextCardVisible) {
+                playNextEpisode()
+                return true
+            }
+            if (introVisible) {
+                skipIntro()
+                return true
+            }
         }
         when (code) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
@@ -1844,6 +2145,11 @@ class PlayerActivity : ComponentActivity() {
             playing?.let(::loadChannelInfo)
         }
         saveProgress()
+        // Zeitversatz endet im Hintergrund (keine Aufnahme ohne Bild); beim Zurückkommen läuft wieder live.
+        if (isLive && timeshifted) {
+            leaveTimeshift()
+            player?.let { p -> playing?.let { setLiveItem(p, it) } }
+        }
         // Live-Streams im Hintergrund nicht weiterladen: spart Bandbreite und eine Verbindung beim Anbieter.
         player?.let { p -> if (isLive) p.stop() else p.pause() }
     }
@@ -1852,6 +2158,9 @@ class PlayerActivity : ComponentActivity() {
         super.onDestroy()
         watchdogJob?.cancel()
         handler.removeCallbacksAndMessages(null)
+        recorder.stop()
+        timeshift.buffer?.release()
+        timeshift.buffer = null
         frameRateMatcher.reset()
         player?.release()
         player = null
@@ -1891,6 +2200,14 @@ class PlayerActivity : ComponentActivity() {
         // Bei 50 Hz bringt 0,985 nur alle ~1,3 s ein doppeltes Bild (0,97 ruckelte bei Schwenks sichtbar).
         private const val CUSHION_SPEED = 0.985f
         private const val VOD_STALL_SECONDS = 20
+        /** „Nächste Folge“ erscheint in den letzten Sekunden einer Folge. */
+        private const val NEXT_CARD_MS = 20_000L
+        private const val NEXT_COUNTDOWN_SECONDS = 10
+        /** Näher als das am Live-Bild gilt als live. */
+        private const val LIVE_EDGE_MS = 4_000L
+        /** Mindestens so viel freier Speicher, sonst kein Zeitversatz. */
+        private const val TIMESHIFT_MIN_BYTES = 200L * 1024 * 1024
+        private const val TIMESHIFT_MAX_BYTES = 4L * 1024 * 1024 * 1024
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"
         private const val EXTRA_FAVORITES = "favorites"

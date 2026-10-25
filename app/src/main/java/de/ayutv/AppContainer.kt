@@ -39,7 +39,11 @@ class AppContainer(context: Context) {
         scope.launch(Dispatchers.IO) { repo.purgeLegacyCache() }
     }
 
+    /** Suche von außen (Suchtaste der Fernbedienung, Sprachassistent): Begriff für die Suche, "" = nur öffnen. */
+    val searchRequests = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
     val reminders = Reminders(context)
+    val intros = de.ayutv.data.IntroStore(context)
     val parental = ParentalControl(context, db)
 
     /** Spiele der gefolgten Vereine als Erinnerungen vormerken (nach jedem TV-Guide-Update). */

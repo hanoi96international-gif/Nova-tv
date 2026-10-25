@@ -74,6 +74,7 @@ object PlayerFactory {
         asyncDecoding: Boolean = settings.asyncDecoding,
         forcePcm: Boolean = settings.audioOutput == AudioOutput.PCM,
         speech: SpeechActivity? = null,
+        timeshift: TimeshiftHolder? = null,
     ): Built {
         val headers = HeaderProvider(settings.userAgent)
 
@@ -89,7 +90,9 @@ object PlayerFactory {
         val resolving = ResolvingDataSource.Factory(httpFactory) { spec ->
             spec.withAdditionalHeaders(mapOf("User-Agent" to headers.userAgent))
         }
-        val dataSourceFactory = DefaultDataSource.Factory(context, resolving)
+        // Live: mitschreiben für den Zeitversatz und timeshift://-Adressen aus dem Zwischenspeicher lesen.
+        val upstream = if (timeshift != null) LiveDataSource.Factory(resolving, timeshift) else resolving
+        val dataSourceFactory = DefaultDataSource.Factory(context, upstream)
 
         val tsFlags = DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
             DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS

@@ -1,5 +1,6 @@
 package de.ayutv.data.repo
 
+import de.ayutv.data.parse.Episodes
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.FavoriteEntity
 import de.ayutv.data.db.GroupKind
@@ -92,15 +93,18 @@ class ContentRepository(
     suspend fun sportEvents(hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> {
         val programmes = db.programmes().sportBetween(now, now + hours * HOUR, 4_000).filter { it.isSportEvent() }
         if (programmes.isEmpty()) return emptyList()
+        // Alle Fassungen je EPG-Kennung (HD, 4K, SD teilen sich oft eine): daraus die beste wählen.
         val channels = programmes.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
-            .flatMap { db.channels().byEpgIds(it) }.associateBy { it.epgId }
+            .flatMap { db.channels().allByEpgIds(it) }.groupBy { it.epgId }
         val favorites = db.favorites().keys().toHashSet()
         return withContext(Dispatchers.Default) {
-            programmes.mapNotNull { p -> channels[p.channelEpgId]?.let { p to it } }
+            programmes.flatMap { p -> channels[p.channelEpgId].orEmpty().map { p to it } }
                 .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to p.headline().lowercase() }
                 .values.map { same ->
                     val (p, c) = same.minWith(compareBy({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) }))
-                    SportEvent(p, c, same.size - 1)
+                    // Weitere Sender, nicht weitere Fassungen desselben Senders.
+                    val others = same.map { ChannelVariants.key(it.second.name) ?: it.second.key }.distinct().size - 1
+                    SportEvent(p, c, others)
                 }
                 .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
         }
@@ -291,6 +295,19 @@ class ContentRepository(
         if (playlist.type != PlaylistType.XTREAM) return@withContext emptyList()
         val client = XtreamClient.of(http, playlist)
         client.episodes(series.seriesId).map { it to client.episodeUrl(it.id, it.extension) }
+    }
+
+    data class NextEpisode(val series: SeriesEntity, val episode: XtreamEpisode, val url: String)
+
+    /** Die Folge nach [episodeKey] („<Serie>:e:<Folge>“), über das Staffelende hinweg; null bei der letzten. */
+    suspend fun nextEpisode(episodeKey: String): NextEpisode? {
+        val seriesKey = Episodes.seriesKeyOf(episodeKey) ?: return null
+        val currentId = Episodes.episodeIdOf(episodeKey) ?: return null
+        val series = db.series().byKey(seriesKey) ?: return null
+        val list = runCatching { episodes(series) }.getOrNull() ?: return null
+        val next = Episodes.next(list.map { it.first }, currentId) ?: return null
+        val url = list.firstOrNull { it.first.id == next.id }?.second ?: return null
+        return NextEpisode(series, next, url)
     }
 
     private companion object {

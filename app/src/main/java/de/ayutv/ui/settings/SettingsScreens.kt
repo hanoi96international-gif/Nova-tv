@@ -375,6 +375,30 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
+                            "Live-TV anhalten und zurückspulen",
+                            if (settings.liveTimeshift) "An · ${settings.timeshiftMinutes} Min." else "Aus",
+                            "Pause hält das Bild an, ⏪ spult zurück (auch ins Tor von vorhin). Der laufende Sender wird dafür auf dem " +
+                                "Gerät zwischengespeichert, höchstens gut die Hälfte des freien Speichers. Auswählen: 15 → 30 → 60 → 90 Min. → Aus.",
+                        ) {
+                            update {
+                                val index = de.ayutv.data.TIMESHIFT_MINUTES.indexOf(it.timeshiftMinutes)
+                                when {
+                                    !it.liveTimeshift -> it.copy(liveTimeshift = true, timeshiftMinutes = de.ayutv.data.TIMESHIFT_MINUTES.first())
+                                    index == de.ayutv.data.TIMESHIFT_MINUTES.lastIndex -> it.copy(liveTimeshift = false)
+                                    else -> it.copy(timeshiftMinutes = de.ayutv.data.TIMESHIFT_MINUTES[index + 1])
+                                }
+                            }
+                        }
+                    }
+                    item {
+                        SettingRow(
+                            "Serien: nächste Folge automatisch",
+                            onOff(settings.autoNextEpisode),
+                            "Am Ende einer Folge startet die nächste nach 10 Sekunden (OK sofort, Zurück bleibt stehen).",
+                        ) { update { it.copy(autoNextEpisode = !it.autoNextEpisode) } }
+                    }
+                    item {
+                        SettingRow(
                             "Doppelte Sender zusammenfassen",
                             onOff(settings.mergeVariants),
                             "Gleiche Sender in SD, HD, 4K, RAW oder als Backup erscheinen einmal, in der besten Fassung. " +

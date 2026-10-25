@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -169,6 +170,20 @@ fun PlayerScreen(activity: PlayerActivity) {
             VodControls(activity)
         }
 
+        if (!activity.isLive && activity.overlay != Overlay.CONTROLS) {
+            when {
+                activity.nextCardVisible -> activity.nextEpisode?.let { next ->
+                    EpisodeCard(
+                        title = "Nächste Folge: S${next.episode.season} E${next.episode.episode}  ${next.episode.title}",
+                        hint = if (activity.nextCountdown >= 0) "Startet in ${activity.nextCountdown} s  ·  OK jetzt  ·  andere Taste: warten"
+                            else "OK: jetzt starten",
+                        modifier = Modifier.align(Alignment.BottomEnd),
+                    )
+                }
+                activity.introVisible -> EpisodeCard("⏭ Intro überspringen", "OK drücken", Modifier.align(Alignment.BottomEnd))
+            }
+        }
+
         if (activity.ownSubtitles) {
             activity.translatedCue?.let { cue ->
                 // Über die Steuerleiste anheben, solange sie sichtbar ist (wie beim Player).
@@ -221,7 +236,9 @@ fun PlayerScreen(activity: PlayerActivity) {
     LaunchedEffect(activity.overlayToken, activity.overlay) {
         val timeout = when (activity.overlay) {
             Overlay.NONE -> return@LaunchedEffect
-            Overlay.INFO -> if (activity.showTech) 10_000L else 5_000L
+            // Angehaltenes Live-TV: Leiste stehen lassen, damit man sieht, wie weit es zurückliegt.
+            Overlay.INFO -> if (activity.timeshifted && activity.player?.playWhenReady == false) Long.MAX_VALUE
+                else if (activity.showTech) 10_000L else 5_000L
             Overlay.CONTROLS -> if (activity.player?.isPlaying == false) Long.MAX_VALUE else 4_000L
             Overlay.CHANNELS, Overlay.TRACKS -> 15_000L
         }
@@ -274,15 +291,60 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         } else {
             Text("Keine Programminformationen", color = AyuColors.TextSecondary)
         }
+        if (activity.timeshifted || activity.rewindableMs > 0) {
+            Spacer(Modifier.height(12.dp))
+            TimeshiftLine(activity)
+        }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
             TechLine(activity.stats, activity.bufferedMs, activity.cushionActive)
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ☰ Ton/Untertitel/Favorit",
+            if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
+            else "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 13.sp,
+        )
+    }
+}
+
+/** Knopf unten rechts (Intro überspringen, nächste Folge): reagiert auf OK, solange die Steuerleiste zu ist. */
+@Composable
+private fun EpisodeCard(title: String, hint: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier.padding(end = 48.dp, bottom = 56.dp).widthIn(max = 520.dp)
+            .clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.82f))
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(4.dp))
+        Text(hint, color = AyuColors.Accent, fontSize = 14.sp)
+    }
+}
+
+/** Zeitversatz: wie weit das Bild hinter Live liegt und wie weit sich zurückspulen lässt. */
+@Composable
+private fun TimeshiftLine(activity: PlayerActivity) {
+    val window = activity.rewindableMs
+    val behind = activity.behindLiveMs.coerceAtMost(window)
+    val paused = activity.timeshifted && activity.player?.playWhenReady == false
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val state = when {
+            paused -> "⏸ Angehalten"
+            activity.timeshifted -> "▶ Zeitversetzt"
+            else -> "● Live"
+        }
+        Text(state, color = if (activity.timeshifted) AyuColors.Accent else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(12.dp))
+        Box(Modifier.weight(1f)) {
+            ProgressLine(if (window > 0) (window - behind).toFloat() / window else 1f)
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            if (activity.timeshifted) "−${formatDuration(behind)} hinter Live" else "${formatDuration(window)} zurückspulbar",
+            color = AyuColors.TextSecondary,
+            fontSize = 14.sp,
         )
     }
 }

@@ -109,6 +109,11 @@ fun AyuRoot() {
     }
     // Nach „Zurück“ verschwindet der fokussierte Inhalt: dann den Fokus gezielt in die Navigation setzen.
     var navTick by remember { mutableIntStateOf(0) }
+    // Suchtaste oder Sprachassistent: zur Suche (den Begriff übernimmt die Suche selbst).
+    val searchRequest by container.searchRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(searchRequest) {
+        if (searchRequest != null) section = Section.SEARCH
+    }
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
     val sectionState = rememberSaveableStateHolder()
 

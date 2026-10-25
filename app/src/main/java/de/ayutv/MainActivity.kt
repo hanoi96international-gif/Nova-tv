@@ -1,6 +1,9 @@
 package de.ayutv
 
+import android.app.SearchManager
+import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
@@ -18,6 +21,7 @@ class MainActivity : ComponentActivity() {
                 AyuTheme { AyuRoot() }
             }
         }
+        handleSearchIntent(intent)
         // Ist beim letzten Mal etwas abgestürzt, den Grund zeigen (zum Fotografieren und Melden).
         if (savedInstanceState == null) CrashReport.takePending(this)?.let { report ->
             android.app.AlertDialog.Builder(this)
@@ -26,6 +30,27 @@ class MainActivity : ComponentActivity() {
                 .setPositiveButton("OK", null)
                 .show()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleSearchIntent(intent)
+    }
+
+    /** Sprachassistent oder Suche des Systems: Begriff direkt in der Suche öffnen. */
+    private fun handleSearchIntent(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEARCH) return
+        val query = intent.getStringExtra(SearchManager.QUERY).orEmpty()
+        (application as AyuApp).container.searchRequests.value = query
+    }
+
+    /** Suchtaste der Fernbedienung öffnet die Suche. */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_SEARCH) {
+            if (event.action == KeyEvent.ACTION_UP) (application as AyuApp).container.searchRequests.value = ""
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /**
