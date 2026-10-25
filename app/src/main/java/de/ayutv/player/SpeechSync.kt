@@ -174,7 +174,7 @@ object SpeechSync {
     private const val BIN_MS = 100L
     private const val COARSE = 5           // grob: 500-ms-Schritte
     private const val MAX_SHIFT_MS = 600_000L
-    const val MIN_SECONDS = 240            // mindestens 4 min gehörter Ton
+    const val MIN_SECONDS = 120            // mindestens 2 min gehörter Ton (danach wird laufend verfeinert)
     private val RATIOS = listOf(1.0, 25.0 / 23.976, 23.976 / 25.0, 24.0 / 23.976, 23.976 / 24.0, 25.0 / 24.0, 24.0 / 25.0)
 
     /** [signal] aus [SpeechActivity.signal], [cues] Start/Ende der geladenen Untertitel (Dateizeit, ms). */

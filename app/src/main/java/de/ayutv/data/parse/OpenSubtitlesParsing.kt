@@ -54,6 +54,11 @@ data class SubtitleCandidate(
     val featureType: String? = null,
     /** Platz in der Antwort von OpenSubtitles (deren Relevanz, vor unserer Sortierung nach Qualität). */
     val rank: Int = 0,
+    /** Bildrate, für die die Datei erstellt wurde (falls angegeben). */
+    val fps: Double? = null,
+    /** Bei Serienfolgen: Staffel und Folge laut OpenSubtitles. */
+    val season: Int? = null,
+    val episode: Int? = null,
 )
 
 object OpenSubtitlesParsing {
@@ -85,6 +90,9 @@ object OpenSubtitlesParsing {
                 year = feature?.primitive("year")?.longOrNull?.toInt(),
                 featureType = feature?.primitive("feature_type")?.contentOrNull,
                 rank = index,
+                fps = attributes.primitive("fps")?.contentOrNull?.toDoubleOrNull()?.takeIf { it > 1 },
+                season = feature?.primitive("season_number")?.longOrNull?.toInt(),
+                episode = feature?.primitive("episode_number")?.longOrNull?.toInt(),
             )
         }.sortedWith(QUALITY)
     }
@@ -113,6 +121,47 @@ object OpenSubtitlesParsing {
         .thenBy { it.translated }
         .thenBy { it.hearingImpaired }
         .thenByDescending { it.downloads }
+
+    /**
+     * Bei gleicher Güte die Datei mit der Bildrate des Films nach vorn: Sie passt ohne Umrechnung
+     * (25 statt 23,976 fps läuft sonst nach einer Stunde 2,5 Minuten auseinander). Hash-Treffer bleiben vorn.
+     */
+    fun preferFrameRate(candidates: List<SubtitleCandidate>, frameRate: Float?): List<SubtitleCandidate> {
+        if (frameRate == null || frameRate <= 1f) return candidates
+        fun fits(c: SubtitleCandidate) = when {
+            c.fps == null -> 1
+            kotlin.math.abs(c.fps - frameRate) < 0.05 -> 0
+            else -> 2
+        }
+        return candidates.sortedWith(compareByDescending<SubtitleCandidate> { it.hashMatch }.thenBy { it.translated }.thenBy(::fits))
+    }
+
+    /** „Serie – S1 E2“, „Serie S01E02“, „Serie 1x02“: Name, Staffel, Folge. Sonst null. */
+    fun episodeOf(title: String): Triple<String, Int, Int>? {
+        val m = EPISODE.find(title) ?: return null
+        val season = (m.groupValues[1].ifEmpty { m.groupValues[3] }).toIntOrNull() ?: return null
+        val episode = (m.groupValues[2].ifEmpty { m.groupValues[4] }).toIntOrNull() ?: return null
+        val name = title.substring(0, m.range.first).trim().trimEnd('-', '–', ':', '|').trim()
+        return if (name.length >= 2) Triple(cleanTitle(name).first, season, episode) else null
+    }
+    private val EPISODE = Regex("""(?i)\bS(\d{1,2})\s*E(\d{1,3})\b|\b(\d{1,2})x(\d{1,3})\b""")
+
+    /** Ende der letzten Einblendung einer SRT-Datei (ms), um zu prüfen, ob sie zur Filmlänge passt. */
+    fun lastCueEndMs(srt: String): Long? {
+        val m = SRT_TIME.findAll(srt).lastOrNull() ?: return null
+        val g = m.groupValues
+        return ((g[1].toLong() * 60 + g[2].toLong()) * 60 + g[3].toLong()) * 1000 + g[4].padEnd(3, '0').take(3).toLong()
+    }
+    private val SRT_TIME = Regex("""-->\s*(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
+
+    /**
+     * Passt eine Datei, die bis [lastCueMs] reicht, zu einem Film von [durationMs]? Untertitel enden vor dem
+     * Abspann, aber nicht nach der Hälfte; länger als der Film (plus Bildraten-Unterschied) geht nicht.
+     */
+    fun plausibleLength(lastCueMs: Long, durationMs: Long): Boolean {
+        if (durationMs < 10 * 60_000L) return true
+        return lastCueMs <= durationMs * 1.06 + 60_000 && lastCueMs >= durationMs * 0.55
+    }
 
     fun downloadLink(body: String): String? =
         (json.parseToJsonElement(body) as? JsonObject)?.primitive("link")?.contentOrNull
