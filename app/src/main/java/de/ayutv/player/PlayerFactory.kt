@@ -73,6 +73,7 @@ object PlayerFactory {
         live: Boolean,
         asyncDecoding: Boolean = settings.asyncDecoding,
         forcePcm: Boolean = settings.audioOutput == AudioOutput.PCM,
+        speech: SpeechActivity? = null,
     ): Built {
         val headers = HeaderProvider(settings.userAgent)
 
@@ -100,7 +101,7 @@ object PlayerFactory {
                 .setConstantBitrateSeekingEnabled(true)
         )
 
-        val renderers = AyuRenderersFactory(context, forcePcm)
+        val renderers = AyuRenderersFactory(context, forcePcm, speech)
             .setEnableDecoderFallback(true)
             .setMediaCodecSelector(DolbyVisionFallbackSelector)
             // FFmpeg nur als Ergänzung: Was das Gerät selbst kann (oder an den Receiver durchreicht),
@@ -287,21 +288,22 @@ private class StreamLoadErrorPolicy(private val live: Boolean) : DefaultLoadErro
 /**
  * Mit [forcePcm] meldet die Tonausgabe nur Stereo-PCM als unterstützt: Dann wird jedes Format im
  * Gerät dekodiert (MediaCodec oder FFmpeg) statt an Soundbar/Receiver durchgereicht. Hilft bei
- * Geräten, die Dolby/DTS ankündigen, aber nicht wiedergeben.
+ * Geräten, die Dolby/DTS ankündigen, aber nicht wiedergeben. Mit [speech] hört [SpeechTapProcessor]
+ * beim Ton mit (Ausrichtung geladener Untertitel an der Sprache).
  */
-private class AyuRenderersFactory(context: Context, private val forcePcm: Boolean) : DefaultRenderersFactory(context) {
+private class AyuRenderersFactory(context: Context, private val forcePcm: Boolean, private val speech: SpeechActivity?) : DefaultRenderersFactory(context) {
     @Suppress("DEPRECATION")
-    override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink? =
-        if (!forcePcm) {
-            super.buildAudioSink(context, enableFloatOutput, enableAudioTrackPlaybackParams)
+    override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink? {
+        // Bewusst ohne Context bei forcePcm: Nur dann gelten feste Fähigkeiten "kein Durchreichen".
+        // Mit Context fragt Media3 das Gerät ab und würde setAudioCapabilities ignorieren.
+        val builder = if (forcePcm) {
+            DefaultAudioSink.Builder().setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
         } else {
-            // Bewusst ohne Context: Nur dann gelten feste Fähigkeiten "kein Durchreichen".
-            // Mit Context fragt Media3 das Gerät ab und würde setAudioCapabilities ignorieren.
-            DefaultAudioSink.Builder()
-                .setAudioCapabilities(AudioCapabilities.DEFAULT_AUDIO_CAPABILITIES)
-                .setEnableFloatOutput(enableFloatOutput)
-                .build()
+            DefaultAudioSink.Builder(context).setEnableAudioOutputPlaybackParameters(enableAudioTrackPlaybackParams)
         }
+        speech?.let { builder.setAudioProcessors(arrayOf(SpeechTapProcessor(it))) }
+        return builder.setEnableFloatOutput(enableFloatOutput).build()
+    }
 }
 
 /**

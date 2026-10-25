@@ -196,7 +196,7 @@ class PhoneSetupServer(private val container: AppContainer) {
             <h2>Playlist hinzufügen (optional)</h2>
             <label>Name<input name=m3u_name placeholder="z. B. Mein Anbieter"></label>
             <label>M3U-Adresse<input name=m3u_url type=url placeholder="http://…/get.php?…"></label>
-            <label>EPG-Adresse (optional)<input name=epg_url type=url></label>
+            <label>EPG-Adresse (optional, sonst automatisch; mehrere mit Komma)<input name=epg_url type=text inputmode=url></label>
             <p>oder Xtream Codes:</p>
             <label>Name<input name=xt_name></label>
             <label>Server<input name=xt_server placeholder="http://server:port"></label>

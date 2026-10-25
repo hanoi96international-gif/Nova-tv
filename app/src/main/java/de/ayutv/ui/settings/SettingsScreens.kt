@@ -660,7 +660,7 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
             TvTextField(
                 epgUrl,
                 { epgUrl = it },
-                if (type == PlaylistType.XTREAM) "EPG-Link (optional, sonst vom Anbieter)" else "EPG-Link XMLTV (optional, sonst aus der Playlist)",
+                if (type == PlaylistType.XTREAM) "EPG-Link (optional, der des Anbieters gilt immer zusätzlich)" else "EPG-Link XMLTV (optional, sonst automatisch aus der Playlist)",
                 keyboardType = KeyboardType.Uri,
                 imeAction = ImeAction.Done,
                 onImeAction = { save() },

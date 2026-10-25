@@ -18,14 +18,15 @@ DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 
 ## Funktionen (Version 0.6)
 
-- **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`, auch aus `url-tvg` im Playlist-Header), Xtream Codes API (Live, Filme, Serien, EPG)
+- **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`), Xtream Codes API (Live, Filme, Serien, EPG)
+- **TV-Guide automatisch:** Ohne Eintrag kommt das EPG vom Anbieter: bei Xtream `xmltv.php`, bei einer M3U alle Adressen aus `url-tvg`, und kommt die M3U von einem Xtream-Server (`get.php?username=…`), dessen `xmltv.php`. Eigene EPG-Adressen (mehrere mit Komma) gehen vor; jede weitere Quelle füllt nur Sender, für die noch nichts da ist. Sender werden auch mit Zusätzen erkannt: „DE: RTL 4K“, „|DE| RTL HD+“, „RTL ᵁᴴᴰ“, „Pro7 FHD“ oder „ARD HD“ finden „RTL“, „ProSieben“ und „Das Erste“ im EPG, auch wenn die Kennung der Playlist im EPG fehlt
 - **Gruppen ein- und ausblenden:** pro Playlist, getrennt für Live TV, Filme und Serien (*Einstellungen → Playlist → Gruppen*), mit Filter und „Alle ein/aus“. Schneller geht es mit langem Druck auf OK auf einer Gruppe in der Liste. Ausgeblendete Gruppen verschwinden überall: in Listen, TV-Guide, Suche, Startseite und beim Zappen. Sie bleiben auch nach dem Aktualisieren ausgeblendet.
 - **Live TV:** Gruppen, Senderliste mit aktuellem Programm und Fortschritt, Detailspalte mit den nächsten Sendungen, Favoriten (OK lange drücken)
 - **TV-Guide:** EPG-Raster pro Gruppe, 2-Stunden-Fenster, das sich mit links/rechts verschieben lässt
 - **Player:** Hoch/Runter schaltet um, OK oder links öffnet die Senderliste, rechts zeigt das Stream-Info (Auflösung, fps, Codec, Decoder, verworfene Frames, Leitung, Startzeit), Zifferntasten wählen direkt einen Sender, die „Letzter Sender“-Taste bzw. die blaue Taste springt zurück, Menü-Taste setzt einen Favoriten. Erkennt 4K, HDR10, HLG und Dolby Vision
 - **Untertitel (Filme & Serien), optional:** standardmäßig aus, im Film mit der Menütaste ☰ einschalten (oder in den Einstellungen „automatisch einschalten“). In **41 Sprachen**:
   1. eingebettete Spur des Films,
-  2. echte Untertitel von [OpenSubtitles](https://www.opensubtitles.com) in der Wunschsprache (per Datei-Hash zeitgenau, sonst nach Titel/Jahr),
+  2. echte Untertitel von [OpenSubtitles](https://www.opensubtitles.com) in der Wunschsprache (per Datei-Hash zeitgenau, sonst nach Titel/Jahr). Passen sie zeitlich nicht (andere Fassung, 25 statt 23,976 fps), richtet DnA-TV sie nach wenigen Minuten **automatisch aus**: an eingebetteten Untertiteln oder, wenn der Film keine hat, **am gesprochenen Ton** (Sprechpausen gegen Untertitel-Lücken, auch bei gekürzten Fassungen). Untertitel eines anderen Films werden erkannt und ersetzt,
   3. gibt es keine: **Übersetzung direkt auf dem Fire TV** (OPUS-MT, ohne Konto, ohne Zeichengrenze, nach dem ersten Laden offline) einer eingebetteten Spur oder einer geladenen Datei – vorausschauend, damit die Zeilen fertig sind, bevor sie erscheinen. Optional DeepL/LibreTranslate,
   4. eingebettete Spuren lassen sich auch **live übersetzen** (jede Zeile beim Erscheinen).
   Alles Geladene und Übersetzte wird gespeichert; mehrere Sprachen hängen gleichzeitig am Film.

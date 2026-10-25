@@ -6,12 +6,15 @@ import android.util.Xml
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.SettingsStore
 import de.ayutv.data.db.ChannelEntity
+import de.ayutv.data.db.EpgChannel
 import de.ayutv.data.db.AyuDatabase
 import de.ayutv.data.db.PlaylistEntity
 import de.ayutv.data.db.PlaylistType
 import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
+import de.ayutv.data.parse.EpgMatcher
+import de.ayutv.data.parse.EpgSources
 import de.ayutv.data.parse.M3uParser
 import de.ayutv.data.parse.XmltvParser
 import kotlinx.coroutines.Dispatchers
@@ -132,9 +135,11 @@ class PlaylistRepository(
         for (playlist in db.playlists().all()) {
             // Ausgeschaltete Playlists kosten keine Zeit und keine Verbindung beim Anbieter.
             if (!playlist.enabled) continue
-            if (force || now - playlist.lastSync > CONTENT_MAX_AGE) sync(playlist.id, withEpg = false)
+            // Nach neuen Sendern immer auch den TV-Guide neu zuordnen: Beim Neuladen der Senderliste gehen
+            // Kennungen verloren, die erst über den Namen gefunden wurden.
+            if (force || now - playlist.lastSync > CONTENT_MAX_AGE) sync(playlist.id, withEpg = true)
             val fresh = db.playlists().byId(playlist.id) ?: continue
-            if (force || now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
+            if (now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
         }
         val archiveDays = db.channels().maxCatchupDaysAll().coerceIn(0, MAX_ARCHIVE_DAYS)
         db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
@@ -221,7 +226,7 @@ class PlaylistRepository(
                     }
                     if (position % 5000 == 0) _state.value = SyncState.Running("${playlist.name}: $position Einträge …")
                 }
-                detectedEpg = header.epgUrls.firstOrNull()
+                detectedEpg = header.epgUrls.joinToString(",").ifEmpty { null }
             }
             db.channels().insertAll(channels)
             db.vod().insertAll(vod)
@@ -319,18 +324,17 @@ class PlaylistRepository(
         mutex.withLock {
             // Erst hier lesen: Während auf die Sperre gewartet wurde, kann die Playlist geändert oder gelöscht worden sein.
             val playlist = db.playlists().byId(playlistId) ?: return
-            val epgUrl = when (playlist.type) {
-                PlaylistType.M3U -> playlist.epgUrl
-                PlaylistType.XTREAM -> playlist.epgUrl?.takeIf { it.isNotBlank() } ?: XtreamClient.of(http, playlist).epgUrl
+            val sources = when (playlist.type) {
+                PlaylistType.M3U -> EpgSources.forM3u(playlist.epgUrl, playlist.url)
+                PlaylistType.XTREAM -> EpgSources.forXtream(playlist.epgUrl, XtreamClient.of(http, playlist).epgUrl)
             }
-            if (epgUrl.isNullOrBlank()) return
+            if (sources.isEmpty()) return
             prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: TV-Guide wird geladen …")
             try {
-                val known = db.channels().epgIds(playlist.id).toHashSet()
-                val withoutId = db.channels().withoutEpgId(playlist.id)
+                val channels = db.channels().forEpg(playlist.id)
                 val shift = settings.current().epgShiftHours * HOUR
-                withContext(importDispatcher) { importEpg(playlist, epgUrl, known, withoutId, shift) }
+                withContext(importDispatcher) { importEpg(playlist, sources, channels, shift) }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
@@ -340,12 +344,58 @@ class PlaylistRepository(
         }
     }
 
-    private fun importEpg(
+    /**
+     * Quellen nacheinander: Die erste ersetzt den alten TV-Guide, jede weitere füllt nur Sender, für die
+     * noch nichts da ist. Eine Quelle, die nicht lädt, hält die anderen nicht auf.
+     */
+    private fun importEpg(playlist: PlaylistEntity, sources: List<String>, channels: List<EpgChannel>, shift: Long) {
+        val covered = HashSet<Long>()
+        val taken = HashSet<String>()
+        var cleared = false
+        var firstError: Exception? = null
+        for ((index, url) in sources.withIndex()) {
+            val open = channels.filter { it.id !in covered }
+            if (open.isEmpty()) break
+            val source = try {
+                fetch(url, "epg-${playlist.id}-$index.xml")
+            } catch (e: IOException) {
+                Log.w(TAG, "EPG-Quelle ${index + 1} nicht erreichbar", e)
+                firstError = firstError ?: e
+                continue
+            }
+            try {
+                val found = HashSet<Long>()
+                val used = HashSet<String>()
+                db.runInTransaction(Runnable {
+                    if (!cleared) db.programmes().deleteForPlaylist(playlist.id)
+                    importEpgSource(playlist, source, open, shift, taken, found, used)
+                })
+                cleared = true
+                covered += found
+                taken += used
+                Log.i(TAG, "EPG-Quelle ${index + 1}: ${found.size} von ${open.size} Sendern")
+            } catch (e: Exception) {
+                Log.w(TAG, "EPG-Quelle ${index + 1} nicht lesbar", e)
+                firstError = firstError ?: e
+            } finally {
+                discard(source)
+            }
+        }
+        if (!cleared) throw firstError ?: IOException("Kein TV-Guide geladen")
+    }
+
+    /**
+     * Eine Quelle einlesen. [taken]: Kennungen, unter denen eine frühere Quelle schon Sendungen gespeichert hat;
+     * zurück kommen die versorgten Sender ([found]) und die hier belegten Kennungen ([used]).
+     */
+    private fun importEpgSource(
         playlist: PlaylistEntity,
-        epgUrl: String,
-        known: Set<String>,
-        withoutId: List<ChannelEntity>,
+        source: File,
+        open: List<EpgChannel>,
         shift: Long,
+        taken: Set<String>,
+        found: MutableSet<Long>,
+        used: MutableSet<String>,
     ) {
         val now = System.currentTimeMillis()
         // Mit Archiv (Catch-up) auch vergangene Tage behalten, sonst nur die letzten 2 Stunden.
@@ -353,49 +403,73 @@ class PlaylistRepository(
         val from = now - maxOf(2 * HOUR, archiveDays * 24 * HOUR)
         val until = now + EPG_DAYS * 24 * HOUR
         val parser = XmltvParser(Xml.newPullParser())
-        // Sender ohne tvg-id lassen sich erst nach dem Lesen der <channel>-Liste zuordnen,
-        // deshalb ihre möglichen Kandidaten vorab über die Namen bestimmen.
-        val wantedNames = withoutId.mapTo(HashSet()) { XmltvParser.normalizeName(it.name) }
-        val source = fetch(epgUrl, "epg-${playlist.id}.xml")
 
-        try { db.runInTransaction(Runnable {
-            db.programmes().deleteForPlaylist(playlist.id)
-            val batch = ArrayList<ProgrammeEntity>(BATCH)
-            var count = 0
-            // <channel> steht in XMLTV vor den Programmen. Beim ersten Programm sind alle Namen bekannt.
-            val nameMatchedIds by lazy {
-                parser.channelNames.filterKeys { it in wantedNames }.values.toHashSet()
+        // EPG-Sender → Kennungen, unter denen seine Sendungen gespeichert werden: die Kennung der Playlist
+        // (auch wenn sie anders lautet als im EPG), bei Sendern ohne Kennung die des EPGs.
+        val targets = HashMap<String, MutableList<String>>()
+        val owner = HashMap<String, String>()
+        val channelsOf = HashMap<String, MutableList<Long>>()
+        val assign = ArrayList<Pair<Long, String>>()
+        fun link(guideId: String, channel: EpgChannel) {
+            // Genau die gespeicherte Kennung des Senders: Unter ihr sucht die Oberfläche die Sendungen.
+            val own = channel.epgId?.takeIf { it.isNotBlank() }
+            val storage = own ?: guideId
+            if (storage in taken) return
+            // Eine Kennung gehört genau einem EPG-Sender, sonst mischten sich zwei Programme.
+            val current = owner.getOrPut(storage) { guideId.also { targets.getOrPut(it) { ArrayList(1) } += storage } }
+            if (own == null) {
+                if (current != guideId) return
+                assign += channel.id to guideId
             }
-            openFile(source).use { input ->
-                parser.parse(
-                    input,
-                    wanted = { id, start, stop ->
-                        stop + shift > from && start + shift < until && (id in known || (wantedNames.isNotEmpty() && id in nameMatchedIds))
-                    },
-                ) { p ->
+            channelsOf.getOrPut(storage) { ArrayList(1) } += channel.id
+        }
+        // <channel> steht in XMLTV vor den Programmen: Beim ersten Programm sind alle Namen bekannt.
+        var prepared = false
+        val byLowerId = open.filter { !it.epgId.isNullOrBlank() }.groupBy { it.epgId!!.trim().lowercase() }
+        val unknown = HashSet<String>()
+        fun storageFor(id: String): List<String>? {
+            if (!prepared) {
+                prepared = true
+                val matcher = EpgMatcher()
+                for ((guideId, names) in parser.channels) matcher.addGuideChannel(guideId, names)
+                if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { link(it, channel) }
+            }
+            targets[id]?.let { return it }
+            if (id in unknown) return null
+            // Programme eines Senders ohne <channel>-Eintrag: nur über die Kennung.
+            byLowerId[id.lowercase()]?.forEach { link(id, it) }
+            return targets[id] ?: null.also { unknown += id }
+        }
+
+        val batch = ArrayList<ProgrammeEntity>(BATCH)
+        var count = 0
+        openFile(source).use { input ->
+            parser.parse(
+                input,
+                wanted = { id, start, stop -> stop + shift > from && start + shift < until && storageFor(id) != null },
+            ) { p ->
+                for (storage in storageFor(p.channelId).orEmpty()) {
                     batch += ProgrammeEntity(
                         playlistId = playlist.id,
-                        channelEpgId = p.channelId,
+                        channelEpgId = storage,
                         start = p.start + shift,
                         stop = p.stop + shift,
                         title = p.title,
                         description = p.description,
                         category = p.category,
                     )
-                    if (batch.size >= BATCH) {
-                        count += batch.size
-                        db.programmes().insertAll(batch.drain())
-                        if (count % 10_000 == 0) _state.value = SyncState.Running("${playlist.name}: TV-Guide, $count Sendungen …")
-                    }
+                    channelsOf[storage]?.let(found::addAll)
+                    used += storage
+                }
+                if (batch.size >= BATCH) {
+                    count += batch.size
+                    db.programmes().insertAll(batch.drain())
+                    if (count % 10_000 < BATCH) _state.value = SyncState.Running("${playlist.name}: TV-Guide, $count Sendungen …")
                 }
             }
-            db.programmes().insertAll(batch)
-
-            for (channel in withoutId) {
-                val id = parser.channelNames[XmltvParser.normalizeName(channel.name)] ?: continue
-                db.channels().setEpgId(channel.id, id)
-            }
-        }) } finally { discard(source) }
+        }
+        db.programmes().insertAll(batch)
+        for ((channelId, guideId) in assign) if (channelId in found) db.channels().setEpgId(channelId, guideId)
     }
 
     private fun <T> ArrayList<T>.drain(): List<T> = toList().also { clear() }
