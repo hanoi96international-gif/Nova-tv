@@ -123,9 +123,9 @@ class PhoneSetupServer(private val container: AppContainer) {
             val body = ByteArray(length).also { readFully(input, it) }.toString(Charsets.UTF_8)
             val form = parseForm(body)
             val report = save(form)
-            respond(client, 200, page(container.settings.current(), report))
+            respond(client, 200, page(container.settings.current(), report) + guideReport())
         } else {
-            respond(client, 200, page(container.settings.current(), null))
+            respond(client, 200, page(container.settings.current(), null) + guideReport())
         }
     }
 
@@ -208,6 +208,27 @@ class PhoneSetupServer(private val container: AppContainer) {
         """.trimIndent()
     }
 
+    /** Welche Sender kein Programm haben, je Playlist und Gruppe: zum Kopieren und Weitergeben an den Support. */
+    private suspend fun guideReport(): String {
+        val parts = container.db.playlists().all().filter { it.enabled }.mapNotNull { playlist ->
+            val status = container.playlists.epgStatus(playlist.id) ?: return@mapNotNull null
+            val sources = status.sources.joinToString(", ") { "${it.first}: ${it.second}" }
+            val text = buildString {
+                append("TV-Guide ${playlist.name}: ${status.withGuide} von ${status.total} Sendern ($sources)\n")
+                append("Ohne Programm (${status.total - status.withGuide}):\n")
+                for ((group, entries) in status.missingInGroups.groupBy({ it.first }, { it.second })) {
+                    append("\n[${group.ifEmpty { "Ohne Gruppe" }}] (${entries.size})\n")
+                    entries.forEach { append(it).append('\n') }
+                }
+            }
+            "<h3>${esc(playlist.name)}: ${status.withGuide} von ${status.total} Sendern mit Programm</h3>" +
+                "<textarea readonly rows=14>${esc(text)}</textarea>"
+        }
+        if (parts.isEmpty()) return ""
+        return "<h2>TV-Guide: Sender ohne Programm</h2><p>Alles markieren, kopieren und an den Support schicken, " +
+            "dann lässt sich die Zuordnung gezielt verbessern. Ausgeblendete Gruppen zählen nicht mit.</p>" + parts.joinToString("")
+    }
+
     private fun respond(client: Socket, code: Int, body: String) {
         val html = """<!doctype html><html lang=de><head><meta charset=utf-8>
             <meta name=viewport content="width=device-width,initial-scale=1"><title>DnA-TV einrichten</title>
@@ -215,6 +236,7 @@ class PhoneSetupServer(private val container: AppContainer) {
             h1{color:#8fb4ff}h2{font-size:1.05em;margin-top:28px}p{color:#aab0bd;line-height:1.45}a{color:#8fb4ff}
             label{display:block;margin:10px 0;color:#c8ccd6}input{display:block;width:100%;box-sizing:border-box;margin-top:4px;padding:12px;
             border-radius:8px;border:1px solid #333a48;background:#171a22;color:#fff;font-size:16px}
+            textarea{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #333a48;background:#171a22;color:#fff;font-size:13px}
             button{margin:24px 0 40px;width:100%;padding:14px;border:0;border-radius:10px;background:#4f7cff;color:#fff;font-size:17px}
             .ok{color:#5fd38d}.no{color:#ff8a7a}ul{padding-left:18px;line-height:1.6}</style></head><body>$body</body></html>"""
         val bytes = html.toByteArray(Charsets.UTF_8)

@@ -1,5 +1,7 @@
 package de.ayutv.ui.components
 
+import de.ayutv.data.parse.headlineWithBadge
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -134,6 +136,20 @@ fun ChannelLogo(url: String?, name: String, modifier: Modifier = Modifier) {
     }
 }
 
+/** Bild zur Sendung aus dem EPG (16:9), oder nichts, wenn keins da ist. */
+@Composable
+fun ProgrammeImage(url: String?, modifier: Modifier = Modifier) {
+    if (url.isNullOrBlank()) return
+    val context = LocalPlatformContext.current
+    val request = remember(url) { ImageRequest.Builder(context).data(url).size(480, 270).memoryCacheKey(url).build() }
+    AsyncImage(
+        model = request,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).background(AyuColors.SurfaceRaised),
+    )
+}
+
 /** Sender-Kachel für horizontale Reihen (Startseite, Empfehlungen). */
 @Composable
 fun ChannelCard(
@@ -162,7 +178,7 @@ fun ChannelCard(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                now?.title?.ifEmpty { null } ?: "Keine Programminfo",
+                now?.headlineWithBadge()?.ifEmpty { null } ?: "Keine Programminfo",
                 style = MaterialTheme.typography.bodySmall,
                 color = AyuColors.TextSecondary,
                 maxLines = 1,

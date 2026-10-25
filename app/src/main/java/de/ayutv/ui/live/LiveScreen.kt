@@ -1,5 +1,9 @@
 package de.ayutv.ui.live
 
+import androidx.compose.runtime.produceState
+import de.ayutv.ui.components.ProgrammeImage
+import de.ayutv.data.parse.headlineWithBadge
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -65,6 +69,8 @@ private const val NOW_PAGE = 30
 @Composable
 fun LiveScreen() {
     val content = LocalContainer.current.content
+    val appSettings by LocalContainer.current.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+    val merge = appSettings?.mergeVariants != false
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -78,7 +84,12 @@ fun LiveScreen() {
         if (selectedGroup == FAVORITES_GROUP) content.favoriteChannels else content.channelsIn(selectedGroup)
     }
     // null = lädt noch (dann kein „Keine Sender“-Aufblitzen), leer = wirklich keine.
-    val loaded by channelsFlow.collectAsStateWithLifecycle(null)
+    val raw by channelsFlow.collectAsStateWithLifecycle(null)
+    // Gleiche Sender in mehreren Qualitäten (SD/HD/4K/RAW/Backup) als ein Eintrag; Favoriten bleiben, wie sie sind.
+    val loaded by produceState<List<ChannelEntity>?>(null, raw, merge, selectedGroup) {
+        val list = raw
+        value = if (list == null) null else if (merge && selectedGroup != FAVORITES_GROUP) content.mergeVariants(list) else list
+    }
     val channels = loaded.orEmpty()
     val favoriteSet = remember(favoriteKeys) { favoriteKeys.toHashSet() }
     val listState = rememberLazyListState()
@@ -216,7 +227,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
                 fontSize = 13.sp,
             )
             Text(
-                p.title,
+                p.headlineWithBadge(),
                 style = if (index == 0) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -224,7 +235,11 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
             if (index == 0) {
                 Spacer(Modifier.height(4.dp))
                 ProgressLine(p.progress())
-                p.description?.takeIf { it.isNotBlank() }?.let {
+                if (!p.icon.isNullOrBlank()) {
+                    Spacer(Modifier.height(8.dp))
+                    ProgrammeImage(p.icon, Modifier.width(242.dp).height(136.dp))
+                }
+                de.ayutv.data.parse.ProgrammeText.description(p.description)?.let {
                     Spacer(Modifier.height(6.dp))
                     Text(it, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 5, overflow = TextOverflow.Ellipsis)
                 }

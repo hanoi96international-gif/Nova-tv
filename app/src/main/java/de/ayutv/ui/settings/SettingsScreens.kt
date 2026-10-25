@@ -84,7 +84,7 @@ import java.util.Date
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit) {
+fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit, onChooseCountries: () -> Unit = {}) {
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
     val playlists by container.playlists.playlists.collectAsStateWithLifecycle(emptyList())
@@ -185,6 +185,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             OutlinedButton(onClick = { container.scope.launch { container.playlists.syncAll(force = true) } }) {
                                 Text("Alles aktualisieren")
                             }
+                            OutlinedButton(onClick = onChooseCountries) { Text("Länder auswählen") }
                         }
                     }
 
@@ -374,13 +375,33 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
-                            "TV-Guide aus dem Internet ergänzen",
-                            onOff(settings.internetGuide),
-                            "Für Sender, die beim Anbieter kein Programm haben (oft Sky, DAZN): freies EPG für Deutschland, " +
-                                "Österreich und die Schweiz (epgshare01), höchstens einmal am Tag geladen. Der Guide wird danach neu geladen.",
+                            "Doppelte Sender zusammenfassen",
+                            onOff(settings.mergeVariants),
+                            "Gleiche Sender in SD, HD, 4K, RAW oder als Backup erscheinen einmal, in der besten Fassung. " +
+                                "Fällt sie aus, schaltet der Player automatisch auf die nächste.",
+                        ) { update { it.copy(mergeVariants = !it.mergeVariants) } }
+                    }
+                    item {
+                        SettingRow(
+                            "TV-Guide aus dem Internet",
+                            when {
+                                !settings.internetGuide -> "Aus"
+                                settings.preferInternetGuide -> "Bevorzugen"
+                                else -> "Ergänzen"
+                            },
+                            "Freies EPG für Deutschland, Österreich und die Schweiz (epgshare01), höchstens einmal am Tag geladen. " +
+                                "Ergänzen: nur für Sender, die beim Anbieter fehlen (oft Sky, DAZN). Bevorzugen: zuerst aus dem Internet " +
+                                "(meist genauer, z. B. mit Fußball-Paarungen), der Anbieter füllt den Rest. Der Guide wird danach neu geladen.",
                         ) {
                             scope.launch {
-                                container.settings.update { it.copy(internetGuide = !it.internetGuide) }
+                                // Ergänzen → Bevorzugen → Aus → Ergänzen
+                                container.settings.update {
+                                    when {
+                                        !it.internetGuide -> it.copy(internetGuide = true, preferInternetGuide = false)
+                                        it.preferInternetGuide -> it.copy(internetGuide = false, preferInternetGuide = false)
+                                        else -> it.copy(preferInternetGuide = true)
+                                    }
+                                }
                                 epgReloadJob?.cancel()
                                 epgReloadJob = container.scope.launch {
                                     delay(2_500)
@@ -536,7 +557,7 @@ private fun PlaylistRow(
                 )
                 if (g.missing.isNotEmpty()) {
                     Text(
-                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " …" else ""),
+                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " … (ganze Liste: Einrichtung per Handy)" else ""),
                         color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 2,
                     )
                 }

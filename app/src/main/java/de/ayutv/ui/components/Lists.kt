@@ -1,5 +1,7 @@
 package de.ayutv.ui.components
 
+import de.ayutv.data.parse.headlineWithBadge
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -89,7 +91,7 @@ fun ChannelListItem(
                     if (favorite) Text("  ★", color = AyuColors.Accent, fontSize = 14.sp)
                 }
                 if (now != null) {
-                    Text(now.title, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(now.headlineWithBadge(), color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
                     ProgressLine(now.progress())
                 }

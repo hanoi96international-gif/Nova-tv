@@ -132,7 +132,7 @@ class DeviceTourTest {
             assertTrue("EPG-Abgleich auf Android: ${key.strong}", key.strong == "skysportbundesliga1" && key.country == "de")
         }
         // Die Abschnitte unten prüfen den TV-Guide des Testservers; das freie EPG aus dem Internet erst am Ende.
-        runBlocking { container.settings.update { it.copy(internetGuide = false) } }
+        runBlocking { container.settings.update { it.copy(internetGuide = false, countryChoiceDone = true) } }
 
         // 1. Playlist + EPG importieren
         val started = System.currentTimeMillis()
@@ -167,6 +167,29 @@ class DeviceTourTest {
                 "sync=${container.playlists.state.value}"
         )
 
+        // 1c. Sport: ein Bundesliga-Spiel im TV-Guide erscheint in der Sport-Übersicht, Verein folgen setzt die Erinnerung.
+        section("sport") {
+            val channel = channels.firstOrNull { it.epgId == "hd.test" } ?: error("Testsender fehlt")
+            val now = System.currentTimeMillis()
+            runBlocking {
+                container.db.programmes().insertAll(
+                    listOf(
+                        de.ayutv.data.db.ProgrammeEntity(
+                            playlistId = channel.playlistId, channelEpgId = "hd.test", start = now + 3_600_000, stop = now + 10_800_000,
+                            title = "Fußball: Bundesliga", description = null, category = "Fußball",
+                            subtitle = "Borussia Dortmund – Eintracht Frankfurt, 7. Spieltag", icon = null, flags = 0,
+                        )
+                    )
+                )
+            }
+            val events = runBlocking { container.content.sportEvents(hours = 6) }
+            val reminders = runBlocking { container.content.teamReminders(setOf("Eintracht Frankfurt")) }
+            val variants = runBlocking { container.content.variantsOf(channel) }
+            log("sport: events=${events.map { de.ayutv.data.parse.ProgrammeText.headline(it.programme.title, it.programme.subtitle) }} reminders=${reminders.map { it.title }} variants=${variants.map { it.name }}")
+            assertTrue("Spiel fehlt in der Sport-Übersicht", events.any { it.programme.subtitle?.contains("Dortmund") == true })
+            assertTrue("Keine Erinnerung für den Verein", reminders.any { it.channelKey == channel.key })
+        }
+
         // 2. Oberfläche per Fernbedienung durchgehen
         section("ui") { ActivityScenario.launch(MainActivity::class.java).use {
             Thread.sleep(4_000)
@@ -178,6 +201,8 @@ class DeviceTourTest {
             key(KeyEvent.KEYCODE_DPAD_LEFT, 3)
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
             shot("04_guide")
+            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
+            shot("04b_sport")
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
             shot("05_movies")
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_000)

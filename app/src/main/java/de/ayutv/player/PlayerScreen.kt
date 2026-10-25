@@ -2,6 +2,8 @@
 
 package de.ayutv.player
 
+import de.ayutv.data.parse.headlineWithBadge
+import de.ayutv.data.parse.headline
 import android.graphics.Color as AndroidColor
 import android.view.View
 import android.view.ViewGroup
@@ -257,17 +259,17 @@ private fun LiveInfoBar(activity: PlayerActivity) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${formatTime(now.start)} – ${formatTime(now.stop)}", color = AyuColors.TextSecondary, fontSize = 14.sp)
                 Spacer(Modifier.width(12.dp))
-                Text(now.title, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(now.headlineWithBadge(), color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(6.dp))
             ProgressLine(now.progress())
-            now.description?.takeIf { it.isNotBlank() }?.let {
+            de.ayutv.data.parse.ProgrammeText.description(now.description)?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (next != null) {
                 Spacer(Modifier.height(8.dp))
-                Text("Danach ${formatTime(next.start)}  ${next.title}", color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 1)
+                Text("Danach ${formatTime(next.start)}  ${next.headline()}", color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 1)
             }
         } else {
             Text("Keine Programminformationen", color = AyuColors.TextSecondary)

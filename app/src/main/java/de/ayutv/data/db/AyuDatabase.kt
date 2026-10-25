@@ -35,7 +35,7 @@ abstract class AyuDatabase : RoomDatabase() {
     abstract fun lockedGroups(): LockedGroupDao
 
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
 
         /** 1 → 2: Playlists ein-/ausschaltbar. Views neu anlegen, damit sie ausgeschaltete Playlists ausblenden. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -66,6 +66,15 @@ abstract class AyuDatabase : RoomDatabase() {
             }
         }
 
+        /** 3 → 4: Untertitel der Sendungen (Paarung beim Fußball, Folgentitel bei Serien), Bild, Live/Wiederholung. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `programmes` ADD COLUMN `subtitle` TEXT")
+                db.execSQL("ALTER TABLE `programmes` ADD COLUMN `icon` TEXT")
+                db.execSQL("ALTER TABLE `programmes` ADD COLUMN `flags` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         private fun recreateViews(db: SupportSQLiteDatabase) {
             listOf(
                 "visible_channels" to VISIBLE_CHANNELS_SQL,
@@ -82,7 +91,7 @@ abstract class AyuDatabase : RoomDatabase() {
                 // WAL erzwingen: Die Oberfläche kann lesen, während im Hintergrund EPG geschrieben wird.
                 // Fire TV Sticks melden sich oft als "low RAM", dann würde Room sonst TRUNCATE wählen.
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 // Nur für unbekannte Versionssprünge: Playlists sollen Updates sonst immer überstehen.
                 .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()

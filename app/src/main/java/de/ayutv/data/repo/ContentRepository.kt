@@ -12,7 +12,15 @@ import de.ayutv.data.db.PlaylistType
 import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
+import de.ayutv.data.parse.ChannelVariants
+import de.ayutv.data.parse.Countries
+import kotlinx.coroutines.flow.first
+import de.ayutv.data.parse.ProgrammeText
+import de.ayutv.data.parse.Teams
 import de.ayutv.data.parse.XtreamEpisode
+import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.isSportEvent
+import de.ayutv.data.reminders.Reminder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -53,11 +61,59 @@ class ContentRepository(
     suspend fun channel(key: String) = db.channels().byKey(key)
     suspend fun channelByNumber(number: Int) = db.channels().byNumber(number)
 
-    /** Liste, durch die im Player mit hoch/runter gezappt wird. */
-    suspend fun zapList(group: String?, favoritesOnly: Boolean): List<ChannelEntity> = when {
-        favoritesOnly -> db.channels().favorites()
-        group != null -> db.channels().inGroup(group)
-        else -> db.channels().all()
+    /** Liste, durch die im Player mit hoch/runter gezappt wird; mit [merge] jeder Sender nur in seiner besten Fassung. */
+    suspend fun zapList(group: String?, favoritesOnly: Boolean, merge: Boolean = false): List<ChannelEntity> {
+        val list = when {
+            favoritesOnly -> db.channels().favorites()
+            group != null -> db.channels().inGroup(group)
+            else -> db.channels().all()
+        }
+        return if (merge && !favoritesOnly) mergeVariants(list) else list
+    }
+
+    /** Jeder Sender einmal, in seiner besten Fassung (SD/HD/4K/RAW/Backup zusammengefasst). */
+    suspend fun mergeVariants(channels: List<ChannelEntity>): List<ChannelEntity> = withContext(Dispatchers.Default) {
+        ChannelVariants.merge(channels, { it.name }, { it.playlistId })
+    }
+
+    /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
+    suspend fun variantsOf(channel: ChannelEntity): List<ChannelEntity> = withContext(Dispatchers.Default) {
+        if (ChannelVariants.key(channel.name) == null) return@withContext emptyList()
+        ChannelVariants.alternatives(channel, db.channels().visibleInPlaylist(channel.playlistId), { it.name }, { it.playlistId }) { a, b -> a.key == b.key }
+    }
+
+    /** Ein Spiel oder eine Live-Übertragung mit dem Sender, auf dem es läuft. */
+    data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val otherChannels: Int)
+
+    /**
+     * Sport von jetzt bis [hours] Stunden: nur Spiele und Live-Übertragungen (keine Magazine, Wiederholungen).
+     * Läuft dasselbe Spiel auf mehreren Sendern, erscheint es einmal (bevorzugt auf einem Favoriten).
+     */
+    suspend fun sportEvents(hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> {
+        val programmes = db.programmes().sportBetween(now, now + hours * HOUR, 4_000).filter { it.isSportEvent() }
+        if (programmes.isEmpty()) return emptyList()
+        val channels = programmes.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
+            .flatMap { db.channels().byEpgIds(it) }.associateBy { it.epgId }
+        val favorites = db.favorites().keys().toHashSet()
+        return withContext(Dispatchers.Default) {
+            programmes.mapNotNull { p -> channels[p.channelEpgId]?.let { p to it } }
+                .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to p.headline().lowercase() }
+                .values.map { same ->
+                    val (p, c) = same.minWith(compareBy({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) }))
+                    SportEvent(p, c, same.size - 1)
+                }
+                .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
+        }
+    }
+
+    /** Spiele der Vereine in [teams] in den nächsten [days] Tagen, als Erinnerungen. */
+    suspend fun teamReminders(teams: Set<String>, days: Int = 7): List<Reminder> {
+        if (teams.isEmpty()) return emptyList()
+        return sportEvents(hours = days * 24).filter { e ->
+            val p = e.programme
+            val pairing = ProgrammeText.pairing(p.title, p.subtitle) ?: return@filter false
+            p.start > System.currentTimeMillis() && teams.any { Teams.plays(it, pairing, p.title + " " + p.subtitle.orEmpty()) }
+        }.map { Reminder(it.channel.key, it.channel.name, it.programme.headline(), it.programme.start) }
     }
 
     suspend fun toggleFavorite(key: String): Boolean {
@@ -196,6 +252,33 @@ class ContentRepository(
         }
     }
 
+    /** Ein Land mit seinen Gruppen (Live, Filme, Serien) über alle Playlists. [visible]: mindestens eine Gruppe sichtbar. */
+    data class CountryChoice(val code: String, val label: String, val groups: Int, val items: Int, val visible: Boolean)
+
+    private suspend fun allGroups(): List<Triple<Long, GroupKind, GroupToggle>> = db.playlists().all().filter { it.enabled }.flatMap { playlist ->
+        GroupKind.entries.flatMap { kind -> groupToggles(playlist.id, kind).first().map { Triple(playlist.id, kind, it) } }
+    }
+
+    /** Länder nach Gruppennamen („DE | Sport“, „UK: News“); Gruppen ohne Länderkennung als eigener Eintrag (code ""). */
+    suspend fun countryChoices(): List<CountryChoice> = withContext(Dispatchers.Default) {
+        allGroups().groupBy { (_, _, g) -> Countries.of(g.name) }.map { (country, groups) ->
+            CountryChoice(
+                code = country?.code.orEmpty(),
+                label = country?.label ?: "Ohne Länderkennung",
+                groups = groups.size,
+                items = groups.sumOf { it.third.count },
+                visible = groups.any { !it.third.hidden },
+            )
+        }.sortedWith(compareBy({ it.code.isEmpty() }, { it.code !in PREFERRED }, { -it.items }))
+    }
+
+    /** Alle Gruppen eines Landes ([code], "" = ohne Länderkennung) ein- oder ausblenden. */
+    suspend fun setCountryVisible(code: String, visible: Boolean) {
+        allGroups().filter { (_, _, g) -> Countries.of(g.name)?.code.orEmpty() == code }
+            .groupBy({ it.first to it.second }, { it.third.name })
+            .forEach { (key, names) -> setGroupsHidden(key.first, key.second, names, hidden = !visible) }
+    }
+
     /** Schnellaktion aus den Listen: Gruppe in allen Playlists ausblenden, die sie enthalten. */
     suspend fun hideGroupEverywhere(kind: GroupKind, name: String) = when (kind) {
         GroupKind.LIVE -> db.hiddenGroups().hideLiveEverywhere(name)
@@ -211,6 +294,8 @@ class ContentRepository(
     }
 
     private companion object {
+        val PREFERRED = setOf("DE", "AT", "CH")
+        const val HOUR = 3_600_000L
         const val SQL_CHUNK = 500
         const val SEARCH_MAX = 20_000
     }

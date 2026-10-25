@@ -1,5 +1,6 @@
 package de.ayutv.ui.search
 
+import de.ayutv.data.parse.headline
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -211,7 +212,7 @@ private fun ProgrammeResult(programme: ProgrammeEntity, channelName: String?, on
                 color = if (live) AyuColors.Live else AyuColors.TextSecondary,
                 fontSize = 13.sp,
             )
-            Text(programme.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(programme.headline(), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(channelName ?: programme.channelEpgId, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1)
         }
     }

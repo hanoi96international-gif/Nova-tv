@@ -146,4 +146,18 @@ class EpgMatcherTest {
         assertEquals("skysportbundesliga1", key.strong)
         assertEquals("de", key.country)
     }
+
+    @Test
+    fun providerLabelsInFront() {
+        val m = EpgMatcher().apply {
+            addGuideChannel("3sat.de", listOf("3sat"))
+            addGuideChannel("ZDF.de", listOf("ZDF"))
+            addGuideChannel("DAZN.1.de", listOf("DAZN 1"))
+        }
+        assertEquals("3sat.de", m.match(null, "PRIME: 3SAT ᴿᴬᵂ"))
+        assertEquals("ZDF.de", m.match(null, "VIP | DE | ZDF HD"))
+        assertEquals("ZDF.de", m.match(null, "PRIME: DE: ZDF FHD"))
+        assertEquals("DAZN.1.de", m.match(null, "SPORT+ : DAZN 1 HD"))
+        assertNull(m.match(null, "PRIME: ARTE"))
+    }
 }

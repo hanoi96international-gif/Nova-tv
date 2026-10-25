@@ -51,6 +51,14 @@ class EpgMatcher(private val country: String = "de") {
         byId?.let { k -> pick(weak[k.weak], wanted)?.let { return it } }
         // Regionalfenster ("MDR Sachsen", "WDR Köln"): sonst das Hauptprogramm der Anstalt.
         byName.region?.let { pick(strong[it], wanted)?.let { id -> return id } }
+        // Eigene Vorsätze des Anbieters ("PRIME: 3SAT", "VIP | ZDF", "Sport+ : DAZN 1"): ohne sie noch einmal.
+        val bare = name.replace(ANY_PREFIX, "")
+        if (bare != name && bare.isNotBlank()) {
+            val k = analyse(bare, isId = false)
+            pick(strong[k.strong], wanted)?.let { return it }
+            pick(weak[k.weak], wanted)?.let { return it }
+            k.region?.let { pick(strong[it], wanted)?.let { id -> return id } }
+        }
         return null
     }
 
@@ -121,6 +129,7 @@ class EpgMatcher(private val country: String = "de") {
         private val TOKENS = Regex("""[^a-z0-9]+""")
         private val GLUED_NOISE = Regex("""(?:hd|fhd|uhd|4k|8k|hevc|h265)$""")
         private val MARKS = Regex("""\p{M}+""")
+        private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
 
         /** Name oder Kennung auf ihren Kern bringen (öffentlich für Tests und die Suche nach Sendern). */
         fun analyse(raw: String, isId: Boolean): Key {

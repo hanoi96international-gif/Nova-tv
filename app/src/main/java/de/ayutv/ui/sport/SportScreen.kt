@@ -1,0 +1,274 @@
+package de.ayutv.ui.sport
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
+import androidx.tv.material3.Text
+import de.ayutv.data.parse.ProgrammeText
+import de.ayutv.data.parse.Teams
+import de.ayutv.data.parse.headline
+import de.ayutv.data.repo.ContentRepository.SportEvent
+import de.ayutv.player.PlayerActivity
+import de.ayutv.ui.LocalContainer
+import de.ayutv.ui.components.ChannelLogo
+import de.ayutv.ui.components.EmptyHint
+import de.ayutv.ui.components.NoticeBar
+import de.ayutv.ui.components.formatTime
+import de.ayutv.ui.components.rememberMinuteTicker
+import de.ayutv.ui.theme.AyuColors
+import de.ayutv.ui.theme.AyuFocus
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Calendar
+
+private enum class SportFilter(val label: String) { ALL("Alles"), FOOTBALL("Fußball"), TEAMS("Meine Vereine") }
+
+/**
+ * Sport auf einen Blick: was jetzt live läuft und was heute und morgen kommt, über alle Sender.
+ * OK schaltet um, OK halten folgt einem Verein (Erinnerung an alle seine Spiele).
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun SportScreen() {
+    val container = LocalContainer.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val settings by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+    val minute by rememberMinuteTicker()
+    var events by remember { mutableStateOf<List<SportEvent>?>(null) }
+    var filter by rememberSaveable { mutableStateOf(SportFilter.ALL) }
+    var choosing by remember { mutableStateOf<SportEvent?>(null) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    val teams = settings?.followedTeams.orEmpty()
+
+    LaunchedEffect(minute) { events = container.content.sportEvents(hours = 48) }
+    LaunchedEffect(notice) {
+        if (notice != null) {
+            delay(5_000)
+            notice = null
+        }
+    }
+
+    fun follow(team: String) {
+        scope.launch {
+            container.settings.update { it.copy(followedTeams = it.followedTeams + team) }
+            val added = container.reminders.ensure(container.content.teamReminders(setOf(team)))
+            notice = "Du folgst $team. " + if (added.isEmpty()) "Sobald ein Spiel im TV-Guide steht, kommt eine Erinnerung." else "${added.size} Spiel(e) vorgemerkt."
+        }
+    }
+    fun unfollow(team: String) {
+        scope.launch {
+            container.settings.update { it.copy(followedTeams = it.followedTeams - team) }
+            notice = "$team: keine neuen Erinnerungen mehr (gesetzte bleiben im TV-Guide sichtbar)"
+        }
+    }
+
+    val now = minute
+    val shown = events.orEmpty().filter { e ->
+        val p = e.programme
+        when (filter) {
+            SportFilter.ALL -> true
+            SportFilter.FOOTBALL -> Regex("(?i)fu(ß|ss)ball|bundesliga|liga|league|pokal|\\bBL\\b").containsMatchIn(p.title + " " + p.category.orEmpty())
+            SportFilter.TEAMS -> ProgrammeText.pairing(p.title, p.subtitle)?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
+        }
+    }
+    val live = shown.filter { it.programme.start <= now && it.programme.stop > now }
+    val later = shown.filter { it.programme.start > now }
+    val tomorrow = Calendar.getInstance().apply {
+        timeInMillis = now
+        add(Calendar.DAY_OF_YEAR, 1)
+        set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    Box(Modifier.fillMaxSize()) {
+        // Solange der Dialog offen ist, steht nur er auf dem Bildschirm (der Fokus kann nicht in die Liste fallen).
+        if (choosing == null) Column(Modifier.fillMaxSize().padding(start = 32.dp, top = 24.dp, end = 32.dp)) {
+            Text("Sport", style = MaterialTheme.typography.headlineMedium)
+            Text(
+                "Spiele und Live-Übertragungen aller Sender · OK: einschalten · OK halten: Verein folgen",
+                color = AyuColors.TextSecondary, fontSize = 14.sp,
+            )
+            Spacer(Modifier.height(12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.focusRestorer()) {
+                items(SportFilter.entries) { f -> Pill(f.label, selected = f == filter) { filter = f } }
+                items(teams.sorted()) { team -> Pill("★ $team  ✕", selected = false) { unfollow(team) } }
+            }
+            Spacer(Modifier.height(12.dp))
+            when {
+                events == null -> Unit
+                shown.isEmpty() -> EmptyHint(
+                    if (filter == SportFilter.TEAMS && teams.isEmpty()) "Noch keinem Verein gefolgt" else "Gerade keine Spiele im TV-Guide",
+                    if (filter == SportFilter.TEAMS && teams.isEmpty()) "Auf einem Spiel OK gedrückt halten und einen der beiden Vereine wählen."
+                    else "Sport erscheint hier, sobald der TV-Guide ihn kennt (Einstellungen → Anzeige → TV-Guide aus dem Internet).",
+                )
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize().focusRestorer(),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    fun section(title: String, list: List<SportEvent>) {
+                        if (list.isEmpty()) return
+                        item(key = "h-$title") {
+                            Text(title, style = MaterialTheme.typography.titleMedium, color = AyuColors.Accent, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                        }
+                        items(list, key = { "${it.programme.id}-${it.channel.key}" }) { e ->
+                            EventRow(
+                                e, now,
+                                onClick = { PlayerActivity.startLive(context, e.channel.key, e.channel.groupTitle) },
+                                onLongClick = { choosing = e },
+                            )
+                        }
+                    }
+                    section("● Jetzt live", live)
+                    section("Heute", later.filter { it.programme.start < tomorrow })
+                    section("Morgen", later.filter { it.programme.start >= tomorrow && it.programme.start < tomorrow + DAY })
+                    section("Später", later.filter { it.programme.start >= tomorrow + DAY })
+                }
+            }
+        }
+        choosing?.let { e ->
+            val pairing = ProgrammeText.pairing(e.programme.title, e.programme.subtitle)
+            val sides = pairing?.let { Teams.ofPairing(it) }.orEmpty()
+            FollowDialog(
+                title = e.programme.headline(),
+                teams = sides,
+                followed = teams,
+                onPick = { team ->
+                    choosing = null
+                    if (team in teams) unfollow(team) else follow(team)
+                },
+                onDismiss = { choosing = null },
+            )
+        }
+        notice?.let { NoticeBar(it) }
+    }
+}
+
+private const val DAY = 24 * 3_600_000L
+
+@Composable
+private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val p = e.programme
+    val running = p.start <= now && p.stop > now
+    Surface(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.AccentSoft),
+        border = AyuFocus.border,
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.width(110.dp)) {
+                Text(
+                    if (running) "● LIVE" else formatTime(p.start),
+                    color = if (running) AyuColors.Live else AyuColors.TextPrimary,
+                    fontSize = 16.sp,
+                )
+                Text("bis ${formatTime(p.stop)}", color = AyuColors.TextSecondary, fontSize = 12.sp)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(p.headline(), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    e.channel.name + if (e.otherChannels > 0) "  ·  auch auf ${e.otherChannels} weiteren" else "",
+                    color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            ChannelLogo(e.channel.logo, e.channel.name, Modifier.size(width = 64.dp, height = 40.dp))
+        }
+    }
+}
+
+@Composable
+private fun Pill(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(20.dp)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) AyuColors.AccentSoft else AyuColors.Surface,
+            focusedContainerColor = AyuColors.Accent,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
+    ) {
+        Text(label, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Color.White, fontSize = 15.sp, maxLines = 1)
+    }
+}
+
+/** Welchem der beiden Vereine folgen? (Oder nicht mehr folgen, wenn schon gefolgt.) */
+@Composable
+private fun FollowDialog(title: String, teams: List<String>, followed: Set<String>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    val first = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        repeat(5) {
+            if (runCatching { first.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Surface(
+            modifier = Modifier.width(560.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = SurfaceDefaults.colors(containerColor = AyuColors.SurfaceRaised),
+        ) {
+            Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Verein folgen", style = MaterialTheme.typography.titleLarge)
+                Text(title, color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "Vor jedem Spiel des Vereins kommt eine Erinnerung, auf welchem Sender es läuft.",
+                    color = AyuColors.TextSecondary, fontSize = 13.sp,
+                )
+                if (teams.isEmpty()) Text("Hier ist keine Paarung erkennbar.", fontSize = 15.sp)
+                teams.forEachIndexed { index, team ->
+                    Pill(
+                        if (team in followed) "★ $team – nicht mehr folgen" else "☆ $team folgen",
+                        selected = false,
+                        modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                        onClick = { onPick(team) },
+                    )
+                }
+                Pill("Abbrechen", selected = false, modifier = if (teams.isEmpty()) Modifier.focusRequester(first) else Modifier, onClick = onDismiss)
+            }
+        }
+    }
+}

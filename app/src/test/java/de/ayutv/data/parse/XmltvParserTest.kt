@@ -41,6 +41,8 @@ class XmltvParserTest {
         assertEquals(15 * 60_000L, first.stop - first.start)
         assertEquals("", result[1].title)
         assertNull(result[1].description)
+        assertEquals("ohne Titel", result[1].subtitle)
+        assertNull(first.subtitle)
         assertEquals(listOf("Das Erste HD"), parser.channels["daserste.de"])
     }
 

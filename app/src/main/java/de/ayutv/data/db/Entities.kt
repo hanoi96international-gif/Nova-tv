@@ -52,7 +52,7 @@ data class ChannelEntity(
 )
 
 /** Was der EPG-Abgleich von einem Sender braucht (kleiner als die ganze Zeile). */
-data class EpgChannel(val id: Long, val name: String, val epgId: String?)
+data class EpgChannel(val id: Long, val name: String, val epgId: String?, val groupTitle: String = "")
 
 @Entity(
     tableName = "programmes",
@@ -67,7 +67,19 @@ data class ProgrammeEntity(
     val title: String,
     val description: String?,
     val category: String?,
+    /** XMLTV-Untertitel: bei Fußball die Paarung, bei Serien der Folgentitel. */
+    val subtitle: String? = null,
+    /** Bild zur Sendung (XMLTV icon). */
+    val icon: String? = null,
+    /** [ProgrammeFlags]: Wiederholung, live, Erstausstrahlung. */
+    @ColumnInfo(defaultValue = "0") val flags: Int = 0,
 )
+
+object ProgrammeFlags {
+    const val REPEAT = 1
+    const val LIVE = 2
+    const val PREMIERE = 4
+}
 
 @Entity(
     tableName = "vod",

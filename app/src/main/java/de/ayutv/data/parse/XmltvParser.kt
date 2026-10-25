@@ -10,6 +10,10 @@ data class XmltvProgramme(
     val title: String,
     val description: String?,
     val category: String?,
+    val subtitle: String? = null,
+    val icon: String? = null,
+    /** de.ayutv.data.db.ProgrammeFlags */
+    val flags: Int = 0,
 )
 
 /**
@@ -17,6 +21,12 @@ data class XmltvProgramme(
  * Zeitraum außerhalb des Fensters), damit nur das in die Datenbank kommt, was angezeigt wird.
  */
 class XmltvParser(private val parser: XmlPullParser) {
+    private companion object {
+        // Gleiche Werte wie de.ayutv.data.db.ProgrammeFlags (der Parser bleibt ohne Datenbank-Abhängigkeit).
+        const val REPEAT = 1
+        const val LIVE = 2
+        const val PREMIERE = 4
+    }
 
     /** Sender des EPGs (Kennung → Anzeigenamen), um Sender der Playlist zuzuordnen ([EpgMatcher]). */
     val channels = LinkedHashMap<String, MutableList<String>>()
@@ -68,6 +78,9 @@ class XmltvParser(private val parser: XmlPullParser) {
         }
 
         var title: String? = null
+        var subtitle: String? = null
+        var icon: String? = null
+        var flags = 0
         var description: String? = null
         var category: String? = null
         val depth = parser.depth
@@ -78,13 +91,26 @@ class XmltvParser(private val parser: XmlPullParser) {
             if (event == XmlPullParser.START_TAG) {
                 when (parser.name) {
                     "title" -> if (title == null) title = readText()
+                    "sub-title" -> if (subtitle == null) subtitle = readText()
+                    "icon" -> {
+                        if (icon == null) icon = parser.getAttributeValue(null, "src")?.trim()?.takeIf { it.startsWith("http") }
+                        skipElement()
+                    }
+                    "previously-shown" -> { flags = flags or REPEAT; skipElement() }
+                    "live" -> { flags = flags or LIVE; skipElement() }
+                    "premiere", "new" -> { flags = flags or PREMIERE; skipElement() }
                     "desc" -> if (description == null) description = readText()
                     "category" -> if (category == null) category = readText()
                     else -> skipElement()
                 }
             }
         }
-        return XmltvProgramme(channel, start, stop, title?.trim().orEmpty(), description?.trim(), category?.trim())
+        return XmltvProgramme(
+            channel, start, stop, title?.trim().orEmpty(), description?.trim(), category?.trim(),
+            subtitle?.trim()?.takeIf { it.isNotEmpty() },
+            icon,
+            flags,
+        )
     }
 
     /** Liest den Text eines Elements und steht danach auf dessen END_TAG. */

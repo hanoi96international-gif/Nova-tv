@@ -42,6 +42,14 @@ class AppContainer(context: Context) {
     val reminders = Reminders(context)
     val parental = ParentalControl(context, db)
 
+    /** Spiele der gefolgten Vereine als Erinnerungen vormerken (nach jedem TV-Guide-Update). */
+    suspend fun refreshTeamReminders() {
+        runCatching {
+            val teams = settings.current().followedTeams
+            if (teams.isNotEmpty()) reminders.ensure(content.teamReminders(teams))
+        }.onFailure { android.util.Log.w("AyuTeams", "Vereins-Erinnerungen", it) }
+    }
+
     init {
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)
         Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)

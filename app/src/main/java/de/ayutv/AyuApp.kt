@@ -38,6 +38,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         container.scope.launch {
             container.parental.applyLocks()
             container.playlists.syncAll()
+            container.refreshTeamReminders()
         }
         runCatching { SyncWorker.schedule(this) }
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.

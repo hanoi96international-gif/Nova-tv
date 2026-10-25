@@ -344,7 +344,7 @@ class PlaylistRepository(
                 val channels = db.channels().forEpg(playlist.id)
                 val visible = db.channels().visibleIds(playlist.id).toHashSet()
                 val shift = current.epgShiftHours * HOUR
-                withContext(importDispatcher) { importEpg(playlist, own, extra, channels, visible, shift) }
+                withContext(importDispatcher) { importEpg(playlist, own, extra, channels, visible, shift, current.internetGuide && current.preferInternetGuide) }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
@@ -355,7 +355,15 @@ class PlaylistRepository(
     }
 
     /** Wie gut der TV-Guide einer Playlist zu ihren Sendern passt (nach dem letzten Laden). */
-    data class EpgStatus(val withGuide: Int, val total: Int, val sources: List<Pair<String, Int>>, val missing: List<String>)
+    data class EpgStatus(
+        val withGuide: Int,
+        val total: Int,
+        val sources: List<Pair<String, Int>>,
+        /** Sender ohne Programm: Gruppe und Name. */
+        val missingInGroups: List<Pair<String, String>>,
+    ) {
+        val missing: List<String> get() = missingInGroups.map { it.second }.distinct()
+    }
 
     fun epgStatus(playlistId: Long): EpgStatus? = runCatching {
         val lines = File(statusDir, "epg-$playlistId.txt").readLines()
@@ -363,7 +371,7 @@ class PlaylistRepository(
         EpgStatus(
             withGuide, total,
             lines.filter { it.startsWith("S\t") }.map { it.split('\t').let { p -> p[1] to p[2].toInt() } },
-            lines.filter { it.startsWith("M\t") }.map { it.substring(2) },
+            lines.filter { it.startsWith("M\t") }.map { it.split('\t').let { p -> if (p.size >= 3) p[1] to p[2] else "" to p.last() } },
         )
     }.getOrNull()
 
@@ -380,13 +388,15 @@ class PlaylistRepository(
         channels: List<EpgChannel>,
         visible: Set<Long>,
         shift: Long,
+        preferExtra: Boolean = false,
     ) {
         val covered = HashSet<Long>()
         val taken = HashSet<String>()
         val counts = ArrayList<Pair<String, Int>>()
         var cleared = false
         var firstError: Exception? = null
-        val sources = own.map { it to false } + extra.map { it to true }
+        // Mit „Internet bevorzugen“ kommt das freie EPG zuerst, der Anbieter füllt nur noch auf.
+        val sources = if (preferExtra) extra.map { it to true } + own.map { it to false } else own.map { it to false } + extra.map { it to true }
         for ((index, entry) in sources.withIndex()) {
             val (url, isPublic) = entry
             val open = channels.filter { it.id !in covered }
@@ -419,8 +429,8 @@ class PlaylistRepository(
             }
         }
         if (!cleared) {
-            // Keine eigene Quelle und keine passende freie: kein Fehler, es gibt einfach keinen TV-Guide.
-            if (firstError == null && own.isEmpty()) return
+            // Nichts zu tun (keine Live-Sender, keine eigene Quelle, keine passende freie): kein Fehler.
+            if (firstError == null) return
             throw firstError ?: IOException("Kein TV-Guide geladen")
         }
         writeStatus(playlist.id, channels, visible, covered, counts)
@@ -428,13 +438,13 @@ class PlaylistRepository(
 
     private fun writeStatus(playlistId: Long, channels: List<EpgChannel>, visible: Set<Long>, covered: Set<Long>, counts: List<Pair<String, Int>>) {
         val shown = channels.filter { it.id in visible }
-        val missing = shown.filter { it.id !in covered }.map { it.name.trim() }.distinct()
+        val missing = shown.filter { it.id !in covered }.map { it.groupTitle.trim() to it.name.trim() }.distinct()
         runCatching {
             statusDir.mkdirs()
             File(statusDir, "epg-$playlistId.txt").writeText(buildString {
                 append("${shown.count { it.id in covered }}\t${shown.size}\n")
                 for ((label, count) in counts) append("S\t${label.replace('\t', ' ')}\t$count\n")
-                for (name in missing.take(MAX_MISSING_LISTED)) append("M\t${name.replace('\n', ' ')}\n")
+                for ((group, name) in missing.take(MAX_MISSING_LISTED)) append("M\t${group.clean()}\t${name.clean()}\n")
             })
         }
     }
@@ -512,6 +522,9 @@ class PlaylistRepository(
                         title = p.title,
                         description = p.description,
                         category = p.category,
+                        subtitle = p.subtitle,
+                        icon = p.icon,
+                        flags = p.flags,
                     )
                     channelsOf[storage]?.let(found::addAll)
                     used += storage
@@ -595,14 +608,15 @@ class PlaylistRepository(
         private const val TAG = "PlaylistRepository"
         private const val BATCH = 1000
         private const val HOUR = 3_600_000L
-        private const val EPG_DAYS = 4L
+        private const val EPG_DAYS = 7L
         private const val MAX_ARCHIVE_DAYS = 7
         private const val CONTENT_MAX_AGE = 12 * HOUR
         private const val EPG_MAX_AGE = 8 * HOUR
         private const val PUBLIC_MAX_AGE = 20 * HOUR
-        private const val MAX_MISSING_LISTED = 40
+        private const val MAX_MISSING_LISTED = 20_000
+        private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "2"
+        private const val EPG_MATCH_VERSION = "4"
         /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
         private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }
