@@ -104,7 +104,7 @@ class EpgMatcher(private val country: String = "de") {
             "nick" to "nickelodeon", "srfeins" to "srf1", "srfzwei" to "srf2", "anixeplus" to "anixeplus",
         )
 
-        private val BRACKETS = Regex("""\[[^\]]*]|\([^)]*\)|\{[^}]*}""")
+        private val BRACKETS = Regex("""\[[^\]]*\]|\([^)]*\)|\{[^}]*\}""")
         private val PLUS_SHIFT = Regex("""\+\s*(\d{1,2})\b""")
         private val HD_PLUS = Regex("""\bhd\s*\+""")
         private val LEADING_COUNTRY = Regex("""^[\s|\[]*([a-z]{1,3}|germany|deutschland)(?:\s*[|:\]▎│·•★]+|\s+[-–—]+)\s*""")
