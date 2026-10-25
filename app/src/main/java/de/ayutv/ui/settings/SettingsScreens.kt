@@ -84,7 +84,7 @@ import java.util.Date
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit) {
+fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit, onChooseCountries: () -> Unit = {}) {
     val container = LocalContainer.current
     val scope = rememberCoroutineScope()
     val playlists by container.playlists.playlists.collectAsStateWithLifecycle(emptyList())
@@ -185,6 +185,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             OutlinedButton(onClick = { container.scope.launch { container.playlists.syncAll(force = true) } }) {
                                 Text("Alles aktualisieren")
                             }
+                            OutlinedButton(onClick = onChooseCountries) { Text("Länder auswählen") }
                         }
                     }
 
@@ -371,6 +372,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             onOff(settings.zapWithUpDown),
                             "Aus: Hoch/Runter öffnet stattdessen die Senderliste.",
                         ) { update { it.copy(zapWithUpDown = !it.zapWithUpDown) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Doppelte Sender zusammenfassen",
+                            onOff(settings.mergeVariants),
+                            "Gleiche Sender in SD, HD, 4K, RAW oder als Backup erscheinen einmal, in der besten Fassung. " +
+                                "Fällt sie aus, schaltet der Player automatisch auf die nächste.",
+                        ) { update { it.copy(mergeVariants = !it.mergeVariants) } }
                     }
                     item {
                         SettingRow(

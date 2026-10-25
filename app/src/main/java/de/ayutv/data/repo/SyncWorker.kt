@@ -18,7 +18,10 @@ import java.util.concurrent.TimeUnit
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as AyuApp).container
-        return runCatching { container.playlists.syncAll() }.fold({ Result.success() }, { Result.retry() })
+        return runCatching {
+            container.playlists.syncAll()
+            container.refreshTeamReminders()
+        }.fold({ Result.success() }, { Result.retry() })
     }
 
     companion object {

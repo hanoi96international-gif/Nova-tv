@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,8 +61,11 @@ import de.ayutv.ui.home.HomeScreen
 import de.ayutv.ui.live.LiveScreen
 import de.ayutv.ui.search.SearchScreen
 import de.ayutv.ui.settings.AddPlaylistScreen
+import de.ayutv.ui.settings.CountryScreen
+import kotlinx.coroutines.launch
 import de.ayutv.ui.settings.GroupManagerScreen
 import de.ayutv.ui.settings.SettingsScreen
+import de.ayutv.ui.sport.SportScreen
 import de.ayutv.ui.theme.AyuColors
 import de.ayutv.ui.vod.MoviesScreen
 import de.ayutv.ui.vod.SeriesScreen
@@ -75,6 +79,7 @@ enum class Section(val label: String, val icon: ImageVector) {
     HOME("Start", Icons.Filled.Home),
     LIVE("Live TV", Icons.Filled.List),
     GUIDE("TV-Guide", Icons.Filled.DateRange),
+    SPORT("Sport", Icons.Filled.ThumbUp),
     MOVIES("Filme", Icons.Filled.PlayArrow),
     SERIES("Serien", Icons.Filled.Star),
     SEARCH("Suche", Icons.Filled.Search),
@@ -93,6 +98,15 @@ fun AyuRoot() {
     var addingPlaylist by remember { mutableStateOf(false) }
     var openSeries by remember { mutableStateOf<SeriesEntity?>(null) }
     var managingGroups by remember { mutableStateOf<PlaylistEntity?>(null) }
+    var choosingCountries by remember { mutableStateOf(false) }
+    // Einmal nach dem ersten Laden: Länder wählen, wenn der Anbieter Sender aus mehreren Ländern liefert.
+    val channelCount by container.content.channelCount.collectAsStateWithLifecycle(initialValue = 0)
+    LaunchedEffect(appSettings?.countryChoiceDone, channelCount > 0) {
+        if (appSettings?.countryChoiceDone != false || channelCount == 0) return@LaunchedEffect
+        val countries = container.content.countryChoices().count { it.code.isNotEmpty() }
+        if (countries >= 2) choosingCountries = true
+        else container.settings.update { it.copy(countryChoiceDone = true) }
+    }
     // Nach „Zurück“ verschwindet der fokussierte Inhalt: dann den Fokus gezielt in die Navigation setzen.
     var navTick by remember { mutableIntStateOf(0) }
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
@@ -107,6 +121,11 @@ fun AyuRoot() {
                 onCancel = if (list.isEmpty()) null else ({ addingPlaylist = false; navTick++ }),
             )
             managingGroups != null -> GroupManagerScreen(managingGroups!!, onBack = { managingGroups = null; navTick++ })
+            choosingCountries -> CountryScreen(onDone = {
+                choosingCountries = false
+                navTick++
+                container.scope.launch { container.settings.update { it.copy(countryChoiceDone = true) } }
+            })
             else -> {
                 BackHandler(enabled = section != Section.HOME) {
                     section = Section.HOME
@@ -119,12 +138,14 @@ fun AyuRoot() {
                             Section.HOME -> HomeScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.LIVE -> LiveScreen()
                             Section.GUIDE -> GuideScreen()
+                            Section.SPORT -> SportScreen()
                             Section.MOVIES -> MoviesScreen()
                             Section.SERIES -> SeriesScreen(openSeries = openSeries, onOpenSeries = { openSeries = it })
                             Section.SEARCH -> SearchScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.SETTINGS -> SettingsScreen(
                                 onAddPlaylist = { addingPlaylist = true },
                                 onManageGroups = { managingGroups = it },
+                                onChooseCountries = { choosingCountries = true },
                             )
                         } }
                     }

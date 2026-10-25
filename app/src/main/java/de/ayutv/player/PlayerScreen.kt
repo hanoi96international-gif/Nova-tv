@@ -2,6 +2,7 @@
 
 package de.ayutv.player
 
+import de.ayutv.data.parse.headlineWithBadge
 import de.ayutv.data.parse.headline
 import android.graphics.Color as AndroidColor
 import android.view.View
@@ -258,7 +259,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("${formatTime(now.start)} – ${formatTime(now.stop)}", color = AyuColors.TextSecondary, fontSize = 14.sp)
                 Spacer(Modifier.width(12.dp))
-                Text(now.headline(), color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(now.headlineWithBadge(), color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Spacer(Modifier.height(6.dp))
             ProgressLine(now.progress())

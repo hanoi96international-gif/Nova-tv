@@ -35,4 +35,21 @@ class ProgrammeTextTest {
         assertEquals("Die besten Szenen.", ProgrammeText.description("Die besten Szenen. (Senderinfo)."))
         assertNull(ProgrammeText.description("  "))
     }
+
+    @Test
+    fun liveAndSportEvents() {
+        fun event(title: String, sub: String?, category: String?, flags: Int = 0) = ProgrammeText.isSportEvent(title, sub, category, flags)
+        assertEquals(true, event("Fußball: Bundesliga", "Borussia Dortmund – Eintracht Frankfurt, tipico Topspiel der Woche, 7. Spieltag", "Fußball"))
+        assertEquals(true, event("Live 2. BL: Sonntags-Konferenz, 9. Spieltag", null, null))
+        assertEquals(true, event("1. FC Köln - FC Schalke 04", null, "Sport"))
+        assertEquals(true, event("Fußball: Bundesliga der Frauen", "8. Spieltag: Hamburger SV – 1. FC Union Berlin", "Fußball"))
+        // Keine Spiele: Zusammenfassungen, Magazine, Talks, Wiederholungen, Nicht-Sport
+        assertEquals(false, event("Fußball: Bundesliga", "Highlights XXL: 1. FC Köln – FC Schalke 04, 7. Spieltag", "Fußball"))
+        assertEquals(false, event("Fußball: 2. Bundesliga, Alle Spiele, alle Tore", "Die Vodafone Highlight-Show, 9. Spieltag", "Fußball"))
+        assertEquals(false, event("Bundesliga pur – 1. & 2. Bundesliga", "7. Spieltag, 1. BL & 9. Spieltag, 2. BL", "Fußballmagazin"))
+        assertEquals(false, event("Doppelpass Live", null, "Fußballstammtisch"))
+        assertEquals(false, event("Fußball: Bundesliga", "Borussia Dortmund – Eintracht Frankfurt", "Fußball", de.ayutv.data.db.ProgrammeFlags.REPEAT))
+        assertEquals(false, event("Tatort", "Der Fluch – Teil 2", "Krimi"))
+        assertEquals("Borussia Dortmund – Eintracht Frankfurt", ProgrammeText.pairing("Fußball: Bundesliga", "Borussia Dortmund – Eintracht Frankfurt, 7. Spieltag"))
+    }
 }

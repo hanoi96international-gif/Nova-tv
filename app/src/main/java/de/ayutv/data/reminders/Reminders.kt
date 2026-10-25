@@ -54,6 +54,22 @@ class Reminders(private val context: Context) {
         return nowSet
     }
 
+    /** Fehlende Erinnerungen setzen (bestehende bleiben, nichts wird entfernt). Liefert die neu gesetzten. */
+    suspend fun ensure(wanted: List<Reminder>): List<Reminder> {
+        if (wanted.isEmpty()) return emptyList()
+        val added = ArrayList<Reminder>()
+        context.settingsDataStore.edit { prefs ->
+            val list = decode(prefs[key])
+            val ids = list.mapTo(HashSet()) { it.id }
+            // Zur selben Zeit nur eine Erinnerung (gleiche Sendung auf mehreren Sendern).
+            val starts = list.mapTo(HashSet()) { it.start to it.title }
+            for (r in wanted) if (r.id !in ids && (r.start to r.title) !in starts) { added += r; ids += r.id; starts += r.start to r.title }
+            if (added.isNotEmpty()) prefs[key] = json.encodeToString(LIST, (list + added).sortedBy { it.start })
+        }
+        added.forEach(::schedule)
+        return added
+    }
+
     /** Nach Neustart des Geräts oder der App: alle künftigen Erinnerungen wieder einplanen. */
     suspend fun rescheduleAll() = all.first().forEach(::schedule)
 

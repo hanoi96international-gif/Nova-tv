@@ -1,5 +1,7 @@
 package de.ayutv.ui.guide
 
+import androidx.compose.runtime.produceState
+import de.ayutv.data.parse.headlineWithBadge
 import de.ayutv.data.parse.headline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -96,9 +98,14 @@ fun GuideScreen() {
     var group by rememberSaveable { mutableStateOf<String?>(null) }
     // Ohne eigene Wahl: Favoriten zuerst (wie in Live TV), sonst die erste Gruppe.
     val activeGroup = group ?: if (favorites.isNotEmpty()) FAVORITES_GROUP else groups.firstOrNull()?.name
-    val channels by remember(activeGroup) {
+    val appSettings by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+    val rawChannels by remember(activeGroup) {
         if (activeGroup == FAVORITES_GROUP) content.favoriteChannels else content.channelsIn(activeGroup)
     }.collectAsStateWithLifecycle(emptyList())
+    // Jeder Sender eine Zeile, auch wenn der Anbieter ihn in SD, HD und 4K führt.
+    val channels by produceState(emptyList<ChannelEntity>(), rawChannels, appSettings?.mergeVariants, activeGroup) {
+        value = if (appSettings?.mergeVariants != false && activeGroup != FAVORITES_GROUP) content.mergeVariants(rawChannels) else rawChannels
+    }
     val minute by rememberMinuteTicker()
     // Nur die Vorschau liest diesen Zustand: Fokuswechsel im Raster bauen das Raster nicht neu auf.
     val focused = remember { mutableStateOf<Pair<ChannelEntity, ProgrammeEntity>?>(null) }
@@ -229,7 +236,12 @@ private fun ProgrammePreview(
     modifier: Modifier,
 ) {
     val (channel, programme) = state.value ?: (null to null)
-    Column(modifier.fillMaxWidth().height(78.dp)) {
+    Row(modifier.fillMaxWidth().height(78.dp)) {
+    if (programme != null && !programme.icon.isNullOrBlank()) {
+        de.ayutv.ui.components.ProgrammeImage(programme.icon, Modifier.width(139.dp).fillMaxHeight())
+        Spacer(Modifier.width(14.dp))
+    }
+    Column(Modifier.weight(1f).fillMaxHeight()) {
         if (channel == null || programme == null) {
             Text("Sendung auswählen: Vorschau erscheint hier", color = AyuColors.TextSecondary, fontSize = 14.sp)
             return@Column
@@ -249,10 +261,11 @@ private fun ProgrammePreview(
             fontSize = 13.sp,
             maxLines = 1,
         )
-        Text(programme.headline(), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(if (programme.stop > now) programme.headlineWithBadge() else programme.headline(), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
         de.ayutv.data.parse.ProgrammeText.description(programme.description)?.let {
             Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
+    }
     }
 }
 
@@ -300,7 +313,7 @@ private fun GuideRow(
                         val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
                         GuideCell(
                             title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
-                                p.headline().ifEmpty { "Ohne Titel" },
+                                (if (p.stop > now) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" },
                             time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
                             width = cell.width,
                             live = p.start <= now && p.stop > now,

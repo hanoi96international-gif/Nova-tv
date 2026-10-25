@@ -523,6 +523,8 @@ class PlaylistRepository(
                         description = p.description,
                         category = p.category,
                         subtitle = p.subtitle,
+                        icon = p.icon,
+                        flags = p.flags,
                     )
                     channelsOf[storage]?.let(found::addAll)
                     used += storage
@@ -606,7 +608,7 @@ class PlaylistRepository(
         private const val TAG = "PlaylistRepository"
         private const val BATCH = 1000
         private const val HOUR = 3_600_000L
-        private const val EPG_DAYS = 4L
+        private const val EPG_DAYS = 7L
         private const val MAX_ARCHIVE_DAYS = 7
         private const val CONTENT_MAX_AGE = 12 * HOUR
         private const val EPG_MAX_AGE = 8 * HOUR

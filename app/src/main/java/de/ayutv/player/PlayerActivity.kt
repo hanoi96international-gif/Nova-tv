@@ -245,7 +245,7 @@ class PlayerActivity : ComponentActivity() {
                 // Erst den Sender starten, dann die (evtl. zehntausende Einträge lange) Zapp-Liste laden.
                 val direct = key?.let { container.content.channel(it) }
                 if (direct != null) playChannel(direct)
-                val list = container.content.zapList(group, favoritesOnly)
+                val list = container.content.zapList(group, favoritesOnly, merge = settings.mergeVariants)
                 val start = direct ?: list.firstOrNull()
                 if (start == null) {
                     finish()
@@ -551,8 +551,38 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Live
 
+    /** Fassungen dieses Senders, die schon ausgefallen sind (beim Wechsel auf die nächste Fassung). */
+    private val failedVariants = HashSet<String>()
+    private var switchingVariant = false
+
+    /**
+     * Sender fällt aus: auf die nächste Fassung desselben Senders wechseln (HD → 4K → SD → Backup), statt
+     * nur einen Fehler zu zeigen. Liefert false, wenn es keine gibt (dann zeigt der Aufrufer [reason]).
+     */
+    private fun tryNextVariant(reason: String): Boolean {
+        if (vod != null || !settings.mergeVariants) return false
+        val channel = playing ?: return false
+        failedVariants += channel.key
+        val generation = streamGeneration
+        lifecycleScope.launch {
+            val next = container.content.variantsOf(channel).firstOrNull { it.key !in failedVariants }
+            if (generation != streamGeneration || playing?.key != channel.key) return@launch
+            if (next == null) {
+                fatalError = true
+                message = reason
+                return@launch
+            }
+            Log.i(TAG, "${channel.name} gestört ($reason), wechsle auf ${next.name}")
+            switchingVariant = true
+            try { playChannel(next) } finally { switchingVariant = false }
+            message = "${channel.name} gestört – läuft jetzt über ${next.name}"
+        }
+        return true
+    }
+
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
+        if (!switchingVariant) failedVariants.clear()
         playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         playing = channel
         current = channel
@@ -1558,13 +1588,19 @@ class PlayerActivity : ComponentActivity() {
                 }
                 // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
                 !everReady && error.isUnsupportedFormat() -> {
-                    fatalError = true
-                    message = unsupportedFormatMessage()
+                    val reason = unsupportedFormatMessage()
+                    if (!tryNextVariant(reason)) {
+                        fatalError = true
+                        message = reason
+                    }
                 }
                 // Decoder-Start gescheitert: oft nur kurz belegt (4K-Decoder beim Zappen). Einmal neu versuchen.
                 error.isFormatError() && !everReady && retries >= 1 -> {
-                    fatalError = true
-                    message = unsupportedFormatMessage()
+                    val reason = unsupportedFormatMessage()
+                    if (!tryNextVariant(reason)) {
+                        fatalError = true
+                        message = reason
+                    }
                 }
                 retries < MAX_RETRIES -> {
                     retries++
@@ -1572,12 +1608,15 @@ class PlayerActivity : ComponentActivity() {
                     retryLater()
                 }
                 else -> {
-                    fatalError = true
-                    message = when (error.errorCode) {
+                    val reason = when (error.errorCode) {
                         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Der Anbieter lehnt den Stream ab (z. B. zu viele Verbindungen oder Konto abgelaufen)"
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Keine Verbindung zum Server"
                         else -> "Stream nicht verfügbar (${error.errorCodeName})"
+                    }
+                    if (!tryNextVariant(reason)) {
+                        fatalError = true
+                        message = reason
                     }
                 }
             }

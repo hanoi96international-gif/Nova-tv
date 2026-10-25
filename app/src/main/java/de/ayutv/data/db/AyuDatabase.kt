@@ -66,10 +66,12 @@ abstract class AyuDatabase : RoomDatabase() {
             }
         }
 
-        /** 3 → 4: Untertitel der Sendungen (Paarung beim Fußball, Folgentitel bei Serien). */
+        /** 3 → 4: Untertitel der Sendungen (Paarung beim Fußball, Folgentitel bei Serien), Bild, Live/Wiederholung. */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `programmes` ADD COLUMN `subtitle` TEXT")
+                db.execSQL("ALTER TABLE `programmes` ADD COLUMN `icon` TEXT")
+                db.execSQL("ALTER TABLE `programmes` ADD COLUMN `flags` INTEGER NOT NULL DEFAULT 0")
             }
         }
 

@@ -69,7 +69,17 @@ data class ProgrammeEntity(
     val category: String?,
     /** XMLTV-Untertitel: bei Fußball die Paarung, bei Serien der Folgentitel. */
     val subtitle: String? = null,
+    /** Bild zur Sendung (XMLTV icon). */
+    val icon: String? = null,
+    /** [ProgrammeFlags]: Wiederholung, live, Erstausstrahlung. */
+    @ColumnInfo(defaultValue = "0") val flags: Int = 0,
 )
+
+object ProgrammeFlags {
+    const val REPEAT = 1
+    const val LIVE = 2
+    const val PREMIERE = 4
+}
 
 @Entity(
     tableName = "vod",

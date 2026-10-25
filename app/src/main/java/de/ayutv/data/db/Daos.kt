@@ -87,6 +87,9 @@ interface ChannelDao {
     @Query("SELECT id, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
     suspend fun forEpg(playlistId: Long): List<EpgChannel>
 
+    @Query("SELECT * FROM visible_channels WHERE playlistId = :playlistId")
+    suspend fun visibleInPlaylist(playlistId: Long): List<ChannelEntity>
+
     /** Sender, die irgendwo erscheinen (ohne ausgeblendete Gruppen). */
     @Query("SELECT id FROM visible_channels WHERE playlistId = :playlistId")
     suspend fun visibleIds(playlistId: Long): List<Long>
@@ -122,6 +125,20 @@ interface ProgrammeDao {
     /** Alles, was gerade läuft: eine Abfrage statt vieler IN-Listen bei großen Senderlisten. */
     @Query("SELECT * FROM programmes WHERE stop > :now AND start <= :now")
     suspend fun airingAt(now: Long): List<ProgrammeEntity>
+
+    /** Mögliche Sportsendungen im Zeitraum auf sichtbaren Sendern (grob; genau prüft ProgrammeText.isSportEvent). */
+    @Query(
+        """SELECT * FROM programmes WHERE stop > :from AND start < :to AND (
+           category LIKE '%ball%' OR category LIKE '%sport%' OR category LIKE '%tennis%' OR category LIKE '%darts%'
+           OR category LIKE '%hockey%' OR category LIKE '%formel%' OR category LIKE '%box%' OR category LIKE '%golf%'
+           OR title LIKE '%ball%' OR title LIKE '%liga%' OR title LIKE '%league%' OR title LIKE '%sport%' OR title LIKE '%live%'
+           OR title LIKE '%pokal%' OR title LIKE '%tennis%' OR title LIKE '%darts%' OR title LIKE '%formel%' OR title LIKE '%NFL%'
+           OR title LIKE '%NBA%' OR title LIKE '%NHL%' OR title LIKE '%UFC%' OR title LIKE '%box%' OR subtitle LIKE '% – %'
+           OR subtitle LIKE '% - %')
+           AND channelEpgId IN (SELECT epgId FROM visible_channels WHERE epgId IS NOT NULL AND epgId != '')
+           ORDER BY start LIMIT :limit"""
+    )
+    suspend fun sportBetween(from: Long, to: Long, limit: Int): List<ProgrammeEntity>
 
     @Query("SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from ORDER BY start LIMIT :limit")
     suspend fun upcoming(epgId: String, from: Long, limit: Int): List<ProgrammeEntity>
@@ -195,6 +212,9 @@ interface FavoriteDao {
 
     @Query("SELECT `key` FROM favorites")
     fun observeKeys(): Flow<List<String>>
+
+    @Query("SELECT `key` FROM favorites")
+    suspend fun keys(): List<String>
 
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE `key` = :key)")
     suspend fun isFavorite(key: String): Boolean
