@@ -536,7 +536,7 @@ private fun PlaylistRow(
                 )
                 if (g.missing.isNotEmpty()) {
                     Text(
-                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " …" else ""),
+                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " … (ganze Liste: Einrichtung per Handy)" else ""),
                         color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 2,
                     )
                 }

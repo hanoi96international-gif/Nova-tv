@@ -84,7 +84,7 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds) GROUP BY epgId")
     suspend fun byEpgIds(epgIds: List<String>): List<ChannelEntity>
 
-    @Query("SELECT id, name, epgId FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
+    @Query("SELECT id, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
     suspend fun forEpg(playlistId: Long): List<EpgChannel>
 
     /** Sender, die irgendwo erscheinen (ohne ausgeblendete Gruppen). */

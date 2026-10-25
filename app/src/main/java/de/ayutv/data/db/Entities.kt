@@ -52,7 +52,7 @@ data class ChannelEntity(
 )
 
 /** Was der EPG-Abgleich von einem Sender braucht (kleiner als die ganze Zeile). */
-data class EpgChannel(val id: Long, val name: String, val epgId: String?)
+data class EpgChannel(val id: Long, val name: String, val epgId: String?, val groupTitle: String = "")
 
 @Entity(
     tableName = "programmes",
