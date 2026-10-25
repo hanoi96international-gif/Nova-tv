@@ -1,0 +1,8 @@
+DE1 http=200 size=3588642
+DE1 channels=266 programmes=22210 uncompressed=21782525
+DE2 http=404 size=52
+DE3 http=404 size=52
+AT1 http=200 size=3741533
+AT1 channels=144 programmes=17882 uncompressed=18780608
+CH1 http=200 size=6218090
+CH1 channels=751 programmes=85790 uncompressed=52276454
