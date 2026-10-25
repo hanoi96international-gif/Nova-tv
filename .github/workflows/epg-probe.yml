@@ -2,6 +2,8 @@ name: EPG-Probe
 on:
   push:
     branches: [epg-probe]
+permissions:
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -10,16 +12,25 @@ jobs:
       - name: Quellen prüfen
         run: |
           set +e
+          mkdir out && cd out
           curl -sSL -m 60 https://epgshare01.online/epgshare01/ -o index.html
-          echo "== index"; grep -o 'epg_ripper_[A-Z0-9_]*\.xml\.gz' index.html | sort -u | grep -E 'DE|AT|CH|SPORT|DAZN|SKY' 
-          for f in DE1 DE2 DE3 AT1 CH1 SKY1 DAZN1 SPORTS1 UK1; do
+          grep -o 'epg_ripper_[A-Za-z0-9_]*\.xml\.gz' index.html | sort -u > files.txt
+          for f in DE1 DE2 DE3 AT1 CH1; do
             u="https://epgshare01.online/epgshare01/epg_ripper_${f}.xml.gz"
-            code=$(curl -sSL -m 120 -o "$f.gz" -w '%{http_code}' "$u")
-            echo "== $f http=$code size=$(stat -c %s $f.gz 2>/dev/null)"
+            code=$(curl -sSL -m 120 -o "../$f.gz" -w '%{http_code}' "$u")
+            echo "$f http=$code size=$(stat -c %s ../$f.gz 2>/dev/null)" >> summary.txt
             [ "$code" = 200 ] || continue
-            zcat "$f.gz" > "$f.xml" || continue
-            echo "channels=$(grep -c '<channel ' $f.xml) programmes=$(grep -c '<programme ' $f.xml)"
-            grep -o 'start="[0-9]\{8\}' $f.xml | sort | uniq -c | head -3
-            grep -o '<channel id="[^"]*"' $f.xml | grep -i -E 'sky|dazn|rtl\.|magenta|sport1|eurosport' | head -80
-            grep -o '<display-name[^>]*>[^<]*' $f.xml | grep -i -E 'sky|dazn' | head -40
+            zcat "../$f.gz" > "../$f.xml" || continue
+            echo "$f channels=$(grep -c '<channel ' ../$f.xml) programmes=$(grep -c '<programme ' ../$f.xml) uncompressed=$(stat -c %s ../$f.xml)" >> summary.txt
+            python3 - "../$f.xml" > "$f.channels.tsv" <<'PY'
+          import sys, re
+          from collections import Counter
+          data = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+          progs = Counter(re.findall(r'<programme[^>]*channel="([^"]*)"', data))
+          for m in re.finditer(r'<channel id="([^"]*)"[^>]*>(.*?)</channel>', data, re.S):
+              names = re.findall(r'<display-name[^>]*>([^<]*)', m.group(2))
+              print(m.group(1) + "\t" + str(progs.get(m.group(1), 0)) + "\t" + "|".join(names))
+          PY
           done
+          git init -q -b epg-probe-results && git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm results && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" epg-probe-results
