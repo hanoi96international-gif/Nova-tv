@@ -18,8 +18,8 @@ data class XmltvProgramme(
  */
 class XmltvParser(private val parser: XmlPullParser) {
 
-    /** display-name (normalisiert) -> channel id, um Sender ohne tvg-id per Namen zuzuordnen. */
-    val channelNames = HashMap<String, String>()
+    /** Sender des EPGs (Kennung → Anzeigenamen), um Sender der Playlist zuzuordnen ([EpgMatcher]). */
+    val channels = LinkedHashMap<String, MutableList<String>>()
 
     fun parse(
         input: InputStream,
@@ -44,7 +44,8 @@ class XmltvParser(private val parser: XmlPullParser) {
     }
 
     private fun readChannel() {
-        val id = parser.getAttributeValue(null, "id") ?: return
+        val id = parser.getAttributeValue(null, "id")?.trim()?.takeIf { it.isNotEmpty() } ?: return
+        val names = channels.getOrPut(id) { ArrayList(2) }
         val depth = parser.depth
         while (true) {
             val event = parser.next()
@@ -52,13 +53,13 @@ class XmltvParser(private val parser: XmlPullParser) {
             if (event == XmlPullParser.END_TAG && parser.depth == depth) return
             if (event == XmlPullParser.START_TAG && parser.name == "display-name") {
                 val name = readText()
-                if (name.isNotBlank()) channelNames.putIfAbsent(normalizeName(name), id)
+                if (name.isNotBlank()) names += name.trim()
             }
         }
     }
 
     private fun readProgramme(wanted: (String, Long, Long) -> Boolean): XmltvProgramme? {
-        val channel = parser.getAttributeValue(null, "channel")
+        val channel = parser.getAttributeValue(null, "channel")?.trim()
         val start = parser.getAttributeValue(null, "start")?.let(XmltvTime::parse)
         val stop = parser.getAttributeValue(null, "stop")?.let(XmltvTime::parse)
         if (channel == null || start == null || stop == null || !wanted(channel, start, stop)) {
@@ -106,15 +107,6 @@ class XmltvParser(private val parser: XmlPullParser) {
             if (event == XmlPullParser.END_DOCUMENT) return
             if (event == XmlPullParser.END_TAG && parser.depth == depth) return
         }
-    }
-
-    companion object {
-        private val nonAlphaNumeric = Regex("[^a-z0-9]")
-        private val qualitySuffix = Regex("\\b(hd|fhd|uhd|sd|4k|hevc|h265)\\b")
-
-        /** "Das Erste HD" und "das erste" sollen beim Abgleich als gleich gelten. */
-        fun normalizeName(name: String): String =
-            name.lowercase().replace(qualitySuffix, "").replace(nonAlphaNumeric, "")
     }
 }
 

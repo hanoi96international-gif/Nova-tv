@@ -371,6 +371,10 @@ class DeviceTourTest {
                 textGroups.firstOrNull()?.let { group -> scenario.onActivity { it.selectTrack(group, 0) } }
                 Thread.sleep(4_000)
                 log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
+                // Ton-Abgriff für die Ausrichtung geladener Untertitel am gesprochenen Ton: bekommt er den Ton?
+                val heard = scenario.read { it.speechHeardSeconds }
+                log("vod speech_tap heard_s=$heard")
+                assertTrue("Ton-Abgriff bekommt keinen Ton (heard_s=$heard)", heard >= 2)
                 shot("21_vod_subtitles")
                 // Wie auf dem Fire TV: Indonesisch wählen, obwohl der Film nur englische Untertitel hat.
                 // Erwartet: Live-Übersetzung der englischen Spur auf dem Gerät (Modell wird einmalig geladen).

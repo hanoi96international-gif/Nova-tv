@@ -532,9 +532,10 @@ private fun syncHint(activity: PlayerActivity): String {
     val shift = String.format(Locale.GERMAN, "%+.1f s", total / 1000f)
     return when {
         activity.subtitleAutoSynced && activity.subtitleDelayMs == 0L ->
-            "Automatisch an den eingebetteten Untertiteln ausgerichtet ($shift" + (if (timing.ratio != 1.0) ", Bildrate korrigiert" else "") + ")."
+            (if (activity.syncedBySpeech) "Automatisch am gesprochenen Ton ausgerichtet ($shift" else "Automatisch an den eingebetteten Untertiteln ausgerichtet ($shift") +
+                (if (timing.ratio != 1.0) ", Bildrate korrigiert" else "") + ")."
         activity.subtitleAutoSynced -> "Automatisch ausgerichtet, von Hand nachgestellt: $shift."
-        else -> "Verschiebung: $shift. Hat der Film eingebettete Untertitel, richtet DnA-TV die Zeiten nach wenigen Minuten automatisch aus."
+        else -> "Verschiebung: $shift. DnA-TV richtet die Zeiten nach wenigen Minuten automatisch aus (an eingebetteten Untertiteln oder am gesprochenen Ton)."
     }
 }
 

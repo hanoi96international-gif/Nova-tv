@@ -84,8 +84,8 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds) GROUP BY epgId")
     suspend fun byEpgIds(epgIds: List<String>): List<ChannelEntity>
 
-    @Query("SELECT * FROM channels WHERE playlistId = :playlistId AND (epgId IS NULL OR epgId = '')")
-    suspend fun withoutEpgId(playlistId: Long): List<ChannelEntity>
+    @Query("SELECT id, name, epgId FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
+    suspend fun forEpg(playlistId: Long): List<EpgChannel>
 
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
     fun setEpgId(id: Long, epgId: String)
@@ -96,8 +96,6 @@ interface ChannelDao {
     @Query("SELECT COALESCE(MAX(catchupDays), 0) FROM visible_channels")
     suspend fun maxCatchupDaysAll(): Int
 
-    @Query("SELECT DISTINCT epgId FROM channels WHERE playlistId = :playlistId AND epgId IS NOT NULL AND epgId != ''")
-    suspend fun epgIds(playlistId: Long): List<String>
 
     @Query("SELECT COUNT(*) FROM visible_channels")
     fun observeCount(): Flow<Int>
