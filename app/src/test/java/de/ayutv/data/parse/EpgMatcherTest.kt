@@ -84,6 +84,43 @@ class EpgMatcherTest {
         check("ZDFneo.de", "ZDF neo")
     }
 
+    /** Ausschnitt aus dem echten freien EPG (epgshare01 DE1/AT1, Oktober 2026). */
+    private val real = EpgMatcher().apply {
+        addGuideChannel("DAZN.de", listOf("DAZN"))
+        addGuideChannel("DAZN.1.de", listOf("DAZN 1"))
+        addGuideChannel("DAZN.2.de", listOf("DAZN 2"))
+        addGuideChannel("Sky.Sport.Bundesliga.de", listOf("Sky Sport Bundesliga"))
+        for (n in 1..10) addGuideChannel("Sky.Sport.Bundesliga.$n.de", listOf("Sky Sport Bundesliga $n"))
+        addGuideChannel("Sky.Sport.News.de", listOf("Sky Sport News"))
+        addGuideChannel("Sky.Sport.Top.Event.de", listOf("Sky Sport Top Event"))
+        addGuideChannel("Sky.Cinema.Premiere.HD.de", listOf("Sky Cinema Premiere HD"))
+        addGuideChannel("SKY.CINEMA.PREMIEREN.+24.at", listOf("SKY CINEMA PREMIEREN +24"))
+        addGuideChannel("MDR.de", listOf("MDR"))
+        addGuideChannel("SWR/SR.de", listOf("SWR/SR"))
+        addGuideChannel("ORF.2.at", listOf("ORF 2"))
+    }
+
+    @Test
+    fun skyAndDaznFromProviderLists() {
+        fun real(expected: String?, name: String) = assertEquals("„$name“", expected, real.match(null, name))
+        real("Sky.Sport.Bundesliga.1.de", "DE: SKY BUNDESLIGA 1 HD")
+        real("Sky.Sport.Bundesliga.10.de", "DE: Sky Bundesliga 10 FHD")
+        real("Sky.Sport.Bundesliga.3.de", "|DE| SKY SPORT BUNDESLIGA 3 UHD")
+        real("Sky.Sport.Bundesliga.de", "DE: SKY BUNDESLIGA HD")
+        real("Sky.Sport.Top.Event.de", "DE: SKY SPORT TOP EVENT")
+        real("Sky.Sport.News.de", "DE: SKY SPORT NEWS FHD")
+        // DAZN und DAZN 1 sind verschiedene Sender
+        real("DAZN.de", "DE: DAZN")
+        real("DAZN.1.de", "DE: DAZN 1 HD")
+        real("DAZN.2.de", "DAZN 2 4K")
+        real("Sky.Cinema.Premiere.HD.de", "DE: SKY CINEMA PREMIEREN")
+        real("SKY.CINEMA.PREMIEREN.+24.at", "DE: SKY CINEMA PREMIEREN +24")
+        // Regionalfenster fallen auf das Hauptprogramm zurück
+        real("MDR.de", "DE: MDR SACHSEN HD")
+        real("SWR/SR.de", "DE: SWR BW")
+        real("ORF.2.at", "AT: ORF 2 Wien")
+    }
+
     @Test
     fun countryDecidesBetweenSameNames() {
         check("VOX.de", "VOX HD")
@@ -101,5 +138,12 @@ class EpgMatcherTest {
         check("SAT1.de", "RTL", epgId = "SAT1.de")
         // Kennung unbekannt, Name hilft
         check("RTL.de", "RTL 4K", epgId = "rtl4k.provider")
+    }
+
+    @Test
+    fun keyAsCheckedOnTheDevice() {
+        val key = EpgMatcher.analyse("|DE| SKY BUNDESLIGA 1 ᴴᴰ [Backup]", isId = false)
+        assertEquals("skysportbundesliga1", key.strong)
+        assertEquals("de", key.country)
     }
 }

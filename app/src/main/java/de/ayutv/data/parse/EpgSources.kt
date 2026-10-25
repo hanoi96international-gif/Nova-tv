@@ -39,5 +39,21 @@ object EpgSources {
         return "${uri.scheme}://${uri.host}$port$base/xmltv.php?username=${enc(user)}&password=${enc(password)}"
     }
 
+    /**
+     * Freies EPG von epgshare01 (täglich aktualisiert) für Sender, die beim Anbieter fehlen, oft Sky und DAZN.
+     * Reihenfolge: Deutschland, Österreich, Schweiz (dort u. a. Sky Bundesliga unter altem Namen).
+     */
+    val PUBLIC = listOf(
+        "https://epgshare01.online/epgshare01/epg_ripper_DE1.xml.gz",
+        "https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz",
+        "https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz",
+    )
+
+    /** Kurzer Name einer Quelle für die Anzeige ("epgshare01 DE", "tv.example.com"). */
+    fun label(url: String): String {
+        Regex("""epg_ripper_([A-Z]{2})\d*\.xml""").find(url)?.let { return "epgshare01 ${it.groupValues[1]}" }
+        return runCatching { URI(url.trim()).host }.getOrNull()?.takeIf { it.isNotEmpty() } ?: url.substringAfterLast('/').take(40)
+    }
+
     private fun enc(value: String) = URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 }

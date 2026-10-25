@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -52,6 +53,7 @@ import de.ayutv.data.SubtitleSize
 import de.ayutv.data.db.PlaylistEntity
 import de.ayutv.data.db.PlaylistType
 import de.ayutv.ui.LocalContainer
+import de.ayutv.data.repo.PlaylistRepository
 import de.ayutv.ui.components.SectionTitle
 import de.ayutv.ui.components.SyncBanner
 import de.ayutv.ui.components.TvTextField
@@ -371,6 +373,23 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         ) { update { it.copy(zapWithUpDown = !it.zapWithUpDown) } }
                     }
                     item {
+                        SettingRow(
+                            "TV-Guide aus dem Internet ergänzen",
+                            onOff(settings.internetGuide),
+                            "Für Sender, die beim Anbieter kein Programm haben (oft Sky, DAZN): freies EPG für Deutschland, " +
+                                "Österreich und die Schweiz (epgshare01), höchstens einmal am Tag geladen. Der Guide wird danach neu geladen.",
+                        ) {
+                            scope.launch {
+                                container.settings.update { it.copy(internetGuide = !it.internetGuide) }
+                                epgReloadJob?.cancel()
+                                epgReloadJob = container.scope.launch {
+                                    delay(2_500)
+                                    container.playlists.reloadAllEpg()
+                                }
+                            }
+                        }
+                    }
+                    item {
                         val shift = settings.epgShiftHours
                         SettingRow(
                             "TV-Guide-Zeitverschiebung",
@@ -504,6 +523,24 @@ private fun PlaylistRow(
             }
             val state = if (playlist.enabled) "" else " · ausgeschaltet, erscheint nirgends"
             Text("$type · $synced$state", color = AyuColors.TextSecondary, fontSize = 13.sp)
+            // Wie viele Sender ein Programm haben, woher es kommt und welche keins haben.
+            val container = LocalContainer.current
+            val guide by produceState<PlaylistRepository.EpgStatus?>(null, playlist.id, playlist.lastEpgSync) {
+                value = withContext(Dispatchers.IO) { container.playlists.epgStatus(playlist.id) }
+            }
+            guide?.let { g ->
+                val sources = g.sources.filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }
+                Text(
+                    "TV-Guide: ${g.withGuide} von ${g.total} Sendern" + (if (sources.isNotEmpty()) " ($sources)" else ""),
+                    color = AyuColors.TextSecondary, fontSize = 13.sp,
+                )
+                if (g.missing.isNotEmpty()) {
+                    Text(
+                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " …" else ""),
+                        color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 2,
+                    )
+                }
+            }
         }
         OutlinedButton(onClick = onGroups) { Text("Gruppen") }
         Spacer(Modifier.width(10.dp))

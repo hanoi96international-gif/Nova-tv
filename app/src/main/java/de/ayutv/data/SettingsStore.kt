@@ -62,6 +62,8 @@ data class AppSettings(
     val showGuide: Boolean = true,
     /** Korrektur für EPGs mit falscher Zeitzone, in Stunden. */
     val epgShiftHours: Int = 0,
+    /** Sender ohne Programm beim Anbieter aus einem freien EPG (Deutschland, Österreich, Schweiz) ergänzen. */
+    val internetGuide: Boolean = true,
     /** Sprache, die beim Einschalten der Untertitel gewählt wird (ISO 639-1). */
     val subtitleLanguage: String = "en",
     /** Untertitel sind optional: standardmäßig aus, einschalten im Player über die Menütaste. */
@@ -98,6 +100,7 @@ class SettingsStore(private val context: Context) {
         val userAgent = stringPreferencesKey("user_agent")
         val zap = booleanPreferencesKey("zap_up_down")
         val epgShift = intPreferencesKey("epg_shift_hours")
+        val internetGuide = booleanPreferencesKey("internet_guide")
         val asyncDecoding = booleanPreferencesKey("async_decoding_v2")
         val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
@@ -145,6 +148,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.userAgent] = next.userAgent
             prefs[Keys.zap] = next.zapWithUpDown
             prefs[Keys.epgShift] = next.epgShiftHours
+            prefs[Keys.internetGuide] = next.internetGuide
             prefs[Keys.asyncDecoding] = next.asyncDecoding
             prefs[Keys.audioOutput] = next.audioOutput.name
             prefs[Keys.showGuide] = next.showGuide
@@ -167,6 +171,7 @@ class SettingsStore(private val context: Context) {
         userAgent = this[Keys.userAgent]?.takeIf { it.isNotBlank() } ?: AppSettings.DEFAULT_USER_AGENT,
         zapWithUpDown = this[Keys.zap] ?: true,
         epgShiftHours = this[Keys.epgShift] ?: 0,
+        internetGuide = this[Keys.internetGuide] ?: true,
         asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,

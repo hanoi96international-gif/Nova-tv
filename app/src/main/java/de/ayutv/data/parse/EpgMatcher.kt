@@ -49,6 +49,8 @@ class EpgMatcher(private val country: String = "de") {
         pick(strong[byName.strong], wanted)?.let { return it }
         pick(weak[byName.weak], wanted)?.let { return it }
         byId?.let { k -> pick(weak[k.weak], wanted)?.let { return it } }
+        // Regionalfenster ("MDR Sachsen", "WDR Köln"): sonst das Hauptprogramm der Anstalt.
+        byName.region?.let { pick(strong[it], wanted)?.let { id -> return id } }
         return null
     }
 
@@ -63,7 +65,7 @@ class EpgMatcher(private val country: String = "de") {
         if (none { it.id == guide.id }) add(guide)
     }
 
-    class Key(val strong: String, val weak: String, val country: String?)
+    class Key(val strong: String, val weak: String, val country: String?, val region: String? = null)
 
     companion object {
         /** Länderkürzel, die als Vorsatz ("DE: ", "|AT| ", "[CH] ") oder Endung ("RTL.de") vorkommen. */
@@ -87,6 +89,9 @@ class EpgMatcher(private val country: String = "de") {
         /** Füllwörter, ohne die ein Name meist noch eindeutig ist. Nur für den zweiten, schwächeren Abgleich. */
         private val FILLER = setOf("tv", "television", "channel", "deutschland", "germany", "german", "sender", "fernsehen", "de")
 
+        /** Anstalten mit Regionalprogrammen: "MDR Sachsen" fällt auf "MDR" zurück. */
+        private val REGIONAL = setOf("mdr", "wdr", "ndr", "br", "swr", "hr", "rbb", "sr", "orf2", "srf1")
+
         /** Zweitnamen → ein Name (nach dem Zusammenziehen, ohne Leer- und Sonderzeichen). */
         private val ALIASES = mapOf(
             "ard" to "daserste", "erste" to "daserste", "ardhd" to "daserste", "ardalpha" to "alpha", "bralpha" to "alpha",
@@ -95,12 +100,13 @@ class EpgMatcher(private val country: String = "de") {
             "kabel1" to "kabeleins", "kabel1doku" to "kabeleinsdoku", "kabeleinsclassics" to "kabeleinsclassics",
             "sat1" to "sat1", "sateins" to "sat1", "ntv" to "ntv", "n24" to "welt", "weltn24" to "welt",
             "n24doku" to "n24doku", "superrtl" to "superrtl", "toggoplus" to "toggoplus",
-            "eurosport" to "eurosport1", "sportdigital" to "sportdigitalfussball", "dazn" to "dazn1",
+            "eurosport" to "eurosport1", "sportdigital" to "sportdigitalfussball",
+            "skycinemapremieren" to "skycinemapremiere", "skycinemapremierenplus24" to "skycinemapremiereplus24", "swrsr" to "swr",
             "bayerischesfernsehen" to "br", "brfernsehen" to "br", "hrfernsehen" to "hr", "mdrfernsehen" to "mdr",
             "ndrfernsehen" to "ndr", "wdrfernsehen" to "wdr", "swrfernsehen" to "swr", "rbbfernsehen" to "rbb",
             "einsfestival" to "one", "ardone" to "one", "zdfneo" to "zdfneo", "zdfinfo" to "zdfinfo",
             "tele5" to "tele5", "dmax" to "dmax", "sixx" to "sixx", "kika" to "kika", "kikavonardundzdf" to "kika",
-            "skysportbundesliga1" to "skysportbundesliga", "orfeins" to "orf1", "orfzwei" to "orf2", "orfiii" to "orf3",
+            "orfeins" to "orf1", "orfzwei" to "orf2", "orfiii" to "orf3",
             "nick" to "nickelodeon", "srfeins" to "srf1", "srfzwei" to "srf2", "anixeplus" to "anixeplus",
         )
 
@@ -155,11 +161,17 @@ class EpgMatcher(private val country: String = "de") {
             val strong = canonical(tokens.joinToString(""))
             val weakTokens = tokens.filter { it !in FILLER }
             val weak = canonical(if (weakTokens.isEmpty()) tokens.joinToString("") else weakTokens.joinToString(""))
-            return Key(strong, weak, country)
+            val first = tokens.firstOrNull()?.let { if (it == "orf" || it == "srf") it + tokens.getOrNull(1).orEmpty() else it }
+            val region = first?.takeIf { it in REGIONAL && canonical(it) != strong }
+            return Key(strong, weak, country, region)
         }
+
+        /** Umbenennungen bei Sky ("Sky Bundesliga 3" heißt heute "Sky Sport Bundesliga 3"). */
+        private val SKY_RENAMES = listOf("skybundesliga" to "skysportbundesliga", "skysports" to "skysport")
 
         private fun canonical(joined: String): String {
             var key = joined
+            for ((old, new) in SKY_RENAMES) if (key.startsWith(old) && !key.startsWith(new)) { key = new + key.removePrefix(old); break }
             // Angehängt statt getrennt: "RTLHD", "ZDF4K"
             while (key.length > 3) {
                 val stripped = key.replace(GLUED_NOISE, "")

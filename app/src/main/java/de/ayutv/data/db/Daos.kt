@@ -87,6 +87,10 @@ interface ChannelDao {
     @Query("SELECT id, name, epgId FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
     suspend fun forEpg(playlistId: Long): List<EpgChannel>
 
+    /** Sender, die irgendwo erscheinen (ohne ausgeblendete Gruppen). */
+    @Query("SELECT id FROM visible_channels WHERE playlistId = :playlistId")
+    suspend fun visibleIds(playlistId: Long): List<Long>
+
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
     fun setEpgId(id: Long, epgId: String)
 

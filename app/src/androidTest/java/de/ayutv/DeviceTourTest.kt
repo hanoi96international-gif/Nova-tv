@@ -127,7 +127,12 @@ class DeviceTourTest {
             val (title, year) = de.ayutv.data.parse.OpenSubtitlesParsing.cleanTitle("DE - Der Film [4K] (Director's Cut) 2020")
             log("regex: plain=$plain title=$title year=$year")
             assertTrue("Srt.plainText: $plain", plain == "Hallo Welt")
+            val key = de.ayutv.data.parse.EpgMatcher.analyse("|DE| SKY BUNDESLIGA 1 ᴴᴰ [Backup]", isId = false)
+            log("regex: epg_key=${key.strong} country=${key.country}")
+            assertTrue("EPG-Abgleich auf Android: ${key.strong}", key.strong == "skysportbundesliga1" && key.country == "de")
         }
+        // Die Abschnitte unten prüfen den TV-Guide des Testservers; das freie EPG aus dem Internet erst am Ende.
+        runBlocking { container.settings.update { it.copy(internetGuide = false) } }
 
         // 1. Playlist + EPG importieren
         val started = System.currentTimeMillis()
@@ -611,6 +616,23 @@ class DeviceTourTest {
                 "big: import_ms=${nowStart - bigStart} channels_total=$total programmes_total=$epgCount " +
                     "now_playing_all_ms=${System.currentTimeMillis() - nowStart} now_found=${now.size} sync=${container.playlists.state.value}"
             )
+        }
+        // 6b. Liste ohne eigenen TV-Guide (Sky, DAZN, RTL 4K): Programm kommt aus dem freien EPG im Internet.
+        section("internet_guide") {
+            val names = listOf("DE: SKY BUNDESLIGA 1 HD", "DE: DAZN 1 HD", "DE: RTL 4K", "|DE| SKY SPORT NEWS FHD", "DE: ZDF HD", "DE: PRO 7 HD")
+            val file = java.io.File(app.cacheDir, "ohne_epg.m3u")
+            file.writeText("#EXTM3U\n" + names.joinToString("") { "#EXTINF:-1 group-title=\"Sport ohne EPG\",$it\n$base/hd50.ts\n" })
+            runBlocking { container.settings.update { it.copy(internetGuide = true) } }
+            val started = System.currentTimeMillis()
+            val id = runBlocking {
+                container.playlists.add(PlaylistEntity(name = "Ohne EPG", type = PlaylistType.M3U, url = file.absolutePath)).also { container.playlists.sync(it) }
+            }
+            val status = container.playlists.epgStatus(id)
+            log(
+                "internet_guide: ms=${System.currentTimeMillis() - started} with_guide=${status?.withGuide}/${status?.total} " +
+                    "sources=${status?.sources} missing=${status?.missing} sync=${container.playlists.state.value}"
+            )
+            assertTrue("Freies EPG: zu wenige Sender mit Programm ($status)", (status?.withGuide ?: 0) >= names.size - 1)
         }
         // Einrichtung per Handy: Seite erreichbar, Formular speichert Werte
         section("phone_setup") {
