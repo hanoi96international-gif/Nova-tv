@@ -55,6 +55,9 @@ class PlaylistRepository(
 ) {
     /** Downloads landen hier vollständig, bevor importiert wird (keine offene Verbindung während der Transaktion). */
     private val importDir = File(cacheDir, "import")
+    /** Freie EPG-Dateien bleiben einen Tag liegen (nicht bei jedem Laden neu holen). */
+    private val publicDir = File(cacheDir, "epg-public")
+    private val statusDir = File(cacheDir, "epg-status")
 
     /** Für Importe: eingestellter User-Agent (viele Anbieter sperren den von OkHttp) und langer Lese-Timeout. */
     @Volatile
@@ -132,6 +135,9 @@ class PlaylistRepository(
 
     suspend fun syncAll(force: Boolean = false) {
         val now = System.currentTimeMillis()
+        // Neue Version mit besserer Senderzuordnung: TV-Guide sofort neu zuordnen statt erst nach 8 Stunden.
+        val versionFile = File(statusDir, "match-version")
+        val rematch = runCatching { versionFile.readText().trim() }.getOrNull() != EPG_MATCH_VERSION
         for (playlist in db.playlists().all()) {
             // Ausgeschaltete Playlists kosten keine Zeit und keine Verbindung beim Anbieter.
             if (!playlist.enabled) continue
@@ -139,8 +145,9 @@ class PlaylistRepository(
             // Kennungen verloren, die erst über den Namen gefunden wurden.
             if (force || now - playlist.lastSync > CONTENT_MAX_AGE) sync(playlist.id, withEpg = true)
             val fresh = db.playlists().byId(playlist.id) ?: continue
-            if (now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
+            if (rematch || now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
         }
+        if (rematch) runCatching { statusDir.mkdirs(); versionFile.writeText(EPG_MATCH_VERSION) }
         val archiveDays = db.channels().maxCatchupDaysAll().coerceIn(0, MAX_ARCHIVE_DAYS)
         db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
     }
@@ -324,17 +331,20 @@ class PlaylistRepository(
         mutex.withLock {
             // Erst hier lesen: Während auf die Sperre gewartet wurde, kann die Playlist geändert oder gelöscht worden sein.
             val playlist = db.playlists().byId(playlistId) ?: return
-            val sources = when (playlist.type) {
+            val own = when (playlist.type) {
                 PlaylistType.M3U -> EpgSources.forM3u(playlist.epgUrl, playlist.url)
                 PlaylistType.XTREAM -> EpgSources.forXtream(playlist.epgUrl, XtreamClient.of(http, playlist).epgUrl)
             }
-            if (sources.isEmpty()) return
+            val current = settings.current()
+            val extra = if (current.internetGuide) EpgSources.PUBLIC.filter { it !in own } else emptyList()
+            if (own.isEmpty() && extra.isEmpty()) return
             prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: TV-Guide wird geladen …")
             try {
                 val channels = db.channels().forEpg(playlist.id)
-                val shift = settings.current().epgShiftHours * HOUR
-                withContext(importDispatcher) { importEpg(playlist, sources, channels, shift) }
+                val visible = db.channels().visibleIds(playlist.id).toHashSet()
+                val shift = current.epgShiftHours * HOUR
+                withContext(importDispatcher) { importEpg(playlist, own, extra, channels, visible, shift) }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
@@ -344,23 +354,49 @@ class PlaylistRepository(
         }
     }
 
+    /** Wie gut der TV-Guide einer Playlist zu ihren Sendern passt (nach dem letzten Laden). */
+    data class EpgStatus(val withGuide: Int, val total: Int, val sources: List<Pair<String, Int>>, val missing: List<String>)
+
+    fun epgStatus(playlistId: Long): EpgStatus? = runCatching {
+        val lines = File(statusDir, "epg-$playlistId.txt").readLines()
+        val (withGuide, total) = lines.first().split('\t').map { it.toInt() }
+        EpgStatus(
+            withGuide, total,
+            lines.filter { it.startsWith("S\t") }.map { it.split('\t').let { p -> p[1] to p[2].toInt() } },
+            lines.filter { it.startsWith("M\t") }.map { it.substring(2) },
+        )
+    }.getOrNull()
+
     /**
      * Quellen nacheinander: Die erste ersetzt den alten TV-Guide, jede weitere füllt nur Sender, für die
-     * noch nichts da ist. Eine Quelle, die nicht lädt, hält die anderen nicht auf.
+     * noch nichts da ist. Eine Quelle, die nicht lädt, hält die anderen nicht auf. Die freien Quellen
+     * ([extra]) kommen zuletzt, nur wenn noch Sender aus dem deutschsprachigen Raum fehlen, und werden
+     * höchstens einmal am Tag geladen.
      */
-    private fun importEpg(playlist: PlaylistEntity, sources: List<String>, channels: List<EpgChannel>, shift: Long) {
+    private fun importEpg(
+        playlist: PlaylistEntity,
+        own: List<String>,
+        extra: List<String>,
+        channels: List<EpgChannel>,
+        visible: Set<Long>,
+        shift: Long,
+    ) {
         val covered = HashSet<Long>()
         val taken = HashSet<String>()
+        val counts = ArrayList<Pair<String, Int>>()
         var cleared = false
         var firstError: Exception? = null
-        for ((index, url) in sources.withIndex()) {
+        val sources = own.map { it to false } + extra.map { it to true }
+        for ((index, entry) in sources.withIndex()) {
+            val (url, isPublic) = entry
             val open = channels.filter { it.id !in covered }
             if (open.isEmpty()) break
+            if (isPublic && open.none { it.id in visible && EpgMatcher.analyse(it.name, isId = false).country in GERMAN_SPEAKING }) continue
             val source = try {
-                fetch(url, "epg-${playlist.id}-$index.xml")
+                if (isPublic) fetchCached(url, PUBLIC_MAX_AGE) else fetch(url, "epg-${playlist.id}-$index.xml")
             } catch (e: IOException) {
                 Log.w(TAG, "EPG-Quelle ${index + 1} nicht erreichbar", e)
-                firstError = firstError ?: e
+                if (!isPublic) firstError = firstError ?: e
                 continue
             }
             try {
@@ -373,15 +409,34 @@ class PlaylistRepository(
                 cleared = true
                 covered += found
                 taken += used
-                Log.i(TAG, "EPG-Quelle ${index + 1}: ${found.size} von ${open.size} Sendern")
+                counts += EpgSources.label(url) to found.count { it in visible }
+                Log.i(TAG, "EPG-Quelle ${index + 1} (${EpgSources.label(url)}): ${found.size} von ${open.size} Sendern")
             } catch (e: Exception) {
                 Log.w(TAG, "EPG-Quelle ${index + 1} nicht lesbar", e)
-                firstError = firstError ?: e
+                if (!isPublic) firstError = firstError ?: e
             } finally {
                 discard(source)
             }
         }
-        if (!cleared) throw firstError ?: IOException("Kein TV-Guide geladen")
+        if (!cleared) {
+            // Keine eigene Quelle und keine passende freie: kein Fehler, es gibt einfach keinen TV-Guide.
+            if (firstError == null && own.isEmpty()) return
+            throw firstError ?: IOException("Kein TV-Guide geladen")
+        }
+        writeStatus(playlist.id, channels, visible, covered, counts)
+    }
+
+    private fun writeStatus(playlistId: Long, channels: List<EpgChannel>, visible: Set<Long>, covered: Set<Long>, counts: List<Pair<String, Int>>) {
+        val shown = channels.filter { it.id in visible }
+        val missing = shown.filter { it.id !in covered }.map { it.name.trim() }.distinct()
+        runCatching {
+            statusDir.mkdirs()
+            File(statusDir, "epg-$playlistId.txt").writeText(buildString {
+                append("${shown.count { it.id in covered }}\t${shown.size}\n")
+                for ((label, count) in counts) append("S\t${label.replace('\t', ' ')}\t$count\n")
+                for (name in missing.take(MAX_MISSING_LISTED)) append("M\t${name.replace('\n', ' ')}\n")
+            })
+        }
     }
 
     /**
@@ -503,6 +558,24 @@ class PlaylistRepository(
         throw IOException("Download fehlgeschlagen")
     }
 
+    /** Freie Quelle aus dem Zwischenspeicher, wenn jünger als [maxAge], sonst neu laden (alte Datei bleibt bei Fehlern). */
+    private fun fetchCached(url: String, maxAge: Long): File {
+        publicDir.mkdirs()
+        val target = File(publicDir, url.substringAfterLast('/'))
+        if (target.length() > 0 && System.currentTimeMillis() - target.lastModified() < maxAge) return target
+        val downloaded = try {
+            fetch(url, "public-" + target.name)
+        } catch (e: IOException) {
+            if (target.length() > 0) return target
+            throw e
+        }
+        if (!downloaded.renameTo(target)) {
+            downloaded.copyTo(target, overwrite = true)
+            downloaded.delete()
+        }
+        return target
+    }
+
     /** Heruntergeladene Zwischendateien wieder löschen (eigene Dateien des Nutzers bleiben). */
     private fun discard(file: File) {
         if (file.parentFile == importDir) file.delete()
@@ -526,5 +599,11 @@ class PlaylistRepository(
         private const val MAX_ARCHIVE_DAYS = 7
         private const val CONTENT_MAX_AGE = 12 * HOUR
         private const val EPG_MAX_AGE = 8 * HOUR
+        private const val PUBLIC_MAX_AGE = 20 * HOUR
+        private const val MAX_MISSING_LISTED = 40
+        /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
+        private const val EPG_MATCH_VERSION = "2"
+        /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
+        private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }
 }

@@ -35,4 +35,10 @@ class EpgSourcesTest {
         assertEquals(listOf("http://x/xmltv.php"), EpgSources.forXtream("http://x/xmltv.php", "http://x/xmltv.php"))
         assertEquals(emptyList<String>(), EpgSources.forM3u("", "http://example.com/list.m3u"))
     }
+
+    @Test
+    fun labels() {
+        assertEquals("epgshare01 DE", EpgSources.label(EpgSources.PUBLIC[0]))
+        assertEquals("tv.example.com", EpgSources.label("http://tv.example.com:8080/xmltv.php?username=a&password=b"))
+    }
 }
