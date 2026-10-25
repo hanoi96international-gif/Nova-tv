@@ -1,5 +1,11 @@
 package de.ayutv.ui.settings
 
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import de.ayutv.data.setup.Backup
+import de.ayutv.ui.components.isTouchDevice
+import de.ayutv.ui.components.isPortrait
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -96,9 +102,33 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     // Einrichtung per Handy: Webseite im Heimnetz, solange die Einstellungen offen sind.
     val phoneSetup = remember { PhoneSetupServer(container) }
     val phone by phoneSetup.state.collectAsStateWithLifecycle()
-    DisposableEffect(Unit) {
-        phoneSetup.start()
+    // Auf dem Handy selbst wird direkt eingegeben: dort keine Einrichtungsseite im Heimnetz.
+    val touch = isTouchDevice
+    DisposableEffect(touch) {
+        if (!touch) phoneSetup.start()
         onDispose { phoneSetup.stop() }
+    }
+    val context = LocalContext.current
+    var backupInfo by remember { mutableStateOf<String?>(null) }
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            backupInfo = runCatching {
+                val text = Backup(container).create()
+                withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } }
+                "Sicherung gespeichert."
+            }.getOrElse { "Speichern fehlgeschlagen: ${it.message}" }
+        }
+    }
+    val loadBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            backupInfo = runCatching {
+                val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
+                    ?: error("Datei nicht lesbar")
+                Backup(container).restore(text)
+            }.getOrElse { it.message ?: "Einspielen fehlgeschlagen" }
+        }
     }
     var keyReport by remember { mutableStateOf<String?>(null) }
     var page by rememberSaveable { mutableStateOf(SettingsPage.PLAYLISTS) }
@@ -130,7 +160,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             // focusRestorer: Von rechts zurück landet der Fokus auf dem gewählten Bereich, nicht auf dem
             // gerade daneben liegenden (der sonst sofort umschalten würde).
             // fallback: Beim ersten Betreten (noch nichts gemerkt) auf den gewählten Bereich, nicht auf den nächstgelegenen.
-            Modifier.width(250.dp).fillMaxHeight().focusRestorer(pageFocus.getValue(page))
+            Modifier.width(if (isPortrait) 170.dp else 250.dp).fillMaxHeight().focusRestorer(pageFocus.getValue(page))
                 .background(AyuColors.Surface.copy(alpha = 0.5f)).padding(vertical = 32.dp, horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -189,7 +219,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         }
                     }
 
-                    item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
+                    if (!touch) item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
                 }
                 SettingsPage.PLAYBACK -> {
                     item {
@@ -255,7 +285,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
 
                 }
                 SettingsPage.SUBTITLES -> {
-                    item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
+                    if (!touch) item { PhoneSetupCard(phone, keyReport ?: phone.lastSaved) }
                     item {
                         SettingRow(
                             "Zugänge prüfen",
@@ -305,10 +335,10 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            CredentialField(settings.openSubtitlesUser, "Benutzername (optional, mehr Downloads pro Tag)", Modifier.width(320.dp)) { user ->
+                            CredentialField(settings.openSubtitlesUser, "Benutzername (optional, mehr Downloads pro Tag)", Modifier.weight(1f)) { user ->
                                 update { it.copy(openSubtitlesUser = user) }
                             }
-                            CredentialField(settings.openSubtitlesPassword, "Passwort (optional)", Modifier.width(260.dp), password = true) { pw ->
+                            CredentialField(settings.openSubtitlesPassword, "Passwort (optional)", Modifier.weight(1f), password = true) { pw ->
                                 update { it.copy(openSubtitlesPassword = pw) }
                             }
                         }
@@ -397,6 +427,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Am Ende einer Folge startet die nächste nach 10 Sekunden (OK sofort, Zurück bleibt stehen).",
                         ) { update { it.copy(autoNextEpisode = !it.autoNextEpisode) } }
                     }
+                    if (touch) item {
+                        SettingRow(
+                            "Datensparmodus bei mobilen Daten",
+                            onOff(settings.dataSaver),
+                            "Ohne WLAN: Sender in der SD-Fassung (wenn vorhanden), Streams mit mehreren Qualitäten höchstens in 720p. " +
+                                "HD braucht sonst etwa 2–3 GB pro Stunde.",
+                        ) { update { it.copy(dataSaver = !it.dataSaver) } }
+                    }
                     item {
                         SettingRow(
                             "Doppelte Sender zusammenfassen",
@@ -459,6 +497,24 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     item { ParentalSettings() }
                 }
                 SettingsPage.DATA -> {
+                    if (touch) {
+                        item {
+                            SettingRow(
+                                "Sicherung speichern",
+                                backupInfo.orEmpty(),
+                                "Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, Vereine und Einstellungen in eine Datei, " +
+                                    "z. B. für ein neues Handy oder den Fire TV. Gut aufbewahren. Ohne Kindersicherung.",
+                            ) {
+                                val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.GERMANY).format(java.util.Date())
+                                runCatching { saveBackup.launch("dna-tv-sicherung-$day.json") }
+                            }
+                        }
+                        item {
+                            SettingRow("Sicherung einspielen", "", "Übernimmt eine gespeicherte Sicherung; nichts wird doppelt angelegt.") {
+                                runCatching { loadBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) }
+                            }
+                        }
+                    }
                     item {
                         SettingRow("Verlauf löschen", "", "Entfernt „Zuletzt gesehen“, „Weiter schauen“ und die Empfehlungen.") {
                             scope.launch { container.content.clearHistory() }
@@ -695,15 +751,17 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
     }
 
     // Zugangsdaten lassen sich auch vom Handy einfügen (QR-Code rechts), statt sie zu tippen.
+    // Auf dem Handy selbst nicht nötig: dort direkt eingeben.
     val phoneSetup = remember { PhoneSetupServer(container) }
     val phone by phoneSetup.state.collectAsStateWithLifecycle()
-    DisposableEffect(Unit) {
-        phoneSetup.start()
+    val touch = isTouchDevice
+    DisposableEffect(touch) {
+        if (!touch) phoneSetup.start()
         onDispose { phoneSetup.stop() }
     }
 
     Row(
-        Modifier.fillMaxSize().padding(horizontal = 56.dp, vertical = 36.dp),
+        Modifier.fillMaxSize().padding(horizontal = if (touch) 16.dp else 56.dp, vertical = if (touch) 16.dp else 36.dp),
         horizontalArrangement = Arrangement.spacedBy(28.dp),
     ) {
         Column(
@@ -759,7 +817,7 @@ fun AddPlaylistScreen(onDone: () -> Unit, onCancel: (() -> Unit)?) {
                 if (onCancel != null) OutlinedButton(onClick = onCancel) { Text("Abbrechen") }
             }
         }
-        Column(
+        if (!touch) Column(
             Modifier.weight(1f).fillMaxHeight()
                 .background(AyuColors.Surface.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
                 .padding(28.dp),

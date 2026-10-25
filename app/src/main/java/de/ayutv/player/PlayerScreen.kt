@@ -18,6 +18,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlin.math.abs
 import de.ayutv.ui.components.isTouchDevice
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -114,6 +118,8 @@ fun PlayerScreen(activity: PlayerActivity) {
                 },
                 update = {
                     it.player = player
+                    // Zwei-Finger-Zoom (Handy): Bild füllt den Bildschirm, Ränder werden abgeschnitten.
+                    it.resizeMode = if (activity.zoomed) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
                     it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
                     // Eigene Einblendung (Übersetzung, geladene Datei): Die Spur des Players läuft nur als Taktgeber mit.
                     it.subtitleView?.visibility = if (activity.ownSubtitles) View.INVISIBLE else View.VISIBLE
@@ -129,18 +135,24 @@ fun PlayerScreen(activity: PlayerActivity) {
             Box(Modifier.fillMaxSize().background(Color.Black))
         }
 
+        // Bild-in-Bild: nur das Bild, keine Leisten und Hinweise.
+        if (!activity.inPip) {
+
         val touch = isTouchDevice
         if (touch) {
             // Tippen blendet die Leiste ein/aus, doppelt tippen links/rechts spult (Filme).
+            // Wischen: rechts Lautstärke, links Helligkeit, waagerecht spulen, Live in der Mitte hoch/runter umschalten.
             Box(
-                Modifier.fillMaxSize().pointerInput(activity.isLive) {
-                    detectTapGestures(
-                        onTap = { activity.onScreenTap() },
-                        onDoubleTap = if (activity.isLive) null else { offset: Offset ->
-                            activity.pressKey(if (offset.x < size.width / 2) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
-                        },
-                    )
-                }
+                Modifier.fillMaxSize()
+                    .pointerInput(activity.isLive) {
+                        detectTapGestures(
+                            onTap = { activity.onScreenTap() },
+                            onDoubleTap = if (activity.isLive) null else { offset: Offset ->
+                                activity.pressKey(if (offset.x < size.width / 2) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
+                            },
+                        )
+                    }
+                    .pointerInput(activity.isLive) { playerGestures(activity) }
             )
         }
 
@@ -149,6 +161,16 @@ fun PlayerScreen(activity: PlayerActivity) {
                 "Lädt …",
                 modifier = Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(16.dp),
                 color = Color.White,
+            )
+        }
+
+        activity.gestureInfo?.let {
+            Text(
+                it,
+                modifier = Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp)).padding(horizontal = 24.dp, vertical = 14.dp),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
             )
         }
 
@@ -256,6 +278,7 @@ fun PlayerScreen(activity: PlayerActivity) {
         ) {
             ChannelListOverlay(activity)
         }
+        }
     }
 
     // Overlays blenden sich nach kurzer Zeit aus. Jede Taste setzt den Timer zurück (overlayToken).
@@ -335,6 +358,68 @@ private fun LiveInfoBar(activity: PlayerActivity) {
     }
 }
 
+private enum class Swipe { NONE, VOLUME, BRIGHTNESS, SEEK, ZAP, PINCH }
+
+/**
+ * Wischgesten wie in Handy-Videoplayern. Erst ab einer kleinen Strecke entschieden (sonst ist es ein Tippen),
+ * danach bleibt es bei dieser Geste, bis der Finger losgelassen wird.
+ */
+private suspend fun PointerInputScope.playerGestures(activity: PlayerActivity) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val start = down.position
+        var mode = Swipe.NONE
+        var last = start
+        var pinchStart = 0f
+        val slop = viewConfiguration.touchSlop * 2
+        while (true) {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.filter { it.pressed }
+            if (pressed.isEmpty()) break
+            if (pressed.size >= 2) {
+                val distance = (pressed[0].position - pressed[1].position).getDistance()
+                if (mode != Swipe.PINCH) {
+                    mode = Swipe.PINCH
+                    pinchStart = distance
+                } else if (pinchStart > 0f) {
+                    if (distance / pinchStart > 1.25f) activity.zoomGesture(true)
+                    if (distance / pinchStart < 0.8f) activity.zoomGesture(false)
+                }
+                event.changes.forEach { it.consume() }
+                continue
+            }
+            if (mode == Swipe.PINCH) continue
+            val change = pressed.first()
+            val pos = change.position
+            if (mode == Swipe.NONE) {
+                val dx = pos.x - start.x
+                val dy = pos.y - start.y
+                if (abs(dx) < slop && abs(dy) < slop) continue
+                mode = when {
+                    abs(dx) > abs(dy) -> Swipe.SEEK
+                    activity.isLive && start.x in size.width / 3f..size.width * 2 / 3f -> Swipe.ZAP
+                    start.x > size.width / 2f -> Swipe.VOLUME
+                    else -> Swipe.BRIGHTNESS
+                }
+                last = pos
+            }
+            when (mode) {
+                Swipe.VOLUME -> activity.adjustVolume((last.y - pos.y) / size.height * 1.5f)
+                Swipe.BRIGHTNESS -> activity.adjustBrightness((last.y - pos.y) / size.height * 1.5f)
+                Swipe.SEEK -> activity.seekGesture((pos.x - start.x) / size.width, done = false)
+                else -> Unit
+            }
+            last = pos
+            change.consume()
+        }
+        when (mode) {
+            Swipe.SEEK -> activity.seekGesture((last.x - start.x) / size.width, done = true)
+            Swipe.ZAP -> if (abs(last.y - start.y) > size.height / 6f) activity.zapGesture(up = last.y < start.y)
+            else -> Unit
+        }
+    }
+}
+
 /** Bedienknöpfe für den Touchscreen: dieselben Funktionen wie die Tasten der Fernbedienung. */
 @Composable
 private fun TouchButtons(activity: PlayerActivity, modifier: Modifier = Modifier) {
@@ -347,9 +432,9 @@ private fun TouchButtons(activity: PlayerActivity, modifier: Modifier = Modifier
         @Composable
         fun button(label: String, action: () -> Unit) {
             Box(
-                Modifier.size(52.dp).clip(RoundedCornerShape(26.dp)).clickable(onClick = action),
+                Modifier.size(60.dp).clip(RoundedCornerShape(30.dp)).clickable(onClick = action),
                 contentAlignment = Alignment.Center,
-            ) { Text(label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+            ) { Text(label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
         }
         if (activity.isLive) {
             button("▲") { activity.pressKey(KeyEvent.KEYCODE_CHANNEL_UP) }

@@ -60,7 +60,12 @@ val isTouchDevice: Boolean
 fun FitToScreen(content: @Composable () -> Unit) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val factor = (configuration.screenHeightDp / TV_HEIGHT_DP).coerceIn(0.55f, 1f)
+    // Hochformat: so verkleinern, dass die Seiten 600 dp breit sind (Listen und Raster passen nebeneinander).
+    val factor = if (configuration.screenHeightDp > configuration.screenWidthDp) {
+        (configuration.screenWidthDp / PORTRAIT_WIDTH_DP).coerceIn(0.55f, 1f)
+    } else {
+        (configuration.screenHeightDp / TV_HEIGHT_DP).coerceIn(0.55f, 1f)
+    }
     if (factor >= 0.99f) {
         content()
     } else {
@@ -69,6 +74,11 @@ fun FitToScreen(content: @Composable () -> Unit) {
 }
 
 private const val TV_HEIGHT_DP = 540f
+private const val PORTRAIT_WIDTH_DP = 600f
+
+/** Hochformat (Handy hochkant gehalten): Navigation unten, schmalere Spalten. */
+val isPortrait: Boolean
+    @Composable get() = LocalConfiguration.current.let { it.screenHeightDp > it.screenWidthDp }
 
 /**
  * Tippen fokussiert das Element und löst es aus, langes Tippen wirkt wie „OK halten“. Mit [focusFirst]

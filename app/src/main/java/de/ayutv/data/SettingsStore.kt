@@ -91,6 +91,8 @@ data class AppSettings(
     val timeshiftMinutes: Int = 30,
     /** Serien: nach einer Folge startet die nächste nach einem kurzen Countdown. */
     val autoNextEpisode: Boolean = true,
+    /** Handy mit mobilen Daten: kleinere Fassung der Sender, adaptive Streams höchstens 720p. */
+    val dataSaver: Boolean = true,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -138,6 +140,7 @@ class SettingsStore(private val context: Context) {
         val timeshift = booleanPreferencesKey("live_timeshift")
         val timeshiftMinutes = intPreferencesKey("timeshift_minutes")
         val autoNext = booleanPreferencesKey("auto_next_episode")
+        val dataSaver = booleanPreferencesKey("data_saver")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -227,6 +230,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.timeshift] = next.liveTimeshift
             prefs[Keys.timeshiftMinutes] = next.timeshiftMinutes
             prefs[Keys.autoNext] = next.autoNextEpisode
+            prefs[Keys.dataSaver] = next.dataSaver
         }
     }
 
@@ -257,6 +261,7 @@ class SettingsStore(private val context: Context) {
         liveTimeshift = this[Keys.timeshift] ?: true,
         timeshiftMinutes = this[Keys.timeshiftMinutes]?.takeIf { it in TIMESHIFT_MINUTES } ?: 30,
         autoNextEpisode = this[Keys.autoNext] ?: true,
+        dataSaver = this[Keys.dataSaver] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

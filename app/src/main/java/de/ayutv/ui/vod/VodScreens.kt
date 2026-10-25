@@ -1,5 +1,6 @@
 package de.ayutv.ui.vod
 
+import de.ayutv.ui.components.isPortrait
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -178,13 +179,14 @@ private fun SeriesDetail(series: SeriesEntity) {
     val activeSeason = if (season in seasons) season else seasons.firstOrNull() ?: 1
 
     Row(Modifier.fillMaxSize().padding(32.dp)) {
-        Column(Modifier.width(260.dp)) {
+        val portrait = isPortrait
+        Column(Modifier.width(if (portrait) 170.dp else 260.dp)) {
             if (!series.cover.isNullOrBlank()) {
                 AsyncImage(
                     model = series.cover,
                     contentDescription = series.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(width = 240.dp, height = 360.dp).clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier.size(width = if (portrait) 160.dp else 240.dp, height = if (portrait) 240.dp else 360.dp).clip(RoundedCornerShape(12.dp)),
                 )
             }
             Spacer(Modifier.height(16.dp))

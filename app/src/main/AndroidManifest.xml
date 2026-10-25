@@ -37,7 +37,7 @@
             android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="landscape">
+            android:screenOrientation="fullUser">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -51,12 +51,15 @@
         </activity>
 
         <!-- Alle Konfigurationswechsel selbst behandeln: Schaltet der Fernseher die Bildwiederholrate,
-             HDR oder die Auflösung um, darf der Player nicht neu starten (sonst Endlosschleife). -->
+             HDR oder die Auflösung um, darf der Player nicht neu starten (sonst Endlosschleife).
+             Auf dem Handy dreht er sich mit (hoch/quer) und läuft als Bild-in-Bild weiter. -->
         <activity
             android:name=".player.PlayerActivity"
             android:configChanges="colorMode|density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|mcc|mnc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|touchscreen|uiMode"
             android:exported="false"
-            android:screenOrientation="landscape"
+            android:resizeableActivity="true"
+            android:screenOrientation="fullUser"
+            android:supportsPictureInPicture="true"
             android:theme="@style/Theme.AyuTV.Player" />
         <!-- Übersetzer und Texterkennung im eigenen Prozess: Speichermangel oder ein Modellabsturz
              beenden nur die Übersetzung, nie den laufenden Film. -->

@@ -9,6 +9,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.os.Build
+import android.content.pm.PackageManager
 import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -310,6 +312,10 @@ class PlayerActivity : ComponentActivity() {
         )
         headers = built.headers
         trackSelector = built.trackSelector
+        // Datensparmodus bei mobilen Daten: adaptive Streams (HLS) höchstens in 720p.
+        if (settings.dataSaver && onMeteredNetwork()) built.trackSelector.let { ts ->
+            ts.setParameters(ts.buildUponParameters().setMaxVideoSize(1280, 720).setMaxVideoBitrate(3_500_000))
+        }
         embedded = built.subtitles
         asyncDecodingActive = asyncDecoding
         forcePcmActive = forcePcm
@@ -672,6 +678,8 @@ class PlayerActivity : ComponentActivity() {
 
         loadChannelInfo(channel)
         container.scope.launch { container.content.recordLive(channel) }
+        checkMobileData()
+        preferSmallVariant(channel)
     }
 
     // ---------------------------------------------------------------- Zeitversatz (Live anhalten)
@@ -891,6 +899,7 @@ class PlayerActivity : ComponentActivity() {
         p.playWhenReady = true
         showOverlay(Overlay.CONTROLS)
         if (request.kind == HistoryKind.EPISODE) prepareEpisodeExtras(request)
+        checkMobileData()
         progressJob?.cancel()
         progressJob = lifecycleScope.launch {
             var tick = 0
@@ -1751,6 +1760,125 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Touch (Handy, Tablet)
 
+    /** Kurze Rückmeldung zu einer Wischgeste (Lautstärke, Helligkeit, Spulen), mittig im Bild. */
+    var gestureInfo by mutableStateOf<String?>(null); private set
+    private var gestureInfoJob: Job? = null
+    /** Bild füllt den Bildschirm (Ränder abgeschnitten) statt ganz zu sehen. */
+    var zoomed by mutableStateOf(false); private set
+    /** Läuft als kleines Fenster über anderen Apps (Bild-in-Bild). */
+    var inPip by mutableStateOf(false); private set
+    private var volumeLevel = -1f
+    private var brightnessLevel = -1f
+
+    private fun showGestureInfo(text: String) {
+        gestureInfo = text
+        gestureInfoJob?.cancel()
+        gestureInfoJob = lifecycleScope.launch {
+            delay(1_200)
+            gestureInfo = null
+        }
+    }
+
+    /** Rechts hoch/runter wischen: [delta] ist der Anteil der Bildschirmhöhe (hoch = positiv). */
+    fun adjustVolume(delta: Float) {
+        val audio = getSystemService(android.media.AudioManager::class.java) ?: return
+        val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        if (volumeLevel < 0) volumeLevel = audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() / max
+        volumeLevel = (volumeLevel + delta).coerceIn(0f, 1f)
+        audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, Math.round(volumeLevel * max), 0)
+        showGestureInfo("🔊 ${Math.round(volumeLevel * 100)} %")
+    }
+
+    /** Links hoch/runter wischen: Helligkeit nur für den Player (nicht für das ganze Gerät). */
+    fun adjustBrightness(delta: Float) {
+        val attributes = window.attributes
+        if (brightnessLevel < 0) brightnessLevel = attributes.screenBrightness.takeIf { it >= 0 } ?: 0.5f
+        brightnessLevel = (brightnessLevel + delta).coerceIn(0.02f, 1f)
+        attributes.screenBrightness = brightnessLevel
+        window.attributes = attributes
+        showGestureInfo("☀ ${Math.round(brightnessLevel * 100)} %")
+    }
+
+    /** Waagerecht wischen: [fraction] der Bildschirmbreite entspricht bis zu zwei Minuten. Erst beim Loslassen springen. */
+    fun seekGesture(fraction: Float, done: Boolean) {
+        val deltaMs = (fraction * SWIPE_SEEK_MS / 5_000).toLong() * 5_000
+        if (!done) {
+            showGestureInfo((if (deltaMs >= 0) "⏩ +" else "⏪ −") + clock(kotlin.math.abs(deltaMs)))
+            return
+        }
+        if (deltaMs == 0L) return
+        if (isLive) shiftLive(deltaMs) else seekBy(deltaMs)
+    }
+
+    /** Live: senkrecht in der Bildmitte wischen schaltet um (hoch = nächster Sender). */
+    fun zapGesture(up: Boolean) {
+        if (isLive) zap(if (up) +1 else -1)
+    }
+
+    /** Zwei Finger auseinander: Bild füllt den Bildschirm; zusammen: wieder ganz. */
+    fun zoomGesture(fill: Boolean) {
+        if (zoomed == fill) return
+        zoomed = fill
+        showGestureInfo(if (fill) "Bild füllt den Bildschirm" else "Ganzes Bild")
+    }
+
+    /** Home-Taste während der Wiedergabe: als kleines Fenster weiterlaufen (Handy, Tablet). */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        enterPipIfPossible()
+    }
+
+    private fun enterPipIfPossible() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !hasTouchscreen() || isFinishing) return
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) return
+        val p = player ?: return
+        if (!p.playWhenReady) return
+        val size = p.videoSize
+        val ratio = if (size.width > 0 && size.height > 0) {
+            val r = size.width.toFloat() * size.pixelWidthHeightRatio / size.height
+            android.util.Rational((r.coerceIn(0.42f, 2.38f) * 1000).toInt(), 1000)
+        } else {
+            android.util.Rational(16, 9)
+        }
+        closeOverlay()
+        runCatching { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().setAspectRatio(ratio).build()) }
+            .onFailure { Log.w(TAG, "Bild-in-Bild nicht möglich", it) }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        inPip = isInPictureInPictureMode
+        if (isInPictureInPictureMode) closeOverlay()
+    }
+
+    /** Mobile Daten (oder anderes Netz mit Volumen): Hinweis und auf Wunsch sparsamere Fassung. */
+    private fun onMeteredNetwork(): Boolean {
+        val connectivity = getSystemService(android.net.ConnectivityManager::class.java) ?: return false
+        return runCatching { connectivity.isActiveNetworkMetered }.getOrDefault(false) && hasTouchscreen()
+    }
+
+    private var meteredHintShown = false
+
+    private fun checkMobileData() {
+        if (!onMeteredNetwork()) return
+        if (!meteredHintShown) {
+            meteredHintShown = true
+            subtitleStatus = if (settings.dataSaver) "Mobile Daten: Datensparmodus an (kleinere Fassung, höchstens 720p)"
+                else "Mobile Daten: HD braucht etwa 2–3 GB pro Stunde"
+        }
+    }
+
+    /** Datensparmodus: auf die SD-Fassung eines Senders wechseln, wenn es eine gibt. */
+    private fun preferSmallVariant(channel: ChannelEntity) {
+        if (!settings.dataSaver || !settings.mergeVariants || switchingVariant || !onMeteredNetwork()) return
+        lifecycleScope.launch {
+            val small = container.content.variantsOf(channel).firstOrNull { de.ayutv.data.parse.ChannelVariants.rank(it.name) == 4 }
+            if (small == null || playing?.key != channel.key) return@launch
+            switchingVariant = true
+            try { playChannel(small) } finally { switchingVariant = false }
+        }
+    }
+
     /** Knopf auf dem Bildschirm: wirkt wie dieselbe Taste der Fernbedienung. */
     fun pressKey(code: Int) {
         if (player == null) return
@@ -2162,6 +2290,11 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
+        if (inPip) {
+            inPip = false
+            finish()
+        }
         // Noch nicht ausgeführtes Schnell-Zappen verwerfen: im Hintergrund keinen neuen Stream öffnen.
         if (zapJob != null) {
             zapJob?.cancel()
@@ -2226,6 +2359,8 @@ class PlayerActivity : ComponentActivity() {
         // Bei 50 Hz bringt 0,985 nur alle ~1,3 s ein doppeltes Bild (0,97 ruckelte bei Schwenks sichtbar).
         private const val CUSHION_SPEED = 0.985f
         private const val VOD_STALL_SECONDS = 20
+        /** Über die ganze Bildschirmbreite wischen spult so weit. */
+        private const val SWIPE_SEEK_MS = 120_000f
         /** „Nächste Folge“ erscheint in den letzten Sekunden einer Folge. */
         private const val NEXT_CARD_MS = 20_000L
         private const val NEXT_COUNTDOWN_SECONDS = 10

@@ -112,7 +112,7 @@ fun CategoryColumn(
     selected: String?,
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
-    width: Dp = 260.dp,
+    width: Dp = if (isPortrait) 170.dp else 260.dp,
     /** Langes Drücken auf eine echte Gruppe (nicht "Alle"/"Favoriten"), z. B. zum Ausblenden. */
     onLongClick: ((String) -> Unit)? = null,
 ) {
