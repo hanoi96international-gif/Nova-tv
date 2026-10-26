@@ -1963,11 +1963,11 @@ class PlayerActivity : ComponentActivity() {
     /** Zwei Finger auseinander: Bild füllt den Bildschirm; zusammen: wieder ganz. */
     fun zoomGesture(fill: Boolean) {
         if ((aspect == AspectMode.ZOOM) == fill) return
-        setAspect(if (fill) AspectMode.ZOOM else AspectMode.FIT)
+        chooseAspect(if (fill) AspectMode.ZOOM else AspectMode.FIT)
         showGestureInfo(if (fill) "Bild füllt den Bildschirm" else "Ganzes Bild")
     }
 
-    fun setAspect(mode: AspectMode) {
+    fun chooseAspect(mode: AspectMode) {
         aspect = mode
         memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(aspect = mode) } }
     }
@@ -2065,7 +2065,7 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    fun setAudioMode(mode: AudioMode) {
+    fun chooseAudioMode(mode: AudioMode) {
         audioMode = mode
         enhance.mode = mode
         container.scope.launch { container.settings.update { it.copy(audioMode = mode) } }

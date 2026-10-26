@@ -733,12 +733,12 @@ private fun TracksOverlay(activity: PlayerActivity) {
         }
         item { MenuHeader("Klang") }
         AudioMode.entries.forEach { mode ->
-            item { OptionRow(mode.label, activity.audioMode == mode) { activity.setAudioMode(mode) } }
+            item { OptionRow(mode.label, activity.audioMode == mode) { activity.chooseAudioMode(mode) } }
         }
         item { MenuHint("Wirkt, wenn der Ton im Gerät dekodiert wird – nicht bei Dolby/DTS, das an Soundbar oder Receiver geht (Einstellungen → Tonausgabe: „Immer im Gerät dekodieren“).") }
         item { MenuHeader("Bild") }
         AspectMode.entries.forEach { mode ->
-            item { OptionRow(mode.label, activity.aspect == mode) { activity.setAspect(mode) } }
+            item { OptionRow(mode.label, activity.aspect == mode) { activity.chooseAspect(mode) } }
         }
         item { MenuHeader("Schlaf-Timer") }
         if (activity.sleepAt > 0) {
