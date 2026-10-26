@@ -1446,7 +1446,7 @@ class PlayerActivity : ComponentActivity() {
             var done = 0
             val skipped = HashSet<Long>()
             var slowWarned = false
-            val wanted: (de.ayutv.player.EmbeddedSubtitles.Entry) -> Boolean =
+            val wanted: (EmbeddedSubtitles.Entry) -> Boolean =
                 { it.startMs !in aheadTranslations && (it.text != null || it.image != null) }
             while (true) {
                 val store = embedded ?: break
@@ -1454,13 +1454,14 @@ class PlayerActivity : ComponentActivity() {
                 // Kommt das Gerät nicht hinterher, die Zeilen überspringen, die vorbei wären, bevor ihre
                 // Übersetzung fertig ist: lieber jede zweite Zeile übersetzt als jede zu spät (dann bliebe alles im Original).
                 val earliest = position - 2_000
-                val from = if (lineMs > 0) maxOf(earliest, position + lineMs * 13 / 10 - 1_000) else earliest
-                val next = store.upcoming(format, from, 1, wanted).firstOrNull()
+                val ready = position + lineMs * 13 / 10
+                fun lateFor(entry: EmbeddedSubtitles.Entry) = lineMs > 0 && (if (entry.endMs >= 0) entry.endMs else entry.startMs + ASSUMED_LINE_MS) <= ready
+                val next = store.upcoming(format, earliest, 1) { wanted(it) && !lateFor(it) }.firstOrNull()
                 if (next == null) {
                     delay(250)
                     continue
                 }
-                if (from > earliest) store.upcoming(format, earliest, 20) { wanted(it) && it.startMs < from }.forEach { skipped += it.startMs }
+                store.upcoming(format, earliest, 20) { wanted(it) && it.startMs < next.startMs && lateFor(it) }.forEach { skipped += it.startMs }
                 try {
                     val started = SystemClock.elapsedRealtime()
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
@@ -2788,6 +2789,8 @@ class PlayerActivity : ComponentActivity() {
         private const val LIVE_STALL_SECONDS = 8
         private const val VLC_PACKAGE = "org.videolan.vlc"
         private const val DROP_WINDOW_MS = 10 * 60_000L
+        /** Angenommene Dauer einer Einblendung ohne bekanntes Ende (Live-Übersetzung, Zeilen überspringen). */
+        private const val ASSUMED_LINE_MS = 3_000L
         private const val DROP_WARN_COUNT = 3
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
