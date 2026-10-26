@@ -24,6 +24,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        AppTime.fixZone()
         val process = processName()
         CrashReport.install(this, process)
         // Der Übersetzer-Prozess braucht nichts davon (keine Datenbank, keine Synchronisierung).
