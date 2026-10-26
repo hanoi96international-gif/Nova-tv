@@ -128,6 +128,8 @@ data class AppSettings(
     val dataSaver: Boolean = true,
     /** Stichwort-Alarm: Sendungen mit diesen Begriffen bekommen automatisch eine Erinnerung. */
     val alertKeywords: Set<String> = emptySet(),
+    /** Fernseher nimmt im Heimnetz Befehle vom Handy an (Fernbedienung, Abgleich), nur mit PIN. */
+    val phoneRemote: Boolean = true,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -181,6 +183,7 @@ class SettingsStore(private val context: Context) {
         val autoNext = booleanPreferencesKey("auto_next_episode")
         val dataSaver = booleanPreferencesKey("data_saver")
         val alertKeywords = stringSetPreferencesKey("alert_keywords")
+        val phoneRemote = booleanPreferencesKey("phone_remote")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -288,6 +291,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.autoNext] = next.autoNextEpisode
             prefs[Keys.dataSaver] = next.dataSaver
             prefs[Keys.alertKeywords] = next.alertKeywords
+            prefs[Keys.phoneRemote] = next.phoneRemote
         }
     }
 
@@ -324,6 +328,7 @@ class SettingsStore(private val context: Context) {
         autoNextEpisode = this[Keys.autoNext] ?: true,
         dataSaver = this[Keys.dataSaver] ?: true,
         alertKeywords = this[Keys.alertKeywords] ?: emptySet(),
+        phoneRemote = this[Keys.phoneRemote] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

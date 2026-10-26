@@ -46,6 +46,9 @@ class AppContainer(context: Context) {
     val reminders = Reminders(context)
     val intros = de.ayutv.data.IntroStore(context)
     val playerMemory = de.ayutv.data.PlayerMemory(context)
+    /** Fenster der App im Vordergrund (für Tasten vom Handy). */
+    @Volatile var foreground: java.lang.ref.WeakReference<android.app.Activity>? = null
+    val remote = de.ayutv.data.remote.RemoteServer(context, this)
     val updates = de.ayutv.data.update.Updater(context, http)
     val parental = ParentalControl(context, db)
 

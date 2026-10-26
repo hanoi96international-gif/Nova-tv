@@ -1,6 +1,9 @@
 package de.ayutv
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
+import de.ayutv.ui.components.hasTouchscreen
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -33,6 +36,25 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             if (event == Lifecycle.Event.ON_STOP && container.parental.unlocked.value) {
                 container.scope.launch { container.parental.lock() }
             }
+            // Handy als Fernbedienung: nur auf dem Fernseher und nur, solange DnA-TV zu sehen ist.
+            when (event) {
+                Lifecycle.Event.ON_START -> container.scope.launch {
+                    if (!hasTouchscreen() && container.settings.current().phoneRemote) container.remote.start()
+                }
+                Lifecycle.Event.ON_STOP -> container.remote.stop()
+                else -> Unit
+            }
+        })
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) { container.foreground = java.lang.ref.WeakReference(activity) }
+            override fun onActivityPaused(activity: Activity) {
+                if (container.foreground?.get() === activity) container.foreground = null
+            }
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
         })
         // Kindersicherung: Nach jedem Start ist wieder alles gesperrt (vor allem anderen anwenden).
         container.scope.launch {

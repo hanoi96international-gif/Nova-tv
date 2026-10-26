@@ -268,6 +268,10 @@ interface HistoryDao {
     @Query("SELECT * FROM history WHERE `key` = :key")
     fun observeByKey(key: String): Flow<HistoryEntity?>
 
+    /** Für den Abgleich mit anderen Geräten: die zuletzt gesehenen Einträge. */
+    @Query("SELECT * FROM history ORDER BY watchedAt DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<HistoryEntity>
+
     @Query("DELETE FROM history")
     suspend fun clear()
 }
