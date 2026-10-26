@@ -1,0 +1,952 @@
+CHANNEL Sky.Sport.Bundesliga.de  <display-name lang="de">Sky Sport Bundesliga</display-name> <url>http://www.tvtoday.de</url> 
+CHANNEL Sky.Sport.Austria.de  <display-name lang="de">Sky Sport Austria</display-name> <url>http://www.tvtoday.de</url> 
+CHANNEL Sky.Sport.Austria.1.HD.de  <display-name lang="en">Sky Sport Austria 1 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCKJR.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCKJR
+CHANNEL Sky.Sport.Austria.2.HD.de  <display-name lang="en">Sky Sport Austria 2 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/s111209_ll_h15_ab.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/s111209_ll_h1
+CHANNEL Sky.Sport.Austria.3.HD.de  <display-name lang="en">Sky Sport Austria 3 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/s111210_ll_h15_ab.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/s111210_ll_h1
+CHANNEL Sky.Sport.Austria.4.HD.de  <display-name lang="en">Sky Sport Austria 4 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/s111211_ll_h15_ab.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/s111211_ll_h1
+CHANNEL Sky.Sport.Austria.5.HD.de  <display-name lang="en">Sky Sport Austria 5 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCQ7M.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCQ7M
+CHANNEL Sky.Sport.Austria.6.HD.de  <display-name lang="en">Sky Sport Austria 6 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCQ84.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCQ84
+CHANNEL Sky.Sport.Austria.7.HD.de  <display-name lang="en">Sky Sport Austria 7 HD</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCQ9J.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCQ9J
+CHANNEL Sky.Sport.Bundesliga.UHD.de  <display-name lang="en">Sky Sport Bundesliga UHD</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0FG.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0
+CHANNEL Sky.Sport.Bundesliga.1.de  <display-name lang="en">Sky Sport Bundesliga 1</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCYLV.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCYLV
+CHANNEL Sky.Sport.Bundesliga.2.de  <display-name lang="en">Sky Sport Bundesliga 2</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCYQ7.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCYQ7
+CHANNEL Sky.Sport.Bundesliga.3.de  <display-name lang="en">Sky Sport Bundesliga 3</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0CB.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0CB
+CHANNEL Sky.Sport.Bundesliga.4.de  <display-name lang="en">Sky Sport Bundesliga 4</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0CP.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0CP
+CHANNEL Sky.Sport.Bundesliga.5.de  <display-name lang="en">Sky Sport Bundesliga 5</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0CE.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0CE
+CHANNEL Sky.Sport.Bundesliga.6.de  <display-name lang="en">Sky Sport Bundesliga 6</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0D3.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0D3
+CHANNEL Sky.Sport.Bundesliga.7.de  <display-name lang="en">Sky Sport Bundesliga 7</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0DH.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0DH
+CHANNEL Sky.Sport.Bundesliga.8.de  <display-name lang="en">Sky Sport Bundesliga 8</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0DV.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0DV
+CHANNEL Sky.Sport.Bundesliga.9.de  <display-name lang="en">Sky Sport Bundesliga 9</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0F1.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FD0F1
+CHANNEL Sky.Sport.Bundesliga.10.de  <display-name lang="en">Sky Sport Bundesliga 10</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCYLQ.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCYL
+CHANNEL Sky.Sport.1.de  <display-name lang="en">Sky Sport 1</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FBQVR.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FBQVR.png?w=360&
+CHANNEL Sky.Sport.2.de  <display-name lang="en">Sky Sport 2</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FBEKP.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FBEKP.png?w=360&
+CHANNEL Sky.Sport.3.de  <display-name lang="en">Sky Sport 3</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FC2FX.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FC2FX.png?w=360&
+CHANNEL Sky.Sport.4.de  <display-name lang="en">Sky Sport 4</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCHBQ.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCHBQ.png?w=360&
+CHANNEL Sky.Sport.5.de  <display-name lang="en">Sky Sport 5</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCHE8.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCHE8.png?w=360&
+CHANNEL Sky.Sport.6.de  <display-name lang="en">Sky Sport 6</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCJQK.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCJQK.png?w=360&
+CHANNEL Sky.Sport.7.de  <display-name lang="en">Sky Sport 7</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCNL7.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCNL7.png?w=360&
+CHANNEL Sky.Sport.8.de  <display-name lang="en">Sky Sport 8</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCPZ9.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCPZ9.png?w=360&
+CHANNEL Sky.Sport.9.de  <display-name lang="en">Sky Sport 9</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCV4Z.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FCV4Z.png?w=360&
+CHANNEL Sky.Sport.10.de  <display-name lang="en">Sky Sport 10</display-name> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FBYXT.png?w=360&amp;h=270" /> <icon src="http://dtil.tmsimg.com/assets/GNLZZGG003FBYXT.png?w=360
+20261026002600 +0000 20261026021000 +0000 ORF.1.de                     | Barbie |  | Komödie
+20261026021000 +0000 20261026035500 +0000 ORF.1.de                     | Madame Web |  | Science-Fiction
+20261026035500 +0000 20261026050000 +0000 ORF.1.de                     | Sisi |  | Historienserie
+20261026050000 +0000 20261026050500 +0000 ORF.1.de                     | Mister Paper | Mister Paper baut ein Schloss | Animationsserie
+20261026050500 +0000 20261026051300 +0000 ORF.1.de                     | Grizzy und die Lemminge | Das Schoko-Rezept | Animationsserie
+20261026051300 +0000 20261026053800 +0000 ORF.1.de                     | Servus Kasperl | Kasperl & Strolchi: Kasperl pflanzt ein Bäumchen | Puppentheater
+20261026053800 +0000 20261026060100 +0000 ORF.1.de                     | Kung Fu Panda – Die Tatzen des Schicksals | Trubel in Gongmen City | Animationsserie
+20261026060100 +0000 20261026062300 +0000 ORF.1.de                     | Der gestiefelte Kater – Abenteuer in San Lorenzo | Die windigen Wichte | Animationsserie
+20261026062300 +0000 20261026064500 +0000 ORF.1.de                     | Der gestiefelte Kater – Abenteuer in San Lorenzo | Der große Gestank | Animationsserie
+20261026064500 +0000 20261026071000 +0000 ORF.1.de                     | Die Croods: Der Familienbaum | Unterirdische Entdeckungen | Animationsserie
+20261026071000 +0000 20261026072100 +0000 ORF.1.de                     | Galapagos X | Die grüne Gefahr | Animationsserie
+20261026072100 +0000 20261026084100 +0000 ORF.1.de                     | Shrek, der Dritte |  | Computertrickspaß
+20261026084100 +0000 20261026095900 +0000 ORF.1.de                     | Pets |  | Digitrickkomödie
+20261026095900 +0000 20261026111800 +0000 ORF.1.de                     | Minions – Auf der Suche nach dem Mini-Boss |  | Animation
+20261026111800 +0000 20261026120000 +0000 ORF.1.de                     | Monk | Mr. Monk als Trainer | Krimiserie
+20261026120000 +0000 20261026124400 +0000 ORF.1.de                     | Soko Kitzbühel | Killerbienen | Krimiserie
+20261026124400 +0000 20261026132900 +0000 ORF.1.de                     | Soko Kitzbühel | Sonnwendfeuer | Krimiserie
+20261026132900 +0000 20261026133300 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261026133300 +0000 20261026142200 +0000 ORF.1.de                     | WaPo Bodensee | Der Tote im Kajak | Krimiserie
+20261026142200 +0000 20261026151400 +0000 ORF.1.de                     | Death in Paradise | Cricket im Blut | Krimiserie
+20261026151400 +0000 20261026152000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261026152000 +0000 20261026160500 +0000 ORF.1.de                     | SOKO Donau | Blutsverwandte | Krimiserie
+20261026160500 +0000 20261026164500 +0000 ORF.1.de                     | Klischees über Deutschland, Österreich und die Schweiz |  | Dokumentation
+20261026164500 +0000 20261026165300 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261026165300 +0000 20261026165600 +0000 ORF.1.de                     | Wetter |  | Wetterbericht
+20261026165600 +0000 20261026174300 +0000 ORF.1.de                     | Smart10 – Das Quiz mit den zehn Möglichkeiten |  | Quizshow
+20261026174300 +0000 20261026183000 +0000 ORF.1.de                     | Q1 Ein Hinweis ist falsch |  | Quiz
+20261026183000 +0000 20261026184500 +0000 ORF.1.de                     | Zeit im Bild |  | Nachrichten
+20261026184500 +0000 20261026184700 +0000 ORF.1.de                     | Wetter |  | Wetterbericht
+20261026184700 +0000 20261026185700 +0000 ORF.1.de                     | Rede des Bundespräsidenten |  | Ansprache
+20261026185700 +0000 20261026190400 +0000 ORF.1.de                     | Sport Aktuell |  | Magazin
+20261026190400 +0000 20261026191500 +0000 ORF.1.de                     | ZIB Magazin |  | Nachrichtenmagazin
+20261026191500 +0000 20261026205000 +0000 ORF.1.de                     | Pfau – Bin ich echt? |  | Tragikomödie
+20261026205000 +0000 20261026205900 +0000 ORF.1.de                     | Eurodreams |  | Lotterie
+20261026205900 +0000 20261026222400 +0000 ORF.1.de                     | VENI.VIDI.VICI |  | Drama
+20261026222400 +0000 20261026235600 +0000 ORF.1.de                     | Hinterland |  | Thriller
+20261026235600 +0000 20261027013200 +0000 ORF.1.de                     | Pfau – Bin ich echt? |  | Tragikomödie
+20261027013200 +0000 20261027025200 +0000 ORF.1.de                     | VENI.VIDI.VICI |  | Drama
+20261027025200 +0000 20261027042400 +0000 ORF.1.de                     | Hinterland |  | Thriller
+20261027042400 +0000 20261027050000 +0000 ORF.1.de                     | MA 2412 | Gemüse im Netz | Comedyserie
+20261027050000 +0000 20261027050500 +0000 ORF.1.de                     | ZIB KiDS |  | Kindernachrichtenmagazin
+20261027050500 +0000 20261027053000 +0000 ORF.1.de                     | Wickie und die starken Männer | Wickies Sieg | Zeichentrickserie
+20261027053000 +0000 20261027055500 +0000 ORF.1.de                     | Servus Kasperl | Kasperl & Buffi: Der große Krach | Puppentheater
+20261027055500 +0000 20261027061500 +0000 ORF.1.de                     | Tom | Tom in Moskau | Zeichentrickserie
+20261027061500 +0000 20261027062000 +0000 ORF.1.de                     | Bakabu | Nanu, mein Schuh | Animationsserie
+20261027062000 +0000 20261027063500 +0000 ORF.1.de                     | ABC Bär |  | Vorschulmagazin
+20261027063500 +0000 20261027065000 +0000 ORF.1.de                     | Garfield | Garfield im Land der Träume | Animationsserie
+20261027065000 +0000 20261027065500 +0000 ORF.1.de                     | ZIB KiDS |  | Kindernachrichtenmagazin
+20261027065500 +0000 20261027071500 +0000 ORF.1.de                     | Young Sheldon | Die Bettnässerin und die wilde Mary | Sitcom
+20261027071500 +0000 20261027080000 +0000 ORF.1.de                     | Tennis: ATP 500 | Highlights Tag 1 | Tennis
+20261027080000 +0000 20261027084500 +0000 ORF.1.de                     | Smart10 – Das Quiz mit den zehn Möglichkeiten |  | Quizshow
+20261027084500 +0000 20261027093000 +0000 ORF.1.de                     | Q1 Ein Hinweis ist falsch |  | Quiz
+20261027093000 +0000 20261027101500 +0000 ORF.1.de                     | Gefragt – Gejagt |  | Rateshow
+20261027101500 +0000 20261027110500 +0000 ORF.1.de                     | Death in Paradise | Die einsame Insel | Krimiserie
+20261027110500 +0000 20261027115000 +0000 ORF.1.de                     | Monk | Mr. Monk sieht nichts mehr | Krimiserie
+20261027115000 +0000 20261027123000 +0000 ORF.1.de                     | Soko Kitzbühel | Das Idol | Krimiserie
+20261027123000 +0000 20261027131500 +0000 ORF.1.de                     | Soko Kitzbühel | Abfahrt in den Tod | Krimiserie
+20261027131500 +0000 20261027140500 +0000 ORF.1.de                     | WaPo Bodensee | Morgenlicht | Krimiserie
+20261027140500 +0000 20261027145500 +0000 ORF.1.de                     | Death in Paradise | Tod an Bord (1) | Krimiserie
+20261027145500 +0000 20261027150000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261027150000 +0000 20261027155000 +0000 ORF.1.de                     | SOKO Donau | Drehschluss | Krimiserie
+20261027155000 +0000 20261027163500 +0000 ORF.1.de                     | SOKO Donau | Patuschek | Krimiserie
+20261027163500 +0000 20261027165500 +0000 ORF.1.de                     | Fußball: ÖFB-Cup | Der Countdown | Fußball
+20261027165500 +0000 20261027185500 +0000 ORF.1.de                     | Fußball: ÖFB-Cup | 3. Runde Konferenz: Austria Wien – Egger Glas Hartberg, First Vienna 1894 – SK Rapid | Fußball
+20261027185500 +0000 20261027191500 +0000 ORF.1.de                     | Fußball: ÖFB-Cup | Die Analyse | Fußball
+20261027191500 +0000 20261027200500 +0000 ORF.1.de                     | Soko Linz | Verstummt | Krimiserie
+20261027200500 +0000 20261027205000 +0000 ORF.1.de                     | SOKO Donau | Höllensturz | Krimiserie
+20261027205000 +0000 20261027210000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261027210000 +0000 20261027220000 +0000 ORF.1.de                     | Willkommen Österreich mit Stermann & Grissemann |  | Satiremagazin
+20261027220000 +0000 20261027222000 +0000 ORF.1.de                     | Sheep | Eine unbequeme Wahrheit | Comedy-Miniserie
+20261027222000 +0000 20261027224000 +0000 ORF.1.de                     | Sheep | Luftpumpe | Comedy-Miniserie
+20261027224000 +0000 20261027230500 +0000 ORF.1.de                     | Gute Nacht Österreich |  | Talkshow
+20261027230500 +0000 20261027231000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261027231000 +0000 20261028004500 +0000 ORF.1.de                     | Der Unfisch |  | Tragikomödie
+20261028004500 +0000 20261028022500 +0000 ORF.1.de                     | Beresina oder die letzten Tage der Schweiz |  | Satire
+20261028022500 +0000 20261028031500 +0000 ORF.1.de                     | Professor T | Anatomie einer Erinnerung | Krimiserie
+20261028031500 +0000 20261028040000 +0000 ORF.1.de                     | Professor T | Ein Fisch namens Walter | Krimiserie
+20261028040000 +0000 20261028050000 +0000 ORF.1.de                     | Willkommen Österreich mit Stermann & Grissemann |  | Satiremagazin
+20261028050000 +0000 20261028050500 +0000 ORF.1.de                     | ZIB KiDS |  | Kindernachrichtenmagazin
+20261028050500 +0000 20261028053000 +0000 ORF.1.de                     | Wickie und die starken Männer | Reise mit Hindernissen | Zeichentrickserie
+20261028053000 +0000 20261028055500 +0000 ORF.1.de                     | Servus Kasperl | Kasperl & Leopold: Die blaue Wunderblume | Puppentheater
+20261028055500 +0000 20261028062000 +0000 ORF.1.de                     | Tom | Tom in Venedig | Zeichentrickserie
+20261028062000 +0000 20261028062500 +0000 ORF.1.de                     | Bakabu | Obst und Gemüse | Animationsserie
+20261028062500 +0000 20261028064000 +0000 ORF.1.de                     | ABC Bär |  | Vorschulmagazin
+20261028064000 +0000 20261028065500 +0000 ORF.1.de                     | Garfield | Maus TV | Animationsserie
+20261028065500 +0000 20261028070000 +0000 ORF.1.de                     | ZIB KiDS |  | Kindernachrichtenmagazin
+20261028070000 +0000 20261028072000 +0000 ORF.1.de                     | Young Sheldon | Neues im Schlafzimmer und das Waschbecken in der Garage | Sitcom
+20261028072000 +0000 20261028080500 +0000 ORF.1.de                     | Tennis: ATP 500 | Highlights Tag 2 | Tennis
+20261028080500 +0000 20261028084500 +0000 ORF.1.de                     | Q1 Ein Hinweis ist falsch |  | Quiz
+20261028084500 +0000 20261028092500 +0000 ORF.1.de                     | Q1 Ein Hinweis ist falsch |  | Quiz
+20261028092500 +0000 20261028101500 +0000 ORF.1.de                     | Gefragt – Gejagt |  | Rateshow
+20261028101500 +0000 20261028110500 +0000 ORF.1.de                     | Death in Paradise | Tod an Bord | Krimiserie
+20261028110500 +0000 20261028114500 +0000 ORF.1.de                     | Monk | Mr. Monk, Privatdetektiv | Krimiserie
+20261028114500 +0000 20261028123000 +0000 ORF.1.de                     | Soko Kitzbühel | Farben des Todes | Krimiserie
+20261028123000 +0000 20261028131500 +0000 ORF.1.de                     | Soko Kitzbühel | Skateboard | Krimiserie
+20261028131500 +0000 20261028140000 +0000 ORF.1.de                     | WaPo Bodensee | Seidenstraße | Krimiserie
+20261028140000 +0000 20261028145500 +0000 ORF.1.de                     | Death in Paradise | Tod an Bord | Krimiserie
+20261028145500 +0000 20261028150000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261028150000 +0000 20261028154500 +0000 ORF.1.de                     | SOKO Donau | Im Schatten der Macht | Krimiserie
+20261028154500 +0000 20261028163500 +0000 ORF.1.de                     | SOKO Donau | Daddy cool | Krimiserie
+20261028163500 +0000 20261028165500 +0000 ORF.1.de                     | Fußball: ÖFB-Cup | Der Countdown | Fußball
+20261028165500 +0000 20261028185500 +0000 ORF.1.de                     | Fußball: ÖFB-Cup | 3. Runde Konferenz: Wacker Innsbruck – WSG Tirol, Schwarz-Weiß Bregenz – Red Bull Salzburg | Fußball
+20261028185500 +0000 20261028191500 +0000 ORF.1.de                     | Fußball: ÖFB-Cup | Die Analyse | Fußball
+20261028191500 +0000 20261028200500 +0000 ORF.1.de                     | Dok 1 | Schwieriges Nebeneinander: Islam in Österreich | Gesellschaftsdoku
+20261028200500 +0000 20261028221000 +0000 ORF.1.de                     | Favoriten |  | Kurzfilmdrama
+20261028221000 +0000 20261028222000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261028222000 +0000 20261028225500 +0000 ORF.1.de                     | betrifft: uns – Reportagen ohne Filter | Taxis: Wer sind die Menschen hinter dem Steuer? | Reportagemagazin
+20261028225500 +0000 20261028230000 +0000 ORF.1.de                     | ZIB Flash |  | Nachrichten
+20261028230000 +0000 20261028234000 +0000 ORF.1.de                     | Navy CIS: L.A. | Schlafende Hunde | Krimiserie
+20261028234000 +0000 20261029002500 +0000 ORF.1.de                     | Harrow | Die Mutter steht immer fest | Krimi
+20261029002500 +0000 20261029010500 +0000 ORF.1.de                     | Harrow | Sie verurteilen was sie nicht verstehen | Krimi
+20261029010500 +0000 20261029015000 +0000 ORF.1.de                     | Soko Linz | Verstummt | Krimiserie
+20261029015000 +0000 20261029024000 +0000 ORF.1.de                     | Dok 1 | Schwieriges Nebeneinander: Islam in Österreich | Gesellschaftsdoku
+20261029024000 +0000 20261029043500 +0000 ORF.1.de                     | Favoriten |  | Kurzfilmdrama
+20261026002500 +0000 20261026012400 +0000 ORF.2.de                     | DAS GESPRÄCH Schnabl & Rangnick; Sturminger |  | Talkshow
+20261026012400 +0000 20261026030000 +0000 ORF.2.de                     | The Witness |  | Drama
+20261026030000 +0000 20261026033000 +0000 ORF.2.de                     | Dober dan, Koroška |  | Magazin
+20261026033000 +0000 20261026040100 +0000 ORF.2.de                     | Dobar dan Hrvati |  | Magazin
+20261026040100 +0000 20261026044800 +0000 ORF.2.de                     | Der Untergang der Habsburger – Die Schlacht bei Königgrätz | Der Untergang der Habsburger – Die Schlacht bei Königgrätz (1) | Dokumentationsreihe
+20261026044800 +0000 20261026045300 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261026045300 +0000 20261026051800 +0000 ORF.2.de                     | "Gesunde Quellen – Heilender Stollen" – Vom Kurzentrum zum modernen Gesundheitstourismus | „Gesunde Quellen – Heilender Stollen“ – Vom Kurzentrum zum modernen Gesundheitstourismus | Reportage
+20261026051800 +0000 20261026060000 +0000 ORF.2.de                     | Text Aktuell |  | Nachrichten
+20261026060000 +0000 20261026080000 +0000 ORF.2.de                     | Wetter-Panorama |  | Wetterbericht
+20261026080000 +0000 20261026081000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261026081000 +0000 20261026094500 +0000 ORF.2.de                     | Militärmusikfestival 2026 für Licht ins Dunkel |  | Konzert
+20261026094500 +0000 20261026111500 +0000 ORF.2.de                     | ZIB Spezial | Angelobung am Heldenplatz | Sondersendung
+20261026111500 +0000 20261026114300 +0000 ORF.2.de                     | Österreich Bild | Führen,schützen, helfen! – Ausbildung zum Offizier | Reportagereihe
+20261026114300 +0000 20261026120000 +0000 ORF.2.de                     | Wetterschau |  | Wetterbericht
+20261026120000 +0000 20261026122600 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261026122600 +0000 20261026135200 +0000 ORF.2.de                     | Wir bewegen Österreich |  | Sportreportage
+20261026135200 +0000 20261026153200 +0000 ORF.2.de                     | Der Bockerer II – Österreich ist frei |  | Nachkriegsposse
+20261026153200 +0000 20261026160000 +0000 ORF.2.de                     | Austria 26 – Die Österreicherinnen und Österreicher des Jahres 2026 |  | Show
+20261026160000 +0000 20261026160900 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261026160900 +0000 20261026163500 +0000 ORF.2.de                     | Aktuell nach fünf |  | Magazin
+20261026163500 +0000 20261026172500 +0000 ORF.2.de                     | Im Wandel der Zeit – 3 Familien – 3 Generationen |  | Dokumentation
+20261026172500 +0000 20261026175700 +0000 ORF.2.de                     | Revolte für die Glaubensfreiheit – 400 Jahre Bauernkriege | \"Es muass sein!\" 400 Jahre Niederschlagung des Bauernaufstands in OÖ | Geschichtsdoku
+20261026175700 +0000 20261026180000 +0000 ORF.2.de                     | Bundesland heute Service |  | Magazin
+20261026180000 +0000 20261026183000 +0000 ORF.2.de                     | Bundesland heute |  | Regionalinfos
+20261026183000 +0000 20261026184500 +0000 ORF.2.de                     | Zeit im Bild |  | Nachrichten
+20261026184500 +0000 20261026184700 +0000 ORF.2.de                     | Wetter |  | Wetterbericht
+20261026184700 +0000 20261026185700 +0000 ORF.2.de                     | Rede des Bundespräsidenten |  | Ansprache
+20261026185700 +0000 20261026190400 +0000 ORF.2.de                     | Sport Aktuell |  | Magazin
+20261026190400 +0000 20261026191500 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261026191500 +0000 20261026215000 +0000 ORF.2.de                     | 9 Plätze – 9 Schätze |  | Heimatreportagen
+20261026215000 +0000 20261026221600 +0000 ORF.2.de                     | ZIB 2 |  | Nachrichten
+20261026221600 +0000 20261026225700 +0000 ORF.2.de                     | Heimat großer Töchter und Söhne |  | Heimatreport
+20261026225700 +0000 20261026232400 +0000 ORF.2.de                     | Austria 26 – Die Österreicherinnen und Österreicher des Jahres 2026 |  | Show
+20261026232400 +0000 20261027001800 +0000 ORF.2.de                     | DAS GESPRÄCH Schnabl & Vranitzky; Rohrer |  | Talkshow
+20261027001800 +0000 20261027015700 +0000 ORF.2.de                     | Der Bockerer II – Österreich ist frei |  | Nachkriegsposse
+20261027015700 +0000 20261027022300 +0000 ORF.2.de                     | Revolte für die Glaubensfreiheit – 400 Jahre Bauernkriege | \"Es muass sein!\" 400 Jahre Niederschlagung des Bauernaufstands in OÖ | Geschichtsdoku
+20261027022300 +0000 20261027022900 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261027022900 +0000 20261027050000 +0000 ORF.2.de                     | 9 Plätze – 9 Schätze |  | Heimatreportagen
+20261027050000 +0000 20261027053000 +0000 ORF.2.de                     | Wetter-Panorama und Programmvorschau |  | Wetterbericht
+20261027053000 +0000 20261027060000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261027060000 +0000 20261027061000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027061000 +0000 20261027063000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261027063000 +0000 20261027063300 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027063300 +0000 20261027070000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261027070000 +0000 20261027071000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027071000 +0000 20261027073000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261027073000 +0000 20261027073300 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027073300 +0000 20261027080000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261027080000 +0000 20261027081000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027081000 +0000 20261027082500 +0000 ORF.2.de                     | Fit mit den Stars |  | Fitnessmagazin
+20261027082500 +0000 20261027082700 +0000 ORF.2.de                     | Silvia kocht | Unterwegs im Gail_ und Lesachtal | Kochshow
+20261027082700 +0000 20261027085000 +0000 ORF.2.de                     | Wetter-Panorama |  | Wetterbericht
+20261027085000 +0000 20261027093000 +0000 ORF.2.de                     | Heimat großer Töchter und Söhne |  | Heimatreport
+20261027093000 +0000 20261027095500 +0000 ORF.2.de                     | Austria 26 – Die Österreicherinnen und Österreicher des Jahres 2026 |  | Show
+20261027095500 +0000 20261027102500 +0000 ORF.2.de                     | Unterwegs beim Nachbarn | Der Weiße Turm von Mulegns. Wie Kultur ein Dorf rettet | Doku
+20261027102500 +0000 20261027105000 +0000 ORF.2.de                     | Bewusst Gesund – Das Magazin |  | Ratgeber
+20261027105000 +0000 20261027114000 +0000 ORF.2.de                     | Bürgeranwalt |  | Ratgeber
+20261027114000 +0000 20261027120000 +0000 ORF.2.de                     | Prisma |  | Gesellschaftsmagazin
+20261027120000 +0000 20261027122500 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027122500 +0000 20261027123000 +0000 ORF.2.de                     | Wetter |  | Wetterbericht
+20261027123000 +0000 20261027131500 +0000 ORF.2.de                     | Aktuell nach eins |  | Magazin
+20261027131500 +0000 20261027132000 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261027132000 +0000 20261027134500 +0000 ORF.2.de                     | Silvia kocht |  | Kochshow
+20261027134500 +0000 20261027143500 +0000 ORF.2.de                     | Sturm der Liebe |  | Telenovela
+20261027143500 +0000 20261027152000 +0000 ORF.2.de                     | Sturm der Liebe |  | Telenovela
+20261027152000 +0000 20261027155600 +0000 ORF.2.de                     | Hinter den Schlagzeilen |  | Dokureihe
+20261027155600 +0000 20261027160000 +0000 ORF.2.de                     | Bundesland heute kompakt |  | Regionalinfos
+20261027160000 +0000 20261027160500 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261027160500 +0000 20261027163000 +0000 ORF.2.de                     | Aktuell nach fünf |  | Magazin
+20261027163000 +0000 20261027173000 +0000 ORF.2.de                     | Studio 2 |  | Magazin
+20261027173000 +0000 20261027175100 +0000 ORF.2.de                     | konkret | Ewige Ruhe – Wo liegen die Kostenfallen? | Magazin
+20261027175100 +0000 20261027175700 +0000 ORF.2.de                     | infos & tipps |  | Doku
+20261027175700 +0000 20261027180000 +0000 ORF.2.de                     | Bundesland heute Service |  | Magazin
+20261027180000 +0000 20261027183000 +0000 ORF.2.de                     | Bundesland heute |  | Regionalinfos
+20261027183000 +0000 20261027185100 +0000 ORF.2.de                     | Zeit im Bild |  | Nachrichten
+20261027185100 +0000 20261027185600 +0000 ORF.2.de                     | Wetter |  | Wetterbericht
+20261027185600 +0000 20261027190500 +0000 ORF.2.de                     | Sport Aktuell |  | Magazin
+20261027190500 +0000 20261027191500 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261027191500 +0000 20261027200500 +0000 ORF.2.de                     | Universum | Die Abruzzenbärin – Das wilde Herz Italiens | Naturdoku
+20261027200500 +0000 20261027210000 +0000 ORF.2.de                     | Report |  | Politmagazin
+20261027210000 +0000 20261027212500 +0000 ORF.2.de                     | ZIB 2 |  | Nachrichten
+20261027212500 +0000 20261027213500 +0000 ORF.2.de                     | Euromillionen |  | Gewinnspiel
+20261027213500 +0000 20261027220500 +0000 ORF.2.de                     | Die Entschlüsselung des Tassilo-Codes |  | Diskussion
+20261027220500 +0000 20261027223500 +0000 ORF.2.de                     | kreuz & quer nah dran/reportage |  | Dokureihe
+20261027223500 +0000 20261028002500 +0000 ORF.2.de                     | Ein Dorf wehrt sich |  | Kriegsdrama
+20261028002500 +0000 20261028011500 +0000 ORF.2.de                     | Report |  | Politmagazin
+20261028011500 +0000 20261028020000 +0000 ORF.2.de                     | Universum | Die Abruzzenbärin – Das wilde Herz Italiens | Naturdoku
+20261028020000 +0000 20261028033000 +0000 ORF.2.de                     | Tatort: Elvis lebt! |  | Krimi
+20261028033000 +0000 20261028040000 +0000 ORF.2.de                     | Hinter den Schlagzeilen |  | Dokureihe
+20261028040000 +0000 20261028045500 +0000 ORF.2.de                     | Studio 2 |  | Magazin
+20261028045500 +0000 20261028050000 +0000 ORF.2.de                     | konkret |  | Magazin
+20261028050000 +0000 20261028053000 +0000 ORF.2.de                     | Wetter-Panorama und Programmvorschau |  | Wetterbericht
+20261028053000 +0000 20261028060000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261028060000 +0000 20261028061000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028061000 +0000 20261028063000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261028063000 +0000 20261028063300 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028063300 +0000 20261028070000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261028070000 +0000 20261028071000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028071000 +0000 20261028073000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261028073000 +0000 20261028073300 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028073300 +0000 20261028080000 +0000 ORF.2.de                     | Guten Morgen Österreich |  | Magazin
+20261028080000 +0000 20261028081000 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028081000 +0000 20261028082700 +0000 ORF.2.de                     | Fit mit den Stars |  | Fitnessmagazin
+20261028082700 +0000 20261028083000 +0000 ORF.2.de                     | Wetter-Panorama |  | Wetterbericht
+20261028083000 +0000 20261028085500 +0000 ORF.2.de                     | Silvia kocht |  | Kochshow
+20261028085500 +0000 20261028094500 +0000 ORF.2.de                     | Um Himmels Willen | Utas Erbe | Familienserie
+20261028094500 +0000 20261028101000 +0000 ORF.2.de                     | Erlebnis Österreich | Wenn der Brunnen versiegt – Die Grenzen unserer Wasserressource | Reportage
+20261028101000 +0000 20261028105500 +0000 ORF.2.de                     | Universum | Die Abruzzenbärin – Das wilde Herz Italiens | Naturdoku
+20261028105500 +0000 20261028114500 +0000 ORF.2.de                     | Report |  | Politmagazin
+20261028114500 +0000 20261028120000 +0000 ORF.2.de                     | Wetterschau |  | Wetterbericht
+20261028120000 +0000 20261028122500 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028122500 +0000 20261028123000 +0000 ORF.2.de                     | Wetter |  | Wetterbericht
+20261028123000 +0000 20261028131500 +0000 ORF.2.de                     | Aktuell nach eins |  | Magazin
+20261028131500 +0000 20261028132000 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261028132000 +0000 20261028134500 +0000 ORF.2.de                     | Silvia kocht |  | Kochshow
+20261028134500 +0000 20261028143500 +0000 ORF.2.de                     | Sturm der Liebe |  | Telenovela
+20261028143500 +0000 20261028152000 +0000 ORF.2.de                     | Die Rosenheim-Cops | Ein gewagtes Stück | Krimiserie
+20261028152000 +0000 20261028155600 +0000 ORF.2.de                     | Hinter den Schlagzeilen |  | Dokureihe
+20261028155600 +0000 20261028160000 +0000 ORF.2.de                     | Bundesland heute kompakt |  | Regionalinfos
+20261028160000 +0000 20261028160500 +0000 ORF.2.de                     | ZIB |  | Nachrichten
+20261028160500 +0000 20261028163000 +0000 ORF.2.de                     | Aktuell nach fünf |  | Magazin
+20261028163000 +0000 20261028173000 +0000 ORF.2.de                     | Studio 2 |  | Magazin
+20261028173000 +0000 20261028174400 +0000 ORF.2.de                     | konkret | Mystery Shopping – Wie gut ist die Beratung | Magazin
+20261028174400 +0000 20261028174800 +0000 ORF.2.de                     | infos & tipps |  | Doku
+20261028174800 +0000 20261028175900 +0000 ORF.2.de                     | Lotto 6 aus 45 mit Joker |  | Lottoziehung
+20261028175900 +0000 20261028180000 +0000 ORF.2.de                     | Bundesland heute Service |  | Magazin
+20261028180000 +0000 20261028183000 +0000 ORF.2.de                     | Bundesland heute |  | Regionalinfos
+20261028183000 +0000 20261028185100 +0000 ORF.2.de                     | Zeit im Bild |  | Nachrichten
+20261028185100 +0000 20261028185600 +0000 ORF.2.de                     | Wetter |  | Wetterbericht
+20261028185600 +0000 20261028190500 +0000 ORF.2.de                     | Sport Aktuell |  | Magazin
+20261028190500 +0000 20261028191500 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261028191500 +0000 20261028205000 +0000 ORF.2.de                     | Die Bergretter | Stimmen der Vergangenheit | Dramaserie
+20261028205000 +0000 20261028210000 +0000 ORF.2.de                     | Autofocus |  | Automagazin
+20261028210000 +0000 20261028213000 +0000 ORF.2.de                     | ZIB 2 |  | Nachrichten
+20261028213000 +0000 20261028222500 +0000 ORF.2.de                     | WELTjournal |  | Auslandsmagazin
+20261028222500 +0000 20261028231500 +0000 ORF.2.de                     | WELTjournal + |  | Auslandsmagazin
+20261028231500 +0000 20261029004500 +0000 ORF.2.de                     | Der Barcelona-Krimi: Tod aus der Tiefe |  | Krimi
+20261029004500 +0000 20261029005000 +0000 ORF.2.de                     | Autofocus |  | Automagazin
+20261029005000 +0000 20261029011500 +0000 ORF.2.de                     | Silvia kocht |  | Kochshow
+20261029011500 +0000 20261029024000 +0000 ORF.2.de                     | Tatort: Angezählt |  | Krimi
+20261029024000 +0000 20261029032500 +0000 ORF.2.de                     | Um Himmels Willen | Planspiele | Familienserie
+20261029032500 +0000 20261029033000 +0000 ORF.2.de                     | Seitenblicke |  | Kulturmagazin
+20261029033000 +0000 20261029040000 +0000 ORF.2.de                     | Hinter den Schlagzeilen |  | Dokureihe
+20261026012000 +0000 20261026020300 +0000 ORF.III.de                   | Fernsehen wie damals |  | Dokumentationsreihe
+20261026020300 +0000 20261026025200 +0000 ORF.III.de                   | Schicksalstage Österreichs – Der Heldenplatz-Skandal | Der Heldenplatz-Skandal | Dokumentationsreihe
+20261026025200 +0000 20261026033900 +0000 ORF.III.de                   | Schicksalstage Österreichs – Der Weinskandal | Der Weinskandal | Dokumentationsreihe
+20261026033900 +0000 20261026042800 +0000 ORF.III.de                   | Der Nationalfeiertag und seine Geschichte |  | Dokumentation
+20261026042800 +0000 20261026053000 +0000 ORF.III.de                   | 50 Jahre "Club 2" – Die legendäre Couch |  | Diskussion
+20261026053000 +0000 20261026060600 +0000 ORF.III.de                   | Kultur Heute Spezial | zur 3500. Sendung | Magazin
+20261026060600 +0000 20261026065700 +0000 ORF.III.de                   | Wetter; Info |  | Nachrichten
+20261026065700 +0000 20261026072900 +0000 ORF.III.de                   | Dobar dan Hrvati |  | Magazin
+20261026072900 +0000 20261026080000 +0000 ORF.III.de                   | Dober dan, Koroška |  | Magazin
+20261026080000 +0000 20261026084900 +0000 ORF.III.de                   | Heimat Österreich | Der Himmel über dem Traunsee | Dokumentation
+20261026084900 +0000 20261026093600 +0000 ORF.III.de                   | Land der Berge | Bergsteigerdörfer in Tirol – Vom Leben im Gschnitztal, Schmirntal & Valsertal | Dokumentation
+20261026093600 +0000 20261026102400 +0000 ORF.III.de                   | Land der Berge | Von Hütte zu Hütte am karnischen Kamm | Dokumentation
+20261026102400 +0000 20261026111500 +0000 ORF.III.de                   | zeit.geschichte | Große Momente – Bilder, die Österreich bewegten: Die 1960er Jahre | Dokumentation
+20261026111500 +0000 20261026120500 +0000 ORF.III.de                   | Große Momente – Bilder, die Österreich bewegten: Die 1970er Jahre |  | Dokumentation
+20261026120500 +0000 20261026125900 +0000 ORF.III.de                   | Große Momente – Bilder, die Österreich bewegten: Die 1980er Jahre |  | Dokumentation
+20261026125900 +0000 20261026134700 +0000 ORF.III.de                   | Österreich – Die ganze Geschichte | Krieger und Baumeister | Dokumentationsreihe
+20261026134700 +0000 20261026143800 +0000 ORF.III.de                   | Österreich – Die ganze Geschichte | Der Hexenprozess | Dokumentationsreihe
+20261026143800 +0000 20261026152700 +0000 ORF.III.de                   | Österreich – Die ganze Geschichte | Am Schafott der Freiheit | Dokumentationsreihe
+20261026152700 +0000 20261026164100 +0000 ORF.III.de                   | 15 Jahre ORF III – Best Of Tafelrunde |  | Show
+20261026164100 +0000 20261026180400 +0000 ORF.III.de                   | Kabarettstars unter Sternen: Andreas Vitásek & Friends |  | Show
+20261026180400 +0000 20261026191400 +0000 ORF.III.de                   | Viktor Gernot – Spiel, Satz und Sieg |  | Dokumentarfilm
+20261026191400 +0000 20261026203300 +0000 ORF.III.de                   | Die goldene Reblaus – Das ORF III Heurigenquiz |  | Show
+20261026203300 +0000 20261026215400 +0000 ORF.III.de                   | Andreas Vitasek: Spätlese |  | Show
+20261026215400 +0000 20261026233300 +0000 ORF.III.de                   | Andreas Vitásek – Ich bereue nichts |  | Show
+20261026233300 +0000 20261027004500 +0000 ORF.III.de                   | Die goldene Reblaus – Das ORF III Heurigenquiz |  | Show
+20261027004500 +0000 20261027020300 +0000 ORF.III.de                   | Kabarettstars unter Sternen: Andreas Vitásek & Friends |  | Show
+20261027020300 +0000 20261027033700 +0000 ORF.III.de                   | Andreas Vitásek – Ich bereue nichts |  | Show
+20261027033700 +0000 20261027041900 +0000 ORF.III.de                   | Schau-Fenster 2026 | Rabenstation Haidlhof | Dokumentationsreihe
+20261027041900 +0000 20261027053000 +0000 ORF.III.de                   | 15 Jahre ORF III – Best Of Tafelrunde |  | Show
+20261027053000 +0000 20261027060000 +0000 ORF.III.de                   | Auf der Rax |  | Dokumentation
+20261027060000 +0000 20261027075500 +0000 ORF.III.de                   | Wetter; Info |  | Nachrichten
+20261027075500 +0000 20261027083000 +0000 ORF.III.de                   | WIR – Das Volksgruppenmagazin |  | Magazin
+20261027083000 +0000 20261027120000 +0000 ORF.III.de                   | ORF III AKTUELL |  | Magazin
+20261027120000 +0000 20261027123500 +0000 ORF.III.de                   | In der Waldheimat |  | Dokumentation
+20261027123500 +0000 20261027132000 +0000 ORF.III.de                   | Heimat Österreich | Wenn der Herbst durch das Mürztal zieht | Dokumentation
+20261027132000 +0000 20261027141000 +0000 ORF.III.de                   | Heimat Österreich | Bergbauernleben im Pongau – Von Wagrain bis Kleinarl | Dokumentation
+20261027141000 +0000 20261027150000 +0000 ORF.III.de                   | Auf der Rax |  | Dokumentation
+20261027150000 +0000 20261027151500 +0000 ORF.III.de                   | ORF III AKTUELL am Nachmittag |  | Nachrichten
+20261027151500 +0000 20261027153500 +0000 ORF.III.de                   | Der steirische Alpentierpark Mautern |  | Dokumentation
+20261027153500 +0000 20261027162500 +0000 ORF.III.de                   | Wandern über die Salzkammergutberge |  | Dokumentation
+20261027162500 +0000 20261027172000 +0000 ORF.III.de                   | Ein Schloss am Wörthersee | Saisonbeginn mit Hindernissen | Familienserie
+20261027172000 +0000 20261027181800 +0000 ORF.III.de                   | Ein Schloss am Wörthersee | Die weißen Pferde von Lipizza | Familienserie
+20261027181800 +0000 20261027182500 +0000 ORF.III.de                   | ORF III AKTUELL am Abend |  | Nachrichten
+20261027182500 +0000 20261027184000 +0000 ORF.III.de                   | Nachrichten in Einfacher Sprache |  | Nachrichten
+20261027184000 +0000 20261027191500 +0000 ORF.III.de                   | Kultur Heute |  | Magazin
+20261027191500 +0000 20261027201000 +0000 ORF.III.de                   | Erbe Österreich | Kapuzinergruft – die gerichtsmedizinische Tour | Dokumentation
+20261027201000 +0000 20261027210000 +0000 ORF.III.de                   | Erbe Österreich | Okkultes Wien – Magier, Trickser und Hellseher | Dokumentation
+20261027210000 +0000 20261027215000 +0000 ORF.III.de                   | Erbe Österreich | Maria Theresias Vampirjäger – Habsburgs Kampf gegen den Aberglauben | Dokumentation
+20261027215000 +0000 20261027224000 +0000 ORF.III.de                   | Was schätzen Sie..? |  | Show
+20261027224000 +0000 20261027233000 +0000 ORF.III.de                   | Erbe Österreich | Kapuzinergruft – die gerichtsmedizinische Tour | Dokumentation
+20261027233000 +0000 20261028002000 +0000 ORF.III.de                   | Erbe Österreich | Okkultes Wien – Magier, Trickser und Hellseher | Dokumentation
+20261028002000 +0000 20261028010000 +0000 ORF.III.de                   | Erbe Österreich | Maria Theresias Vampirjäger – Habsburgs Kampf gegen den Aberglauben | Dokumentation
+20261028010000 +0000 20261028015000 +0000 ORF.III.de                   | Was schätzen Sie..? |  | Show
+20261028015000 +0000 20261028024000 +0000 ORF.III.de                   | Erbe Österreich | Kapuzinergruft – die gerichtsmedizinische Tour | Dokumentation
+20261028024000 +0000 20261028032500 +0000 ORF.III.de                   | Erbe Österreich | Okkultes Wien – Magier, Trickser und Hellseher | Dokumentation
+20261028032500 +0000 20261028041000 +0000 ORF.III.de                   | Erbe Österreich | Maria Theresias Vampirjäger – Habsburgs Kampf gegen den Aberglauben | Dokumentation
+20261028041000 +0000 20261028050000 +0000 ORF.III.de                   | Was schätzen Sie..? |  | Show
+20261028050000 +0000 20261028060000 +0000 ORF.III.de                   | Erbe Österreich | Kapuzinergruft – die gerichtsmedizinische Tour | Dokumentation
+20261028060000 +0000 20261028080000 +0000 ORF.III.de                   | Wetter; Info |  | Nachrichten
+20261028080000 +0000 20261028083000 +0000 ORF.III.de                   | kreuz & quer nah dran | Nepalesen auf der Alm | Magazin
+20261028083000 +0000 20261028120000 +0000 ORF.III.de                   | ORF III AKTUELL |  | Magazin
+20261028120000 +0000 20261028123000 +0000 ORF.III.de                   | Auf der Rax |  | Dokumentation
+20261028123000 +0000 20261028132000 +0000 ORF.III.de                   | Auf der Rax |  | Dokumentation
+20261028132000 +0000 20261028141000 +0000 ORF.III.de                   | Heimat Österreich | Der Himmel über dem Traunsee | Dokumentation
+20261028141000 +0000 20261028150000 +0000 ORF.III.de                   | Vom Sonnenberg zum Goldberg – Wandern am Bernsteintrail |  | Dokumentation
+20261028150000 +0000 20261028151500 +0000 ORF.III.de                   | ORF III AKTUELL am Nachmittag |  | Nachrichten
+20261028151500 +0000 20261028153500 +0000 ORF.III.de                   | Expeditionen | Unterwegs in den Hohen Tauern | Doku
+20261028153500 +0000 20261028162500 +0000 ORF.III.de                   | Wanderparadies Wienerwald |  | Dokumentation
+20261028162500 +0000 20261028172000 +0000 ORF.III.de                   | Ein Schloss am Wörthersee | Der Löwe ist los | Familienserie
+20261028172000 +0000 20261028181800 +0000 ORF.III.de                   | Ein Schloss am Wörthersee | Hoppla Zwillinge | Familienserie
+20261028181800 +0000 20261028182500 +0000 ORF.III.de                   | ORF III AKTUELL am Abend |  | Nachrichten
+20261028182500 +0000 20261028184000 +0000 ORF.III.de                   | Nachrichten in Einfacher Sprache |  | Nachrichten
+20261028184000 +0000 20261028191500 +0000 ORF.III.de                   | Kultur Heute erLesen Spezial |  | Magazin
+20261028191500 +0000 20261028200500 +0000 ORF.III.de                   | Die Sonne über dem Gurktal |  | Dokumentation
+20261028200500 +0000 20261028205500 +0000 ORF.III.de                   | Landleben | An der Enns | Dokumentation
+20261028205500 +0000 20261028213000 +0000 ORF.III.de                   | Im Rosental |  | Dokumentation
+20261028213000 +0000 20261028222000 +0000 ORF.III.de                   | zur SACHE |  | Gespräch
+20261028222000 +0000 20261028231500 +0000 ORF.III.de                   | Puls der Zeit | Requiem in weiß – Das Sterben der Gletscher | Dokumentation
+20261028231500 +0000 20261029000000 +0000 ORF.III.de                   | Heimat Österreich | Die Sonne über dem Gurktal | Dokumentation
+20261029000000 +0000 20261029004500 +0000 ORF.III.de                   | Landleben | An der Enns | Dokumentation
+20261029004500 +0000 20261029011500 +0000 ORF.III.de                   | Im Rosental |  | Dokumentation
+20261029011500 +0000 20261029020000 +0000 ORF.III.de                   | Heimat Österreich | Die Sonne über dem Gurktal | Dokumentation
+20261029020000 +0000 20261029025000 +0000 ORF.III.de                   | Landleben | An der Enns | Dokumentation
+20261029025000 +0000 20261029032000 +0000 ORF.III.de                   | Im Rosental |  | Dokumentation
+20261029032000 +0000 20261029041000 +0000 ORF.III.de                   | Heimat Österreich | Die Sonne über dem Gurktal | Dokumentation
+20261026003000 +0000 20261026020000 +0000 ORF.SPORT.+.de               | Handball Herren HLA 2026/2027 – 8. Runde: Bregenz – Alpla Hard, Highlights aus Bregenz |  | Handball
+20261026020000 +0000 20261026021500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261026021500 +0000 20261026041500 +0000 ORF.SPORT.+.de               | Fußball: 2. Liga | 10. Runde: Austria Salzburg _Blau-Weiß Linz | Fußball
+20261026041500 +0000 20261026044500 +0000 ORF.SPORT.+.de               | Motorsport LeMans Cup 2026 | 6. Station, Highlights aus Portimao | Autosport
+20261026044500 +0000 20261026050000 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261026050000 +0000 20261026060200 +0000 ORF.SPORT.+.de               | Silent Sports + | Springreiten Global Champions Tour Wien/Schloss Schönbrunn | Magazin
+20261026060200 +0000 20261026064100 +0000 ORF.SPORT.+.de               | Silent Sports + | Tischtennis Bundesliga Finale Damen Kufstein-Linz Froschberg | Magazin
+20261026064100 +0000 20261026070000 +0000 ORF.SPORT.+.de               | Silent Sports + | Leichtathletik Team EM Division 2 Maribor 2025 | Magazin
+20261026070000 +0000 20261026073000 +0000 ORF.SPORT.+.de               | Yoga Magazin |  | Magazin
+20261026073000 +0000 20261026074000 +0000 ORF.SPORT.+.de               | "Wir bewegen Österreich" Schule – Folge 24 |  | Magazin
+20261026074000 +0000 20261026084000 +0000 ORF.SPORT.+.de               | Ski alpin: Weltcup | Riesenslalom Damen | Ski alpin
+20261026084000 +0000 20261026085500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261026085500 +0000 20261026095500 +0000 ORF.SPORT.+.de               | Ski alpin: Weltcup | Riesenslalom Herren | Ski alpin
+20261026095500 +0000 20261026100000 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261026100000 +0000 20261026113000 +0000 ORF.SPORT.+.de               | Basketball Herren Superliga 6. Runde: Swans Gmunden – Kapfenberg Bulls, Highlights aus Gmunden |  | Basketball
+20261026113000 +0000 20261026130000 +0000 ORF.SPORT.+.de               | Handball Herren HLA 2026/2027 – 8. Runde: Bregenz – Alpla Hard, Highlights aus Bregenz |  | Handball
+20261026130000 +0000 20261026143000 +0000 ORF.SPORT.+.de               | Fußball ADMIRAL Frauen Bundesliga 11. Runde: Sturm Graz – LASK, Highlights aus Graz |  | Fußball
+20261026143000 +0000 20261026163000 +0000 ORF.SPORT.+.de               | Fußball ADMIRAL 2. Liga 10. Runde: Austria Salzburg – Blau-Weiß Linz, Highlights aus Salzburg |  | Fußball
+20261026163000 +0000 20261026170000 +0000 ORF.SPORT.+.de               | Motorsport LeMans Cup 2026 | 6. Station, Highlights aus Portimao | Autosport
+20261026170000 +0000 20261026190000 +0000 ORF.SPORT.+.de               | Formel 1 Grand Prix der USA 2026, Highlights aus Austin |  | Formel 1
+20261026190000 +0000 20261026191500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261026191500 +0000 20261026220000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 | Tag 1 | Tennis
+20261026220000 +0000 20261026230000 +0000 ORF.SPORT.+.de               | American Football Herren EM Vorrunde: Österreich – Türkei, Highlights aus Wien |  | American Football
+20261026230000 +0000 20261026231500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261026231500 +0000 20261027000000 +0000 ORF.SPORT.+.de               | Ski alpin: Weltcup | Riesenslalom Herren | Ski alpin
+20261027000000 +0000 20261027001500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261027001500 +0000 20261027020000 +0000 ORF.SPORT.+.de               | Eishockey ICE Hockey League 2026/2027: Vienna Capitals – Moser Medical Graz 99ers, Highlights |  | Eishockey
+20261027020000 +0000 20261027033000 +0000 ORF.SPORT.+.de               | Tischtennis Bundesliga Damen 4. Runde: Linz AG Froschberg – Sparkasse Salzburg, Highlights aus Linz |  | Tischtennis
+20261027033000 +0000 20261027050000 +0000 ORF.SPORT.+.de               | Handball Herren HLA 2026/2027 – 8. Runde: Bregenz – Alpla Hard, Highlights aus Bregenz |  | Handball
+20261027050000 +0000 20261027051300 +0000 ORF.SPORT.+.de               | Silent Sports + | Fußball Bundesliga 25/26: Runde 8 | Magazin
+20261027051300 +0000 20261027053200 +0000 ORF.SPORT.+.de               | Silent Sports + | Fußball Bundesliga 25/26: Runde 9 | Magazin
+20261027053200 +0000 20261027054200 +0000 ORF.SPORT.+.de               | Silent Sports + | Beachvolleyball Masters Wien 2025 | Magazin
+20261027054200 +0000 20261027055400 +0000 ORF.SPORT.+.de               | Silent Sports + | Handball HLA 2024/2025 15.Runde Hard-Fivers | Magazin
+20261027055400 +0000 20261027060800 +0000 ORF.SPORT.+.de               | Silent Sports + | Handball Viertelfinale Bregenz – Hard | Magazin
+20261027060800 +0000 20261027062000 +0000 ORF.SPORT.+.de               | Silent Sports + | Handball HLA Hard – Bregenz | Magazin
+20261027062000 +0000 20261027063400 +0000 ORF.SPORT.+.de               | Silent Sports + | Tischtennis österreichische Meisterschaften Herren Semifinale | Magazin
+20261027063400 +0000 20261027064600 +0000 ORF.SPORT.+.de               | Silent Sports + | Tennis Herren Einzel Davis Cup 2025 Qualifikation Österreich – Finnland | Magazin
+20261027064600 +0000 20261027070000 +0000 ORF.SPORT.+.de               | Silent Sports + | Volleyball Supercup Herren Hartberg – Aich/Dob | Magazin
+20261027070000 +0000 20261027073000 +0000 ORF.SPORT.+.de               | Yoga Magazin |  | Magazin
+20261027073000 +0000 20261027074000 +0000 ORF.SPORT.+.de               | "Wir bewegen Österreich" Schule – Folge 25 |  | Magazin
+20261027074000 +0000 20261027075500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261027075500 +0000 20261027095500 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 |  | Tennis
+20261027095500 +0000 20261027100000 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261027100000 +0000 20261027120000 +0000 ORF.SPORT.+.de               | American Football Herren EM Vorrunde: Österreich – Türkei, Highlights aus Wien |  | American Football
+20261027120000 +0000 20261027130000 +0000 ORF.SPORT.+.de               | Formel 1 Academy 2026: 6. Station: Austin – Feature Race, Highlights |  | Motorsport
+20261027130000 +0000 20261027140000 +0000 ORF.SPORT.+.de               | Ski alpin: Weltcup | Riesenslalom Herren | Ski alpin
+20261027140000 +0000 20261027150000 +0000 ORF.SPORT.+.de               | Hockey Bundesliga Feld Herren 2026/2027: AHTC – SV Arminen, Highlights aus Wien |  | Landhockey
+20261027150000 +0000 20261027163000 +0000 ORF.SPORT.+.de               | Tischtennis Bundesliga Damen 4. Runde: Linz AG Froschberg – Sparkasse Salzburg, Highlights aus Linz |  | Tischtennis
+20261027163000 +0000 20261027180000 +0000 ORF.SPORT.+.de               | Handball Herren HLA 2026/2027 – 8. Runde: Bregenz – Alpla Hard, Highlights aus Bregenz |  | Handball
+20261027180000 +0000 20261027183000 +0000 ORF.SPORT.+.de               | Sportbild |  | Sportnews
+20261027183000 +0000 20261027190000 +0000 ORF.SPORT.+.de               | Sailing To the Games 2026 |  | Segeln
+20261027190000 +0000 20261027191500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261027191500 +0000 20261027220000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 | Tag 2 | Tennis
+20261027220000 +0000 20261028000000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 |  | Tennis
+20261028000000 +0000 20261028014000 +0000 ORF.SPORT.+.de               | Schätze aus dem ORF-Archiv: Formel 1 Saison 1988 Großer Preis von Italien |  | Sport
+20261028014000 +0000 20261028015500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261028015500 +0000 20261028020000 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261028020000 +0000 20261028021500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261028021500 +0000 20261028031500 +0000 ORF.SPORT.+.de               | Ski alpin: Weltcup | Riesenslalom Herren | Ski alpin
+20261028031500 +0000 20261028050000 +0000 ORF.SPORT.+.de               | Eishockey ICE Hockey League 2026/2027: Vienna Capitals – Moser Medical Graz 99ers, Highlights |  | Eishockey
+20261028050000 +0000 20261028052400 +0000 ORF.SPORT.+.de               | Silent Sports + | Fußball Bundesliga 25/26: Runde 10 | Magazin
+20261028052400 +0000 20261028054700 +0000 ORF.SPORT.+.de               | Silent Sports + | Tennis Herren Davis Cup 2025 Qualifikation Österreich – Finnland | Magazin
+20261028054700 +0000 20261028060800 +0000 ORF.SPORT.+.de               | Silent Sports + | Volleyball Herren Champions League Hypo Tirol – Aluron Warta Zawircie | Magazin
+20261028060800 +0000 20261028062400 +0000 ORF.SPORT.+.de               | Silent Sports + | Tore von Sturm Graz in der Saison 2024/2025 | Magazin
+20261028062400 +0000 20261028070000 +0000 ORF.SPORT.+.de               | Silent Sports + | Leichtathletik Team EM Division 2 Maribor 2025 | Magazin
+20261028070000 +0000 20261028073000 +0000 ORF.SPORT.+.de               | Yoga Magazin |  | Magazin
+20261028073000 +0000 20261028074000 +0000 ORF.SPORT.+.de               | "Wir bewegen Österreich" Schule – Folge 25 |  | Magazin
+20261028074000 +0000 20261028100000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 |  | Tennis
+20261028100000 +0000 20261028120000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 |  | Tennis
+20261028120000 +0000 20261028134000 +0000 ORF.SPORT.+.de               | Schätze aus dem ORF-Archiv: Formel 1 Saison 1988 Großer Preis von Italien |  | Sport
+20261028134000 +0000 20261028135000 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261028135000 +0000 20261028155000 +0000 ORF.SPORT.+.de               | American Football Herren EM Vorrunde: Österreich – Türkei, Highlights aus Wien |  | American Football
+20261028155000 +0000 20261028165000 +0000 ORF.SPORT.+.de               | Formel 1 Academy 2026: 6. Station: Austin – Feature Race, Highlights |  | Motorsport
+20261028165000 +0000 20261028175000 +0000 ORF.SPORT.+.de               | Ski alpin: Weltcup | Riesenslalom Herren | Ski alpin
+20261028175000 +0000 20261028190000 +0000 ORF.SPORT.+.de               | Fußball ADMIRAL Bundesliga | Highlights der 10. Runde | Fußball
+20261028190000 +0000 20261028191500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261028191500 +0000 20261028220000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 | Tag 3 | Tennis
+20261028220000 +0000 20261028223000 +0000 ORF.SPORT.+.de               | Sportbild |  | Sportnews
+20261028223000 +0000 20261028230000 +0000 ORF.SPORT.+.de               | Sailing To the Games 2026 |  | Segeln
+20261028230000 +0000 20261028231500 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261028231500 +0000 20261029013500 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 |  | Tennis
+20261029013500 +0000 20261029020000 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261029020000 +0000 20261029024500 +0000 ORF.SPORT.+.de               | Funsport |  | Magazin
+20261029024500 +0000 20261029030000 +0000 ORF.SPORT.+.de               | Sport 20 |  | Magazin
+20261029030000 +0000 20261029050000 +0000 ORF.SPORT.+.de               | Tennis: ATP 500 |  | Tennis
+20261026000000 +0000 20261026010000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga Kompakt | 9. Spieltag | Fußball
+20261026010000 +0000 20261026011500 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Dein Spieltags-Sprint (7) | 1. Bundesliga
+20261026011500 +0000 20261026013000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Spieltags-Sprint (9) | 2. Bundesliga
+20261026013000 +0000 20261026033000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Holstein Kiel – Dynamo Dresden, 9. Spieltag | 2. Bundesliga
+20261026033000 +0000 20261026034500 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Spieltags-Sprint (9) | 2. Bundesliga
+20261026034500 +0000 20261026040000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Dein Spieltags-Sprint (7) | 1. Bundesliga
+20261026040000 +0000 20261026050000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga Kompakt | 9. Spieltag | Fußball
+20261026050000 +0000 20261026051500 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Dein Spieltags-Sprint (7) | 1. Bundesliga
+20261026051500 +0000 20261026053000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Spieltags-Sprint (9) | 2. Bundesliga
+20261026053000 +0000 20261026054500 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Highlights XXL: TSG 1899 Hoffenheim – Bayer 04 Leverkusen, 7. Spieltag | 1. Bundesliga
+20261026054500 +0000 20261026060000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Highlights XXL: SC Freiburg – FC Bayern München, 7. Spieltag | 1. Bundesliga
+20261026060000 +0000 20261026080000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | RB Leipzig – SV Elversberg, 7. Spieltag | 1. Bundesliga
+20261026080000 +0000 20261026090000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Alle Spiele, alle Stimmen, 9. Spieltag | 2. Bundesliga
+20261026090000 +0000 20261026091500 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Highlights XXL: TSG 1899 Hoffenheim – Bayer 04 Leverkusen, 7. Spieltag | 1. Bundesliga
+20261026091500 +0000 20261026093000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Highlights XXL: SC Freiburg – FC Bayern München, 7. Spieltag | 1. Bundesliga
+20261026093000 +0000 20261026110000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Sky90 – Die Fußballdebatte | Fußballtalk
+20261026110000 +0000 20261026130000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Highlights XXL: TSG 1899 Hoffenheim – Bayer 04 Leverkusen, 7. Spieltag | 1. Bundesliga
+20261026130000 +0000 20261026140000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga Kompakt | 7. Spieltag | Fußballmagazin
+20261026140000 +0000 20261026160000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | SC Freiburg – FC Bayern München, 7. Spieltag | 1. Bundesliga
+20261026160000 +0000 20261026163000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261026163000 +0000 20261026170000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261026170000 +0000 20261026173000 +0000 Sky.Sport.Bundesliga.de      | Fußball | Spielmacher Podcast von Sports 360 mit Sebastian Hellmann (Gast: Julian Brandt) | Fußball-Vodcast
+20261026173000 +0000 20261026183000 +0000 Sky.Sport.Bundesliga.de      | Dokumentation | Müller-Wohlfahrt – Der Arzt der Champions | Porträt
+20261026183000 +0000 20261026184500 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Torparade 9. Spieltag | 2. Bundesliga
+20261026184500 +0000 20261026190000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Torparade 7. Spieltag | 1. Bundesliga
+20261026190000 +0000 20261026200000 +0000 Sky.Sport.Bundesliga.de      | Transfer Update | Die Show XXL | Sportmagazin
+20261026200000 +0000 20261026210000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Glanzparade – Die Show mit Buschmann, Fuss und Wagner | Fußballtalk
+20261026210000 +0000 20261026213000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261026213000 +0000 20261026220000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261026220000 +0000 20261026230000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Glanzparade – Die Show mit Buschmann, Fuss und Wagner | Fußballtalk
+20261026230000 +0000 20261026233000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261026233000 +0000 20261027000000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261027000000 +0000 20261027020000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Freitags-Konferenz, 9. Spieltag | 2. Bundesliga
+20261027020000 +0000 20261027030000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga Kompakt | 9. Spieltag | Fußball
+20261027030000 +0000 20261027040000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga Kompakt | 7. Spieltag | Fußballmagazin
+20261027040000 +0000 20261027041500 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Torparade 9. Spieltag | 2. Bundesliga
+20261027041500 +0000 20261027043000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Torparade 7. Spieltag | 1. Bundesliga
+20261027043000 +0000 20261027050000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261027050000 +0000 20261027051500 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Torparade 9. Spieltag | 2. Bundesliga
+20261027051500 +0000 20261027053000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Torparade 7. Spieltag | 1. Bundesliga
+20261027053000 +0000 20261027060000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261027060000 +0000 20261027080000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | FC Augsburg – 1. FC Union Berlin, 7. Spieltag | 1. Bundesliga
+20261027080000 +0000 20261027090000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Glanzparade – Die Show mit Buschmann, Fuss und Wagner | Fußballtalk
+20261027090000 +0000 20261027100000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Alle Spiele, alle Stimmen, 7. Spieltag | 1. Bundesliga
+20261027100000 +0000 20261027110000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Alle Spiele, alle Stimmen, 9. Spieltag | 2. Bundesliga
+20261027110000 +0000 20261027130000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | SV Darmstadt 98 – FC St. Pauli, 9. Spieltag | 2. Bundesliga
+20261027130000 +0000 20261027150000 +0000 Sky.Sport.Bundesliga.de      | Fußball: U19-DFB-Nachwuchsliga | FC Schalke 04 U19 – Borussia Dortmund U19, 9. Spieltag | Fußball
+20261027150000 +0000 20261027153000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261027153000 +0000 20261027173000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 1. FC Heidenheim – Energie Cottbus, 9. Spieltag | 2. Bundesliga
+20261027173000 +0000 20261027180000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261027180000 +0000 20261027190000 +0000 Sky.Sport.Bundesliga.de      | Fußball | Sammer & Basile – Der Hagedorn-Talk | Fußballtalk
+20261027190000 +0000 20261027210000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Sky Sport Fantasy: VfB Stuttgart – Borussia Mönchengladbach, 7. Spieltag | 1. Bundesliga
+20261027210000 +0000 20261027230000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Tactical Feed: Borussia Dortmund – Eintracht Frankfurt, 7. Spieltag | 1. Bundesliga
+20261027230000 +0000 20261028000000 +0000 Sky.Sport.Bundesliga.de      | Fußball | Sammer & Basile – Der Hagedorn-Talk | Fußballtalk
+20261028000000 +0000 20261028020000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Samstags-Konferenz, 9. Spieltag | 2. Bundesliga
+20261028020000 +0000 20261028030000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga Kompakt | 7. Spieltag | Fußballmagazin
+20261028030000 +0000 20261028040000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga Kompakt | 9. Spieltag | Fußball
+20261028040000 +0000 20261028043000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261028043000 +0000 20261028044500 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Torparade 9. Spieltag | 2. Bundesliga
+20261028044500 +0000 20261028050000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Torparade 7. Spieltag | 1. Bundesliga
+20261028050000 +0000 20261028053000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261028053000 +0000 20261028060000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261028060000 +0000 20261028080000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 1. FSV Mainz 05 – Werder Bremen, 7. Spieltag | 1. Bundesliga
+20261028080000 +0000 20261028083000 +0000 Sky.Sport.Bundesliga.de      | Meine Geschichte |  | Porträt
+20261028083000 +0000 20261028103000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | VfL Bochum – VfL Wolfsburg, 9. Spieltag | 2. Bundesliga
+20261028103000 +0000 20261028104500 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Dein Spieltags-Sprint (7) | 1. Bundesliga
+20261028104500 +0000 20261028110000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Spieltags-Sprint (9) | 2. Bundesliga
+20261028110000 +0000 20261028130000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Holstein Kiel – Dynamo Dresden, 9. Spieltag | 2. Bundesliga
+20261028130000 +0000 20261028140000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga Kompakt | 7. Spieltag | Fußballmagazin
+20261028140000 +0000 20261028160000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Hertha BSC – Arminia Bielefeld, 9. Spieltag | 2. Bundesliga
+20261028160000 +0000 20261028163000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261028163000 +0000 20261028173000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 3. Liga | Alle Spiele, alle Tore, 11. Spieltag komplett | Fußball
+20261028173000 +0000 20261028180000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Zweitligatalk – HvK & Tusche | Fußballtalk
+20261028180000 +0000 20261028190000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Glanzparade – Die Show mit Buschmann, Fuss und Wagner | Fußballtalk
+20261028190000 +0000 20261028200000 +0000 Sky.Sport.Bundesliga.de      | Fußball | Sammer & Basile – Der Hagedorn-Talk | Fußballtalk
+20261028200000 +0000 20261028203000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Zweitligatalk – HvK & Tusche | Fußballtalk
+20261028203000 +0000 20261028210000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261028210000 +0000 20261028224500 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | Klassiker der Woche: FC Bayern München – Borussia Dortmund (2005/06) | 1. Bundesliga
+20261028224500 +0000 20261028230000 +0000 Sky.Sport.Bundesliga.de      | Bundesliga Collection | Die schönsten Tore: FC Bayern München | Fußballdoku
+20261028230000 +0000 20261028233000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Dein Zweitligatalk – HvK & Tusche | Fußballtalk
+20261028233000 +0000 20261029000000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | 90in30: FCN – FCK, 9. Spieltag | Fußballmagazin
+20261029000000 +0000 20261029020000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Sonntags-Konferenz, 9. Spieltag | 2. Bundesliga
+20261029020000 +0000 20261029023000 +0000 Sky.Sport.Bundesliga.de      | Fußball: Bundesliga | 90in30: BVB – SGE, 7. Spieltag | Fußballmagazin
+20261029023000 +0000 20261029043000 +0000 Sky.Sport.Bundesliga.de      | Fußball: 2. Bundesliga | Eintracht Braunschweig – Hannover 96, 9. Spieltag | 2. Bundesliga
+20261026003000 +0000 20261026023000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | SK Puntigamer Sturm Graz – SV Oberbank Ried, 10. Runde | Fußball
+20261026023000 +0000 20261026033000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Rapid Liebe | Fußball
+20261026033000 +0000 20261026040000 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261026040000 +0000 20261026060000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | SK Puntigamer Sturm Graz – SV Oberbank Ried, 10. Runde | Fußball
+20261026060000 +0000 20261026063000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore Kompakt, 10. Runde | Fußball
+20261026063000 +0000 20261026070000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261026070000 +0000 20261026073000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore Kompakt, 10. Runde | Fußball
+20261026073000 +0000 20261026093000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | LASK – FC Red Bull Salzburg, 10. Runde | Fußball
+20261026093000 +0000 20261026100000 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261026100000 +0000 20261026101500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261026101500 +0000 20261026103000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261026103000 +0000 20261026110000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261026110000 +0000 20261026113000 +0000 Sky.Sport.Austria.de         | RIESENrad | Sportgrößen im Waggon 28 (Gast: Günter Bresnik) | Gespräch
+20261026113000 +0000 20261026114500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261026114500 +0000 20261026120000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261026120000 +0000 20261026121500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261026121500 +0000 20261026123000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261026123000 +0000 20261026124500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261026124500 +0000 20261026131500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore Kompakt, 10. Runde | Fußball
+20261026131500 +0000 20261026134500 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261026134500 +0000 20261026140000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261026140000 +0000 20261026141500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261026141500 +0000 20261026143000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261026143000 +0000 20261026144500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261026144500 +0000 20261026150000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261026150000 +0000 20261026151500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ALT – FAK, 10. Runde | Fußball
+20261026151500 +0000 20261026154500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261026154500 +0000 20261026160000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261026160000 +0000 20261026161500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261026161500 +0000 20261026163000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261026163000 +0000 20261026171500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261026171500 +0000 20261026174500 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261026174500 +0000 20261026181500 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261026181500 +0000 20261026190000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261026190000 +0000 20261026193000 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261026193000 +0000 20261026200000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261026200000 +0000 20261026204500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261026204500 +0000 20261026211500 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261026211500 +0000 20261026214500 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261026214500 +0000 20261026220000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261026220000 +0000 20261026221500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261026221500 +0000 20261026223000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261026223000 +0000 20261026224500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261026224500 +0000 20261026230000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261026230000 +0000 20261027000000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Rapid Liebe | Fußball
+20261027000000 +0000 20261027003000 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261027003000 +0000 20261027004500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261027004500 +0000 20261027010000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261027010000 +0000 20261027011500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261027011500 +0000 20261027020000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027020000 +0000 20261027040000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | SK Rapid – SC Austria Lustenau, 10. Runde | Fußball
+20261027040000 +0000 20261027060000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | LASK – FC Red Bull Salzburg, 10. Runde | Fußball
+20261027060000 +0000 20261027063000 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261027063000 +0000 20261027071500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027071500 +0000 20261027074500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261027074500 +0000 20261027081500 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261027081500 +0000 20261027090000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027090000 +0000 20261027093000 +0000 Sky.Sport.Austria.de         | Fußball | Heimspiel – Union Gurten | Fußball
+20261027093000 +0000 20261027113000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | SK Rapid – SC Austria Lustenau, 10. Runde | Fußball
+20261027113000 +0000 20261027120000 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261027120000 +0000 20261027124500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027124500 +0000 20261027130000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ALT – FAK, 10. Runde | Fußball
+20261027130000 +0000 20261027131500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261027131500 +0000 20261027134500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261027134500 +0000 20261027140000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261027140000 +0000 20261027141500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261027141500 +0000 20261027143000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261027143000 +0000 20261027144500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261027144500 +0000 20261027151500 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261027151500 +0000 20261027154500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261027154500 +0000 20261027163000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027163000 +0000 20261027170000 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Fußball
+20261027170000 +0000 20261027171500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261027171500 +0000 20261027173000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261027173000 +0000 20261027174500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ALT – FAK, 10. Runde | Fußball
+20261027174500 +0000 20261027180000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261027180000 +0000 20261027183000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261027183000 +0000 20261027191500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027191500 +0000 20261027194500 +0000 Sky.Sport.Austria.de         | RIESENrad | Sportgrößen im Waggon 28 (Gast: Günter Bresnik) | Gespräch
+20261027194500 +0000 20261027201500 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261027201500 +0000 20261027203000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ALT – FAK, 10. Runde | Fußball
+20261027203000 +0000 20261027204500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261027204500 +0000 20261027210000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261027210000 +0000 20261027211500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261027211500 +0000 20261027213000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261027213000 +0000 20261027214500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261027214500 +0000 20261027223000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261027223000 +0000 20261027224500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Supercup | Backstage – Hinter den Kulissen einer Megaproduktion | Reportage
+20261027224500 +0000 20261028004500 +0000 Sky.Sport.Austria.de         | Fußball: Champions League | Paris Saint-Germain – FC Barcelona, Ligaphase, 3. Spieltag, Dienstag | Fußball
+20261028004500 +0000 20261028024500 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | LASK – FC Red Bull Salzburg, 10. Runde | Fußball
+20261028024500 +0000 20261028033000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261028033000 +0000 20261028053000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | WSG Tirol – Grazer AK 1902, 10. Runde | Fußball
+20261028053000 +0000 20261028060000 +0000 Sky.Sport.Austria.de         | Fußball | Heimspiel – Austria Salzburg | Fußball
+20261028060000 +0000 20261028063000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261028063000 +0000 20261028070000 +0000 Sky.Sport.Austria.de         | RIESENrad | Sportgrößen im Waggon 28 (Gast: Günter Bresnik) | Gespräch
+20261028070000 +0000 20261028073000 +0000 Sky.Sport.Austria.de         | Die UEFA Champions League am Dienstag | Alle Spiele, alle Tore, Ligaphase, 3. Spieltag | Fußball
+20261028073000 +0000 20261028081500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261028081500 +0000 20261028083000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Supercup | Backstage – Hinter den Kulissen einer Megaproduktion | Reportage
+20261028083000 +0000 20261028103000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | TSV Egger Glas Hartberg – RZ Pellets WAC, 10. Runde | Fußball
+20261028103000 +0000 20261028110000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261028110000 +0000 20261028130000 +0000 Sky.Sport.Austria.de         | Fußball: Champions League | Sabah FK – Borussia Dortmund, Ligaphase, 3. Spieltag, Dienstag | Fußball
+20261028130000 +0000 20261028133000 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261028133000 +0000 20261028141500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261028141500 +0000 20261028144500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261028144500 +0000 20261028151500 +0000 Sky.Sport.Austria.de         | Fußball | Bundesliga Classic: Wr. Neustadt – Sturm (2014/2015) | Fußball
+20261028151500 +0000 20261028153000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ALT – FAK, 10. Runde | Fußball
+20261028153000 +0000 20261028154500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261028154500 +0000 20261028160000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261028160000 +0000 20261028161500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261028161500 +0000 20261028163000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261028163000 +0000 20261028164500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261028164500 +0000 20261028171500 +0000 Sky.Sport.Austria.de         | RIESENrad |  | Gespräch
+20261028171500 +0000 20261028174500 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261028174500 +0000 20261028183000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261028183000 +0000 20261028190000 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261028190000 +0000 20261028193000 +0000 Sky.Sport.Austria.de         | RIESENrad | Sportgrößen im Waggon 28 (Gast: Matthias Walkner) | Gespräch
+20261028193000 +0000 20261028200000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261028200000 +0000 20261028204500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Alle Spiele, alle Tore, 10. Runde | Fußball
+20261028204500 +0000 20261028211500 +0000 Sky.Sport.Austria.de         | Fußball | Hamann & Stankovic – Der Fußball Podcast | Talkshow
+20261028211500 +0000 20261028213000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ALT – FAK, 10. Runde | Fußball
+20261028213000 +0000 20261028214500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: HTB – WAC, 10. Runde | Fußball
+20261028214500 +0000 20261028220000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: WSG – GAK, 10. Runde | Fußball
+20261028220000 +0000 20261028223000 +0000 Sky.Sport.Austria.de         | Fußball: UEFA Champions League | Magazin | Magazin
+20261028223000 +0000 20261028224500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: SCR – ALU, 10. Runde | Fußball
+20261028224500 +0000 20261028230000 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: STU – RIE, 10. Runde | Fußball
+20261028230000 +0000 20261028231500 +0000 Sky.Sport.Austria.de         | Fußball: Österreich, Admiral Bundesliga | Highlights XXL: ASK – RBS, 10. Runde | Fußball
+20261028231500 +0000 20261028234000 +0000 Sky.Sport.Austria.de         | Fußball | Bundesliga Classic: Rapid – Salzburg (2014/2015) | Fußball
+20261028234000 +0000 20261029000000 +0000 Sky.Sport.Austria.de         | Fußball | Bundesliga Classic: Salzburg – Grödig (2014/2015) | Fußball
+20261029000000 +0000 20261029020000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | SK Puntigamer Sturm Graz – SV Oberbank Ried, 10. Runde | Fußball
+20261029020000 +0000 20261029040000 +0000 Sky.Sport.Austria.de         | Fußball: Österreichische Bundesliga | TSV Egger Glas Hartberg – RZ Pellets WAC, 10. Runde | Fußball
+20261026040000 +0000 20261026060000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261026060000 +0000 20261026063000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | Kompakt, 10. Runde | Series
+20261026063000 +0000 20261026070000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261026070000 +0000 20261026073000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | Kompakt, 10. Runde | Series
+20261026073000 +0000 20261026093000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261026093000 +0000 20261026100000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261026100000 +0000 20261026101500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261026101500 +0000 20261026103000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261026103000 +0000 20261026110000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261026110000 +0000 20261026113000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Gast: Günter Bresnik | Series
+20261026113000 +0000 20261026114500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261026114500 +0000 20261026120000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261026120000 +0000 20261026121500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261026121500 +0000 20261026123000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261026123000 +0000 20261026124500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261026124500 +0000 20261026131500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | Kompakt, 10. Runde | Series
+20261026131500 +0000 20261026134500 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261026134500 +0000 20261026140000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261026140000 +0000 20261026141500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261026141500 +0000 20261026143000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261026143000 +0000 20261026144500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261026144500 +0000 20261026150000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261026150000 +0000 20261026151500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261026151500 +0000 20261026154500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261026154500 +0000 20261026160000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261026160000 +0000 20261026161500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261026161500 +0000 20261026163000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261026163000 +0000 20261026171500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261026171500 +0000 20261026174500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261026174500 +0000 20261026181500 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261026181500 +0000 20261026190000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261026190000 +0000 20261026193000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261026193000 +0000 20261026200000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261026200000 +0000 20261026204500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261026204500 +0000 20261026211500 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261026211500 +0000 20261026214500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261026214500 +0000 20261026220000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261026220000 +0000 20261026221500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261026221500 +0000 20261026223000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261026223000 +0000 20261026224500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261026224500 +0000 20261026230000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261026230000 +0000 20261027000000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Rapid Liebe |  | Special
+20261027000000 +0000 20261027003000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261027003000 +0000 20261027004500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261027004500 +0000 20261027010000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261027010000 +0000 20261027011500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261027011500 +0000 20261027020000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027020000 +0000 20261027040000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261027040000 +0000 20261027060000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261027060000 +0000 20261027063000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261027063000 +0000 20261027071500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027071500 +0000 20261027074500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261027074500 +0000 20261027081500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261027081500 +0000 20261027090000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027090000 +0000 20261027093000 +0000 Sky.Sport.Austria.1.HD.de    | Heimspiel | Union Gurten | Series
+20261027093000 +0000 20261027113000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261027113000 +0000 20261027120000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261027120000 +0000 20261027124500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027124500 +0000 20261027130000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261027130000 +0000 20261027131500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261027131500 +0000 20261027134500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261027134500 +0000 20261027140000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261027140000 +0000 20261027141500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261027141500 +0000 20261027143000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261027143000 +0000 20261027144500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261027144500 +0000 20261027151500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261027151500 +0000 20261027154500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261027154500 +0000 20261027163000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027163000 +0000 20261027170000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261027170000 +0000 20261027171500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261027171500 +0000 20261027173000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261027173000 +0000 20261027174500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261027174500 +0000 20261027180000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261027180000 +0000 20261027183000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261027183000 +0000 20261027191500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027191500 +0000 20261027194500 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Gast: Günter Bresnik | Series
+20261027194500 +0000 20261027201500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261027201500 +0000 20261027203000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261027203000 +0000 20261027204500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261027204500 +0000 20261027210000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261027210000 +0000 20261027211500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261027211500 +0000 20261027213000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261027213000 +0000 20261027214500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261027214500 +0000 20261027223000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261027223000 +0000 20261027224500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA Supercup: Backstage Supercup - Hinter den Kulissen einer Megaproduktion |  | Special
+20261027224500 +0000 20261028004500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL |  | Sports
+20261028004500 +0000 20261028024500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261028024500 +0000 20261028033000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261028033000 +0000 20261028053000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261028053000 +0000 20261028060000 +0000 Sky.Sport.Austria.1.HD.de    | Heimspiel | Austria Salzburg | Series
+20261028060000 +0000 20261028063000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261028063000 +0000 20261028070000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Gast: Günter Bresnik | Series
+20261028070000 +0000 20261028073000 +0000 Sky.Sport.Austria.1.HD.de    | Die UEFA CL am Dienstag: Alle Spiele, alle Tore | Ligaphase, 3. Spieltag | Series
+20261028073000 +0000 20261028081500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261028081500 +0000 20261028083000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA Supercup: Backstage Supercup - Hinter den Kulissen einer Megaproduktion |  | Special
+20261028083000 +0000 20261028103000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261028103000 +0000 20261028110000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261028110000 +0000 20261028130000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL |  | Sports
+20261028130000 +0000 20261028133000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261028133000 +0000 20261028141500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261028141500 +0000 20261028144500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261028144500 +0000 20261028151500 +0000 Sky.Sport.Austria.1.HD.de    | Bundesliga Classic | Wr. Neustadt - Sturm (2014/2015) | Series
+20261028151500 +0000 20261028153000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261028153000 +0000 20261028154500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261028154500 +0000 20261028160000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261028160000 +0000 20261028161500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261028161500 +0000 20261028163000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261028163000 +0000 20261028164500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261028164500 +0000 20261028171500 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261028171500 +0000 20261028174500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261028174500 +0000 20261028183000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261028183000 +0000 20261028190000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261028190000 +0000 20261028193000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Gast: Matthias Walkner | Series
+20261028193000 +0000 20261028200000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261028200000 +0000 20261028204500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261028204500 +0000 20261028211500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261028211500 +0000 20261028213000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261028213000 +0000 20261028214500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261028214500 +0000 20261028220000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261028220000 +0000 20261028223000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261028223000 +0000 20261028224500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261028224500 +0000 20261028230000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261028230000 +0000 20261028231500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261028231500 +0000 20261028234000 +0000 Sky.Sport.Austria.1.HD.de    | Bundesliga Classic | Rapid - Salzburg (2014/2015) | Series
+20261028234000 +0000 20261029000000 +0000 Sky.Sport.Austria.1.HD.de    | Bundesliga Classic | Salzburg - Grödig (2014/2015) | Series
+20261029000000 +0000 20261029020000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261029020000 +0000 20261029040000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261029040000 +0000 20261029043000 +0000 Sky.Sport.Austria.1.HD.de    | Heimspiel | Union Gurten | Series
+20261029043000 +0000 20261029050000 +0000 Sky.Sport.Austria.1.HD.de    | Heimspiel | Austria Salzburg | Series
+20261029050000 +0000 20261029053000 +0000 Sky.Sport.Austria.1.HD.de    | Heimspiel - der Talk | Wiener Viktoria | Series
+20261029053000 +0000 20261029060000 +0000 Sky.Sport.Austria.1.HD.de    | Heimspiel | Union Gurten | Series
+20261029060000 +0000 20261029064500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261029064500 +0000 20261029071500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261029071500 +0000 20261029074500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261029074500 +0000 20261029094500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261029094500 +0000 20261029103000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261029103000 +0000 20261029110000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261029110000 +0000 20261029130000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261029130000 +0000 20261029150000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL |  | Sports
+20261029150000 +0000 20261029170000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA EL |  | Sports
+20261029170000 +0000 20261029174500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261029174500 +0000 20261029181500 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261029181500 +0000 20261029184500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261029184500 +0000 20261029191500 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261029191500 +0000 20261029200000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261029200000 +0000 20261029203000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Gast: Matthias Walkner | Series
+20261029203000 +0000 20261029204500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ALT - FAK, 10. Runde | Series
+20261029204500 +0000 20261029210000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | HTB - WAC, 10. Runde | Series
+20261029210000 +0000 20261029211500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | WSG - GAK, 10. Runde | Series
+20261029211500 +0000 20261029213000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | SCR - ALU, 10. Runde | Series
+20261029213000 +0000 20261029214500 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | STU - RIE, 10. Runde | Series
+20261029214500 +0000 20261029220000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Highlights XXL | ASK - RBS, 10. Runde | Series
+20261029220000 +0000 20261029223000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL: Magazin |  | Soccer
+20261029223000 +0000 20261030003000 +0000 Sky.Sport.Austria.1.HD.de    | UEFA CL |  | Sports
+20261030003000 +0000 20261030010000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Sportgrößen im Waggon 28 (Gast: Felix Großschartner) | Series
+20261030010000 +0000 20261030030000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL |  | Sports
+20261030030000 +0000 20261030031500 +0000 Sky.Sport.Austria.1.HD.de    | UEFA Supercup: Backstage Supercup - Hinter den Kulissen einer Megaproduktion |  | Special
+20261030031500 +0000 20261030040000 +0000 Sky.Sport.Austria.1.HD.de    | Admiral BL: Alle Spiele, alle Tore | 10. Runde | Series
+20261030040000 +0000 20261030043000 +0000 Sky.Sport.Austria.1.HD.de    | Hamann & Stankovic - Der Fußball Podcast |  | Soccer
+20261030043000 +0000 20261030050000 +0000 Sky.Sport.Austria.1.HD.de    | RIESENrad: Sportgrößen im Waggon 28 | Gast: Günter Bresnik | Series
+20261026030000 +0000 20261026150000 +0000 Sky.Sport.Austria.2.HD.de    | Live: Tennis: Guangzhou Open 2026 |  | Sports
+20261026150000 +0000 20261026160000 +0000 Sky.Sport.Austria.2.HD.de    | Live: Tennis: Guangzhou Open 2026 |  | Sports
+20261026160000 +0000 20261027000000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261027000000 +0000 20261027024000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261027024000 +0000 20261027030000 +0000 Sky.Sport.Austria.2.HD.de    | Es folgt | Live Tennis WTA Tour | Series
+20261027030000 +0000 20261027150000 +0000 Sky.Sport.Austria.2.HD.de    | Live: Tennis: Guangzhou Open 2026 |  | Sports
+20261027150000 +0000 20261027230000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261027230000 +0000 20261028044000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261028044000 +0000 20261028050000 +0000 Sky.Sport.Austria.2.HD.de    | Es folgt | Live Tennis WTA Tour | Series
+20261028050000 +0000 20261028130000 +0000 Sky.Sport.Austria.2.HD.de    | Live: Tennis: Guangzhou Open 2026 |  | Sports
+20261028130000 +0000 20261028210000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261028210000 +0000 20261029044000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261029044000 +0000 20261029050000 +0000 Sky.Sport.Austria.2.HD.de    | Es folgt | Live Tennis WTA Tour | Series
+20261029050000 +0000 20261029130000 +0000 Sky.Sport.Austria.2.HD.de    | Live: Tennis: Guangzhou Open 2026 |  | Sports
+20261029130000 +0000 20261029210000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261029210000 +0000 20261030044000 +0000 Sky.Sport.Austria.2.HD.de    | Sendepause |  | Special
+20261030044000 +0000 20261030050000 +0000 Sky.Sport.Austria.2.HD.de    | Es folgt | Live Tennis WTA Tour | Series
+20261026050000 +0000 20261026130000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261026130000 +0000 20261026140000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261026140000 +0000 20261026220000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261026220000 +0000 20261027050000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261027050000 +0000 20261027130000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261027130000 +0000 20261027210000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261027210000 +0000 20261028050000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261028050000 +0000 20261028130000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261028130000 +0000 20261028210000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261028210000 +0000 20261029050000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261029050000 +0000 20261029130000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261029130000 +0000 20261029210000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261029210000 +0000 20261030050000 +0000 Sky.Sport.Austria.3.HD.de    | Sendepause |  | Special
+20261026050000 +0000 20261026130000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261026130000 +0000 20261026140000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261026140000 +0000 20261026220000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261026220000 +0000 20261027050000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261027050000 +0000 20261027130000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261027130000 +0000 20261027210000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261027210000 +0000 20261028050000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261028050000 +0000 20261028130000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261028130000 +0000 20261028210000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261028210000 +0000 20261029050000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261029050000 +0000 20261029130000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261029130000 +0000 20261029210000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261029210000 +0000 20261030050000 +0000 Sky.Sport.Austria.4.HD.de    | Sendepause |  | Special
+20261026050000 +0000 20261026090000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261026090000 +0000 20261026130000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261026130000 +0000 20261026140000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261026140000 +0000 20261026180000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261026180000 +0000 20261026220000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261026220000 +0000 20261027020000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261027020000 +0000 20261027040000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261027040000 +0000 20261027080000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261027080000 +0000 20261027120000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261027120000 +0000 20261027160000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261027160000 +0000 20261027200000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261027200000 +0000 20261028000000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261028000000 +0000 20261028040000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261028040000 +0000 20261028080000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261028080000 +0000 20261028120000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261028120000 +0000 20261028160000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261028160000 +0000 20261028200000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261028200000 +0000 20261029000000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261029000000 +0000 20261029040000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261029040000 +0000 20261029080000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261029080000 +0000 20261029120000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261029120000 +0000 20261029160000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261029160000 +0000 20261029200000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261029200000 +0000 20261030000000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261030000000 +0000 20261030040000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261030040000 +0000 20261030080000 +0000 Sky.Sport.Austria.5.HD.de    | Sendepause |  | Special
+20261026050000 +0000 20261026090000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261026090000 +0000 20261026130000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261026130000 +0000 20261026140000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261026140000 +0000 20261026180000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261026180000 +0000 20261026220000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261026220000 +0000 20261027020000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261027020000 +0000 20261027040000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261027040000 +0000 20261027080000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261027080000 +0000 20261027120000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261027120000 +0000 20261027160000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261027160000 +0000 20261027200000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261027200000 +0000 20261028000000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261028000000 +0000 20261028040000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261028040000 +0000 20261028080000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261028080000 +0000 20261028120000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261028120000 +0000 20261028160000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261028160000 +0000 20261028200000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261028200000 +0000 20261029000000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261029000000 +0000 20261029040000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261029040000 +0000 20261029080000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261029080000 +0000 20261029120000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261029120000 +0000 20261029160000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261029160000 +0000 20261029200000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261029200000 +0000 20261030000000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261030000000 +0000 20261030040000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261030040000 +0000 20261030080000 +0000 Sky.Sport.Austria.6.HD.de    | Sendepause |  | Special
+20261026050000 +0000 20261026090000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261026090000 +0000 20261026130000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261026130000 +0000 20261026140000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261026140000 +0000 20261026180000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261026180000 +0000 20261026220000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261026220000 +0000 20261027020000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261027020000 +0000 20261027040000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261027040000 +0000 20261027080000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261027080000 +0000 20261027120000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261027120000 +0000 20261027160000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261027160000 +0000 20261027200000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261027200000 +0000 20261028000000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261028000000 +0000 20261028040000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261028040000 +0000 20261028080000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261028080000 +0000 20261028120000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261028120000 +0000 20261028160000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261028160000 +0000 20261028200000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261028200000 +0000 20261029000000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261029000000 +0000 20261029040000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261029040000 +0000 20261029080000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261029080000 +0000 20261029120000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261029120000 +0000 20261029160000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261029160000 +0000 20261029200000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261029200000 +0000 20261030000000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261030000000 +0000 20261030040000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
+20261030040000 +0000 20261030080000 +0000 Sky.Sport.Austria.7.HD.de    | Sendepause |  | Special
