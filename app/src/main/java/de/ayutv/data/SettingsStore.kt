@@ -1,5 +1,6 @@
 package de.ayutv.data
 
+import de.ayutv.data.security.Credentials
 import android.content.Context
 import de.ayutv.BuildConfig
 import androidx.datastore.preferences.core.Preferences
@@ -47,6 +48,34 @@ enum class SubtitleSize(val label: String, val scale: Float) {
     XL("Sehr groß", 1.6f),
 }
 
+/** Schriftfarbe der Untertitel (ARGB). */
+enum class SubtitleColor(val label: String, val argb: Int) {
+    WHITE("Weiß", 0xFFFFFFFF.toInt()),
+    YELLOW("Gelb", 0xFFFFE14D.toInt()),
+    CYAN("Hellblau", 0xFF8FE3FF.toInt()),
+}
+
+/** Wie sich die Untertitel vom Bild abheben. */
+enum class SubtitleBackground(val label: String) {
+    OUTLINE("Schwarzer Rand"),
+    SHADOW("Schatten"),
+    BOX("Dunkler Kasten"),
+}
+
+/** Abstand der Untertitel vom unteren Bildrand (Anteil der Bildhöhe). */
+enum class SubtitlePosition(val label: String, val bottomFraction: Float) {
+    LOW("Ganz unten", 0.04f),
+    NORMAL("Unten", 0.07f),
+    HIGH("Etwas höher", 0.15f),
+}
+
+/** Ton: normal, Nachtmodus (leise Stellen lauter, laute leiser) oder Dialoge hervorheben. */
+enum class AudioMode(val label: String) {
+    NORMAL("Normal"),
+    NIGHT("Nachtmodus"),
+    DIALOG("Dialoge verstärken"),
+}
+
 data class AppSettings(
     val bufferProfile: BufferProfile = BufferProfile.BALANCED,
     val tunneling: Boolean = false,
@@ -79,6 +108,10 @@ data class AppSettings(
     /** Untertitel sind optional: standardmäßig aus, einschalten im Player über die Menütaste. */
     val subtitlesAutoOn: Boolean = false,
     val subtitleSize: SubtitleSize = SubtitleSize.LARGE,
+    val subtitleColor: SubtitleColor = SubtitleColor.WHITE,
+    val subtitleBackground: SubtitleBackground = SubtitleBackground.OUTLINE,
+    val subtitlePosition: SubtitlePosition = SubtitlePosition.NORMAL,
+    val audioMode: AudioMode = AudioMode.NORMAL,
     /** Untertitel bei OpenSubtitles suchen, wenn der Film selbst keine passenden hat. */
     val onlineSubtitles: Boolean = true,
     val openSubtitlesKey: String = "",
@@ -93,6 +126,10 @@ data class AppSettings(
     val autoNextEpisode: Boolean = true,
     /** Handy mit mobilen Daten: kleinere Fassung der Sender, adaptive Streams höchstens 720p. */
     val dataSaver: Boolean = true,
+    /** Stichwort-Alarm: Sendungen mit diesen Begriffen bekommen automatisch eine Erinnerung. */
+    val alertKeywords: Set<String> = emptySet(),
+    /** Fernseher nimmt im Heimnetz Befehle vom Handy an (Fernbedienung, Abgleich), nur mit PIN. */
+    val phoneRemote: Boolean = true,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -133,6 +170,10 @@ class SettingsStore(private val context: Context) {
         val subAuto = booleanPreferencesKey("subtitles_auto_on")
         val provider = stringPreferencesKey("translation_provider")
         val subSize = stringPreferencesKey("subtitle_size")
+        val subColor = stringPreferencesKey("subtitle_color")
+        val subBackground = stringPreferencesKey("subtitle_background")
+        val subPosition = stringPreferencesKey("subtitle_position")
+        val audioMode = stringPreferencesKey("audio_mode")
         val osKey = stringPreferencesKey("opensubtitles_key")
         val osOn = booleanPreferencesKey("opensubtitles_on")
         val osUser = stringPreferencesKey("opensubtitles_user")
@@ -141,6 +182,8 @@ class SettingsStore(private val context: Context) {
         val timeshiftMinutes = intPreferencesKey("timeshift_minutes")
         val autoNext = booleanPreferencesKey("auto_next_episode")
         val dataSaver = booleanPreferencesKey("data_saver")
+        val alertKeywords = stringSetPreferencesKey("alert_keywords")
+        val phoneRemote = booleanPreferencesKey("phone_remote")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -182,7 +225,9 @@ class SettingsStore(private val context: Context) {
                 is Set<*> -> "stringSets"
                 else -> continue
             }
-            out.getOrPut(type) { linkedMapOf() }[key.name] = value
+            // Passwörter im Klartext: Der Schlüssel des Keystores gilt nur auf diesem Gerät.
+            val portable = if (key == Keys.osPassword) Credentials.reveal(value as? String).orEmpty() else value
+            out.getOrPut(type) { linkedMapOf() }[key.name] = portable
         }
         return out
     }
@@ -194,10 +239,20 @@ class SettingsStore(private val context: Context) {
             values["booleans"]?.allowed()?.forEach { (k, v) -> (v as? Boolean)?.let { prefs[booleanPreferencesKey(k)] = it } }
             values["ints"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[intPreferencesKey(k)] = it.toInt() } }
             values["longs"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[longPreferencesKey(k)] = it.toLong() } }
-            values["strings"]?.allowed()?.forEach { (k, v) -> (v as? String)?.let { prefs[stringPreferencesKey(k)] = it } }
+            values["strings"]?.allowed()?.forEach { (k, v) ->
+                (v as? String)?.let { prefs[stringPreferencesKey(k)] = if (k == Keys.osPassword.name) Credentials.protect(it).orEmpty() else it }
+            }
             values["stringSets"]?.allowed()?.forEach { (k, v) ->
                 (v as? Collection<*>)?.let { prefs[stringSetPreferencesKey(k)] = it.filterIsInstance<String>().toSet() }
             }
+        }
+    }
+
+    /** Einmalig: ein unverschlüsselt gespeichertes Passwort (ältere Versionen) verschlüsseln. */
+    suspend fun protectStoredSecrets() {
+        context.settingsDataStore.edit { prefs ->
+            val stored = prefs[Keys.osPassword]
+            if (!stored.isNullOrEmpty() && !Credentials.isProtected(stored)) prefs[Keys.osPassword] = Credentials.protect(stored).orEmpty()
         }
     }
 
@@ -223,14 +278,20 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.subAuto] = next.subtitlesAutoOn
             prefs[Keys.provider] = next.translationProvider.name
             prefs[Keys.subSize] = next.subtitleSize.name
+            prefs[Keys.subColor] = next.subtitleColor.name
+            prefs[Keys.subBackground] = next.subtitleBackground.name
+            prefs[Keys.subPosition] = next.subtitlePosition.name
+            prefs[Keys.audioMode] = next.audioMode.name
             prefs[Keys.osKey] = next.openSubtitlesKey.trim()
             prefs[Keys.osOn] = next.onlineSubtitles
             prefs[Keys.osUser] = next.openSubtitlesUser.trim()
-            prefs[Keys.osPassword] = next.openSubtitlesPassword
+            prefs[Keys.osPassword] = Credentials.protect(next.openSubtitlesPassword).orEmpty()
             prefs[Keys.timeshift] = next.liveTimeshift
             prefs[Keys.timeshiftMinutes] = next.timeshiftMinutes
             prefs[Keys.autoNext] = next.autoNextEpisode
             prefs[Keys.dataSaver] = next.dataSaver
+            prefs[Keys.alertKeywords] = next.alertKeywords
+            prefs[Keys.phoneRemote] = next.phoneRemote
         }
     }
 
@@ -254,14 +315,20 @@ class SettingsStore(private val context: Context) {
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
         translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),
         subtitleSize = enumOrDefault(this[Keys.subSize], SubtitleSize.LARGE),
+        subtitleColor = enumOrDefault(this[Keys.subColor], SubtitleColor.WHITE),
+        subtitleBackground = enumOrDefault(this[Keys.subBackground], SubtitleBackground.OUTLINE),
+        subtitlePosition = enumOrDefault(this[Keys.subPosition], SubtitlePosition.NORMAL),
+        audioMode = enumOrDefault(this[Keys.audioMode], AudioMode.NORMAL),
         openSubtitlesKey = this[Keys.osKey].orEmpty(),
         onlineSubtitles = this[Keys.osOn] ?: true,
         openSubtitlesUser = this[Keys.osUser].orEmpty(),
-        openSubtitlesPassword = this[Keys.osPassword].orEmpty(),
+        openSubtitlesPassword = Credentials.reveal(this[Keys.osPassword]).orEmpty(),
         liveTimeshift = this[Keys.timeshift] ?: true,
         timeshiftMinutes = this[Keys.timeshiftMinutes]?.takeIf { it in TIMESHIFT_MINUTES } ?: 30,
         autoNextEpisode = this[Keys.autoNext] ?: true,
         dataSaver = this[Keys.dataSaver] ?: true,
+        alertKeywords = this[Keys.alertKeywords] ?: emptySet(),
+        phoneRemote = this[Keys.phoneRemote] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

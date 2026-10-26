@@ -51,6 +51,8 @@ class ParentalControl(private val context: Context, private val db: AyuDatabase)
         return true
     }
 
+    suspend fun hasPinNow(): Boolean = !context.settingsDataStore.data.first()[pinKey].isNullOrEmpty()
+
     suspend fun check(pin: String): Boolean {
         val stored = context.settingsDataStore.data.first()[pinKey] ?: return false
         return MessageDigest.isEqual(stored.toByteArray(), hash(pin).toByteArray())

@@ -62,6 +62,8 @@ class MainActivity : ComponentActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // Neue Version bei GitHub? (höchstens alle 6 Stunden nachfragen)
+        (application as AyuApp).container.let { c -> c.scope.launch { c.updates.check() } }
         if (!de.ayutv.data.translate.OnDeviceTranslator.hasPendingPreparation(filesDir)) return
         val container = (application as AyuApp).container
         container.scope.launch {

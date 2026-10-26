@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# Neuer Push auf denselben PR: den alten Lauf abbrechen (main und Tags laufen immer zu Ende).
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # FFmpeg-Tondecoder (DTS, TrueHD, AC-3/E-AC-3 …) für Media3 bauen. Dauert beim ersten Mal einige
   # Minuten, danach kommt das Ergebnis aus dem Cache (Schlüssel: Bauskript + Media3-Version).
@@ -61,7 +66,9 @@ jobs:
       - name: Tests und APKs bauen
         env:
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
+        # Auch die Test-APK: Gerätetest und ARM-Test nehmen diese APKs, statt alles noch einmal zu bauen
+        # (auf langsamen Runnern je fast eine Stunde).
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease assembleDebugAndroidTest
 
       - name: APK umbenennen
         run: |
@@ -73,6 +80,12 @@ jobs:
         with:
           name: DnA-TV-apk
           path: out/*.apk
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk/
+          retention-days: 3
 
       - name: Versionsnummer lesen
         id: version
@@ -113,8 +126,11 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: APKs bauen
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: APKs aus dem Build übernehmen
+        uses: actions/download-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk
       - name: Selbsttest mit 32-Bit-ARM
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -170,10 +186,11 @@ jobs:
           ci/make-test-media.sh ci-media
           nohup python3 ci/test_server.py ci-media > http.log 2>&1 &
 
-      - name: APKs bauen
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest assembleRelease
+      - name: APKs aus dem Build übernehmen
+        uses: actions/download-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk
 
       # Upgrade-Test: Die Version aus main zuerst installieren, dann die neue darüber. So fällt eine
       # fehlerhafte Datenbank-Migration auf, bevor sie auf dem Fire TV die Playlists kostet.
@@ -220,3 +237,49 @@ jobs:
           git add -A
           git commit -qm "Ergebnisse für ${{ github.sha }}"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-results
+
+  # Handy mit Touchscreen: tippen statt Fernbedienung, Hoch- und Querformat, Player.
+  phone:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: KVM aktivieren
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Testinhalte erzeugen und bereitstellen
+        run: |
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          ci/make-test-media.sh ci-media
+          nohup python3 ci/test_server.py ci-media > http.log 2>&1 &
+
+      - name: APKs aus dem Build übernehmen
+        uses: actions/download-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk
+
+      - name: Handy-Test im Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_4
+          ram-size: 3072M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-boot-anim
+          disable-animations: true
+          script: ci/run-phone-test.sh
+
+      - name: Ergebnisse hochladen
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: phone-results
+          path: ci-phone
+          retention-days: 7

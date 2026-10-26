@@ -7,6 +7,22 @@ import org.junit.Test
 class OpenSubtitlesParsingTest {
 
     @Test
+    fun vipAccountsUseTheirOwnServer() {
+        assertEquals("https://vip-api.opensubtitles.com/api/v1", OpenSubtitlesParsing.loginApi("""{"token":"x","base_url":"vip-api.opensubtitles.com","status":200}"""))
+        assertEquals("https://api.opensubtitles.com/api/v1", OpenSubtitlesParsing.loginApi("""{"token":"x","base_url":"api.opensubtitles.com"}"""))
+        // Nur Adressen von OpenSubtitles: ein Token geht nie an einen fremden Server.
+        assertEquals(null, OpenSubtitlesParsing.loginApi("""{"token":"x","base_url":"evil.example.com"}"""))
+        assertEquals(null, OpenSubtitlesParsing.loginApi("""{"token":"x"}"""))
+    }
+
+    @Test
+    fun rejectedTokenIsRecognised() {
+        assertEquals(true, OpenSubtitlesParsing.isTokenProblem(401, "{}"))
+        assertEquals(true, OpenSubtitlesParsing.isTokenProblem(403, """{"message":"invalid token"}"""))
+        assertEquals(false, OpenSubtitlesParsing.isTokenProblem(406, """{"message":"You have downloaded your allowed 5 subtitles"}"""))
+    }
+
+    @Test
     fun hashOfZeroBytesIsFileSize() {
         val zero = ByteArray(MovieHash.CHUNK)
         assertEquals("0000000000020000", MovieHash.compute(131_072L, zero, zero))
@@ -90,7 +106,16 @@ class OpenSubtitlesParsingTest {
         val a = SubtitleCandidate(1, "de", "a", hashMatch = false, downloads = 900, hearingImpaired = false, fps = 25.0)
         val b = SubtitleCandidate(2, "de", "b", hashMatch = false, downloads = 100, hearingImpaired = false, fps = 23.976)
         val c = SubtitleCandidate(3, "de", "c", hashMatch = true, downloads = 1, hearingImpaired = false, fps = 25.0)
-        assertEquals(listOf(3L, 2L, 1L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b, c), 23.976f).map { it.fileId })
+        // Hash-Treffer bleibt vorn
+        assertEquals(listOf(3L, 1L, 2L), OpenSubtitlesParsing.preferFrameRate(listOf(c, a, b), 23.976f).map { it.fileId })
+        // Selten geladene Datei mit passender Bildrate verdrängt die oft geladene nicht (meist falsche Fassung)
+        assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b), 23.976f).map { it.fileId })
+        // Fast gleich oft geladen: die mit passender Bildrate
+        val b2 = b.copy(downloads = 600)
+        assertEquals(listOf(2L, 1L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b2), 23.976f).map { it.fileId })
+        // Maschinell übersetzt zählt nicht als gleich gut
+        val b3 = b2.copy(translated = true)
+        assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b3), 23.976f).map { it.fileId })
         assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferFrameRate(listOf(a, b), null).map { it.fileId })
 
         val srt = "1\n00:00:01,000 --> 00:00:02,500\nHallo\n\n2\n01:52:10,250 --> 01:52:12,040\nEnde\n"

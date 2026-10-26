@@ -19,6 +19,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
@@ -75,6 +76,7 @@ object PlayerFactory {
         forcePcm: Boolean = settings.audioOutput == AudioOutput.PCM,
         speech: SpeechActivity? = null,
         timeshift: TimeshiftHolder? = null,
+        enhance: AudioEnhance? = null,
     ): Built {
         val headers = HeaderProvider(settings.userAgent)
 
@@ -104,7 +106,7 @@ object PlayerFactory {
                 .setConstantBitrateSeekingEnabled(true)
         )
 
-        val renderers = AyuRenderersFactory(context, forcePcm, speech)
+        val renderers = AyuRenderersFactory(context, forcePcm, speech, enhance)
             .setEnableDecoderFallback(true)
             .setMediaCodecSelector(DolbyVisionFallbackSelector)
             // FFmpeg nur als Ergänzung: Was das Gerät selbst kann (oder an den Receiver durchreicht),
@@ -292,9 +294,15 @@ private class StreamLoadErrorPolicy(private val live: Boolean) : DefaultLoadErro
  * Mit [forcePcm] meldet die Tonausgabe nur Stereo-PCM als unterstützt: Dann wird jedes Format im
  * Gerät dekodiert (MediaCodec oder FFmpeg) statt an Soundbar/Receiver durchgereicht. Hilft bei
  * Geräten, die Dolby/DTS ankündigen, aber nicht wiedergeben. Mit [speech] hört [SpeechTapProcessor]
- * beim Ton mit (Ausrichtung geladener Untertitel an der Sprache).
+ * beim Ton mit (Ausrichtung geladener Untertitel an der Sprache), mit [enhance] gibt es Nachtmodus und
+ * Dialog-Verstärkung.
  */
-private class AyuRenderersFactory(context: Context, private val forcePcm: Boolean, private val speech: SpeechActivity?) : DefaultRenderersFactory(context) {
+private class AyuRenderersFactory(
+    context: Context,
+    private val forcePcm: Boolean,
+    private val speech: SpeechActivity?,
+    private val enhance: AudioEnhance?,
+) : DefaultRenderersFactory(context) {
     @Suppress("DEPRECATION")
     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink? {
         // Bewusst ohne Context bei forcePcm: Nur dann gelten feste Fähigkeiten "kein Durchreichen".
@@ -304,7 +312,9 @@ private class AyuRenderersFactory(context: Context, private val forcePcm: Boolea
         } else {
             DefaultAudioSink.Builder(context).setEnableAudioOutputPlaybackParameters(enableAudioTrackPlaybackParams)
         }
-        speech?.let { builder.setAudioProcessors(arrayOf(SpeechTapProcessor(it))) }
+        // Erst mithören (unveränderte Sprache), dann Nachtmodus/Dialoge.
+        val processors = listOfNotNull<AudioProcessor>(speech?.let(::SpeechTapProcessor), enhance?.let(::AudioEnhanceProcessor))
+        if (processors.isNotEmpty()) builder.setAudioProcessors(processors.toTypedArray())
         return builder.setEnableFloatOutput(enableFloatOutput).build()
     }
 }

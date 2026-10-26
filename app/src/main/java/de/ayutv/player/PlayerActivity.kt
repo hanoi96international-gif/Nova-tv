@@ -44,12 +44,19 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import de.ayutv.AyuApp
 import de.ayutv.data.AppSettings
+import de.ayutv.data.AspectMode
+import de.ayutv.data.AudioMode
+import de.ayutv.data.PlayerMemory
+import de.ayutv.data.SubtitleBackground
+import de.ayutv.data.SubtitleColor
+import de.ayutv.data.SubtitlePosition
 import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
 import de.ayutv.data.DeviceInfo
 import de.ayutv.data.Languages
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
+import de.ayutv.data.IntroStore
 import de.ayutv.hideSystemBars
 import de.ayutv.ui.components.FitToScreen
 import de.ayutv.ui.components.hasTouchscreen
@@ -184,6 +191,8 @@ class PlayerActivity : ComponentActivity() {
     var subtitleAutoSynced by mutableStateOf(false); private set
     /** Untertitel kommen nicht vom Player, sondern aus DnA-TV (Übersetzung oder geladene Datei). */
     val ownSubtitles: Boolean get() = liveTranslateTarget != null || externalLanguage != null
+    /** Live-Übersetzung von Bild-Untertiteln: Die aktuelle Zeile ist noch nicht übersetzt, das Original bleibt sichtbar. */
+    var originalVisible by mutableStateOf(false); private set
     private var externalCues: List<TimedCue> = emptyList()
     private var externalTexts: java.util.concurrent.atomic.AtomicReferenceArray<String>? = null
     private var externalJob: Job? = null
@@ -194,6 +203,16 @@ class PlayerActivity : ComponentActivity() {
     private var syncJob: Job? = null
     /** Mitgehörter Ton (nur Filme): zeigt, wann gesprochen wird, wenn der Film keine eigenen Untertitel hat. */
     private val heardSpeech = SpeechActivity()
+    /** Nachtmodus / Dialoge verstärken, im Ton des Players. */
+    private val enhance = AudioEnhance()
+    var audioMode by mutableStateOf(AudioMode.NORMAL); private set
+    /** Untertitel-Aussehen aus den Einstellungen. */
+    var subtitleLook by mutableStateOf(SubtitleLook()); private set
+    /** Gemerkte Spuren dieses Senders/dieser Serie schon angewendet. */
+    private var memoryApplied = false
+    /** Schlaf-Timer: Ende (Uhrzeit, ms) oder 0 = aus. */
+    var sleepAt by mutableLongStateOf(0L); private set
+    private var sleepJob: Job? = null
     private var heardSpeechKey: String? = null
     /** Wie viele Sekunden Ton schon mitgehört wurden (für den Gerätetest). */
     val speechHeardSeconds: Int get() = heardSpeech.seconds()
@@ -233,7 +252,14 @@ class PlayerActivity : ComponentActivity() {
     /** Knopf „Intro überspringen“ (Serien). */
     var introVisible by mutableStateOf(false); private set
     private var introLearned: IntroSkip.Intro? = null
-    private var introUsed = false
+    /** Wie oft schon übersprungen (Rückblick, dann Intro: der Knopf kommt danach wieder). */
+    private var introSkips = 0
+    private var introHiddenUntil = 0L
+    /** Am Ton erkannter Intro-Klang dieser Serie, und wohin das gerade erkannte Intro reicht (ms, -1 = noch nicht). */
+    private var introFingerprint: IntroStore.Fingerprint? = null
+    private var introAudioEnd = -1L
+    private var introSearchJob: Job? = null
+    private var openingLearned = false
     /** Letztes Überspringen: von wo, wohin (inkl. Korrekturen) und wann, zum Lernen der Intro-Länge. */
     private var introFrom = -1L
     private var introTo = 0L
@@ -245,6 +271,11 @@ class PlayerActivity : ComponentActivity() {
     private var aheadJob: Job? = null
     var translatedCue by mutableStateOf<String?>(null); private set
     var languagePicker by mutableStateOf(false); private set
+    /** Auswahl „Programm zuordnen“ (TV-Guide von Hand) für den laufenden Sender. */
+    var epgPicker by mutableStateOf(false); private set
+    var epgChoices by mutableStateOf<List<de.ayutv.data.repo.PlaylistRepository.GuideChannel>>(emptyList()); private set
+    /** Von Hand gewählte Zuordnung des laufenden Senders, oder null. */
+    var epgOverride by mutableStateOf<String?>(null); private set
     val preferredSubtitleLanguage: String get() = if (::settings.isInitialized) settings.subtitleLanguage else "en"
     val translationAvailable: Boolean get() = ::settings.isInitialized && settings.translationEnabled
 
@@ -264,6 +295,9 @@ class PlayerActivity : ComponentActivity() {
             // Einmaliges Laden eines Sprachmodells für die Übersetzung auf dem Gerät anzeigen.
             Translators.remote.onProgress = { text -> runOnUiThread { subtitleStatus = text } }
             subtitleScale = settings.subtitleSize.scale
+            subtitleLook = SubtitleLook(settings.subtitleColor, settings.subtitleBackground, settings.subtitlePosition)
+            audioMode = settings.audioMode
+            enhance.mode = settings.audioMode
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
@@ -271,7 +305,7 @@ class PlayerActivity : ComponentActivity() {
             val request = vod
             if (request != null) {
                 vodTitle = request.title
-                val resume = container.content.resumePosition(request.key)
+                val resume = if (intent.getBooleanExtra(EXTRA_FROM_START, false)) 0L else container.content.resumePosition(request.key)
                 // Datei-Hash, bevor der Player verbindet (danach nie parallel): Damit findet OpenSubtitles
                 // Untertitel, die zeitgenau zu genau dieser Datei passen.
                 if (settings.onlineSubtitlesEnabled && request.kind != HistoryKind.CATCHUP) {
@@ -309,6 +343,7 @@ class PlayerActivity : ComponentActivity() {
             this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm,
             speech = heardSpeech.takeIf { vod != null },
             timeshift = timeshift.takeIf { vod == null },
+            enhance = enhance,
         )
         headers = built.headers
         trackSelector = built.trackSelector
@@ -467,6 +502,8 @@ class PlayerActivity : ComponentActivity() {
     private fun displaySwitching() = frameRateMatcher.switching || SystemClock.elapsedRealtime() < displaySwitchGraceUntil
 
     private fun resetStreamState() {
+        memoryApplied = false
+        aspect = memoryKey()?.let { container.playerMemory.get(it).aspect } ?: AspectMode.FIT
         everReady = false
         rebufferedThisStream = false
         fatalError = false
@@ -680,6 +717,8 @@ class PlayerActivity : ComponentActivity() {
         container.scope.launch { container.content.recordLive(channel) }
         checkMobileData()
         preferSmallVariant(channel)
+        // Läuft gerade Chromecast: den neuen Sender dort weiterspielen.
+        castingTo?.let { startCasting(it) }
     }
 
     // ---------------------------------------------------------------- Zeitversatz (Live anhalten)
@@ -919,12 +958,62 @@ class PlayerActivity : ComponentActivity() {
         val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
         introLearned = container.intros.get(seriesKey)
         lifecycleScope.launch { nextEpisode = container.content.nextEpisode(request.key) }
+        lifecycleScope.launch { introFingerprint = withContext(Dispatchers.IO) { container.intros.fingerprint(seriesKey) } }
+    }
+
+    /** Läuft gerade das bekannte Intro? Am Ton der letzten Sekunden suchen (alle 2 s, in den ersten Minuten). */
+    private fun searchIntroByAudio(position: Long) {
+        val fingerprint = introFingerprint ?: return
+        if (introAudioEnd >= 0 || position > OPENING_MS || introSearchJob?.isActive == true) return
+        val from = (position - INTRO_SEARCH_BACK_MS).coerceAtLeast(0)
+        introSearchJob = lifecycleScope.launch(Dispatchers.Default) {
+            val heard = heardSpeech.levels(from, position)
+            val at = IntroMatch.find(heard, fingerprint.pattern, 0, heard.size) ?: return@launch
+            val end = from + (at + fingerprint.lengthBins) * 100L
+            withContext(Dispatchers.Main) { if (end > position + 3_000) introAudioEnd = end }
+        }
+    }
+
+    /**
+     * Folge verlassen: Anfang dieser Folge mit dem der zuletzt gesehenen vergleichen. Der gemeinsame Abschnitt
+     * ist die Titelmusik; ihr Anfang wird gespeichert und in den nächsten Folgen am Ton wiedererkannt.
+     */
+    private fun learnOpening(request: VodRequest) {
+        if (openingLearned || request.kind != HistoryKind.EPISODE) return
+        val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
+        val opening = heardSpeech.levels(0, OPENING_MS)
+        val heard = opening.count { !it.isNaN() }
+        if (heard < opening.size / 3) return
+        openingLearned = true
+        val intros = container.intros
+        container.scope.launch(Dispatchers.Default) {
+            val previous = intros.opening(seriesKey)
+            val segment = previous?.let { IntroMatch.commonSegment(opening, it) }
+            if (segment != null && segment.length in INTRO_MIN_BINS..INTRO_MAX_BINS) {
+                // Muster aus der Folge nehmen, in der der Anfang vollständig gehört wurde.
+                val fromCurrent = opening.copyOfRange(segment.startA, segment.startA + INTRO_PATTERN_BINS)
+                val pattern = if (fromCurrent.none { it.isNaN() }) fromCurrent
+                    else previous!!.copyOfRange(segment.startB, segment.startB + INTRO_PATTERN_BINS)
+                if (pattern.none { it.isNaN() }) intros.saveFingerprint(seriesKey, IntroStore.Fingerprint(pattern, segment.length))
+                Log.i(TAG, "Intro erkannt: bei ${segment.startA / 10} s, ${segment.length / 10} s lang")
+            }
+            // Für den nächsten Vergleich den vollständigeren Anfang behalten.
+            if (previous == null || heard >= previous.count { !it.isNaN() }) intros.saveOpening(seriesKey, opening)
+        }
     }
 
     private fun updateEpisodeCards(request: VodRequest) {
         val p = player ?: return
         val position = positionMs
-        introVisible = !introUsed && p.playbackState == Player.STATE_READY && IntroSkip.visible(position, introLearned)
+        searchIntroByAudio(position)
+        introVisible = p.playbackState == Player.STATE_READY && when {
+            // Am Ton erkannt: genau solange das Intro läuft.
+            introAudioEnd > 0 -> position < introAudioEnd - 2_000
+            // Am Ton erkanntes Intro schon übersprungen.
+            introAudioEnd == 0L -> false
+            // Sonst nach Zeit; nach einem Sprung kurz weg, dann wieder da (erst Rückblick, dann Intro).
+            else -> introSkips < MAX_INTRO_SKIPS && SystemClock.elapsedRealtime() > introHiddenUntil && IntroSkip.visible(position, introLearned)
+        }
         // Korrekturen nach dem Überspringen gelten als Intro-Länge.
         if (introFrom >= 0 && SystemClock.elapsedRealtime() - introAt > IntroSkip.LEARN_WINDOW_MS) {
             IntroSkip.learn(introFrom, introTo)?.let { intro ->
@@ -941,8 +1030,18 @@ class PlayerActivity : ComponentActivity() {
     private fun skipIntro() {
         val p = player ?: return
         val from = p.currentPosition
+        if (introAudioEnd > from) {
+            // Am Ton erkannt: genau ans Ende, nichts zu lernen.
+            p.seekTo(introAudioEnd)
+            positionMs = introAudioEnd
+            introAudioEnd = 0
+            introVisible = false
+            subtitleStatus = "Intro übersprungen"
+            return
+        }
         val to = IntroSkip.target(from, introLearned)
-        introUsed = true
+        introSkips++
+        introHiddenUntil = SystemClock.elapsedRealtime() + 4_000
         introVisible = false
         introFrom = from
         introTo = to
@@ -1158,6 +1257,33 @@ class PlayerActivity : ComponentActivity() {
         textDisabled = false
     }
 
+    fun openEpgPicker() {
+        val channel = current ?: return
+        epgOverride = container.epgOverrides.get(channel.key)
+        epgPicker = true
+        lifecycleScope.launch {
+            epgChoices = withContext(Dispatchers.IO) { container.playlists.guideChannels(channel.playlistId) }
+        }
+    }
+
+    fun closeEpgPicker() {
+        epgPicker = false
+    }
+
+    /** Programm für den laufenden Sender festlegen ([guideId] = null: wieder automatisch) und den TV-Guide neu laden. */
+    fun assignEpg(guideId: String?) {
+        val channel = current ?: return
+        container.epgOverrides.set(channel.key, guideId)
+        epgPicker = false
+        closeOverlay()
+        message = if (guideId == null) "Zuordnung zurückgesetzt – TV-Guide wird neu geladen …" else "TV-Guide wird neu zugeordnet …"
+        handler.postDelayed({ message = null }, 3_000)
+        container.scope.launch {
+            container.playlists.syncEpg(channel.playlistId)
+            container.content.channel(channel.key)?.let { fresh -> withContext(Dispatchers.Main) { if (current?.key == fresh.key) loadChannelInfo(fresh) } }
+        }
+    }
+
     fun openLanguagePicker() {
         languagePicker = true
         overlayToken++
@@ -1219,8 +1345,11 @@ class PlayerActivity : ComponentActivity() {
                     val store = embedded
                     if (store != null && store.hasEntries(format)) {
                         val entry = store.at(format, player?.currentPosition ?: 0L)
-                        // Noch nicht übersetzt: Text im Original zeigen, Bild-Untertitel erst mit Übersetzung.
-                        translatedCue = entry?.let { aheadTranslations[it.startMs]?.ifEmpty { null } ?: if (bitmap) null else it.text }
+                        val translated = entry?.let { aheadTranslations[it.startMs]?.ifEmpty { null } }
+                        // Noch nicht übersetzt: das Original zeigen (Text selbst, Bild-Untertitel über den Player)
+                        // statt gar nichts, solange der Übersetzer lädt oder nicht hinterherkommt.
+                        translatedCue = translated ?: if (bitmap) null else entry?.text
+                        originalVisible = bitmap && entry != null && translated == null
                     }
                     delay(100)
                 }
@@ -1243,6 +1372,13 @@ class PlayerActivity : ComponentActivity() {
                     failures = 0
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
+                } catch (e: de.ayutv.data.translate.RemoteTranslator.NoAnswer) {
+                    // Übersetzer hängt (Modell lädt auf diesem Gerät zu lange): beenden statt endlos warten.
+                    Log.w(SUBTITLE_TAG, "Übersetzer antwortet nicht", e)
+                    Translators.remote.abort(e.message ?: "keine Antwort")
+                    stopLiveTranslation()
+                    fallbackToLoaded(target, "${e.message}. Test: Einstellungen → Untertitel → Übersetzer testen")
+                    break
                 } catch (e: Exception) {
                     Log.w(SUBTITLE_TAG, "Übersetzung mit Vorlauf fehlgeschlagen", e)
                     aheadTranslations[next.startMs] = next.text.orEmpty()
@@ -1276,6 +1412,7 @@ class PlayerActivity : ComponentActivity() {
         aheadJob = null
         aheadFormat = null
         aheadTranslations.clear()
+        originalVisible = false
         embedded?.readImagesOf(null)
     }
 
@@ -1592,6 +1729,7 @@ class PlayerActivity : ComponentActivity() {
                 .onFailure {
                     if (it is kotlinx.coroutines.CancellationException) return@onFailure
                     Log.w(SUBTITLE_TAG, "Live-Übersetzung fehlgeschlagen", it)
+                    if (it is de.ayutv.data.translate.RemoteTranslator.NoAnswer) Translators.remote.abort(it.message.orEmpty())
                     stopLiveTranslation()
                     subtitleStatus = "Übersetzung nicht möglich: ${it.message ?: it.javaClass.simpleName}"
                 }
@@ -1642,6 +1780,7 @@ class PlayerActivity : ComponentActivity() {
                 throw e
             } catch (e: Exception) {
                 Log.w(SUBTITLE_TAG, "Übersetzung der Datei fehlgeschlagen", e)
+                if (e is de.ayutv.data.translate.RemoteTranslator.NoAnswer) Translators.remote.abort(e.message.orEmpty())
                 subtitleStatus = "Übersetzung nicht möglich: ${e.message ?: e.javaClass.simpleName}"
                 stopLiveTranslation()
             }
@@ -1673,10 +1812,16 @@ class PlayerActivity : ComponentActivity() {
             textDisabled = false
             stopLiveTranslation()
         }
+        // Für diesen Sender / diese Serie merken.
+        val language = group.getTrackFormat(index).language?.takeIf { it != "und" }
+        if (language != null) memoryKey()?.let { key ->
+            container.playerMemory.update(key) { if (group.type == C.TRACK_TYPE_AUDIO) it.copy(audio = language) else it.copy(text = language) }
+        }
     }
 
     fun setTextEnabled(enabled: Boolean) {
         val p = player ?: return
+        if (!enabled) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = PlayerMemory.OFF) } }
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
             .apply { if (!enabled) clearOverridesOfType(C.TRACK_TYPE_TEXT) }
@@ -1763,8 +1908,8 @@ class PlayerActivity : ComponentActivity() {
     /** Kurze Rückmeldung zu einer Wischgeste (Lautstärke, Helligkeit, Spulen), mittig im Bild. */
     var gestureInfo by mutableStateOf<String?>(null); private set
     private var gestureInfoJob: Job? = null
-    /** Bild füllt den Bildschirm (Ränder abgeschnitten) statt ganz zu sehen. */
-    var zoomed by mutableStateOf(false); private set
+    /** Bildformat: ganz, füllen (Ränder abgeschnitten) oder gestreckt; gemerkt je Sender/Serie/Film. */
+    var aspect by mutableStateOf(AspectMode.FIT); private set
     /** Läuft als kleines Fenster über anderen Apps (Bild-in-Bild). */
     var inPip by mutableStateOf(false); private set
     private var volumeLevel = -1f
@@ -1817,9 +1962,149 @@ class PlayerActivity : ComponentActivity() {
 
     /** Zwei Finger auseinander: Bild füllt den Bildschirm; zusammen: wieder ganz. */
     fun zoomGesture(fill: Boolean) {
-        if (zoomed == fill) return
-        zoomed = fill
+        if ((aspect == AspectMode.ZOOM) == fill) return
+        chooseAspect(if (fill) AspectMode.ZOOM else AspectMode.FIT)
         showGestureInfo(if (fill) "Bild füllt den Bildschirm" else "Ganzes Bild")
+    }
+
+    fun chooseAspect(mode: AspectMode) {
+        aspect = mode
+        memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(aspect = mode) } }
+    }
+
+    // ---------------------------------------------------------------- Merken, Ton-Modus, Schlaf-Timer
+
+    /** Wofür Spuren und Bildformat gemerkt werden: Sender, Serie (alle Folgen gleich) oder Film. */
+    private fun memoryKey(): String? = vod?.let { Episodes.seriesKeyOf(it.key) ?: it.key } ?: playing?.key
+
+    /** Beim ersten Mal, wenn die Spuren des Streams bekannt sind: zuletzt gewählten Ton und Untertitel einstellen. */
+    private fun applyMemory(tracks: Tracks) {
+        if (memoryApplied || tracks.isEmpty) return
+        val key = memoryKey() ?: return
+        memoryApplied = true
+        val choice = container.playerMemory.get(key)
+        val p = player ?: return
+        choice.audio?.let { language ->
+            val match = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+                .flatMap { g -> (0 until g.length).filter { g.isTrackSupported(it) }.map { g to it } }
+                .firstOrNull { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) == Languages.normalize(language) }
+            if (match != null && !match.first.isTrackSelected(match.second)) {
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setOverrideForType(TrackSelectionOverride(match.first.mediaTrackGroup, match.second))
+                    .build()
+            }
+        }
+        val text = choice.text
+        when {
+            choice.textOff -> if (!textDisabled) {
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).clearOverridesOfType(C.TRACK_TYPE_TEXT).build()
+                textDisabled = true
+            }
+            text != null && externalLanguage == null && hasTextTrack(text) -> selectTextLanguage(text)
+        }
+    }
+
+    // ---------------------------------------------------------------- Chromecast (Handy)
+
+    /** Chromecast möglich (Handy mit Google-Play-Diensten). */
+    val castAvailable: Boolean by lazy { de.ayutv.player.cast.Cast.available(this) }
+    /** Name des Chromecast, auf dem gerade gespielt wird. */
+    var castingTo by mutableStateOf<String?>(null); private set
+
+    fun toggleCast() {
+        if (castingTo != null) {
+            de.ayutv.player.cast.Cast.stop(this)
+            return
+        }
+        de.ayutv.player.cast.Cast.choose(
+            this,
+            onConnected = { name -> startCasting(name) },
+            onEnded = {
+                castingTo = null
+                message = "Chromecast beendet – läuft wieder hier"
+                player?.play()
+            },
+        )
+    }
+
+    private fun startCasting(name: String) {
+        val p = player ?: return
+        val media = if (isLive) {
+            playing?.let { c ->
+                val title = nowNext.firstOrNull()?.headline()?.ifEmpty { null }
+                de.ayutv.player.cast.Cast.Media(c.url, c.name, title, c.logo, live = true, positionMs = 0)
+            }
+        } else {
+            vod?.let { de.ayutv.player.cast.Cast.Media(it.url, it.title, it.subtitle, it.image, live = false, positionMs = p.currentPosition) }
+        }
+        if (media == null || media.url.startsWith("file:")) {
+            message = "Aufnahmen und Downloads lassen sich nicht übertragen"
+            return
+        }
+        if (de.ayutv.player.cast.Cast.play(this, media)) {
+            castingTo = name
+            p.pause()
+            message = "📺 Läuft auf $name (📺 nochmal: zurück aufs Handy)"
+        }
+    }
+
+    /** Laufende Sendung aufnehmen (ohne Programmdaten: die nächste Stunde); nochmal = Aufnahme entfernen. */
+    fun recordCurrent() {
+        val channel = playing ?: return
+        val now = System.currentTimeMillis()
+        val programme = nowNext.firstOrNull { it.start <= now && it.stop > now }
+        val start = programme?.start ?: (now / 60_000 * 60_000)
+        val stop = programme?.stop ?: (start + 60 * 60_000)
+        val title = programme?.headline()?.ifEmpty { null } ?: channel.name
+        lifecycleScope.launch {
+            val on = container.recordings.toggleRecording(
+                channel.key, channel.name, title, channel.url, channel.userAgent ?: settings.userAgent, start, stop, programme?.icon ?: channel.logo,
+            )
+            message = if (on) "⏺ Wird aufgenommen bis ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(stop))}: $title" else "Aufnahme entfernt"
+        }
+    }
+
+    fun chooseAudioMode(mode: AudioMode) {
+        audioMode = mode
+        enhance.mode = mode
+        container.scope.launch { container.settings.update { it.copy(audioMode = mode) } }
+    }
+
+    /**
+     * Schlaf-Timer: nach [minutes] anhalten und den Player schließen. 0 = aus, [SLEEP_END] = am Ende der
+     * laufenden Sendung bzw. des Films.
+     */
+    fun setSleepTimer(minutes: Int) {
+        sleepJob?.cancel()
+        sleepJob = null
+        val now = System.currentTimeMillis()
+        sleepAt = when {
+            minutes == 0 -> 0L
+            minutes == SLEEP_END && isLive -> nowNext.firstOrNull()?.stop?.takeIf { it > now } ?: 0L
+            minutes == SLEEP_END -> player?.let { p -> (p.duration - p.currentPosition).takeIf { p.duration > 0 && it > 0 }?.let { now + it } } ?: 0L
+            else -> now + minutes * 60_000L
+        }
+        if (sleepAt == 0L) {
+            if (minutes != 0) message = "Ende unbekannt – bitte eine feste Zeit wählen"
+            return
+        }
+        message = "Schlaf-Timer: Ende um ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(sleepAt))}"
+        sleepJob = lifecycleScope.launch {
+            var warned = false
+            while (true) {
+                val left = sleepAt - System.currentTimeMillis()
+                if (left <= 0) break
+                if (!warned && left <= 60_000) {
+                    warned = true
+                    message = "Schlaf-Timer: noch 1 Minute (☰ → Schlaf-Timer zum Verlängern)"
+                }
+                delay(minOf(left, 5_000))
+            }
+            sleepAt = 0L
+            player?.pause()
+            finish()
+        }
     }
 
     /** Home-Taste während der Wiedergabe: als kleines Fenster weiterlaufen (Handy, Tablet). */
@@ -1938,6 +2223,7 @@ class PlayerActivity : ComponentActivity() {
 
         override fun onTracksChanged(tracks: Tracks) {
             this@PlayerActivity.tracks = tracks
+            applyMemory(tracks)
             checkAudioSupport(tracks)
             updateFormats()
             if (externalLanguage != null) selectSyncReference()
@@ -2164,6 +2450,7 @@ class PlayerActivity : ComponentActivity() {
             if (event.action == KeyEvent.ACTION_UP) {
                 when {
                     languagePicker -> closeLanguagePicker()
+                    epgPicker -> closeEpgPicker()
                     overlay != Overlay.NONE -> closeOverlay()
                     else -> finish()
                 }
@@ -2290,6 +2577,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        vod?.let(::learnOpening)
         // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
         if (inPip) {
             inPip = false
@@ -2361,9 +2649,18 @@ class PlayerActivity : ComponentActivity() {
         private const val VOD_STALL_SECONDS = 20
         /** Über die ganze Bildschirmbreite wischen spult so weit. */
         private const val SWIPE_SEEK_MS = 120_000f
+        /** Schlaf-Timer bis zum Ende der Sendung / des Films. */
+        const val SLEEP_END = -1
         /** „Nächste Folge“ erscheint in den letzten Sekunden einer Folge. */
         private const val NEXT_CARD_MS = 20_000L
         private const val NEXT_COUNTDOWN_SECONDS = 10
+        /** Die ersten Minuten einer Folge: darin wird das Intro gesucht und gelernt. */
+        private const val OPENING_MS = 8 * 60_000L
+        private const val INTRO_SEARCH_BACK_MS = 40_000L
+        private const val INTRO_PATTERN_BINS = 80
+        private const val INTRO_MIN_BINS = 150
+        private const val INTRO_MAX_BINS = 2_400
+        private const val MAX_INTRO_SKIPS = 3
         /** Näher als das am Live-Bild gilt als live. */
         private const val LIVE_EDGE_MS = 4_000L
         /** Mindestens so viel freier Speicher, sonst kein Zeitversatz. */
@@ -2372,6 +2669,7 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"
         private const val EXTRA_FAVORITES = "favorites"
+        private const val EXTRA_FROM_START = "from_start"
         private const val EXTRA_VOD_KEY = "vod_key"
         private const val EXTRA_VOD_KIND = "vod_kind"
         private const val EXTRA_VOD_TITLE = "vod_title"
@@ -2407,7 +2705,8 @@ class PlayerActivity : ComponentActivity() {
         fun startLive(context: Context, channelKey: String, group: String?, favoritesOnly: Boolean = false) =
             context.startActivity(liveIntent(context, channelKey, group, favoritesOnly))
 
-        fun startVod(context: Context, request: VodRequest) = context.startActivity(vodIntent(context, request))
+        fun startVod(context: Context, request: VodRequest, fromStart: Boolean = false) =
+            context.startActivity(vodIntent(context, request).putExtra(EXTRA_FROM_START, fromStart))
 
         /** Vergangene Sendung aus dem Archiv des Anbieters: läuft wie ein Film (spulbar). */
         fun startCatchup(context: Context, channel: ChannelEntity, programme: ProgrammeEntity, url: String) = startVod(
@@ -2444,6 +2743,13 @@ data class VodRequest(
     val subtitle: String?,
     val image: String?,
     val url: String,
+)
+
+/** Wie Untertitel aussehen (aus den Einstellungen). */
+data class SubtitleLook(
+    val color: SubtitleColor = SubtitleColor.WHITE,
+    val background: SubtitleBackground = SubtitleBackground.OUTLINE,
+    val position: SubtitlePosition = SubtitlePosition.NORMAL,
 )
 
 data class StreamStats(

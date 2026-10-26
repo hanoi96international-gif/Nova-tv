@@ -19,6 +19,8 @@ class EpgMatcher(private val country: String = "de") {
     private val lower = HashMap<String, String>()
     private val strong = HashMap<String, MutableList<Guide>>()
     private val weak = HashMap<String, MutableList<Guide>>()
+    /** Namenskerne je EPG-Sender (aus Kennung und Anzeigenamen), um eine Zuordnung zu prüfen. */
+    private val keysOf = HashMap<String, MutableSet<String>>()
 
     /** Ein Sender des EPGs mit seinen Anzeigenamen. */
     fun addGuideChannel(id: String, names: Collection<String>) {
@@ -27,7 +29,10 @@ class EpgMatcher(private val country: String = "de") {
         lower.putIfAbsent(id.lowercase(), id)
         val idKey = analyse(id, isId = true)
         val guide = Guide(id, idKey.country ?: names.firstNotNullOfOrNull { analyse(it, isId = false).country })
+        val keys = keysOf.getOrPut(id) { HashSet() }
         for (k in listOf(idKey) + names.map { analyse(it, isId = false) }) {
+            if (k.strong.isNotEmpty()) keys += k.strong
+            if (k.weak.isNotEmpty()) keys += k.weak
             if (k.strong.isNotEmpty()) strong.getOrPut(k.strong) { ArrayList() }.addUnique(guide)
             if (k.weak.isNotEmpty()) weak.getOrPut(k.weak) { ArrayList() }.addUnique(guide)
         }
@@ -60,6 +65,21 @@ class EpgMatcher(private val country: String = "de") {
             k.region?.let { pick(strong[it], wanted)?.let { id -> return id } }
         }
         return null
+    }
+
+    /**
+     * Passt der Sendername zum EPG-Sender [guideId]? Manche Anbieter geben einem Sender die Kennung eines
+     * anderen („Sky Sport Austria 1“ mit der Kennung von „Sky Sport 1“): Dann stimmt sein Programm nicht.
+     * Unbekannte Sender und Namen ohne verwertbaren Kern gelten als passend.
+     */
+    fun fitsName(guideId: String, name: String): Boolean {
+        val keys = keysOf[guideId] ?: return true
+        val k = analyse(name, isId = false)
+        if (k.strong.length < 3 || k.strong in keys || k.region in keys) return true
+        val bare = analyse(name.replace(ANY_PREFIX, ""), isId = false)
+        if (bare.strong in keys || bare.region in keys) return true
+        // Nur Füllwörter verschieden („Bibel TV“ / „Bibel“): passt.
+        return k.weak in keys || bare.weak in keys
     }
 
     private fun pick(candidates: List<Guide>?, wanted: String): String? {
@@ -178,11 +198,15 @@ class EpgMatcher(private val country: String = "de") {
         }
 
         /** Umbenennungen bei Sky ("Sky Bundesliga 3" heißt heute "Sky Sport Bundesliga 3"). */
-        private val SKY_RENAMES = listOf("skybundesliga" to "skysportbundesliga", "skysports" to "skysport")
+        private val SKY_RENAMES = listOf(
+            "skybundesliga" to "skysportbundesliga", "skysports" to "skysport",
+            "skysportosterreich" to "skysportaustria", "skyaustria" to "skysportaustria",
+        )
 
         private fun canonical(joined: String): String {
             var key = joined
-            for ((old, new) in SKY_RENAMES) if (key.startsWith(old) && !key.startsWith(new)) { key = new + key.removePrefix(old); break }
+            // („skysports…“ beginnt selbst mit „skysport“: deshalb nur auf den alten Anfang prüfen.)
+            for ((old, new) in SKY_RENAMES) if (key.startsWith(old)) { key = new + key.removePrefix(old); break }
             // Angehängt statt getrennt: "RTLHD", "ZDF4K"
             while (key.length > 3) {
                 val stripped = key.replace(GLUED_NOISE, "")

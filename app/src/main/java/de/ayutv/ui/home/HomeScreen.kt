@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -30,6 +33,7 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.repo.Recommendation
 import de.ayutv.player.PlayerActivity
+import de.ayutv.data.record.Recording
 import de.ayutv.player.VodRequest
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.components.ChannelCard
@@ -56,6 +60,13 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val recentSeries by content.recentSeries.collectAsStateWithLifecycle(emptyList())
     val sync by container.playlists.state.collectAsStateWithLifecycle()
     val minute by rememberMinuteTicker()
+    val recordings by container.recordings.all.collectAsStateWithLifecycle()
+    var pendingDelete by remember { mutableStateOf<String?>(null) }
+    var pickingProfile by remember { mutableStateOf(false) }
+    if (pickingProfile) {
+        ProfilePicker(onClose = { pickingProfile = false })
+        return
+    }
 
     var recentChannels by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var recommendations by remember { mutableStateOf<List<Recommendation>>(emptyList()) }
@@ -82,7 +93,10 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text("Willkommen zurück", style = MaterialTheme.typography.headlineMedium)
                     SyncBanner(sync)
+                    de.ayutv.ui.components.UpdateBanner(Modifier.padding(top = 8.dp))
                 }
+                ProfileChip { pickingProfile = true }
+                Spacer(Modifier.width(16.dp))
                 Text(formatTime(minute), style = MaterialTheme.typography.headlineSmall, color = AyuColors.TextSecondary)
             }
         }
@@ -110,6 +124,49 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                                     context,
                                     VodRequest(entry.key, entry.kind, entry.title, entry.subtitle, entry.image, entry.url),
                                 )
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        if (recordings.isNotEmpty()) {
+            item(key = "recordings", contentType = "posterRow") {
+                PosterRow("⏺ Aufnahmen & Downloads") {
+                    items(recordings, key = { it.id }) { r ->
+                        PosterCard(
+                            title = r.title,
+                            image = r.image,
+                            subtitle = recordingStatus(r),
+                            progress = if (r.totalBytes > 0 && r.state == Recording.State.RUNNING) r.bytes.toFloat() / r.totalBytes else null,
+                            onClick = {
+                                if (r.state == Recording.State.SCHEDULED || r.bytes == 0L && r.state != Recording.State.DONE) {
+                                    android.widget.Toast.makeText(context, recordingStatus(r), android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val key = r.sourceKey ?: "rec:${r.id}"
+                                    PlayerActivity.startVod(
+                                        context,
+                                        VodRequest(
+                                            key,
+                                            if (de.ayutv.data.parse.Episodes.seriesKeyOf(key) != null) HistoryKind.EPISODE else HistoryKind.VOD,
+                                            r.title,
+                                            r.subtitle,
+                                            r.image,
+                                            android.net.Uri.fromFile(container.recordings.file(r)).toString(),
+                                        ),
+                                    )
+                                }
+                            },
+                            onLongClick = {
+                                // Zweimal lange drücken: löschen (einmal könnte ein Versehen sein).
+                                if (pendingDelete == r.id) {
+                                    pendingDelete = null
+                                    scope.launch { container.recordings.delete(r) }
+                                } else {
+                                    pendingDelete = r.id
+                                    android.widget.Toast.makeText(context, "Nochmal lange drücken: „${r.title}“ löschen", android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             },
                         )
                     }
@@ -212,5 +269,18 @@ private fun ChannelRow(
                 )
             }
         }
+    }
+}
+
+/** Stand einer Aufnahme / eines Downloads in wenigen Worten. */
+private fun recordingStatus(r: Recording): String {
+    fun size(bytes: Long) = if (bytes >= 1_000_000_000) "%.1f GB".format(bytes / 1e9) else "${bytes / 1_000_000} MB"
+    val time = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+    return when (r.state) {
+        Recording.State.SCHEDULED -> if (r.kind == Recording.Kind.RECORDING) "Geplant: ${time.format(java.util.Date(r.start))}" else "Wartet …"
+        Recording.State.RUNNING -> if (r.kind == Recording.Kind.RECORDING) "⏺ Läuft · ${size(r.bytes)}"
+            else if (r.totalBytes > 0) "⬇ ${r.bytes * 100 / r.totalBytes} %" else "⬇ ${size(r.bytes)}"
+        Recording.State.DONE -> (if (r.kind == Recording.Kind.RECORDING) "${r.subtitle.orEmpty()} · " else "⬇ ") + size(r.bytes)
+        Recording.State.FAILED -> "✗ ${r.error ?: "Fehlgeschlagen"}"
     }
 }

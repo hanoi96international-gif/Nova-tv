@@ -58,7 +58,7 @@ class RemoteTranslator(private val context: Context) : Translator {
     fun lastNativeCrash(): String? = de.ayutv.NativeCrashLog.last(context.filesDir)
 
     /** Übersetzer vorbereiten, die während eines Films keinen Platz hatten. Gibt die Sprachpaare zurück. */
-    suspend fun preparePending(): List<String> = call(PREPARE, Bundle()).getStringArrayList(RESULT).orEmpty()
+    suspend fun preparePending(): List<String> = call(PREPARE, Bundle(), 600_000).getStringArrayList(RESULT).orEmpty()
 
     @Volatile
     private var service: Messenger? = null
@@ -78,12 +78,20 @@ class RemoteTranslator(private val context: Context) : Translator {
 
     override suspend fun translate(texts: List<String>, target: String): List<String> = translate(texts, target, null)
 
+    /** Antwortet der Übersetzer nicht in der erwarteten Zeit (Modell lädt ewig, Prozess hängt). */
+    class NoAnswer(message: String) : IOException(message)
+
+    /** Sprachpaare und Texterkennung, die schon einmal geantwortet haben (danach ist das Modell geladen). */
+    private val warm = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
     override suspend fun translate(texts: List<String>, target: String, source: String?): List<String> {
+        val pair = "${source ?: "en"}-$target"
         val reply = call(TRANSLATE, Bundle().apply {
             putStringArrayList(TEXTS, ArrayList(texts))
             putString(TARGET, target)
             putString(SOURCE, source)
-        })
+        }, if (pair in warm) WARM_TIMEOUT_MS * texts.size.coerceAtLeast(1) else COLD_TIMEOUT_MS)
+        warm += pair
         return reply.getStringArrayList(RESULT) ?: throw IOException("Übersetzer lieferte nichts")
     }
 
@@ -92,7 +100,22 @@ class RemoteTranslator(private val context: Context) : Translator {
         putInt(WIDTH, image.width)
         putInt(HEIGHT, image.height)
         putByteArray(PIXELS, image.pixels)
-    }).getString(RESULT).orEmpty()
+    }, if ("ocr" in warm) WARM_TIMEOUT_MS else COLD_TIMEOUT_MS).getString(RESULT).orEmpty().also { warm += "ocr" }
+
+    /**
+     * Hängt der Übersetzer: Prozess beenden, damit er nicht weiter rechnet (und dem Film Rechenzeit nimmt).
+     * Der nächste Aufruf startet ihn neu.
+     */
+    fun abort(reason: String) {
+        release()
+        failAll(reason)
+        warm.clear()
+        runCatching {
+            context.getSystemService(ActivityManager::class.java)?.runningAppProcesses.orEmpty()
+                .filter { it.processName.endsWith(":mt") }
+                .forEach { android.os.Process.killProcess(it.pid) }
+        }
+    }
 
     /** Verbindung trennen: Das System beendet den Übersetzer-Prozess, der Speicher ist wieder frei. */
     fun release() {
@@ -103,7 +126,7 @@ class RemoteTranslator(private val context: Context) : Translator {
         failAll("Übersetzer beendet")
     }
 
-    private suspend fun call(what: Int, data: Bundle): Bundle {
+    private suspend fun call(what: Int, data: Bundle, timeoutMs: Long = COLD_TIMEOUT_MS): Bundle {
         val target = connect()
         val id = nextId.incrementAndGet()
         val answer = CompletableDeferred<Bundle>()
@@ -113,7 +136,8 @@ class RemoteTranslator(private val context: Context) : Translator {
                 this.data = data
                 replyTo = replies
             })
-            val reply = answer.await()
+            val reply = kotlinx.coroutines.withTimeoutOrNull(timeoutMs) { answer.await() }
+                ?: throw NoAnswer("Übersetzer antwortet nicht (nach ${timeoutMs / 1000} s)")
             if (reply.containsKey(PEAK)) lastPeakMb = reply.getLong(PEAK)
             if (reply.containsKey(ANON)) lastAnonMb = reply.getLong(ANON)
             reply.getString(ERROR)?.let { throw IOException(it) }
@@ -197,6 +221,10 @@ class RemoteTranslator(private val context: Context) : Translator {
     }
 
     internal companion object {
+        /** Erster Aufruf: Modell laden (auf langsamen Geräten mit dem DnA-Rechenkern bis zu einigen Minuten). */
+        const val COLD_TIMEOUT_MS = 180_000L
+        /** Danach je Zeile. */
+        const val WARM_TIMEOUT_MS = 30_000L
         const val TRANSLATE = 1
         const val RECOGNIZE = 2
         const val PROGRESS = 3

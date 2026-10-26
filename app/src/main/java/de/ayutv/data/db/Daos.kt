@@ -25,6 +25,9 @@ interface PlaylistDao {
     @Update
     suspend fun update(playlist: PlaylistEntity)
 
+    @Query("UPDATE playlists SET password = :password WHERE id = :id")
+    suspend fun setPassword(id: Long, password: String?)
+
     @Query("UPDATE playlists SET lastEpgSync = :time WHERE id = :id")
     suspend fun setLastEpgSync(id: Long, time: Long)
 
@@ -100,6 +103,9 @@ interface ChannelDao {
 
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
     fun setEpgId(id: Long, epgId: String)
+
+    @Query("SELECT id, `key` FROM channels WHERE playlistId = :playlistId")
+    suspend fun keysFor(playlistId: Long): List<ChannelKeyId>
 
     @Query("SELECT COALESCE(MAX(catchupDays), 0) FROM channels WHERE playlistId = :playlistId")
     fun maxCatchupDays(playlistId: Long): Int
@@ -223,6 +229,9 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorites")
     suspend fun all(): List<FavoriteEntity>
 
+    @Query("DELETE FROM favorites")
+    suspend fun clear()
+
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE `key` = :key)")
     suspend fun isFavorite(key: String): Boolean
 }
@@ -254,6 +263,17 @@ interface HistoryDao {
 
     @Query("SELECT `key` FROM history WHERE kind = 'LIVE' ORDER BY watchedAt DESC LIMIT :limit")
     suspend fun recentLiveKeys(limit: Int): List<String>
+
+    /** Verlauf aller Folgen einer Serie (Schlüssel „<Serie>:e:…“): gesehen, angefangen. */
+    @Query("SELECT * FROM history WHERE `key` LIKE :prefix || '%'")
+    fun observeWithPrefix(prefix: String): Flow<List<HistoryEntity>>
+
+    @Query("SELECT * FROM history WHERE `key` = :key")
+    fun observeByKey(key: String): Flow<HistoryEntity?>
+
+    /** Für den Abgleich mit anderen Geräten: die zuletzt gesehenen Einträge. */
+    @Query("SELECT * FROM history ORDER BY watchedAt DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<HistoryEntity>
 
     @Query("DELETE FROM history")
     suspend fun clear()

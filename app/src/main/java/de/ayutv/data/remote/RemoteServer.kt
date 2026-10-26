@@ -1,0 +1,278 @@
+package de.ayutv.data.remote
+
+import android.content.Context
+import android.content.Intent
+import android.media.AudioManager
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.os.Build
+import android.os.SystemClock
+import android.util.Log
+import android.view.KeyEvent
+import de.ayutv.AppContainer
+import de.ayutv.BuildConfig
+import de.ayutv.MainActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.NetworkInterface
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.URLDecoder
+import java.security.SecureRandom
+import java.util.concurrent.Semaphore
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Handy als Fernbedienung: Der Fernseher nimmt im Heimnetz Tasten, Suchbegriffe und den Abgleich an.
+ * Läuft, solange DnA-TV im Vordergrund ist. Jede Anfrage braucht die PIN aus den Einstellungen
+ * (bleibt gleich, damit das Handy gekoppelt bleibt); viele Fehlversuche erzeugen eine neue.
+ * Im Heimnetz unter „_dnatv._tcp“ angekündigt, damit die App auf dem Handy den Fernseher findet.
+ * Mit dem Browser geht es auch ohne App: Die Adresse zeigt eine Fernbedienung als Webseite.
+ */
+class RemoteServer(private val context: Context, private val container: AppContainer) {
+    private val prefs = context.getSharedPreferences("remote", Context.MODE_PRIVATE)
+    private var scope: CoroutineScope? = null
+    private var socket: ServerSocket? = null
+    private var registration: NsdManager.RegistrationListener? = null
+    private val failures = AtomicInteger()
+    private val clients = Semaphore(MAX_CLIENTS)
+
+    @Volatile var address: String? = null
+        private set
+
+    val pin: String
+        get() = prefs.getString("pin", null) ?: newPin()
+
+    fun newPin(): String = (100_000 + SecureRandom().nextInt(900_000)).toString().also {
+        prefs.edit().putString("pin", it).apply()
+        failures.set(0)
+    }
+
+    fun start() {
+        if (scope != null) return
+        val newScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e -> Log.w(TAG, "Fernbedienung", e) })
+        scope = newScope
+        newScope.launch {
+            val ip = localAddress() ?: return@launch
+            val server = runCatching { ServerSocket(PORT, 8, InetAddress.getByName(ip)) }.getOrElse {
+                Log.w(TAG, "Port $PORT belegt", it)
+                return@launch
+            }
+            socket = server
+            address = "http://$ip:$PORT"
+            announce()
+            while (true) {
+                val client = runCatching { server.accept() }.getOrNull() ?: break
+                if (!clients.tryAcquire()) {
+                    runCatching { client.close() }
+                    continue
+                }
+                launch {
+                    try {
+                        client.use { handle(it) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Anfrage verworfen", e)
+                    } finally {
+                        clients.release()
+                    }
+                }
+            }
+        }
+    }
+
+    fun stop() {
+        registration?.let { r -> runCatching { context.getSystemService(NsdManager::class.java)?.unregisterService(r) } }
+        registration = null
+        runCatching { socket?.close() }
+        socket = null
+        address = null
+        scope?.cancel()
+        scope = null
+    }
+
+    private fun announce() {
+        val nsd = context.getSystemService(NsdManager::class.java) ?: return
+        val info = NsdServiceInfo().apply {
+            serviceName = "DnA-TV ${Build.MODEL}".take(60)
+            serviceType = SERVICE_TYPE
+            port = PORT
+        }
+        val listener = object : NsdManager.RegistrationListener {
+            override fun onServiceRegistered(info: NsdServiceInfo) = Unit
+            override fun onRegistrationFailed(info: NsdServiceInfo, errorCode: Int) { Log.w(TAG, "Ankündigung fehlgeschlagen: $errorCode") }
+            override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
+            override fun onUnregistrationFailed(info: NsdServiceInfo, errorCode: Int) = Unit
+        }
+        runCatching { nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener) }.onSuccess { registration = listener }
+    }
+
+    private suspend fun handle(client: Socket) {
+        client.soTimeout = 10_000
+        val input = BufferedInputStream(client.getInputStream())
+        val requestLine = readLine(input) ?: return
+        val parts = requestLine.split(' ')
+        val method = parts.getOrNull(0).orEmpty()
+        val path = parts.getOrNull(1).orEmpty()
+        var length = 0
+        while (true) {
+            val header = readLine(input) ?: return
+            if (header.isEmpty()) break
+            if (header.startsWith("Content-Length:", ignoreCase = true)) {
+                length = header.substringAfter(':').trim().toIntOrNull()?.coerceIn(0, MAX_BODY) ?: 0
+            }
+        }
+        val route = path.substringBefore('?')
+        val query = parseQuery(path.substringAfter('?', ""))
+        val prefix = "/$pin"
+        if (route != prefix && !route.startsWith("$prefix/")) {
+            delay(1_000)
+            if (failures.incrementAndGet() > MAX_FAILURES) newPin()
+            respond(client, 403, "text/plain", "Falsche PIN".toByteArray())
+            return
+        }
+        failures.set(0)
+        val body = if (length > 0) ByteArray(length).also { readFully(input, it) } else ByteArray(0)
+        when (route.removePrefix(prefix)) {
+            "", "/" -> respond(client, 200, "text/html; charset=utf-8", RemotePage.html(pin).toByteArray())
+            "/info" -> respond(client, 200, "application/json", """{"name":"${jsonEscape("DnA-TV ${Build.MODEL}")}","version":"${BuildConfig.VERSION_NAME}"}""".toByteArray())
+            "/key" -> {
+                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                val ok = query["k"]?.let { press(it) } == true
+                respond(client, if (ok) 200 else 400, "text/plain", (if (ok) "ok" else "unbekannte Taste").toByteArray())
+            }
+            "/search" -> {
+                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                search(body.toString(Charsets.UTF_8).trim().take(200))
+                respond(client, 200, "text/plain", "ok".toByteArray())
+            }
+            "/sync" -> {
+                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                val sync = DeviceSync(container)
+                val result = runCatching { sync.import(body.toString(Charsets.UTF_8)) }
+                if (result.isFailure) return respond(client, 400, "text/plain", (result.exceptionOrNull()?.message ?: "Fehler").toByteArray())
+                respond(client, 200, "application/json", sync.export().toByteArray())
+            }
+            else -> respond(client, 404, "text/plain", ByteArray(0))
+        }
+    }
+
+    /** Taste im Vordergrund-Fenster der App auslösen, als käme sie von der Fernbedienung. */
+    private suspend fun press(name: String): Boolean {
+        val audio = context.getSystemService(AudioManager::class.java)
+        when (name) {
+            "volup" -> { audio?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI); return true }
+            "voldown" -> { audio?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI); return true }
+            "mute" -> { audio?.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI); return true }
+        }
+        val code = KEYS[name] ?: return false
+        val activity = container.foreground?.get() ?: return false
+        withContext(Dispatchers.Main) {
+            val now = SystemClock.uptimeMillis()
+            activity.dispatchKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, code, 0))
+            activity.dispatchKeyEvent(KeyEvent(now, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, code, 0))
+        }
+        return true
+    }
+
+    private suspend fun search(text: String) {
+        container.searchRequests.value = text
+        withContext(Dispatchers.Main) {
+            // Aus dem Player heraus: zur Startseite mit der Suche.
+            context.startActivity(
+                Intent(context, MainActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            )
+        }
+    }
+
+    private fun respond(client: Socket, code: Int, type: String, bytes: ByteArray) {
+        val status = when (code) { 200 -> "OK"; 400 -> "Bad Request"; 403 -> "Forbidden"; 405 -> "Method Not Allowed"; else -> "Not Found" }
+        runCatching {
+            client.getOutputStream().apply {
+                write(
+                    ("HTTP/1.1 $code $status\r\nContent-Type: $type\r\nContent-Length: ${bytes.size}\r\n" +
+                        "Cache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\n" +
+                        "Connection: close\r\n\r\n").toByteArray()
+                )
+                write(bytes)
+                flush()
+            }
+        }
+    }
+
+    private fun readLine(input: InputStream): String? {
+        val out = StringBuilder()
+        while (true) {
+            val c = input.read()
+            if (c == -1) return if (out.isEmpty()) null else out.toString()
+            if (c == '\n'.code) return out.toString().trimEnd('\r')
+            if (out.length > 8192) throw IOException("Zeile zu lang")
+            out.append(c.toChar())
+        }
+    }
+
+    private fun readFully(input: InputStream, target: ByteArray) {
+        var read = 0
+        while (read < target.size) {
+            val n = input.read(target, read, target.size - read)
+            if (n < 0) break
+            read += n
+        }
+    }
+
+    private fun parseQuery(q: String): Map<String, String> = q.split('&').mapNotNull { pair ->
+        val k = pair.substringBefore('=', "").takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+        k to runCatching { URLDecoder.decode(pair.substringAfter('=', ""), "UTF-8") }.getOrDefault("")
+    }.toMap()
+
+    private fun jsonEscape(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
+
+    private fun localAddress(): String? = runCatching {
+        NetworkInterface.getNetworkInterfaces().toList()
+            .filter { it.isUp && !it.isLoopback }
+            .flatMap { it.inetAddresses.toList() }
+            .filterIsInstance<Inet4Address>()
+            .firstOrNull { it.isSiteLocalAddress }?.hostAddress
+    }.getOrNull()
+
+    companion object {
+        private const val TAG = "RemoteServer"
+        const val PORT = 8096
+        const val SERVICE_TYPE = "_dnatv._tcp."
+        private const val MAX_BODY = 2 * 1024 * 1024
+        private const val MAX_CLIENTS = 6
+        private const val MAX_FAILURES = 20
+
+        val KEYS = mapOf(
+            "up" to KeyEvent.KEYCODE_DPAD_UP,
+            "down" to KeyEvent.KEYCODE_DPAD_DOWN,
+            "left" to KeyEvent.KEYCODE_DPAD_LEFT,
+            "right" to KeyEvent.KEYCODE_DPAD_RIGHT,
+            "ok" to KeyEvent.KEYCODE_DPAD_CENTER,
+            "back" to KeyEvent.KEYCODE_BACK,
+            "menu" to KeyEvent.KEYCODE_MENU,
+            "play" to KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
+            "rew" to KeyEvent.KEYCODE_MEDIA_REWIND,
+            "ffwd" to KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+            "chup" to KeyEvent.KEYCODE_CHANNEL_UP,
+            "chdown" to KeyEvent.KEYCODE_CHANNEL_DOWN,
+            "info" to KeyEvent.KEYCODE_INFO,
+            "guide" to KeyEvent.KEYCODE_GUIDE,
+            "last" to KeyEvent.KEYCODE_LAST_CHANNEL,
+        ) + (0..9).associate { "$it" to KeyEvent.KEYCODE_0 + it }
+    }
+}

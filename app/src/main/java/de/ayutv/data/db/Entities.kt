@@ -51,6 +51,9 @@ data class ChannelEntity(
     val catchupSource: String? = null,
 )
 
+/** Zeilennummer und stabiler Schlüssel eines Senders. */
+data class ChannelKeyId(val id: Long, val key: String)
+
 /** Was der EPG-Abgleich von einem Sender braucht (kleiner als die ganze Zeile). */
 data class EpgChannel(val id: Long, val name: String, val epgId: String?, val groupTitle: String = "")
 

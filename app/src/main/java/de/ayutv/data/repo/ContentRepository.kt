@@ -14,11 +14,13 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
 import de.ayutv.data.parse.ChannelVariants
+import de.ayutv.data.db.ProgrammeFlags
 import de.ayutv.data.parse.Countries
 import kotlinx.coroutines.flow.first
 import de.ayutv.data.parse.ProgrammeText
 import de.ayutv.data.parse.Teams
 import de.ayutv.data.parse.XtreamEpisode
+import de.ayutv.data.parse.XtreamMovieInfo
 import de.ayutv.data.parse.headline
 import de.ayutv.data.parse.isSportEvent
 import de.ayutv.data.reminders.Reminder
@@ -118,6 +120,31 @@ class ContentRepository(
             val pairing = ProgrammeText.pairing(p.title, p.subtitle) ?: return@filter false
             p.start > System.currentTimeMillis() && teams.any { Teams.plays(it, pairing, p.title + " " + p.subtitle.orEmpty()) }
         }.map { Reminder(it.channel.key, it.channel.name, it.programme.headline(), it.programme.start) }
+    }
+
+    /**
+     * Stichwort-Alarm: kommende Sendungen mit einem der [words] im Titel oder Untertitel (keine Wiederholungen),
+     * je auf dem besten Sender, höchstens [perWord] je Begriff.
+     */
+    suspend fun keywordReminders(words: Set<String>, days: Int = 7, perWord: Int = 20): List<Reminder> {
+        val now = System.currentTimeMillis()
+        val until = now + days * 24 * HOUR
+        val out = ArrayList<Reminder>()
+        for (word in words.map { it.trim() }.filter { it.length >= 3 }) {
+            val found = db.programmes().search(word, now, 400)
+                .filter { it.start > now && it.start < until && (it.flags and ProgrammeFlags.REPEAT) == 0 }
+                .distinctBy { it.start to it.title.lowercase() }
+                .sortedBy { it.start }
+                .take(perWord)
+            if (found.isEmpty()) continue
+            val channels = found.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
+                .flatMap { db.channels().allByEpgIds(it) }.groupBy { it.epgId }
+            for (p in found) {
+                val channel = channels[p.channelEpgId]?.minByOrNull { ChannelVariants.rank(it.name) } ?: continue
+                out += Reminder(channel.key, channel.name, p.headline(), p.start)
+            }
+        }
+        return out
     }
 
     suspend fun toggleFavorite(key: String): Boolean {
@@ -235,6 +262,25 @@ class ContentRepository(
     }
 
     suspend fun clearHistory() = db.history().clear()
+
+    fun historyOf(key: String) = db.history().observeByKey(key)
+
+    /** Verlauf aller Folgen einer Serie, nach Folgen-Kennung. */
+    fun episodeHistory(seriesKey: String) = db.history().observeWithPrefix(Episodes.key(seriesKey, ""))
+
+    /** Von Hand als gesehen / nicht gesehen markieren (lange OK auf einer Folge). */
+    suspend fun setWatched(entry: HistoryEntity, watched: Boolean) {
+        val duration = entry.durationMs.takeIf { it > 0 } ?: 1L
+        db.history().upsert(entry.copy(positionMs = if (watched) duration else 0L, durationMs = duration, watchedAt = System.currentTimeMillis()))
+    }
+
+    /** Angaben zum Film beim Anbieter (Handlung, Besetzung, Trailer); null, wenn das Panel keine liefert. */
+    suspend fun movieInfo(movie: VodEntity): XtreamMovieInfo? = withContext(Dispatchers.IO) {
+        val playlist = db.playlists().byId(movie.playlistId) ?: return@withContext null
+        if (playlist.type != PlaylistType.XTREAM) return@withContext null
+        val id = XtreamClient.movieIdOf(movie.url) ?: return@withContext null
+        runCatching { XtreamClient.of(http, playlist).movieInfo(id) }.getOrNull()
+    }
 
     // ---------------------------------------------------------------- Gruppen ein-/ausblenden
 

@@ -1,6 +1,22 @@
 package de.ayutv.ui.vod
 
 import de.ayutv.ui.components.isPortrait
+import de.ayutv.ui.components.isTouchDevice
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import de.ayutv.data.db.HistoryEntity
+import de.ayutv.data.db.VodEntity
+import de.ayutv.data.parse.SeriesProgress
+import de.ayutv.data.parse.XtreamMovieInfo
+import de.ayutv.ui.components.Button
+import de.ayutv.ui.components.OutlinedButton
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -75,6 +91,14 @@ fun MoviesScreen() {
     }
     val movies by remember(active) { content.moviesIn(active.orEmpty()) }.collectAsStateWithLifecycle(emptyList())
     val scope = rememberCoroutineScope()
+    // Detailseite eines Films; das Raster behält seine Stelle für die Rückkehr.
+    var openMovie by remember { mutableStateOf<VodEntity?>(null) }
+    val gridState = rememberLazyGridState()
+    openMovie?.let { movie ->
+        BackHandler { openMovie = null }
+        MovieDetail(movie)
+        return
+    }
 
     Row(Modifier.fillMaxSize()) {
         CategoryColumn(
@@ -88,6 +112,7 @@ fun MoviesScreen() {
         )
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
+            state = gridState,
             modifier = Modifier.weight(1f).fillMaxHeight().focusRestorer(),
             contentPadding = PaddingValues(24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -98,12 +123,7 @@ fun MoviesScreen() {
                     title = movie.name,
                     image = movie.poster,
                     subtitle = movie.rating?.let { "★ $it" },
-                    onClick = {
-                        PlayerActivity.startVod(
-                            context,
-                            VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url),
-                        )
-                    },
+                    onClick = { openMovie = movie },
                 )
             }
         }
@@ -160,13 +180,141 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
     }
 }
 
+private fun VodEntity.request() = VodRequest(key, HistoryKind.VOD, name, category, poster, url)
+
+/** Film: Handlung, Besetzung, Bewertung, Trailer; Abspielen oder dort weiterschauen, wo man aufgehört hat. */
+@Composable
+private fun MovieDetail(movie: VodEntity) {
+    val container = LocalContainer.current
+    val content = container.content
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var info by remember(movie.key) { mutableStateOf<XtreamMovieInfo?>(null) }
+    var loading by remember(movie.key) { mutableStateOf(true) }
+    val history by remember(movie.key) { content.historyOf(movie.key) }.collectAsStateWithLifecycle(null)
+    val favorites by content.favoriteKeys.collectAsStateWithLifecycle(emptyList())
+    val playFocus = remember { FocusRequester() }
+    LaunchedEffect(movie.key) {
+        info = content.movieInfo(movie)
+        loading = false
+    }
+    val i = info
+    val resumeMs = history?.let { h ->
+        h.positionMs.takeIf { it > 60_000 && (h.durationMs == 0L || it < h.durationMs * 0.95) }
+    }
+    val watched = history?.let { it.durationMs > 0 && it.positionMs >= it.durationMs * 0.95 } == true
+
+    Box(Modifier.fillMaxSize()) {
+        (i?.backdrop)?.let { backdrop ->
+            AsyncImage(
+                model = backdrop,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                alpha = 0.25f,
+            )
+        }
+        Row(Modifier.fillMaxSize().padding(32.dp)) {
+            val portrait = isPortrait
+            val poster = movie.poster ?: i?.poster
+            if (!poster.isNullOrBlank()) {
+                AsyncImage(
+                    model = poster,
+                    contentDescription = movie.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(width = if (portrait) 150.dp else 240.dp, height = if (portrait) 225.dp else 360.dp).clip(RoundedCornerShape(12.dp)),
+                )
+                Spacer(Modifier.width(32.dp))
+            }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                Text(movie.name, style = MaterialTheme.typography.headlineSmall, maxLines = 3)
+                val facts = listOfNotNull(
+                    i?.year?.toString(),
+                    i?.durationMinutes?.let { "$it min" },
+                    i?.genre,
+                    (i?.rating ?: movie.rating)?.let { "★ $it" },
+                    if (watched) "✓ gesehen" else null,
+                )
+                if (facts.isNotEmpty()) Text(facts.joinToString("  ·  "), color = AyuColors.TextSecondary, fontSize = 14.sp)
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = { PlayerActivity.startVod(context, movie.request()) },
+                        modifier = Modifier.focusRequester(playFocus),
+                    ) {
+                        Text(if (resumeMs != null) "▶ Weiterschauen (${clockText(resumeMs)})" else "▶ Abspielen")
+                    }
+                    if (resumeMs != null) {
+                        OutlinedButton(onClick = { PlayerActivity.startVod(context, movie.request(), fromStart = true) }) { Text("Von vorn") }
+                    }
+                    i?.trailer?.let { id -> OutlinedButton(onClick = { openTrailer(context, id) }) { Text("🎬 Trailer") } }
+                    OutlinedButton(onClick = { scope.launch { content.toggleFavorite(movie.key) } }) {
+                        Text(if (movie.key in favorites) "★ Favorit" else "☆ Merken")
+                    }
+                    // Fürs Handy unterwegs: Film aufs Gerät laden (läuft im Hintergrund weiter).
+                    if (isTouchDevice) {
+                        val downloads by container.recordings.all.collectAsStateWithLifecycle()
+                        val loaded = downloads.any { it.sourceKey == movie.key && it.state != de.ayutv.data.record.Recording.State.FAILED }
+                        OutlinedButton(onClick = {
+                            if (!loaded) scope.launch {
+                                container.recordings.download(movie.key, movie.name, i?.genre, movie.poster, movie.url, container.settings.current().userAgent)
+                                android.widget.Toast.makeText(context, "⬇ Wird heruntergeladen – unter Start → Aufnahmen & Downloads", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }) { Text(if (loaded) "⬇ Geladen" else "⬇ Herunterladen") }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+                when {
+                    i?.plot != null -> Text(i.plot, fontSize = 15.sp, color = AyuColors.TextPrimary)
+                    loading -> Text("Angaben werden geladen …", color = AyuColors.TextSecondary)
+                    else -> Text("Keine Beschreibung vom Anbieter.", color = AyuColors.TextSecondary)
+                }
+                i?.director?.let {
+                    Spacer(Modifier.height(12.dp))
+                    Text("Regie: $it", fontSize = 13.sp, color = AyuColors.TextSecondary)
+                }
+                i?.cast?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text("Mit: $it", fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        repeat(5) {
+            if (runCatching { playFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+            kotlinx.coroutines.delay(16)
+        }
+    }
+}
+
+/** Trailer in der YouTube-App, sonst im Browser; ohne beides ein Hinweis. */
+private fun openTrailer(context: android.content.Context, id: String) {
+    val app = Intent(Intent.ACTION_VIEW, Uri.parse("vnd.youtube:$id"))
+    val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/watch?v=$id"))
+    val opened = listOf(app, web).any { intent -> runCatching { context.startActivity(intent) }.isSuccess }
+    if (!opened) android.widget.Toast.makeText(context, "Keine App für YouTube-Trailer installiert", android.widget.Toast.LENGTH_LONG).show()
+}
+
+private fun clockText(ms: Long): String {
+    val total = ms / 1000
+    val h = total / 3600
+    val m = total % 3600 / 60
+    val s = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
 @Composable
 private fun SeriesDetail(series: SeriesEntity) {
-    val content = LocalContainer.current.content
+    val container = LocalContainer.current
+    val content = container.content
     val context = LocalContext.current
     var episodes by remember(series.key) { mutableStateOf<List<Pair<XtreamEpisode, String>>?>(null) }
     var error by remember(series.key) { mutableStateOf<String?>(null) }
     var season by remember(series.key) { mutableIntStateOf(-1) }
+    val scope = rememberCoroutineScope()
+    val history by remember(series.key) { content.episodeHistory(series.key) }.collectAsStateWithLifecycle(emptyList())
+    val progress = remember(history) { history.associateBy { de.ayutv.data.parse.Episodes.episodeIdOf(it.key).orEmpty() } }
 
     LaunchedEffect(series.key) {
         runCatching { content.episodes(series) }
@@ -176,7 +324,20 @@ private fun SeriesDetail(series: SeriesEntity) {
 
     val list = episodes
     val seasons = list?.map { it.first.season }?.distinct().orEmpty()
-    val activeSeason = if (season in seasons) season else seasons.firstOrNull() ?: 1
+    // Weiter mit der angefangenen Folge oder der nach der zuletzt gesehenen.
+    val upNext = remember(list, progress) { list?.let { SeriesProgress.upNext(it.map { e -> e.first }, progress.mapValues { (_, h) -> h.positionMs to h.durationMs }) } }
+    val activeSeason = if (season in seasons) season else upNext?.season ?: seasons.firstOrNull() ?: 1
+    fun play(episode: XtreamEpisode, url: String) = PlayerActivity.startVod(
+        context,
+        VodRequest(
+            key = de.ayutv.data.parse.Episodes.key(series.key, episode.id),
+            kind = HistoryKind.EPISODE,
+            title = de.ayutv.data.parse.Episodes.title(series.name, episode),
+            subtitle = episode.title,
+            image = episode.image ?: series.cover,
+            url = url,
+        ),
+    )
 
     Row(Modifier.fillMaxSize().padding(32.dp)) {
         val portrait = isPortrait
@@ -218,22 +379,59 @@ private fun SeriesDetail(series: SeriesEntity) {
                             }
                         }
                     }
+                    upNext?.let { next ->
+                        Spacer(Modifier.height(12.dp))
+                        val url = list.firstOrNull { it.first.id == next.id }?.second
+                        if (url != null) {
+                            val started = progress[next.id]?.positionMs?.let { it > 60_000 } == true
+                            Button(onClick = { play(next, url) }) {
+                                Text("▶ ${if (started) "Weiterschauen" else "Weiter mit"}: S${next.season} E${next.episode}")
+                            }
+                        }
+                    }
+                    val seen = progress.values.count { SeriesProgress.watched(it.positionMs, it.durationMs) }
+                    if (seen > 0) {
+                        Text("$seen von ${list.size} Folgen gesehen · lange OK markiert eine Folge als (un)gesehen", fontSize = 12.sp, color = AyuColors.TextSecondary)
+                    }
                     Spacer(Modifier.height(16.dp))
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(list.filter { it.first.season == activeSeason }, key = { it.first.id }) { (episode, url) ->
-                            EpisodeRow(episode) {
-                                PlayerActivity.startVod(
-                                    context,
-                                    VodRequest(
-                                        key = de.ayutv.data.parse.Episodes.key(series.key, episode.id),
+                            val h = progress[episode.id]
+                            val fraction = h?.let { SeriesProgress.fraction(it.positionMs, it.durationMs) }
+                            EpisodeRow(
+                                episode,
+                                onDownload = if (isTouchDevice) ({
+                                    scope.launch {
+                                        container.recordings.download(
+                                            de.ayutv.data.parse.Episodes.key(series.key, episode.id),
+                                            de.ayutv.data.parse.Episodes.title(series.name, episode),
+                                            episode.title,
+                                            episode.image ?: series.cover,
+                                            url,
+                                            container.settings.current().userAgent,
+                                        )
+                                        android.widget.Toast.makeText(context, "⬇ Folge wird heruntergeladen", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }) else null,
+                                watched = h != null && SeriesProgress.watched(h.positionMs, h.durationMs),
+                                progress = fraction,
+                                onLongClick = {
+                                    val key = de.ayutv.data.parse.Episodes.key(series.key, episode.id)
+                                    val entry = h ?: HistoryEntity(
+                                        key = key,
                                         kind = HistoryKind.EPISODE,
                                         title = de.ayutv.data.parse.Episodes.title(series.name, episode),
                                         subtitle = episode.title,
                                         image = episode.image ?: series.cover,
                                         url = url,
-                                    ),
-                                )
-                            }
+                                        groupTitle = series.name,
+                                        durationMs = episode.durationSeconds * 1000,
+                                        watchedAt = System.currentTimeMillis(),
+                                    )
+                                    val nowWatched = h != null && SeriesProgress.watched(h.positionMs, h.durationMs)
+                                    scope.launch { content.setWatched(entry, !nowWatched) }
+                                },
+                            ) { play(episode, url) }
                         }
                     }
                 }
@@ -243,9 +441,17 @@ private fun SeriesDetail(series: SeriesEntity) {
 }
 
 @Composable
-private fun EpisodeRow(episode: XtreamEpisode, onClick: () -> Unit) {
+private fun EpisodeRow(
+    episode: XtreamEpisode,
+    watched: Boolean = false,
+    progress: Float? = null,
+    onLongClick: (() -> Unit)? = null,
+    onDownload: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     Surface(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = Modifier.fillMaxWidth(),
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
         colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.AccentSoft),
@@ -262,11 +468,30 @@ private fun EpisodeRow(episode: XtreamEpisode, onClick: () -> Unit) {
                 Spacer(Modifier.width(14.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text("${episode.episode}. ${episode.title}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    (if (watched) "✓ " else "") + "${episode.episode}. ${episode.title}",
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = if (watched) AyuColors.TextSecondary else AyuColors.TextPrimary,
+                )
                 episode.plot?.let { Text(it, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                if (progress != null && !watched && progress > 0.02f) {
+                    Spacer(Modifier.height(6.dp))
+                    Box(Modifier.fillMaxWidth().height(3.dp).background(AyuColors.Surface)) {
+                        Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(AyuColors.Accent))
+                    }
+                }
             }
             if (episode.durationSeconds > 0) {
                 Text("${episode.durationSeconds / 60} min", fontSize = 13.sp, color = AyuColors.TextSecondary)
+            }
+            onDownload?.let { download ->
+                Spacer(Modifier.width(10.dp))
+                Surface(
+                    onClick = download,
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(18.dp)),
+                    colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.Accent),
+                ) { Text("⬇", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) }
             }
         }
     }

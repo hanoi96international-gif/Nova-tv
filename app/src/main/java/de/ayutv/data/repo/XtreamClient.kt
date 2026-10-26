@@ -5,9 +5,11 @@ import de.ayutv.data.db.PlaylistEntity
 import de.ayutv.data.parse.XtreamAccount
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.data.parse.XtreamLive
+import de.ayutv.data.parse.XtreamMovieInfo
 import de.ayutv.data.parse.XtreamParsing
 import de.ayutv.data.parse.XtreamSeries
 import de.ayutv.data.parse.XtreamVod
+import de.ayutv.data.security.Credentials
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -33,6 +35,8 @@ class XtreamClient(
 
     fun episodes(seriesId: String): List<XtreamEpisode> =
         get(apiUrl("get_series_info", "series_id" to seriesId), XtreamParsing::episodes)
+
+    fun movieInfo(vodId: String): XtreamMovieInfo? = get(apiUrl("get_vod_info", "vod_id" to vodId), XtreamParsing::movieInfo)
 
     val epgUrl: String get() = "$base/xmltv.php?username=${enc(username)}&password=${enc(password)}"
 
@@ -60,6 +64,9 @@ class XtreamClient(
     private fun enc(value: String) = java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
     companion object {
+        /** Film-Nummer aus der Abspieladresse („…/movie/<user>/<pass>/<id>.<ext>“). */
+        fun movieIdOf(url: String): String? = Regex("""/movie/[^/]+/[^/]+/(\d+)\.[A-Za-z0-9]+$""").find(url)?.groupValues?.get(1)
+
         fun normalizeServer(server: String): String {
             var s = server.trim().trimEnd('/')
             if (!s.startsWith("http://", ignoreCase = true) && !s.startsWith("https://", ignoreCase = true)) s = "http://$s"
@@ -67,6 +74,6 @@ class XtreamClient(
         }
 
         fun of(http: OkHttpClient, playlist: PlaylistEntity) =
-            XtreamClient(http, playlist.url, playlist.username.orEmpty(), playlist.password.orEmpty())
+            XtreamClient(http, playlist.url, playlist.username.orEmpty(), Credentials.reveal(playlist.password).orEmpty())
     }
 }

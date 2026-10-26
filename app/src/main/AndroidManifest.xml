@@ -9,6 +9,11 @@
     <!-- Erinnerungen an Sendungen: Benachrichtigung und nach Neustart wieder einplanen -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Updates direkt in der App installieren (Android fragt einmal nach „Unbekannte Apps“). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Aufnahmen und Downloads laufen als Dienst im Vordergrund weiter, auch wenn die App zu ist. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Fire TV / Android TV: keine Touch-Bedienung nötig, Leanback-Launcher unterstützen -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -67,6 +72,10 @@
             android:name=".data.translate.TranslationService"
             android:exported="false"
             android:process=":mt" />
+        <service
+            android:name=".data.record.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <receiver
             android:name=".data.reminders.ReminderReceiver"
             android:exported="false">
@@ -75,6 +84,22 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Chromecast (Handy mit Google-Play-Diensten) -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="de.ayutv.player.cast.CastOptionsProvider" />
+
+        <!-- Heruntergeladenes Update an den Paket-Installer übergeben -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Keine Telemetrie der ONNX Runtime (würde Nutzungsdaten an Microsoft senden). -->
         <provider

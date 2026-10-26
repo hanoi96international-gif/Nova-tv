@@ -18,6 +18,7 @@ import de.ayutv.data.parse.EpgSources
 import de.ayutv.data.parse.M3uParser
 import de.ayutv.data.parse.XmltvParser
 import kotlinx.coroutines.Dispatchers
+import de.ayutv.data.security.Credentials
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +53,7 @@ class PlaylistRepository(
     private val http: OkHttpClient,
     private val settings: SettingsStore,
     cacheDir: File,
+    private val overrides: de.ayutv.data.EpgOverrides? = null,
 ) {
     /** Downloads landen hier vollständig, bevor importiert wird (keine offene Verbindung während der Transaktion). */
     private val importDir = File(cacheDir, "import")
@@ -92,7 +94,17 @@ class PlaylistRepository(
 
     val playlists = db.playlists().observeAll()
 
-    suspend fun add(playlist: PlaylistEntity): Long = db.playlists().insert(playlist)
+    suspend fun add(playlist: PlaylistEntity): Long =
+        db.playlists().insert(playlist.copy(password = withContext(Dispatchers.Default) { Credentials.protect(playlist.password) }))
+
+    /** Einmalig: Passwörter aus älteren Versionen verschlüsselt ablegen. */
+    suspend fun protectStoredPasswords() = withContext(Dispatchers.Default) {
+        for (p in db.playlists().all()) {
+            if (p.password.isNullOrEmpty() || Credentials.isProtected(p.password)) continue
+            val protected = Credentials.protect(p.password)
+            if (Credentials.isProtected(protected)) db.playlists().setPassword(p.id, protected)
+        }
+    }
 
     /** Playlist ein- oder ausschalten. Daten bleiben erhalten; eine nie geladene Playlist wird jetzt geladen. */
     suspend fun setEnabled(id: Long, enabled: Boolean) {
@@ -341,10 +353,17 @@ class PlaylistRepository(
             prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: TV-Guide wird geladen …")
             try {
-                val channels = db.channels().forEpg(playlist.id)
+                // Von Hand zugeordnete Sender: Ihre Kennung gilt, egal was der Anbieter liefert.
+                val chosen = overrides?.all().orEmpty()
+                val forced = HashMap<Long, String>()
+                if (chosen.isNotEmpty()) for (k in db.channels().keysFor(playlist.id)) chosen[k.key]?.let { forced[k.id] = it }
+                val channels = db.channels().forEpg(playlist.id).map { c -> forced[c.id]?.let { c.copy(epgId = it) } ?: c }
                 val visible = db.channels().visibleIds(playlist.id).toHashSet()
                 val shift = current.epgShiftHours * HOUR
-                withContext(importDispatcher) { importEpg(playlist, own, extra, channels, visible, shift, current.internetGuide && current.preferInternetGuide) }
+                withContext(importDispatcher) {
+                    for ((id, guideId) in forced) db.channels().setEpgId(id, guideId)
+                    importEpg(playlist, own, extra, channels, visible, shift, current.internetGuide && current.preferInternetGuide, forced.keys)
+                }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
             } catch (e: Exception) {
@@ -389,9 +408,14 @@ class PlaylistRepository(
         visible: Set<Long>,
         shift: Long,
         preferExtra: Boolean = false,
+        forced: Set<Long> = emptySet(),
     ) {
         val covered = HashSet<Long>()
+        // Alle EPG-Sender aller Quellen, für die Auswahl „Programm zuordnen“.
+        val guideIndex = ArrayList<String>()
         val taken = HashSet<String>()
+        // Sender, deren Kennung beim Anbieter nicht zum Namen passt: Das freie EPG darf sie neu zuordnen.
+        val suspects = HashSet<Long>()
         val counts = ArrayList<Pair<String, Int>>()
         var cleared = false
         var firstError: Exception? = null
@@ -399,7 +423,9 @@ class PlaylistRepository(
         val sources = if (preferExtra) extra.map { it to true } + own.map { it to false } else own.map { it to false } + extra.map { it to true }
         for ((index, entry) in sources.withIndex()) {
             val (url, isPublic) = entry
-            val open = channels.filter { it.id !in covered }
+            val open = channels.filter { it.id !in covered } +
+                // Ohne die fragliche Kennung: Ein Treffer im freien EPG bekommt dessen Kennung (setEpgId).
+                if (isPublic) channels.filter { it.id in suspects }.map { it.copy(epgId = null) } else emptyList()
             if (open.isEmpty()) break
             if (isPublic && open.none { it.id in visible && EpgMatcher.analyse(it.name, isId = false).country in GERMAN_SPEAKING }) continue
             val source = try {
@@ -414,11 +440,12 @@ class PlaylistRepository(
                 val used = HashSet<String>()
                 db.runInTransaction(Runnable {
                     if (!cleared) db.programmes().deleteForPlaylist(playlist.id)
-                    importEpgSource(playlist, source, open, shift, taken, found, used)
+                    importEpgSource(playlist, source, open, shift, taken, found, used, if (isPublic) null else suspects, forced, guideIndex, EpgSources.label(url))
                 })
                 cleared = true
                 covered += found
                 taken += used
+                if (isPublic) suspects -= found
                 counts += EpgSources.label(url) to found.count { it in visible }
                 Log.i(TAG, "EPG-Quelle ${index + 1} (${EpgSources.label(url)}): ${found.size} von ${open.size} Sendern")
             } catch (e: Exception) {
@@ -434,7 +461,19 @@ class PlaylistRepository(
             throw firstError ?: IOException("Kein TV-Guide geladen")
         }
         writeStatus(playlist.id, channels, visible, covered, counts)
+        runCatching { File(statusDir, "epg-guide-${playlist.id}.tsv").writeText(guideIndex.joinToString("\n")) }
     }
+
+    /** Ein Sender aus einem der geladenen EPGs (für die Auswahl „Programm zuordnen“). */
+    data class GuideChannel(val id: String, val name: String, val source: String)
+
+    /** Alle EPG-Sender, die beim letzten Laden für diese Playlist in den Quellen standen. */
+    fun guideChannels(playlistId: Long): List<GuideChannel> = runCatching {
+        File(statusDir, "epg-guide-$playlistId.tsv").readLines().mapNotNull { line ->
+            val p = line.split('\t')
+            if (p.size >= 3) GuideChannel(p[0], p[1], p[2]) else null
+        }.distinctBy { it.id }
+    }.getOrDefault(emptyList())
 
     private fun writeStatus(playlistId: Long, channels: List<EpgChannel>, visible: Set<Long>, covered: Set<Long>, counts: List<Pair<String, Int>>) {
         val shown = channels.filter { it.id in visible }
@@ -461,6 +500,12 @@ class PlaylistRepository(
         taken: Set<String>,
         found: MutableSet<Long>,
         used: MutableSet<String>,
+        /** Hier eintragen, wessen Kennung nicht zum Sendernamen passt (null = nicht prüfen). */
+        suspects: MutableSet<Long>? = null,
+        /** Von Hand zugeordnete Sender: nur über genau ihre Kennung, nie über den Namen. */
+        forced: Set<Long> = emptySet(),
+        guideIndex: MutableList<String>? = null,
+        sourceLabel: String = "",
     ) {
         val now = System.currentTimeMillis()
         // Mit Archiv (Catch-up) auch vergangene Tage behalten, sonst nur die letzten 2 Stunden.
@@ -496,8 +541,18 @@ class PlaylistRepository(
             if (!prepared) {
                 prepared = true
                 val matcher = EpgMatcher()
-                for ((guideId, names) in parser.channels) matcher.addGuideChannel(guideId, names)
-                if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { link(it, channel) }
+                for ((guideId, names) in parser.channels) {
+                    matcher.addGuideChannel(guideId, names)
+                    guideIndex?.add("${guideId.clean()}\t${(names.firstOrNull() ?: guideId).clean()}\t${sourceLabel.clean()}")
+                }
+                if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { guideId ->
+                    if (channel.id in forced && guideId != channel.epgId) return@let
+                    link(guideId, channel)
+                    if (suspects != null && channel.id !in forced && !channel.epgId.isNullOrBlank() && !matcher.fitsName(guideId, channel.name)) {
+                        Log.i(TAG, "Kennung „${channel.epgId}“ passt nicht zu „${channel.name}“ (EPG-Sender $guideId)")
+                        suspects += channel.id
+                    }
+                }
             }
             targets[id]?.let { return it }
             if (id in unknown) return null

@@ -95,6 +95,13 @@ class SpeechActivity(maxMinutes: Int = 300) {
         binSum = 0.0; binFlux = 0.0; binFrames = 0
     }
 
+    /** Lautstärke je 100 ms zwischen [fromMs] und [toMs], wie gehört (NaN = nicht gehört). Für die Intro-Erkennung. */
+    fun levels(fromMs: Long, toMs: Long): FloatArray {
+        val from = (fromMs / 100).coerceIn(0, bins.toLong()).toInt()
+        val to = (toMs / 100).coerceIn(from.toLong(), bins.toLong()).toInt()
+        synchronized(this) { return level.copyOfRange(from, to) }
+    }
+
     /** Wie viele Sekunden Ton insgesamt ausgewertet sind. */
     fun seconds(): Int = heardBins / 10
 
