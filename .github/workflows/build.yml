@@ -142,7 +142,7 @@ jobs:
   device:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v5
 
@@ -177,15 +177,22 @@ jobs:
 
       # Upgrade-Test: Die Version aus main zuerst installieren, dann die neue darüber. So fällt eine
       # fehlerhafte Datenbank-Migration auf, bevor sie auf dem Fire TV die Playlists kostet.
-      - name: Vorversion bauen (Upgrade-Test)
+      - name: Vorversion holen (Upgrade-Test)
         run: |
-          mkdir -p ~/.android && cp signing/ayutv.keystore ~/.android/debug.keystore
-          git fetch -q --depth 1 origin main
-          git worktree add -q ../previous FETCH_HEAD
-          if (cd ../previous && ./gradlew --no-daemon assembleDebug > ../previous-build.log 2>&1); then
-            cp ../previous/app/build/outputs/apk/debug/app-debug.apk previous-debug.apk
+          # Die veröffentlichte Debug-APK der letzten Version (gleiche Signatur) statt sie neu zu bauen:
+          # spart auf langsamen Runnern fast eine Stunde. Nur wenn es sie nicht gibt, wird gebaut.
+          if curl -fsSL --retry 3 -o previous-debug.apk "https://github.com/${{ github.repository }}/releases/latest/download/DnA-TV-debug.apk"; then
+            echo "Vorversion aus dem letzten Release geladen"
           else
-            echo "Vorversion ließ sich nicht bauen, Upgrade-Test entfällt"; tail -40 ../previous-build.log
+            rm -f previous-debug.apk
+            mkdir -p ~/.android && cp signing/ayutv.keystore ~/.android/debug.keystore
+            git fetch -q --depth 1 origin main
+            git worktree add -q ../previous FETCH_HEAD
+            if (cd ../previous && ./gradlew --no-daemon assembleDebug > ../previous-build.log 2>&1); then
+              cp ../previous/app/build/outputs/apk/debug/app-debug.apk previous-debug.apk
+            else
+              echo "Vorversion ließ sich nicht bauen, Upgrade-Test entfällt"; tail -40 ../previous-build.log
+            fi
           fi
 
       - name: Rundgang im Emulator
