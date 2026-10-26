@@ -13,7 +13,16 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import android.view.KeyEvent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlin.math.abs
+import de.ayutv.ui.components.isTouchDevice
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -60,7 +70,7 @@ import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
 import androidx.tv.material3.Text
 import de.ayutv.data.Languages
 import de.ayutv.ui.components.ChannelListItem
@@ -108,6 +118,8 @@ fun PlayerScreen(activity: PlayerActivity) {
                 },
                 update = {
                     it.player = player
+                    // Zwei-Finger-Zoom (Handy): Bild füllt den Bildschirm, Ränder werden abgeschnitten.
+                    it.resizeMode = if (activity.zoomed) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
                     it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
                     // Eigene Einblendung (Übersetzung, geladene Datei): Die Spur des Players läuft nur als Taktgeber mit.
                     it.subtitleView?.visibility = if (activity.ownSubtitles) View.INVISIBLE else View.VISIBLE
@@ -123,11 +135,42 @@ fun PlayerScreen(activity: PlayerActivity) {
             Box(Modifier.fillMaxSize().background(Color.Black))
         }
 
+        // Bild-in-Bild: nur das Bild, keine Leisten und Hinweise.
+        if (!activity.inPip) {
+
+        val touch = isTouchDevice
+        if (touch) {
+            // Tippen blendet die Leiste ein/aus, doppelt tippen links/rechts spult (Filme).
+            // Wischen: rechts Lautstärke, links Helligkeit, waagerecht spulen, Live in der Mitte hoch/runter umschalten.
+            Box(
+                Modifier.fillMaxSize()
+                    .pointerInput(activity.isLive) {
+                        detectTapGestures(
+                            onTap = { activity.onScreenTap() },
+                            onDoubleTap = if (activity.isLive) null else { offset: Offset ->
+                                activity.pressKey(if (offset.x < size.width / 2) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT)
+                            },
+                        )
+                    }
+                    .pointerInput(activity.isLive) { playerGestures(activity) }
+            )
+        }
+
         if (activity.buffering && activity.message == null) {
             Text(
                 "Lädt …",
                 modifier = Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(16.dp),
                 color = Color.White,
+            )
+        }
+
+        activity.gestureInfo?.let {
+            Text(
+                it,
+                modifier = Modifier.align(Alignment.Center).background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(12.dp)).padding(horizontal = 24.dp, vertical = 14.dp),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
             )
         }
 
@@ -167,6 +210,26 @@ fun PlayerScreen(activity: PlayerActivity) {
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             VodControls(activity)
+        }
+
+        if (!activity.isLive && activity.overlay != Overlay.CONTROLS) {
+            val press = Modifier.pointerInput(Unit) { detectTapGestures { activity.pressKey(KeyEvent.KEYCODE_DPAD_CENTER) } }
+            when {
+                activity.nextCardVisible -> activity.nextEpisode?.let { next ->
+                    EpisodeCard(
+                        title = "Nächste Folge: S${next.episode.season} E${next.episode.episode}  ${next.episode.title}",
+                        hint = if (activity.nextCountdown >= 0) "Startet in ${activity.nextCountdown} s  ·  OK jetzt  ·  andere Taste: warten"
+                            else "OK: jetzt starten",
+                        modifier = Modifier.align(Alignment.BottomEnd).then(press),
+                    )
+                }
+                activity.introVisible -> EpisodeCard("⏭ Intro überspringen", if (touch) "Tippen" else "OK drücken", Modifier.align(Alignment.BottomEnd).then(press))
+            }
+        }
+
+        // Knöpfe statt Fernbedienung, solange die Leiste zu sehen ist.
+        if (touch && (activity.overlay == Overlay.INFO && activity.isLive || activity.overlay == Overlay.CONTROLS && !activity.isLive)) {
+            TouchButtons(activity, Modifier.align(Alignment.TopEnd))
         }
 
         if (activity.ownSubtitles) {
@@ -215,14 +278,19 @@ fun PlayerScreen(activity: PlayerActivity) {
         ) {
             ChannelListOverlay(activity)
         }
+        }
     }
 
     // Overlays blenden sich nach kurzer Zeit aus. Jede Taste setzt den Timer zurück (overlayToken).
     LaunchedEffect(activity.overlayToken, activity.overlay) {
         val timeout = when (activity.overlay) {
             Overlay.NONE -> return@LaunchedEffect
-            Overlay.INFO -> if (activity.showTech) 10_000L else 5_000L
-            Overlay.CONTROLS -> if (activity.player?.isPlaying == false) Long.MAX_VALUE else 4_000L
+            // Angehaltenes Live-TV: Leiste stehen lassen, damit man sieht, wie weit es zurückliegt.
+            Overlay.INFO -> if (activity.timeshifted && activity.player?.playWhenReady == false) Long.MAX_VALUE
+                else if (activity.showTech) 10_000L else 5_000L
+            // Angehalten: Leiste bleibt. Nicht isPlaying nehmen: beim Laden ist das auch false, dann
+            // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
+            Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             Overlay.CHANNELS, Overlay.TRACKS -> 15_000L
         }
         delay(timeout)
@@ -274,15 +342,156 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         } else {
             Text("Keine Programminformationen", color = AyuColors.TextSecondary)
         }
+        if (activity.timeshifted || activity.rewindableMs > 0) {
+            Spacer(Modifier.height(12.dp))
+            TimeshiftLine(activity)
+        }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
             TechLine(activity.stats, activity.bufferedMs, activity.cushionActive)
         }
         Spacer(Modifier.height(10.dp))
         Text(
-            "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ☰ Ton/Untertitel/Favorit",
+            if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
+            else "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 13.sp,
+        )
+    }
+}
+
+private enum class Swipe { NONE, VOLUME, BRIGHTNESS, SEEK, ZAP, PINCH }
+
+/**
+ * Wischgesten wie in Handy-Videoplayern. Erst ab einer kleinen Strecke entschieden (sonst ist es ein Tippen),
+ * danach bleibt es bei dieser Geste, bis der Finger losgelassen wird.
+ */
+private suspend fun PointerInputScope.playerGestures(activity: PlayerActivity) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val start = down.position
+        var mode = Swipe.NONE
+        var last = start
+        var pinchStart = 0f
+        val slop = viewConfiguration.touchSlop * 2
+        while (true) {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.filter { it.pressed }
+            if (pressed.isEmpty()) break
+            if (pressed.size >= 2) {
+                val distance = (pressed[0].position - pressed[1].position).getDistance()
+                if (mode != Swipe.PINCH) {
+                    mode = Swipe.PINCH
+                    pinchStart = distance
+                } else if (pinchStart > 0f) {
+                    if (distance / pinchStart > 1.25f) activity.zoomGesture(true)
+                    if (distance / pinchStart < 0.8f) activity.zoomGesture(false)
+                }
+                event.changes.forEach { it.consume() }
+                continue
+            }
+            if (mode == Swipe.PINCH) continue
+            val change = pressed.first()
+            val pos = change.position
+            if (mode == Swipe.NONE) {
+                val dx = pos.x - start.x
+                val dy = pos.y - start.y
+                if (abs(dx) < slop && abs(dy) < slop) continue
+                mode = when {
+                    abs(dx) > abs(dy) -> Swipe.SEEK
+                    activity.isLive && start.x in size.width / 3f..size.width * 2 / 3f -> Swipe.ZAP
+                    start.x > size.width / 2f -> Swipe.VOLUME
+                    else -> Swipe.BRIGHTNESS
+                }
+                last = pos
+            }
+            when (mode) {
+                Swipe.VOLUME -> activity.adjustVolume((last.y - pos.y) / size.height * 1.5f)
+                Swipe.BRIGHTNESS -> activity.adjustBrightness((last.y - pos.y) / size.height * 1.5f)
+                Swipe.SEEK -> activity.seekGesture((pos.x - start.x) / size.width, done = false)
+                else -> Unit
+            }
+            last = pos
+            change.consume()
+        }
+        when (mode) {
+            Swipe.SEEK -> activity.seekGesture((last.x - start.x) / size.width, done = true)
+            Swipe.ZAP -> if (abs(last.y - start.y) > size.height / 6f) activity.zapGesture(up = last.y < start.y)
+            else -> Unit
+        }
+    }
+}
+
+/** Bedienknöpfe für den Touchscreen: dieselben Funktionen wie die Tasten der Fernbedienung. */
+@Composable
+private fun TouchButtons(activity: PlayerActivity, modifier: Modifier = Modifier) {
+    val paused = activity.player?.playWhenReady == false
+    Row(
+        modifier.padding(16.dp).clip(RoundedCornerShape(28.dp)).background(Color.Black.copy(alpha = 0.6f)).padding(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        @Composable
+        fun button(label: String, action: () -> Unit) {
+            Box(
+                Modifier.size(60.dp).clip(RoundedCornerShape(30.dp)).clickable(onClick = action),
+                contentAlignment = Alignment.Center,
+            ) { Text(label, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+        }
+        if (activity.isLive) {
+            button("▲") { activity.pressKey(KeyEvent.KEYCODE_CHANNEL_UP) }
+            button("▼") { activity.pressKey(KeyEvent.KEYCODE_CHANNEL_DOWN) }
+            button("☰") { activity.openChannelList() }
+            button("⏪") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_REWIND) }
+            button(if (paused) "▶" else "⏸") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            button("⏩") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD) }
+            button(if (activity.isFavorite) "★" else "☆") { activity.pressKey(KeyEvent.KEYCODE_PROG_RED) }
+        } else {
+            button("⏪") { activity.pressKey(KeyEvent.KEYCODE_DPAD_LEFT) }
+            button(if (paused) "▶" else "⏸") { activity.pressKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) }
+            button("⏩") { activity.pressKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        }
+        button("CC") { activity.pressKey(KeyEvent.KEYCODE_MENU) }
+        button("✕") { activity.finish() }
+    }
+}
+
+/** Knopf unten rechts (Intro überspringen, nächste Folge): reagiert auf OK, solange die Steuerleiste zu ist. */
+@Composable
+private fun EpisodeCard(title: String, hint: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier.padding(end = 48.dp, bottom = 56.dp).widthIn(max = 520.dp)
+            .clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.82f))
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(4.dp))
+        Text(hint, color = AyuColors.Accent, fontSize = 14.sp)
+    }
+}
+
+/** Zeitversatz: wie weit das Bild hinter Live liegt und wie weit sich zurückspulen lässt. */
+@Composable
+private fun TimeshiftLine(activity: PlayerActivity) {
+    val window = activity.rewindableMs
+    val behind = activity.behindLiveMs.coerceAtMost(window)
+    val paused = activity.timeshifted && activity.player?.playWhenReady == false
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val state = when {
+            paused -> "⏸ Angehalten"
+            activity.timeshifted -> "▶ Zeitversetzt"
+            else -> "● Live"
+        }
+        Text(state, color = if (activity.timeshifted) AyuColors.Accent else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(12.dp))
+        Box(Modifier.weight(1f)) {
+            ProgressLine(if (window > 0) (window - behind).toFloat() / window else 1f)
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(
+            if (activity.timeshifted) "−${formatDuration(behind)} hinter Live" else "${formatDuration(window)} zurückspulbar",
+            color = AyuColors.TextSecondary,
+            fontSize = 14.sp,
         )
     }
 }
@@ -300,7 +509,15 @@ private fun VodControls(activity: PlayerActivity) {
             activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
         }
         Spacer(Modifier.height(16.dp))
-        ProgressLine(if (duration > 0) position.toFloat() / duration else 0f)
+        // Touch: auf den Balken tippen springt dorthin (großzügige Trefferfläche um die dünne Linie).
+        Box(
+            Modifier.fillMaxWidth().height(28.dp).pointerInput(Unit) {
+                detectTapGestures { offset -> activity.seekToFraction(offset.x / size.width) }
+            },
+            contentAlignment = Alignment.Center,
+        ) {
+            ProgressLine(if (duration > 0) position.toFloat() / duration else 0f)
+        }
         Spacer(Modifier.height(6.dp))
         Row {
             Text(formatDuration(position), color = Color.White, fontSize = 14.sp)

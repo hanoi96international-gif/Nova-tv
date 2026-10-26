@@ -45,11 +45,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Border
-import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -255,6 +253,7 @@ fun TvTextField(
 ) {
     var editing by remember { mutableStateOf(false) }
     var wasEditing by remember { mutableStateOf(false) }
+    val touch = isTouchDevice
     val editRequester = remember { FocusRequester() }
     val viewRequester = remember { FocusRequester() }
     // Nach dem Tippen den Fokus wieder auf das Feld setzen, sonst wäre er verloren.
@@ -309,7 +308,7 @@ fun TvTextField(
                     else -> value
                 }
                 Text(
-                    shown.ifEmpty { "OK drücken zum Eingeben" },
+                    shown.ifEmpty { if (touch) "Tippen zum Eingeben" else "OK drücken zum Eingeben" },
                     color = if (shown.isEmpty()) AyuColors.TextSecondary else AyuColors.TextPrimary,
                     fontSize = 18.sp,
                     maxLines = 1,

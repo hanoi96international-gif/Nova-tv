@@ -35,11 +35,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
+import de.ayutv.ui.components.Button
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.OutlinedButton
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.OutlinedButton
+import de.ayutv.ui.components.Surface
 import androidx.tv.material3.Text
 import de.ayutv.data.db.GroupKind
 import de.ayutv.data.db.GroupToggle

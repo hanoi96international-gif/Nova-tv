@@ -39,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.ProgrammeEntity
@@ -113,7 +112,7 @@ fun CategoryColumn(
     selected: String?,
     onSelect: (String?) -> Unit,
     modifier: Modifier = Modifier,
-    width: Dp = 260.dp,
+    width: Dp = if (isPortrait) 170.dp else 260.dp,
     /** Langes Drücken auf eine echte Gruppe (nicht "Alle"/"Favoriten"), z. B. zum Ausblenden. */
     onLongClick: ((String) -> Unit)? = null,
 ) {

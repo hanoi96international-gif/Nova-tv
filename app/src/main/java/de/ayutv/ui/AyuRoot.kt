@@ -51,7 +51,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
+import de.ayutv.ui.components.isTouchDevice
+import de.ayutv.ui.components.isPortrait
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.tv.material3.Text
 import de.ayutv.AppContainer
 import de.ayutv.data.db.PlaylistEntity
@@ -74,6 +79,7 @@ val LocalContainer = staticCompositionLocalOf<AppContainer> { error("AppContaine
 
 private val NAV_COLLAPSED = 72.dp
 private val NAV_EXPANDED = 220.dp
+private val NAV_BOTTOM = 68.dp
 
 enum class Section(val label: String, val icon: ImageVector) {
     HOME("Start", Icons.Filled.Home),
@@ -109,6 +115,11 @@ fun AyuRoot() {
     }
     // Nach „Zurück“ verschwindet der fokussierte Inhalt: dann den Fokus gezielt in die Navigation setzen.
     var navTick by remember { mutableIntStateOf(0) }
+    // Suchtaste oder Sprachassistent: zur Suche (den Begriff übernimmt die Suche selbst).
+    val searchRequest by container.searchRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(searchRequest) {
+        if (searchRequest != null) section = Section.SEARCH
+    }
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
     val sectionState = rememberSaveableStateHolder()
 
@@ -132,8 +143,9 @@ fun AyuRoot() {
                     navTick++
                 }
                 // Die Navigation liegt über dem Inhalt: Aufklappen verschiebt nichts und löst kein Neu-Layout aus.
+                val portrait = isPortrait
                 Box(Modifier.fillMaxSize()) {
-                    Box(Modifier.fillMaxSize().padding(start = NAV_COLLAPSED)) {
+                    Box(Modifier.fillMaxSize().padding(start = if (portrait) 0.dp else NAV_COLLAPSED, bottom = if (portrait) NAV_BOTTOM else 0.dp)) {
                         sectionState.SaveableStateProvider(section.name) { when (section) {
                             Section.HOME -> HomeScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.LIVE -> LiveScreen()
@@ -149,7 +161,54 @@ fun AyuRoot() {
                             )
                         } }
                     }
-                    SideNav(sections = sections, selected = section, refocusTick = navTick, onSelect = { section = it })
+                    if (portrait) {
+                        BottomNav(sections, section, Modifier.align(Alignment.BottomCenter)) { section = it }
+                    } else {
+                        SideNav(sections = sections, selected = section, refocusTick = navTick, onSelect = { section = it })
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Hochformat (Handy): Leiste unten mit Symbol und kurzer Beschriftung, wie in Handy-Apps üblich. */
+@Composable
+private fun BottomNav(sections: List<Section>, selected: Section, modifier: Modifier = Modifier, onSelect: (Section) -> Unit) {
+    Row(
+        modifier.fillMaxWidth().height(NAV_BOTTOM).background(AyuColors.Surface).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        sections.forEach { item ->
+            val isSelected = item == selected
+            Surface(
+                onClick = { onSelect(item) },
+                modifier = Modifier.weight(1f).fillMaxHeight().padding(vertical = 6.dp, horizontal = 2.dp),
+                shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = if (isSelected) AyuColors.SurfaceRaised else Color.Transparent,
+                    focusedContainerColor = AyuColors.AccentSoft,
+                ),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
+            ) {
+                Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Icon(
+                        item.icon,
+                        contentDescription = item.label,
+                        tint = if (isSelected) AyuColors.Accent else AyuColors.TextSecondary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Text(
+                        when (item) {
+                            Section.LIVE -> "Live"
+                            Section.GUIDE -> "Guide"
+                            Section.SETTINGS -> "Optionen"
+                            else -> item.label
+                        },
+                        color = if (isSelected) AyuColors.TextPrimary else AyuColors.TextSecondary,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                    )
                 }
             }
         }
@@ -163,10 +222,15 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
     var expanded by remember { mutableStateOf(false) }
     val width by animateDpAsState(if (expanded) NAV_EXPANDED else NAV_COLLAPSED, label = "nav")
     val initialFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val touch = isTouchDevice
 
     if (expanded) {
-        // Abdunkeln des Inhalts hinter der aufgeklappten Navigation
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)))
+        // Abdunkeln des Inhalts hinter der aufgeklappten Navigation; Tippen daneben klappt sie zu.
+        Box(
+            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f))
+                .then(if (touch) Modifier.pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } } else Modifier)
+        )
     }
     Column(
         Modifier
@@ -189,7 +253,11 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
         sections.forEach { item ->
             val isSelected = item == selected
             Surface(
-                onClick = { onSelect(item) },
+                onClick = {
+                    onSelect(item)
+                    // Per Touch: nach der Wahl zuklappen (mit der Fernbedienung geht es mit ▶ in den Inhalt).
+                    if (touch) focusManager.clearFocus()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(if (isSelected) Modifier.focusRequester(initialFocus) else Modifier),

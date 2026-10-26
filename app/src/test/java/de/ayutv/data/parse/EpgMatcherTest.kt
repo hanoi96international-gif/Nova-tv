@@ -113,6 +113,9 @@ class EpgMatcherTest {
         real("DAZN.de", "DE: DAZN")
         real("DAZN.1.de", "DE: DAZN 1 HD")
         real("DAZN.2.de", "DAZN 2 4K")
+        // Gastronomie-Fassung zeigt dasselbe Programm
+        real("DAZN.1.de", "DE: DAZN 1 BAR")
+        real("DAZN.de", "DAZN Bar HD")
         real("Sky.Cinema.Premiere.HD.de", "DE: SKY CINEMA PREMIEREN")
         real("SKY.CINEMA.PREMIEREN.+24.at", "DE: SKY CINEMA PREMIEREN +24")
         // Regionalfenster fallen auf das Hauptprogramm zurück

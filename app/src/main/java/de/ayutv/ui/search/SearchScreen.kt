@@ -1,7 +1,14 @@
 package de.ayutv.ui.search
 
 import de.ayutv.data.parse.headline
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import de.ayutv.data.VoiceInput
+import de.ayutv.data.parse.SpokenQuery
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
 import androidx.tv.material3.Text
 import de.ayutv.data.db.HistoryKind
 import de.ayutv.data.db.ProgrammeEntity
@@ -66,6 +73,29 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     var results by remember { mutableStateOf(SearchResults()) }
     var searching by remember { mutableStateOf(false) }
     val fieldFocus = remember { FocusRequester() }
+    /** Der Begriff wurde gesprochen: Passt ein Sender oder Titel genau, startet er direkt. */
+    var spoken by remember { mutableStateOf(false) }
+    val canSpeak = remember { VoiceInput.available(context) }
+    val speech = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (!text.isNullOrBlank()) {
+            query = SpokenQuery.normalize(text)
+            spoken = true
+        }
+    }
+
+    // Suchtaste oder Sprachassistent (z. B. „Suche Tagesschau in DnA-TV“)
+    val request by container.searchRequests.collectAsStateWithLifecycle()
+    LaunchedEffect(request) {
+        val term = request ?: return@LaunchedEffect
+        container.searchRequests.value = null
+        if (term.isNotBlank()) {
+            query = SpokenQuery.normalize(term)
+            spoken = true
+        } else {
+            runCatching { fieldFocus.requestFocus() }
+        }
+    }
 
     LaunchedEffect(query) {
         if (query.trim().length < 2) {
@@ -76,6 +106,22 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         searching = true
         results = content.search(query)
         searching = false
+        if (spoken) {
+            spoken = false
+            val r = results
+            val channel = SpokenQuery.channel(query, r.channels) { it.name }
+            val movie = if (channel == null) SpokenQuery.title(query, r.movies) { it.name } else null
+            val series = if (channel == null && movie == null) SpokenQuery.title(query, r.series) { it.name } else null
+            when {
+                channel != null -> PlayerActivity.startLive(context, channel.key, channel.groupTitle)
+                movie != null -> PlayerActivity.startVod(
+                    context, VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url),
+                )
+                series != null -> onOpenSeries(series)
+                else -> return@LaunchedEffect
+            }
+            saveQuery()
+        }
     }
 
     LazyColumn(
@@ -84,15 +130,33 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         item {
-            TvTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = "Suche nach Sendern, Sendungen, Filmen und Serien",
-                imeAction = ImeAction.Search,
-                onImeAction = { saveQuery() },
-                focusRequester = fieldFocus,
-                modifier = Modifier.fillMaxWidth(0.7f),
-            )
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                TvTextField(
+                    value = query,
+                    onValueChange = { new ->
+                        // Diktieren (Fire-TV-Tastatur) fügt den ganzen Begriff auf einmal ein, Tippen Zeichen für Zeichen.
+                        if (query.isBlank() && new.trim().length >= 3) spoken = true
+                        query = new
+                    },
+                    label = "Suche nach Sendern, Sendungen, Filmen und Serien",
+                    imeAction = ImeAction.Search,
+                    onImeAction = { saveQuery() },
+                    focusRequester = fieldFocus,
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                )
+                if (canSpeak) {
+                    Chip("🎤 Sprechen") { runCatching { speech.launch(VoiceInput.intent()) } }
+                }
+            }
+            if (!canSpeak) {
+                Text(
+                    "Per Sprache: OK auf das Suchfeld und auf der Fire-TV-Tastatur die Mikrofontaste der Fernbedienung " +
+                        "gedrückt halten. Passt ein Sender oder Film genau, startet er sofort.",
+                    color = AyuColors.TextSecondary,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp).fillMaxWidth(0.7f),
+                )
+            }
         }
 
         if (query.isBlank() && history.isNotEmpty()) {

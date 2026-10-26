@@ -16,6 +16,8 @@ import de.ayutv.player.PlayerActivity
 import de.ayutv.player.VodRequest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -187,7 +189,11 @@ class DeviceTourTest {
             val variants = runBlocking { container.content.variantsOf(channel) }
             log("sport: events=${events.map { de.ayutv.data.parse.ProgrammeText.headline(it.programme.title, it.programme.subtitle) }} reminders=${reminders.map { it.title }} variants=${variants.map { it.name }}")
             assertTrue("Spiel fehlt in der Sport-Übersicht", events.any { it.programme.subtitle?.contains("Dortmund") == true })
-            assertTrue("Keine Erinnerung für den Verein", reminders.any { it.channelKey == channel.key })
+            // Die Erinnerung gilt der besten Fassung unter allen Sendern mit diesem Programm (nicht unbedingt diesem).
+            // (auch aus einer anderen Playlist: der Xtream-Testsender hat dieselbe EPG-Kennung).
+            val remindedChannels = runBlocking { reminders.mapNotNull { container.content.channel(it.channelKey) } }
+            log("sport_reminder_channels=${remindedChannels.map { "${it.name}/${it.epgId}" }}")
+            assertTrue("Keine Erinnerung für den Verein", remindedChannels.any { it.epgId == "hd.test" })
         }
 
         // 2. Oberfläche per Fernbedienung durchgehen
@@ -258,6 +264,37 @@ class DeviceTourTest {
                     shot("1${index}_live_menu")
                     key(KeyEvent.KEYCODE_BACK)
                 }
+            }
+        } }
+
+        // 2a. Live anhalten und zurückspulen (Zeitversatz aus dem Zwischenspeicher)
+        // „Wackelige Leitung“ liefert wie ein echter Sender in Echtzeit und trennt alle 15 s: auch die Aufnahme muss neu verbinden.
+        (channels.firstOrNull { it.name == "Wackelige Leitung" } ?: live.firstOrNull())?.let { channel -> section("timeshift") {
+            launchPlayer(PlayerActivity.liveIntent(app, channel.key, null)).use { scenario ->
+                val ready = waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                // Genug Vorlauf, damit 10 s zurück nicht am Anfang des Speichers anstoßen
+                val recorded = waitFor(35_000) { scenario.read { it.rewindableMs } > 16_000 }
+                log("timeshift ${channel.name}: ready=$ready rewindable_ms=${scenario.read { it.rewindableMs }}")
+                key(KeyEvent.KEYCODE_MEDIA_PAUSE)
+                val paused = waitFor(5_000) { scenario.read { it.timeshifted && it.player?.playWhenReady == false } }
+                Thread.sleep(6_000)
+                shot("1t_timeshift_paused")
+                key(KeyEvent.KEYCODE_MEDIA_PLAY)
+                val resumed = waitFor(15_000) { scenario.read { it.player?.isPlaying == true && it.timeshifted } }
+                Thread.sleep(2_000)
+                val behind = scenario.read { it.behindLiveMs }
+                key(KeyEvent.KEYCODE_MEDIA_REWIND)
+                val rewound = waitFor(15_000) { scenario.read { it.player?.isPlaying == true && it.behindLiveMs > behind + 5_000 } }
+                val behindAfterRewind = scenario.read { it.behindLiveMs }
+                shot("1t_timeshift_rewound")
+                repeat(4) { key(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD); Thread.sleep(1_500) }
+                val live = waitFor(15_000) { scenario.read { !it.timeshifted && it.player?.playbackState == Player.STATE_READY } }
+                log(
+                    "timeshift: recorded=$recorded paused=$paused resumed=$resumed behind_ms=$behind rewound=$rewound " +
+                        "behind_after_rewind_ms=$behindAfterRewind back_to_live=$live message=${scenario.read { it.message }}"
+                )
+                assertTrue("Zeitversatz: recorded=$recorded paused=$paused resumed=$resumed rewound=$rewound live=$live",
+                    recorded && paused && resumed && behind >= 4_000 && rewound && live)
             }
         } }
 
@@ -495,6 +532,26 @@ class DeviceTourTest {
                 Thread.sleep(2_000)
                 log("episode ${episode.title}: ready=$ready message=${scenario.read { it.message }}")
                 shot("30_episode")
+                // Intro überspringen: in den ersten Minuten springt OK um 80 s weiter
+                Thread.sleep(5_000) // Steuerleiste blendet sich aus
+                scenario.onActivity { it.player?.seekTo(30_000) }
+                val introShown = waitFor(5_000) { scenario.read { it.introVisible } }
+                shot("31_episode_intro")
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                val skipped = waitFor(5_000) { scenario.read { (it.player?.currentPosition ?: 0) > 100_000 } }
+                // Nächste Folge: am Ende Hinweis mit Countdown, eine andere Taste hält ihn an
+                val next = waitFor(15_000) { scenario.read { it.nextEpisode } != null }
+                scenario.onActivity { act -> act.player?.let { p -> p.seekTo((p.duration - 4_000).coerceAtLeast(0)) } }
+                val countdown = waitFor(15_000) { scenario.read { it.nextCountdown } > 0 }
+                shot("32_episode_next")
+                key(KeyEvent.KEYCODE_DPAD_LEFT)
+                val stopped = waitFor(3_000) { scenario.read { it.nextCountdown } < 0 }
+                log(
+                    "episode_extras: intro_shown=$introShown skipped=$skipped next=${scenario.read { it.nextEpisode?.episode?.title }} " +
+                        "countdown=$countdown countdown_stopped=$stopped"
+                )
+                assertTrue("Serienextras: intro=$introShown skipped=$skipped next=$next countdown=$countdown stopped=$stopped",
+                    introShown && skipped && next && countdown && stopped)
             }
         } }
         // 5. Tonformate, die Fire TV ohne AV-Receiver nicht selbst dekodiert: FFmpeg muss sie abspielen
@@ -672,6 +729,24 @@ class DeviceTourTest {
                 val user = runBlocking { container.settings.current().openSubtitlesUser }
                 log("phone_setup: url=$url get=${page.first} has_form=${"os_key" in page.second} post=$saved user=$user report=${server.state.value.lastSaved?.replace('\n', '|')}")
                 assertTrue("Formular nicht gespeichert", page.first == 200 && saved == 200 && user == "ayu-ci")
+                // Sicherung herunterladen und wieder einspielen: nichts doppelt, Favoriten bleiben
+                val favoritesBefore = runBlocking { container.db.favorites().keys().size }
+                val playlistsBefore = runBlocking { container.db.playlists().all().size }
+                val backup = container.http.newCall(okhttp3.Request.Builder().url("$url/backup").build()).execute()
+                    .use { it.code to it.body.string() }
+                val upload = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
+                    .addFormDataPart("backup", "sicherung.json", backup.second.toRequestBody("application/json".toMediaTypeOrNull()))
+                    .build()
+                val restored = container.http.newCall(okhttp3.Request.Builder().url("$url/restore").post(upload).build()).execute().use { it.code }
+                val report = server.state.value.lastSaved.orEmpty()
+                val playlistsAfter = runBlocking { container.db.playlists().all().size }
+                val favoritesAfter = runBlocking { container.db.favorites().keys().size }
+                log(
+                    "backup: get=${backup.first} bytes=${backup.second.length} has_playlists=${"\"playlists\"" in backup.second} " +
+                        "restore=$restored report=$report playlists=$playlistsBefore→$playlistsAfter favorites=$favoritesBefore→$favoritesAfter"
+                )
+                assertTrue("Sicherung: $report", backup.first == 200 && restored == 200 && report.startsWith("✓") &&
+                    playlistsAfter == playlistsBefore && favoritesAfter == favoritesBefore)
                 runBlocking { container.settings.update { it.copy(openSubtitlesUser = "") } }
             } finally {
                 server.stop()

@@ -1,5 +1,6 @@
 package de.ayutv.ui.live
 
+import de.ayutv.ui.components.isPortrait
 import androidx.compose.runtime.produceState
 import de.ayutv.ui.components.ProgrammeImage
 import de.ayutv.data.parse.headlineWithBadge
@@ -187,7 +188,8 @@ fun LiveScreen() {
             }
         }
 
-        ChannelDetails(focusedState, Modifier.width(290.dp).fillMaxHeight())
+        // Hochformat: kein Platz für die Detailspalte (Sendungsinfo steht in der Senderzeile).
+        if (!isPortrait) ChannelDetails(focusedState, Modifier.width(290.dp).fillMaxHeight())
     }
     notice?.let { NoticeBar(it) }
 }

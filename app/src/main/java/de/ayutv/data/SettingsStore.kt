@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -84,6 +85,14 @@ data class AppSettings(
     val openSubtitlesUser: String = "",
     val openSubtitlesPassword: String = "",
     val translationProvider: TranslationProvider = TranslationProvider.ON_DEVICE,
+    /** Live-TV anhalten und zurückspulen: der laufende Sender wird auf dem Gerät zwischengespeichert. */
+    val liveTimeshift: Boolean = true,
+    /** So viele Minuten Live-TV bleiben zum Zurückspulen gespeichert. */
+    val timeshiftMinutes: Int = 30,
+    /** Serien: nach einer Folge startet die nächste nach einem kurzen Countdown. */
+    val autoNextEpisode: Boolean = true,
+    /** Handy mit mobilen Daten: kleinere Fassung der Sender, adaptive Streams höchstens 720p. */
+    val dataSaver: Boolean = true,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -99,6 +108,9 @@ data class AppSettings(
 val Context.settingsDataStore by preferencesDataStore(name = "settings")
 
 private const val SEARCH_HISTORY_SIZE = 12
+
+/** Wählbare Länge des Zwischenspeichers für Live-TV. */
+val TIMESHIFT_MINUTES = listOf(15, 30, 60, 90)
 
 class SettingsStore(private val context: Context) {
     private object Keys {
@@ -125,6 +137,10 @@ class SettingsStore(private val context: Context) {
         val osOn = booleanPreferencesKey("opensubtitles_on")
         val osUser = stringPreferencesKey("opensubtitles_user")
         val osPassword = stringPreferencesKey("opensubtitles_password")
+        val timeshift = booleanPreferencesKey("live_timeshift")
+        val timeshiftMinutes = intPreferencesKey("timeshift_minutes")
+        val autoNext = booleanPreferencesKey("auto_next_episode")
+        val dataSaver = booleanPreferencesKey("data_saver")
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -150,6 +166,40 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun current(): AppSettings = settings.first()
+
+    /** Alle gespeicherten Einstellungen nach Typ (für die Sicherung). */
+    suspend fun export(): Map<String, Map<String, Any>> {
+        val prefs = context.settingsDataStore.data.first().asMap()
+        val out = linkedMapOf<String, MutableMap<String, Any>>()
+        for ((key, value) in prefs) {
+            // Kindersicherung bleibt auf dem Gerät: Eine Sicherung soll sie nicht aushebeln.
+            if (key.name.startsWith("parental_")) continue
+            val type = when (value) {
+                is Boolean -> "booleans"
+                is Int -> "ints"
+                is Long -> "longs"
+                is String -> "strings"
+                is Set<*> -> "stringSets"
+                else -> continue
+            }
+            out.getOrPut(type) { linkedMapOf() }[key.name] = value
+        }
+        return out
+    }
+
+    /** Einstellungen aus einer Sicherung übernehmen (unbekannte Einträge bleiben, wie sie sind). */
+    suspend fun import(values: Map<String, Map<String, Any>>) {
+        fun <T> Map<String, T>.allowed() = filterKeys { !it.startsWith("parental_") }
+        context.settingsDataStore.edit { prefs ->
+            values["booleans"]?.allowed()?.forEach { (k, v) -> (v as? Boolean)?.let { prefs[booleanPreferencesKey(k)] = it } }
+            values["ints"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[intPreferencesKey(k)] = it.toInt() } }
+            values["longs"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[longPreferencesKey(k)] = it.toLong() } }
+            values["strings"]?.allowed()?.forEach { (k, v) -> (v as? String)?.let { prefs[stringPreferencesKey(k)] = it } }
+            values["stringSets"]?.allowed()?.forEach { (k, v) ->
+                (v as? Collection<*>)?.let { prefs[stringSetPreferencesKey(k)] = it.filterIsInstance<String>().toSet() }
+            }
+        }
+    }
 
     suspend fun update(transform: (AppSettings) -> AppSettings) {
         context.settingsDataStore.edit { prefs ->
@@ -177,6 +227,10 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.osOn] = next.onlineSubtitles
             prefs[Keys.osUser] = next.openSubtitlesUser.trim()
             prefs[Keys.osPassword] = next.openSubtitlesPassword
+            prefs[Keys.timeshift] = next.liveTimeshift
+            prefs[Keys.timeshiftMinutes] = next.timeshiftMinutes
+            prefs[Keys.autoNext] = next.autoNextEpisode
+            prefs[Keys.dataSaver] = next.dataSaver
         }
     }
 
@@ -204,6 +258,10 @@ class SettingsStore(private val context: Context) {
         onlineSubtitles = this[Keys.osOn] ?: true,
         openSubtitlesUser = this[Keys.osUser].orEmpty(),
         openSubtitlesPassword = this[Keys.osPassword].orEmpty(),
+        liveTimeshift = this[Keys.timeshift] ?: true,
+        timeshiftMinutes = this[Keys.timeshiftMinutes]?.takeIf { it in TIMESHIFT_MINUTES } ?: 30,
+        autoNextEpisode = this[Keys.autoNext] ?: true,
+        dataSaver = this[Keys.dataSaver] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

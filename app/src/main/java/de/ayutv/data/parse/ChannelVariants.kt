@@ -38,7 +38,7 @@ object ChannelVariants {
             else -> 3
         }
     }
-    private val BACKUP = Regex("""\b(backup|alt|bkp|reserve|test)\b|\(2\)""")
+    private val BACKUP = Regex("""\b(backup|alt|bkp|reserve|test|bar)\b|\(2\)""")
     private val HD = Regex("""\b(fhd|1080[ip]?|hd)\b""")
     private val UHD = Regex("""\b(uhd|4k|2160p?)\b""")
     private val RAW = Regex("""\braw\b""")

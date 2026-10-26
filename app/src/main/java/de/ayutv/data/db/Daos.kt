@@ -84,6 +84,10 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds) GROUP BY epgId")
     suspend fun byEpgIds(epgIds: List<String>): List<ChannelEntity>
 
+    /** Alle Sender (auch alle Fassungen) mit diesen EPG-Kennungen. */
+    @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds)")
+    suspend fun allByEpgIds(epgIds: List<String>): List<ChannelEntity>
+
     @Query("SELECT id, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
     suspend fun forEpg(playlistId: Long): List<EpgChannel>
 
@@ -216,6 +220,9 @@ interface FavoriteDao {
     @Query("SELECT `key` FROM favorites")
     suspend fun keys(): List<String>
 
+    @Query("SELECT * FROM favorites")
+    suspend fun all(): List<FavoriteEntity>
+
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE `key` = :key)")
     suspend fun isFavorite(key: String): Boolean
 }
@@ -262,6 +269,9 @@ interface HiddenGroupDao {
 
     @Query("DELETE FROM hidden_groups WHERE playlistId = :playlistId")
     fun deleteForPlaylist(playlistId: Long)
+
+    @Query("SELECT * FROM hidden_groups")
+    suspend fun all(): List<HiddenGroupEntity>
 
     /** Blendet eine Gruppe in allen Playlists aus, die sie enthalten (Schnellaktion in den Listen). */
     @Query(

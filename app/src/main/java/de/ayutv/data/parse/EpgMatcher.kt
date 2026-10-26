@@ -167,6 +167,8 @@ class EpgMatcher(private val country: String = "de") {
                 country = country ?: COUNTRIES[tokens.last()]
                 tokens.removeAt(tokens.lastIndex)
             }
+            // Gastronomie-Fassung („DAZN 1 Bar“) zeigt dasselbe Programm wie der Sender selbst.
+            if (tokens.size > 1 && tokens.last() == "bar" && tokens.first() == "dazn") tokens.removeAt(tokens.lastIndex)
             val strong = canonical(tokens.joinToString(""))
             val weakTokens = tokens.filter { it !in FILLER }
             val weak = canonical(if (weakTokens.isEmpty()) tokens.joinToString("") else weakTokens.joinToString(""))

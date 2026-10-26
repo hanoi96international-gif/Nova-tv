@@ -48,7 +48,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
+import de.ayutv.ui.components.isTouchDevice
+import de.ayutv.ui.components.isPortrait
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.tv.material3.Text
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.ProgrammeEntity
@@ -75,8 +79,11 @@ private const val HALF_HOUR = 30 * MINUTE
 private const val WINDOW = 4 * HALF_HOUR
 private const val DAY = 24 * 60 * MINUTE
 // 1080p-Fernseher haben 960 dp Breite: Navigation + Senderspalte + 2 Stunden à 5 dp/min passen genau.
-private val DP_PER_MINUTE = 5.dp
-private val CHANNEL_COLUMN = 190.dp
+/** Breite pro Minute und der Senderspalte: im Hochformat schmaler, damit zwei Stunden auf den Bildschirm passen. */
+private class GuideMetrics(val dpPerMinute: Dp, val channelColumn: Dp)
+private val TV_METRICS = GuideMetrics(5.dp, 190.dp)
+private val PORTRAIT_METRICS = GuideMetrics(2.9.dp, 150.dp)
+private val LocalGuideMetrics = staticCompositionLocalOf { TV_METRICS }
 private val ROW_HEIGHT = 58.dp
 
 /**
@@ -141,6 +148,8 @@ fun GuideScreen() {
         }
     }
 
+    val metrics = if (isPortrait) PORTRAIT_METRICS else TV_METRICS
+    CompositionLocalProvider(LocalGuideMetrics provides metrics) {
     Column(Modifier.fillMaxSize().padding(top = 20.dp)) {
         LazyRow(
             modifier = Modifier.focusRestorer(),
@@ -158,12 +167,20 @@ fun GuideScreen() {
         Spacer(Modifier.height(10.dp))
         ProgrammePreview(focused, playlists, reminderIds, minute, Modifier.padding(horizontal = 24.dp))
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.padding(start = 24.dp)) {
-            Spacer(Modifier.width(CHANNEL_COLUMN + 4.dp))
+        Row(Modifier.padding(start = 24.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (isTouchDevice) {
+                // Ohne Fernbedienung: Zeitfenster mit Knöpfen verschieben (sonst ◀ am ersten, ▶ am letzten Feld).
+                Row(Modifier.width(metrics.channelColumn + 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    GroupChip("◀ früher", false) { shift(-2) }
+                    GroupChip("später ▶", false) { shift(+2) }
+                }
+            } else {
+                Spacer(Modifier.width(metrics.channelColumn + 4.dp))
+            }
             for (i in 0 until 4) {
                 Text(
                     formatTime(windowStart + i * HALF_HOUR),
-                    modifier = Modifier.width(DP_PER_MINUTE * 30),
+                    modifier = Modifier.width(metrics.dpPerMinute * 30),
                     color = AyuColors.TextSecondary,
                     fontSize = 13.sp,
                 )
@@ -201,13 +218,14 @@ fun GuideScreen() {
             if (nowOffset in 0 until WINDOW / MINUTE) {
                 Box(
                     Modifier
-                        .offset(x = 24.dp + CHANNEL_COLUMN + 4.dp + DP_PER_MINUTE * nowOffset.toInt())
+                        .offset(x = 24.dp + metrics.channelColumn + 4.dp + metrics.dpPerMinute * nowOffset.toInt())
                         .width(2.dp)
                         .fillMaxHeight()
                         .background(AyuColors.Live),
                 )
             }
         }
+    }
     }
 }
 
@@ -281,9 +299,10 @@ private fun GuideRow(
     onFocusProgramme: (ProgrammeEntity) -> Unit,
     onPlay: (ProgrammeEntity?) -> Unit,
 ) {
+    val metrics = LocalGuideMetrics.current
     Row(Modifier.height(ROW_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
         Row(
-            Modifier.width(CHANNEL_COLUMN).fillMaxHeight().background(AyuColors.Surface, RoundedCornerShape(8.dp)).padding(horizontal = 10.dp),
+            Modifier.width(metrics.channelColumn).fillMaxHeight().background(AyuColors.Surface, RoundedCornerShape(8.dp)).padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ChannelLogo(channel.logo, channel.name, Modifier.size(width = 48.dp, height = 32.dp))
@@ -297,9 +316,9 @@ private fun GuideRow(
         }
         Spacer(Modifier.width(4.dp))
 
-        val cells = remember(programmes, windowStart) { layoutCells(programmes, windowStart, windowEnd) }
+        val cells = remember(programmes, windowStart, metrics) { layoutCells(programmes, windowStart, windowEnd, metrics.dpPerMinute) }
         if (cells.isEmpty()) {
-            GuideCell("Keine Programmdaten", null, DP_PER_MINUTE * (WINDOW / MINUTE).toInt(), live = true, first = false, last = false, onShift, {}) { onPlay(null) }
+            GuideCell("Keine Programmdaten", null, metrics.dpPerMinute * (WINDOW / MINUTE).toInt(), live = true, first = false, last = false, onShift, {}) { onPlay(null) }
         } else {
             val firstIndex = cells.indexOfFirst { it.programme != null }
             val lastIndex = cells.indexOfLast { it.programme != null }
@@ -332,15 +351,15 @@ private fun GuideRow(
 
 private class Cell(val programme: ProgrammeEntity?, val width: Dp)
 
-private fun layoutCells(programmes: List<ProgrammeEntity>, windowStart: Long, windowEnd: Long): List<Cell> {
+private fun layoutCells(programmes: List<ProgrammeEntity>, windowStart: Long, windowEnd: Long, dpPerMinute: Dp): List<Cell> {
     val cells = ArrayList<Cell>()
     var cursor = windowStart
     for (p in programmes.sortedBy { it.start }) {
         val start = maxOf(p.start, cursor)
         val end = minOf(p.stop, windowEnd)
         if (end <= start) continue
-        if (start > cursor) cells += Cell(null, DP_PER_MINUTE * ((start - cursor) / MINUTE).toInt())
-        cells += Cell(p, DP_PER_MINUTE * ((end - start) / MINUTE).toInt().coerceAtLeast(4))
+        if (start > cursor) cells += Cell(null, dpPerMinute * ((start - cursor) / MINUTE).toInt())
+        cells += Cell(p, dpPerMinute * ((end - start) / MINUTE).toInt().coerceAtLeast(4))
         cursor = end
     }
     return cells
@@ -361,6 +380,8 @@ private fun GuideCell(
     var focused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
+        // Tippen: erst Vorschau zeigen (wie Fokussieren mit der Fernbedienung), zweites Tippen spielt.
+        focusFirst = true,
         modifier = Modifier
             .width(width)
             .fillMaxHeight()

@@ -105,18 +105,36 @@ class PhoneSetupServer(private val container: AppContainer) {
         val requestLine = readLine(input) ?: return
         val (method, path) = requestLine.split(' ').let { (it.getOrNull(0) ?: "") to (it.getOrNull(1) ?: "") }
         var length = 0
+        var contentType = ""
         while (true) {
             val header = readLine(input) ?: return
             if (header.isEmpty()) break
             if (header.startsWith("Content-Length:", ignoreCase = true)) {
                 length = header.substringAfter(':').trim().toIntOrNull()?.coerceIn(0, MAX_BODY) ?: 0
             }
+            if (header.startsWith("Content-Type:", ignoreCase = true)) contentType = header.substringAfter(':').trim()
         }
-        if (path.substringBefore('?').trimEnd('/') != "/$pin") {
+        val route = path.substringBefore('?').trimEnd('/')
+        if (route != "/$pin" && route != "/$pin/backup" && route != "/$pin/restore") {
             // Falsche PIN: bremsen, damit sie sich nicht durchprobieren lässt; nach vielen Fehlversuchen neue PIN.
             delay(1_000)
             if (failures.incrementAndGet() > MAX_FAILURES) rotatePin()
             respond(client, 404, "<h1>Falsche Adresse</h1><p>Bitte die Adresse genau so eingeben, wie sie auf dem Fernseher steht.</p>")
+            return
+        }
+        if (route == "/$pin/backup") {
+            val bytes = Backup(container).create().toByteArray(Charsets.UTF_8)
+            val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.GERMANY).format(java.util.Date())
+            respondBytes(client, "application/json; charset=utf-8", bytes, "Content-Disposition: attachment; filename=\"dna-tv-sicherung-$day.json\"\r\n")
+            return
+        }
+        if (route == "/$pin/restore" && method == "POST") {
+            val raw = ByteArray(length).also { readFully(input, it) }
+            val text = multipartFile(raw, contentType) ?: raw.toString(Charsets.UTF_8)
+            val line = runCatching { Backup(container).restore(text) }
+                .fold({ KeyCheck.Line(true, it) }, { KeyCheck.Line(false, it.message ?: "Sicherung konnte nicht eingespielt werden") })
+            _state.value = _state.value.copy(lastSaved = (if (line.ok) "✓ " else "✗ ") + line.text)
+            respond(client, 200, page(container.settings.current(), listOf(line)) + guideReport())
             return
         }
         if (method == "POST") {
@@ -205,6 +223,16 @@ class PhoneSetupServer(private val container: AppContainer) {
 
             <button>Speichern und prüfen</button>
             </form>
+
+            <h2>Sicherung</h2>
+            <p>Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, gefolgte Vereine und alle Einstellungen
+            in einer Datei. Damit ist ein neuer Fire TV in einer Minute eingerichtet. Die Datei enthält Passwörter:
+            gut aufbewahren. Die Kindersicherung wird nicht mitgesichert.</p>
+            <p><a href="/$pin/backup" download>⬇ Sicherung herunterladen</a></p>
+            <form method=post action="/$pin/restore" enctype="multipart/form-data">
+            <label>Sicherung einspielen<input name=backup type=file accept=".json,application/json"></label>
+            <button>Sicherung einspielen</button>
+            </form>
         """.trimIndent()
     }
 
@@ -255,6 +283,30 @@ class PhoneSetupServer(private val container: AppContainer) {
         }.onFailure { Log.w(TAG, "Antwort fehlgeschlagen", it) }
     }
 
+    private fun respondBytes(client: Socket, contentType: String, bytes: ByteArray, extraHeaders: String = "") {
+        runCatching {
+            client.getOutputStream().apply {
+                write(
+                    ("HTTP/1.1 200 OK\r\nContent-Type: $contentType\r\nContent-Length: ${bytes.size}\r\n" +
+                        "Cache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n$extraHeaders" +
+                        "Connection: close\r\n\r\n").toByteArray()
+                )
+                write(bytes)
+                flush()
+            }
+        }.onFailure { Log.w(TAG, "Antwort fehlgeschlagen", it) }
+    }
+
+    /** Inhalt der ersten hochgeladenen Datei aus einem multipart/form-data-Formular, sonst null. */
+    private fun multipartFile(body: ByteArray, contentType: String): String? {
+        val boundary = contentType.substringAfter("boundary=", "").trim('"').takeIf { it.isNotEmpty() } ?: return null
+        // ISO-8859-1 bildet jedes Byte auf ein Zeichen ab: so bleiben die UTF-8-Bytes unverändert.
+        val text = body.toString(Charsets.ISO_8859_1)
+        val part = text.split("--$boundary").firstOrNull { "filename=" in it.substringBefore("\r\n\r\n") } ?: return null
+        val content = part.substringAfter("\r\n\r\n", "").removeSuffix("\r\n")
+        return content.toByteArray(Charsets.ISO_8859_1).toString(Charsets.UTF_8).takeIf { it.isNotBlank() }
+    }
+
     private fun readLine(input: InputStream): String? {
         val out = StringBuilder()
         while (true) {
@@ -295,7 +347,8 @@ class PhoneSetupServer(private val container: AppContainer) {
     private companion object {
         const val TAG = "PhoneSetup"
         const val PORT = 8095
-        const val MAX_BODY = 64 * 1024
+        /** Groß genug für eine Sicherung mit vielen Favoriten. */
+        const val MAX_BODY = 4 * 1024 * 1024
         const val MAX_CLIENTS = 4
         const val MAX_FAILURES = 20
     }

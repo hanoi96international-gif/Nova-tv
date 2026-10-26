@@ -1,5 +1,6 @@
 package de.ayutv.ui.vod
 
+import de.ayutv.ui.components.isPortrait
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,7 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
+import de.ayutv.ui.components.Surface
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import de.ayutv.data.db.GroupKind
@@ -178,13 +179,14 @@ private fun SeriesDetail(series: SeriesEntity) {
     val activeSeason = if (season in seasons) season else seasons.firstOrNull() ?: 1
 
     Row(Modifier.fillMaxSize().padding(32.dp)) {
-        Column(Modifier.width(260.dp)) {
+        val portrait = isPortrait
+        Column(Modifier.width(if (portrait) 170.dp else 260.dp)) {
             if (!series.cover.isNullOrBlank()) {
                 AsyncImage(
                     model = series.cover,
                     contentDescription = series.name,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(width = 240.dp, height = 360.dp).clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier.size(width = if (portrait) 160.dp else 240.dp, height = if (portrait) 240.dp else 360.dp).clip(RoundedCornerShape(12.dp)),
                 )
             }
             Spacer(Modifier.height(16.dp))
@@ -223,9 +225,9 @@ private fun SeriesDetail(series: SeriesEntity) {
                                 PlayerActivity.startVod(
                                     context,
                                     VodRequest(
-                                        key = "${series.key}:e:${episode.id}",
+                                        key = de.ayutv.data.parse.Episodes.key(series.key, episode.id),
                                         kind = HistoryKind.EPISODE,
-                                        title = "${series.name} – S${episode.season} E${episode.episode}",
+                                        title = de.ayutv.data.parse.Episodes.title(series.name, episode),
                                         subtitle = episode.title,
                                         image = episode.image ?: series.cover,
                                         url = url,
