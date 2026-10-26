@@ -24,6 +24,8 @@
         <intent>
             <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
         </intent>
+        <!-- „In VLC öffnen“ im Player-Menü, wenn VLC installiert ist. -->
+        <package android:name="org.videolan.vlc" />
     </queries>
 
     <application

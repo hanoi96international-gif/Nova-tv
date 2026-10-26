@@ -15,8 +15,16 @@ object AppTime {
     @Volatile var corrected: Boolean = false
         private set
 
+    /** Zeitzone, die das Gerät meldet (vor einer Korrektur). */
+    @Volatile var deviceZone: String = TimeZone.getDefault().id
+        private set
+
+    /** Fire TV meldet UTC/GMT (bei anderer Sprache als Deutsch bleibt das so: dann ist der Hinweis nötig). */
+    val deviceOnUtc: Boolean get() = deviceZone in UTC_IDS
+
     fun fixZone() {
         val device = TimeZone.getDefault()
+        deviceZone = device.id
         val zone = replacement(device.id, Locale.getDefault()) ?: return
         TimeZone.setDefault(TimeZone.getTimeZone(zone))
         corrected = true

@@ -8,8 +8,8 @@ import java.io.File
  * Womit Übersetzer und Texterkennung rechnen:
  * - ONNX Runtime (nativ, schnell), auf 64-Bit-Geräten;
  * - DnA-Rechenkern (reines Kotlin, kann nicht nativ abstürzen, braucht kaum Arbeitsspeicher), auf
- *   32-Bit-ARM (Fire TV Stick 4K: dort stürzt ONNX Runtime ab) und überall, wo ONNX Runtime einmal
- *   abgestürzt ist.
+ *   32-Bit-ARM (Fire TV Stick 4K: dort stürzt ONNX Runtime ab) und dort, wo ONNX Runtime in dieser
+ *   Version schon einmal abgestürzt ist (mit der nächsten Version wird es wieder versucht).
  */
 object Engine {
     enum class Kind(val label: String) {
@@ -25,7 +25,14 @@ object Engine {
             "kern" -> return Kind.KERN
             "ort" -> return Kind.ORT
         }
-        if (File(baseDir, ORT_CRASHED).isFile) return Kind.KERN
+        val crashed = File(baseDir, ORT_CRASHED)
+        if (crashed.isFile) {
+            // Mit jeder neuen Version einmal wieder das schnelle ONNX Runtime versuchen (der Absturz kann
+            // behoben sein); stürzt es wieder ab, schreibt markOrtCrash die neue Version hinein.
+            val version = runCatching { crashed.readText().trim() }.getOrNull()
+            if (version == de.ayutv.BuildConfig.VERSION_NAME || version.isNullOrEmpty()) return Kind.KERN
+            crashed.delete()
+        }
         val is64 = if (Build.VERSION.SDK_INT >= 23) Process.is64Bit() else Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
         return if (is64) Kind.ORT else Kind.KERN
     }

@@ -54,6 +54,7 @@ class PlaylistRepository(
     private val settings: SettingsStore,
     cacheDir: File,
     private val overrides: de.ayutv.data.EpgOverrides? = null,
+    private val limits: de.ayutv.data.AccountLimits? = null,
 ) {
     /** Downloads landen hier vollständig, bevor importiert wird (keine offene Verbindung während der Transaktion). */
     private val importDir = File(cacheDir, "import")
@@ -376,7 +377,10 @@ class PlaylistRepository(
             seriesFile?.let(::discard)
         }
         // Zeitzone des Servers merken: Archiv-Adressen werden in Serverzeit angegeben.
-        val timezone = runCatching { client.account()?.timezone }.getOrNull() ?: playlist.timezone
+        val account = runCatching { client.account() }.getOrNull()
+        val timezone = account?.timezone ?: playlist.timezone
+        // Verbindungslimit merken: Davor warnt die App, bevor eine Aufnahme die einzige Verbindung belegt.
+        account?.maxConnections?.let { limits?.set(playlist.id, it) }
         return playlist.copy(lastSync = System.currentTimeMillis(), timezone = timezone)
     }
 
@@ -430,11 +434,14 @@ class PlaylistRepository(
         val withGuide: Int,
         val total: Int,
         val sources: List<Pair<String, Int>>,
-        /** Sender ohne Programm: Gruppe und Name. */
-        val missingInGroups: List<Pair<String, String>>,
+        /** Sender ohne Programm (Zeile in der Datenbank beim letzten Laden, Gruppe, Name). */
+        val missingChannels: List<MissingChannel>,
     ) {
-        val missing: List<String> get() = missingInGroups.map { it.second }.distinct()
+        val missingInGroups: List<Pair<String, String>> get() = missingChannels.map { it.group to it.name }
+        val missing: List<String> get() = missingChannels.map { it.name }.distinct()
     }
+
+    data class MissingChannel(val rowId: Long?, val group: String, val name: String)
 
     fun epgStatus(playlistId: Long): EpgStatus? = runCatching {
         val lines = File(statusDir, "epg-$playlistId.txt").readLines()
@@ -442,7 +449,9 @@ class PlaylistRepository(
         EpgStatus(
             withGuide, total,
             lines.filter { it.startsWith("S\t") }.map { it.split('\t').let { p -> p[1] to p[2].toInt() } },
-            lines.filter { it.startsWith("M\t") }.map { it.split('\t').let { p -> if (p.size >= 3) p[1] to p[2] else "" to p.last() } },
+            lines.filter { it.startsWith("M\t") }.map {
+                it.split('\t').let { p -> if (p.size >= 3) MissingChannel(p.getOrNull(3)?.toLongOrNull(), p[1], p[2]) else MissingChannel(null, "", p.last()) }
+            },
         )
     }.getOrNull()
 
@@ -529,13 +538,13 @@ class PlaylistRepository(
 
     private fun writeStatus(playlistId: Long, channels: List<EpgChannel>, visible: Set<Long>, covered: Set<Long>, counts: List<Pair<String, Int>>) {
         val shown = channels.filter { it.id in visible }
-        val missing = shown.filter { it.id !in covered }.map { it.groupTitle.trim() to it.name.trim() }.distinct()
+        val missing = shown.filter { it.id !in covered }.distinctBy { it.groupTitle.trim() to it.name.trim() }
         runCatching {
             statusDir.mkdirs()
             File(statusDir, "epg-$playlistId.txt").writeText(buildString {
                 append("${shown.count { it.id in covered }}\t${shown.size}\n")
                 for ((label, count) in counts) append("S\t${label.replace('\t', ' ')}\t$count\n")
-                for ((group, name) in missing.take(MAX_MISSING_LISTED)) append("M\t${group.clean()}\t${name.clean()}\n")
+                for (c in missing.take(MAX_MISSING_LISTED)) append("M\t${c.groupTitle.trim().clean()}\t${c.name.trim().clean()}\t${c.id}\n")
             })
         }
     }

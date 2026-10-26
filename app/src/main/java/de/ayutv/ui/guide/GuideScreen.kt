@@ -144,7 +144,12 @@ fun GuideScreen() {
                 channel.userAgent ?: appSettings?.userAgent ?: de.ayutv.data.AppSettings.DEFAULT_USER_AGENT,
                 programme.start, programme.stop, programme.icon ?: channel.logo,
             )
-            android.widget.Toast.makeText(context, if (on) "⏺ Wird aufgenommen: ${programme.headline()}" else "Aufnahme entfernt", android.widget.Toast.LENGTH_SHORT).show()
+            val warning = if (on) de.ayutv.data.AccountLimits.recordingWarning(container.accountLimits.maxConnections(channel.playlistId)) else null
+            android.widget.Toast.makeText(
+                context,
+                (if (on) "⏺ Wird aufgenommen: ${programme.headline()}" else "Aufnahme entfernt") + warning?.let { "\n$it" }.orEmpty(),
+                if (warning != null) android.widget.Toast.LENGTH_LONG else android.widget.Toast.LENGTH_SHORT,
+            ).show()
         }
     }
     val play: (ChannelEntity, ProgrammeEntity?) -> Unit = { channel, programme ->

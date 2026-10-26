@@ -54,6 +54,7 @@ import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
 import de.ayutv.data.DeviceInfo
 import de.ayutv.data.Languages
+import de.ayutv.data.record.Recording
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.IntroStore
@@ -118,6 +119,10 @@ class PlayerActivity : ComponentActivity() {
     var showTech by mutableStateOf(false); private set
     /** Gepufferte Sekunden (nur aktualisiert, solange die Stream-Info sichtbar ist). */
     var bufferedMs by mutableLongStateOf(0L); private set
+    /** Abbrüche der Verbindung zum Anbieter beim laufenden Sender, für die Technik-Anzeige. */
+    var dropInfo by mutableStateOf(""); private set
+    private var seenDrops = 0
+    private var dropWarnedAt = 0L
     /** Live: Wiedergabe läuft gerade minimal langsamer, um wieder Vorrat aufzubauen. */
     var cushionActive by mutableStateOf(false); private set
     var stats by mutableStateOf(StreamStats()); private set
@@ -405,7 +410,10 @@ class PlayerActivity : ComponentActivity() {
         while (true) {
             delay(1_000)
             val p = player ?: continue
-            if (isLive) updateTimeshiftState(p)
+            if (isLive) {
+                updateTimeshiftState(p)
+                checkDrops()
+            }
             if (seenGeneration != streamGeneration) {
                 seenGeneration = streamGeneration
                 stalledSeconds = 0
@@ -448,6 +456,28 @@ class PlayerActivity : ComponentActivity() {
                 lastReconnect = now
                 reconnect("Bild hängt, verbinde neu …")
             }
+        }
+    }
+
+    /**
+     * Die Datenquelle verbindet nach einem Abbruch selbst neu (der Puffer überbrückt das). Passiert das
+     * oft, liegt es meist am WLAN oder an zu vielen Verbindungen beim Anbieter: einmal deutlich sagen.
+     */
+    private fun checkDrops() {
+        val drops = timeshift.drops
+        if (drops.count == seenDrops) return
+        seenDrops = drops.count
+        val recent = drops.recent(DROP_WINDOW_MS)
+        val last = recent.lastOrNull() ?: return
+        dropInfo = "Trennungen ${recent.size}× in 10 Min. (zuletzt: ${last.reason})"
+        Log.i(TAG, "Verbindung zum Anbieter abgerissen: ${last.reason} (${recent.size}× in 10 Min.)")
+        val now = SystemClock.elapsedRealtime()
+        if (recent.size >= DROP_WARN_COUNT && message == null && (dropWarnedAt == 0L || now - dropWarnedAt > DROP_WINDOW_MS)) {
+            dropWarnedAt = now
+            val text = "Der Anbieter trennt oft die Verbindung (${recent.size}× in 10 Min.). DnA-TV verbindet jedes Mal neu. " +
+                "Hilft meist: LAN-Kabel statt WLAN, oder nicht auf zwei Geräten gleichzeitig schauen."
+            message = text
+            handler.postDelayed({ if (message == text) message = null }, 8_000)
         }
     }
 
@@ -703,6 +733,9 @@ class PlayerActivity : ComponentActivity() {
         leaveTimeshift()
         timeshift.buffer?.release()
         timeshift.buffer = newTimeshiftBuffer(url)
+        timeshift.liveUrl = url
+        seenDrops = 0
+        dropInfo = ""
         stopLiveTranslation()
         embedded?.clear()
         p.setMediaItem(mediaItem(url, guessMime(url)))
@@ -714,6 +747,7 @@ class PlayerActivity : ComponentActivity() {
         showOverlay(Overlay.INFO)
 
         loadChannelInfo(channel)
+        checkConnectionLimit(channel)
         container.scope.launch { container.content.recordLive(channel) }
         checkMobileData()
         preferSmallVariant(channel)
@@ -803,7 +837,7 @@ class PlayerActivity : ComponentActivity() {
         )
         p.prepare()
         p.playWhenReady = play
-        recorder.start(buffer, headers?.userAgent ?: settings.userAgent)
+        recorder.start(buffer, headers?.userAgent ?: settings.userAgent, timeshift.replayFilter())
         updateTimeshiftState(p)
     }
 
@@ -838,6 +872,23 @@ class PlayerActivity : ComponentActivity() {
         val buffer = timeshift.buffer
         rewindableMs = if (buffer != null && buffer.hasData) buffer.latestMs - buffer.oldestMs else 0L
         behindLiveMs = if (timeshifted && buffer != null) (buffer.latestMs - currentTimeshiftMs(p)).coerceAtLeast(0) else 0L
+    }
+
+    /**
+     * Läuft beim selben Anbieter eine Aufnahme und erlaubt das Konto nur eine Verbindung, gleich sagen,
+     * warum das Bild ausbleibt (sonst sieht es aus wie ein kaputter Sender).
+     */
+    private fun checkConnectionLimit(channel: ChannelEntity) {
+        if (container.accountLimits.maxConnections(channel.playlistId) != 1) return
+        val running = container.recordings.all.value.filter { it.state == Recording.State.RUNNING && it.kind == Recording.Kind.RECORDING }
+        if (running.isEmpty()) return
+        lifecycleScope.launch {
+            val busy = running.any { r -> r.channelKey?.let { container.content.channel(it) }?.playlistId == channel.playlistId }
+            if (!busy || current?.key != channel.key) return@launch
+            val text = "Gerade läuft eine Aufnahme, und dein Konto erlaubt nur 1 Verbindung. Dieser Sender startet erst, wenn die Aufnahme fertig ist."
+            message = text
+            handler.postDelayed({ if (message == text) message = null }, 8_000)
+        }
     }
 
     /** EPG und Favorit für die Infoleiste; eine ältere Abfrage überschreibt nie die des neuen Senders. */
@@ -1303,6 +1354,24 @@ class PlayerActivity : ComponentActivity() {
     fun openLanguagePicker() {
         languagePicker = true
         overlayToken++
+        warmUpTranslator()
+    }
+
+    private var warmUpJob: Job? = null
+
+    /**
+     * Während die Sprache gewählt wird, schon das Modell der zuletzt gewählten Richtung laden: Auf dem
+     * Fire TV Stick dauert das bis zu einer Minute, so steht die erste Zeile früher da.
+     */
+    private fun warmUpTranslator() {
+        if (warmUpJob?.isActive == true || liveTranslateTarget != null || Translators.from(settings) == null) return
+        val target = settings.lastTranslationTarget.ifEmpty { return }
+        val source = bestTranslationSource()?.let { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) } ?: return
+        if (source == target || Translators.remote.isWarm(source, target)) return
+        warmUpJob = lifecycleScope.launch {
+            runCatching { Translators.remote.translate(listOf("Hello."), target, source) }
+                .onFailure { Log.i(SUBTITLE_TAG, "Übersetzer vorab laden: ${it.message}") }
+        }
     }
 
     fun closeLanguagePicker() {
@@ -1332,6 +1401,7 @@ class PlayerActivity : ComponentActivity() {
         unlabelledTexts.clear()
         cueTranslations.clear()
         liveTranslateTarget = target
+        if (settings.lastTranslationTarget != target) container.scope.launch { container.settings.update { it.copy(lastTranslationTarget = target) } }
         startAhead(format, target)
         val via = Translators.from(settings)?.name?.let { " mit $it" }.orEmpty()
         val kind = if (format.isBitmapSubtitle()) "Bild-Untertitel " else ""
@@ -1371,20 +1441,38 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
             var failures = 0
+            // Wie lange eine Zeile gerade dauert (gleitender Mittelwert, ohne das erste Laden des Modells).
+            var lineMs = 0L
+            var done = 0
+            val skipped = HashSet<Long>()
+            var slowWarned = false
+            val wanted: (de.ayutv.player.EmbeddedSubtitles.Entry) -> Boolean =
+                { it.startMs !in aheadTranslations && (it.text != null || it.image != null) }
             while (true) {
                 val store = embedded ?: break
                 val position = player?.currentPosition ?: 0L
-                val next = store.upcoming(format, position - 2_000, 1) { it.startMs !in aheadTranslations && (it.text != null || it.image != null) }
-                    .firstOrNull()
+                // Kommt das Gerät nicht hinterher, die Zeilen überspringen, die vorbei wären, bevor ihre
+                // Übersetzung fertig ist: lieber jede zweite Zeile übersetzt als jede zu spät (dann bliebe alles im Original).
+                val earliest = position - 2_000
+                val from = if (lineMs > 0) maxOf(earliest, position + lineMs * 13 / 10 - 1_000) else earliest
+                val next = store.upcoming(format, from, 1, wanted).firstOrNull()
                 if (next == null) {
                     delay(250)
                     continue
                 }
+                if (from > earliest) store.upcoming(format, earliest, 20) { wanted(it) && it.startMs < from }.forEach { skipped += it.startMs }
                 try {
                     val started = SystemClock.elapsedRealtime()
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
                     aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, sourceFor(text)).first()
-                    Log.i(SUBTITLE_TAG, "Vorlauf ${(next.startMs - position) / 1000} s, ${SystemClock.elapsedRealtime() - started} ms: $text → ${aheadTranslations[next.startMs]}")
+                    val took = SystemClock.elapsedRealtime() - started
+                    Log.i(SUBTITLE_TAG, "Vorlauf ${(next.startMs - position) / 1000} s, $took ms: $text → ${aheadTranslations[next.startMs]}")
+                    if (text.isNotBlank() && done++ > 0) lineMs = if (lineMs == 0L) took else (lineMs * 3 + took) / 4
+                    if (!slowWarned && done >= 8 && skipped.size >= done) {
+                        slowWarned = true
+                        subtitleStatus = slowTranslationHint(target, lineMs)
+                        Log.i(SUBTITLE_TAG, "Gerät zu langsam: $done Zeilen übersetzt, ${skipped.size} übersprungen, $lineMs ms pro Zeile")
+                    }
                     failures = 0
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
@@ -1406,6 +1494,13 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Ehrlich sagen, dass das Gerät nicht mitkommt, und was stattdessen hilft. */
+    private fun slowTranslationHint(target: String, lineMs: Long): String {
+        val seconds = String.format(Locale.GERMAN, "%.1f", lineMs / 1000f)
+        val tip = if (vod != null) " Besser: ☰ → „${Languages.label(target)} laden“ (fertige Untertitel)." else ""
+        return "Dieses Gerät ist für Live-Übersetzung zu langsam ($seconds s pro Zeile). Ein Teil der Zeilen bleibt im Original.$tip"
     }
 
     /** Gelesene Zeilen einer Spur ohne Sprachangabe, um ihre Sprache zu erkennen. */
@@ -2095,7 +2190,35 @@ class PlayerActivity : ComponentActivity() {
             val on = container.recordings.toggleRecording(
                 channel.key, channel.name, title, channel.url, channel.userAgent ?: settings.userAgent, start, stop, programme?.icon ?: channel.logo,
             )
-            message = if (on) "⏺ Wird aufgenommen bis ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(stop))}: $title" else "Aufnahme entfernt"
+            val warning = if (on) de.ayutv.data.AccountLimits.recordingWarning(container.accountLimits.maxConnections(channel.playlistId)) else null
+            message = (if (on) "⏺ Wird aufgenommen bis ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(stop))}: $title" else "Aufnahme entfernt") +
+                warning?.let { "\n$it" }.orEmpty()
+        }
+    }
+
+    /** VLC ist installiert (Fire TV: Amazon Appstore). Manche kaputten Streams spielt es robuster ab. */
+    val vlcAvailable: Boolean by lazy { runCatching { packageManager.getPackageInfo(VLC_PACKAGE, 0) }.isSuccess }
+
+    /**
+     * Den laufenden Stream an VLC übergeben. DnA-TV hält vorher an und schließt den Player: Viele Konten
+     * erlauben nur eine Verbindung, VLC bekäme sonst „zu viele Verbindungen“.
+     */
+    fun openInVlc() {
+        val request = vod
+        val url = request?.url ?: playing?.let { adaptLiveUrl(it.url) } ?: return
+        val intent = Intent(Intent.ACTION_VIEW)
+            .setPackage(VLC_PACKAGE)
+            .setDataAndType(android.net.Uri.parse(url), "video/*")
+            .putExtra("title", request?.title ?: playing?.name)
+            .apply { if (request != null) player?.currentPosition?.takeIf { it > 0 }?.let { putExtra("position", it) } }
+        player?.stop()
+        try {
+            startActivity(intent)
+            finish()
+        } catch (e: Exception) {
+            Log.w(TAG, "VLC nicht gestartet", e)
+            message = "VLC ließ sich nicht starten"
+            restartStream()
         }
     }
 
@@ -2663,6 +2786,9 @@ class PlayerActivity : ComponentActivity() {
         const val SUBTITLE_TAG = "AyuSubtitles"
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 8
+        private const val VLC_PACKAGE = "org.videolan.vlc"
+        private const val DROP_WINDOW_MS = 10 * 60_000L
+        private const val DROP_WARN_COUNT = 3
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
         private const val WRONG_FILE_REFERENCES = 60

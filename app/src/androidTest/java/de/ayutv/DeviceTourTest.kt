@@ -401,7 +401,7 @@ class DeviceTourTest {
                         scenario.read { it.player?.playbackState } == Player.STATE_BUFFERING -> buffering++
                     }
                 }
-                log("flaky: playing_s=$playing buffering_s=$buffering cushion=${scenario.read { it.cushionActive }} message=${scenario.read { it.message }}")
+                log("flaky: playing_s=$playing buffering_s=$buffering cushion=${scenario.read { it.cushionActive }} drops=${scenario.read { it.dropInfo }} message=${scenario.read { it.message }}")
                 assertTrue("Live-Stream hängt bei Verbindungsabbrüchen ($playing von 50 s gelaufen)", playing >= 45)
             }
         } }
