@@ -1,0 +1,37 @@
+name: EPG-Probe-3
+on:
+  push:
+    branches: [epg-probe3]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Sky Sport Austria ansehen
+        run: |
+          set +e
+          mkdir out && cd out
+          for f in DE1 AT1 CH1; do
+            curl -sSL -m 120 -o "../$f.gz" "https://epgshare01.online/epgshare01/epg_ripper_${f}.xml.gz" && zcat "../$f.gz" > "../$f.xml"
+          done
+          python3 - <<'PY'
+          import re, html
+          for f in ["DE1","AT1","CH1"]:
+              data = open("../%s.xml" % f, encoding="utf-8", errors="replace").read()
+              chans = re.findall(r'<channel id="([^"]*)">(.*?)</channel>', data, re.S)
+              out = open("%s.austria.txt" % f, "w")
+              for cid, body in chans:
+                  if re.search(r'(?i)austria|skyspoaus|sky\.sport\.[0-9]', cid):
+                      out.write("CHANNEL %s %s\n" % (cid, re.sub(r'\s+',' ', body)[:200]))
+              for m in re.finditer(r'<programme start="([^"]*)" stop="([^"]*)" channel="([^"]*)"[^>]*>(.*?)</programme>', data, re.S):
+                  start, stop, ch, body = m.groups()
+                  if not re.search(r'(?i)austria|skyspoaus|sky\.sport\.[0-9]', ch): continue
+                  t = re.search(r'<title[^>]*>(.*?)</title>', body, re.S)
+                  s = re.search(r'<sub-title[^>]*>(.*?)</sub-title>', body, re.S)
+                  c = re.search(r'<category[^>]*>(.*?)</category>', body, re.S)
+                  out.write("%s %s %-28s | %s | %s | %s\n" % (start[:12], stop[8:12], ch, html.unescape(t.group(1)) if t else "", html.unescape(s.group(1)) if s else "", html.unescape(c.group(1)) if c else ""))
+          PY
+          git init -q -b epg-probe3-results && git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm results && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" epg-probe3-results
