@@ -125,7 +125,7 @@ fun PlayerScreen(activity: PlayerActivity) {
                     it.subtitleView?.setApplyEmbeddedStyles(false)
                     it.subtitleView?.setStyle(captionStyle(activity.subtitleLook))
                     // Eigene Einblendung (Übersetzung, geladene Datei): Die Spur des Players läuft nur als Taktgeber mit.
-                    it.subtitleView?.visibility = if (activity.ownSubtitles) View.INVISIBLE else View.VISIBLE
+                    it.subtitleView?.visibility = if (activity.ownSubtitles && !activity.originalVisible) View.INVISIBLE else View.VISIBLE
                     // Untertitel über die Steuerleiste anheben, solange sie sichtbar ist.
                     val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
                     it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else activity.subtitleLook.position.bottomFraction)

@@ -191,6 +191,8 @@ class PlayerActivity : ComponentActivity() {
     var subtitleAutoSynced by mutableStateOf(false); private set
     /** Untertitel kommen nicht vom Player, sondern aus DnA-TV (Übersetzung oder geladene Datei). */
     val ownSubtitles: Boolean get() = liveTranslateTarget != null || externalLanguage != null
+    /** Live-Übersetzung von Bild-Untertiteln: Die aktuelle Zeile ist noch nicht übersetzt, das Original bleibt sichtbar. */
+    var originalVisible by mutableStateOf(false); private set
     private var externalCues: List<TimedCue> = emptyList()
     private var externalTexts: java.util.concurrent.atomic.AtomicReferenceArray<String>? = null
     private var externalJob: Job? = null
@@ -1343,8 +1345,11 @@ class PlayerActivity : ComponentActivity() {
                     val store = embedded
                     if (store != null && store.hasEntries(format)) {
                         val entry = store.at(format, player?.currentPosition ?: 0L)
-                        // Noch nicht übersetzt: Text im Original zeigen, Bild-Untertitel erst mit Übersetzung.
-                        translatedCue = entry?.let { aheadTranslations[it.startMs]?.ifEmpty { null } ?: if (bitmap) null else it.text }
+                        val translated = entry?.let { aheadTranslations[it.startMs]?.ifEmpty { null } }
+                        // Noch nicht übersetzt: das Original zeigen (Text selbst, Bild-Untertitel über den Player)
+                        // statt gar nichts, solange der Übersetzer lädt oder nicht hinterherkommt.
+                        translatedCue = translated ?: if (bitmap) null else entry?.text
+                        originalVisible = bitmap && entry != null && translated == null
                     }
                     delay(100)
                 }
@@ -1367,6 +1372,13 @@ class PlayerActivity : ComponentActivity() {
                     failures = 0
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
+                } catch (e: de.ayutv.data.translate.RemoteTranslator.NoAnswer) {
+                    // Übersetzer hängt (Modell lädt auf diesem Gerät zu lange): beenden statt endlos warten.
+                    Log.w(SUBTITLE_TAG, "Übersetzer antwortet nicht", e)
+                    Translators.remote.abort(e.message ?: "keine Antwort")
+                    stopLiveTranslation()
+                    fallbackToLoaded(target, "${e.message}. Test: Einstellungen → Untertitel → Übersetzer testen")
+                    break
                 } catch (e: Exception) {
                     Log.w(SUBTITLE_TAG, "Übersetzung mit Vorlauf fehlgeschlagen", e)
                     aheadTranslations[next.startMs] = next.text.orEmpty()
@@ -1400,6 +1412,7 @@ class PlayerActivity : ComponentActivity() {
         aheadJob = null
         aheadFormat = null
         aheadTranslations.clear()
+        originalVisible = false
         embedded?.readImagesOf(null)
     }
 
@@ -1716,6 +1729,7 @@ class PlayerActivity : ComponentActivity() {
                 .onFailure {
                     if (it is kotlinx.coroutines.CancellationException) return@onFailure
                     Log.w(SUBTITLE_TAG, "Live-Übersetzung fehlgeschlagen", it)
+                    if (it is de.ayutv.data.translate.RemoteTranslator.NoAnswer) Translators.remote.abort(it.message.orEmpty())
                     stopLiveTranslation()
                     subtitleStatus = "Übersetzung nicht möglich: ${it.message ?: it.javaClass.simpleName}"
                 }
@@ -1766,6 +1780,7 @@ class PlayerActivity : ComponentActivity() {
                 throw e
             } catch (e: Exception) {
                 Log.w(SUBTITLE_TAG, "Übersetzung der Datei fehlgeschlagen", e)
+                if (e is de.ayutv.data.translate.RemoteTranslator.NoAnswer) Translators.remote.abort(e.message.orEmpty())
                 subtitleStatus = "Übersetzung nicht möglich: ${e.message ?: e.javaClass.simpleName}"
                 stopLiveTranslation()
             }
