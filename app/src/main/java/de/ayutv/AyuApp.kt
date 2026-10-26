@@ -45,7 +45,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
                 else -> Unit
             }
         })
-        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+        registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) { container.foreground = java.lang.ref.WeakReference(activity) }
             override fun onActivityPaused(activity: Activity) {
                 if (container.foreground?.get() === activity) container.foreground = null
