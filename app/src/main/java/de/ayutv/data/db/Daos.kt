@@ -258,6 +258,13 @@ interface HistoryDao {
     @Query("SELECT `key` FROM history WHERE kind = 'LIVE' ORDER BY watchedAt DESC LIMIT :limit")
     suspend fun recentLiveKeys(limit: Int): List<String>
 
+    /** Verlauf aller Folgen einer Serie (Schlüssel „<Serie>:e:…“): gesehen, angefangen. */
+    @Query("SELECT * FROM history WHERE `key` LIKE :prefix || '%'")
+    fun observeWithPrefix(prefix: String): Flow<List<HistoryEntity>>
+
+    @Query("SELECT * FROM history WHERE `key` = :key")
+    fun observeByKey(key: String): Flow<HistoryEntity?>
+
     @Query("DELETE FROM history")
     suspend fun clear()
 }

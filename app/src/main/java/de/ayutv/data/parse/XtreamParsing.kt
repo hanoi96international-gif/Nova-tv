@@ -53,6 +53,21 @@ data class XtreamEpisode(
     val durationSeconds: Long,
 )
 
+/** Angaben zu einem Film (get_vod_info). Alles optional: Panels füllen sehr unterschiedlich viel aus. */
+data class XtreamMovieInfo(
+    val plot: String? = null,
+    val cast: String? = null,
+    val director: String? = null,
+    val genre: String? = null,
+    val year: Int? = null,
+    val durationMinutes: Int? = null,
+    val rating: String? = null,
+    /** YouTube-Kennung des Trailers. */
+    val trailer: String? = null,
+    val backdrop: String? = null,
+    val poster: String? = null,
+)
+
 data class XtreamAccount(val status: String?, val expiresAt: Long?, val maxConnections: Int?, val timezone: String? = null)
 
 /**
@@ -150,6 +165,56 @@ object XtreamParsing {
                 )
             }
             .sortedWith(compareBy({ it.season }, { it.episode }))
+    }
+
+    fun movieInfo(input: InputStream): XtreamMovieInfo? {
+        val root = json.decodeFromStream<JsonElement>(input) as? JsonObject ?: return null
+        val info = root["info"] as? JsonObject ?: return null
+        fun text(vararg keys: String) = keys.firstNotNullOfOrNull { k -> info.str(k)?.takeIf { it != "0" && it != "N/A" } }
+        val backdrop = when (val b = info["backdrop_path"]) {
+            is JsonArray -> (b.firstOrNull() as? JsonPrimitive)?.content
+            is JsonPrimitive -> b.content
+            else -> null
+        }?.trim()?.takeIf { it.startsWith("http") }
+        val minutes = info.long("duration_secs")?.takeIf { it > 0 }?.let { (it / 60).toInt() }
+            ?: text("duration")?.let(::parseMinutes)
+            ?: text("episode_run_time")?.toIntOrNull()
+        return XtreamMovieInfo(
+            plot = text("plot", "description"),
+            cast = text("cast", "actors"),
+            director = text("director"),
+            genre = text("genre"),
+            year = text("releasedate", "release_date", "year")?.let { Regex("""(19|20)\d\d""").find(it)?.value?.toInt() },
+            durationMinutes = minutes,
+            rating = text("rating", "rating_5based")?.let(::formatRating),
+            trailer = text("youtube_trailer", "trailer")?.let(::youtubeId),
+            backdrop = backdrop,
+            poster = text("movie_image", "cover_big"),
+        )
+    }
+
+    /** „01:52:03“ oder „112 min“ in Minuten. */
+    fun parseMinutes(raw: String): Int? {
+        val parts = raw.trim().split(':').map { it.trim().toIntOrNull() ?: return Regex("""\d+""").find(raw)?.value?.toIntOrNull() }
+        return when (parts.size) {
+            3 -> parts[0] * 60 + parts[1]
+            2 -> parts[0] * 60 + parts[1]
+            else -> parts.firstOrNull()
+        }?.takeIf { it > 0 }
+    }
+
+    /** Bewertung auf eine Nachkommastelle („7.8“); 0 zählt nicht. */
+    fun formatRating(raw: String): String? {
+        val value = raw.replace(',', '.').toDoubleOrNull() ?: return null
+        if (value <= 0) return null
+        return String.format(java.util.Locale.ROOT, "%.1f", value)
+    }
+
+    /** YouTube-Kennung aus einer Kennung oder Adresse (watch?v=, youtu.be/, embed/). */
+    fun youtubeId(raw: String): String? {
+        val s = raw.trim()
+        if (Regex("""^[A-Za-z0-9_-]{11}$""").matches(s)) return s
+        return Regex("""(?:v=|youtu\.be/|embed/|shorts/)([A-Za-z0-9_-]{11})""").find(s)?.groupValues?.get(1)
     }
 
     private inline fun objects(input: InputStream, crossinline block: (JsonObject) -> Unit) {

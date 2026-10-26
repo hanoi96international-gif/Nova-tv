@@ -55,3 +55,34 @@ object IntroSkip {
     fun learn(fromMs: Long, toMs: Long): Intro? =
         (toMs - fromMs).takeIf { it in MIN_LENGTH_MS..MAX_LENGTH_MS }?.let { Intro(fromMs, it) }
 }
+
+/** Serienfortschritt: welche Folgen gesehen sind und mit welcher es weitergeht. */
+object SeriesProgress {
+    /** Gesehen: bis auf die letzten 5 % (Abspann) oder 2 Minuten. */
+    fun watched(positionMs: Long, durationMs: Long): Boolean =
+        durationMs > 0 && (positionMs >= durationMs * 0.95 || durationMs - positionMs < 120_000 && positionMs > durationMs / 2)
+
+    fun fraction(positionMs: Long, durationMs: Long): Float? =
+        if (durationMs <= 0) null else (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+
+    /**
+     * Die Folge, mit der es weitergeht: eine angefangene (die zuletzt geordnete), sonst die nach der letzten
+     * gesehenen. Null, wenn noch nichts geschaut wurde oder alles gesehen ist.
+     * [progress]: Folgen-Kennung → (Position, Länge).
+     */
+    fun upNext(episodes: List<XtreamEpisode>, progress: Map<String, Pair<Long, Long>>): XtreamEpisode? {
+        if (progress.isEmpty()) return null
+        val ordered = episodes.sortedWith(compareBy<XtreamEpisode> { it.season }.thenBy { it.episode })
+        var lastSeen = -1
+        var lastStarted = -1
+        ordered.forEachIndexed { index, e ->
+            val (position, duration) = progress[e.id] ?: return@forEachIndexed
+            when {
+                watched(position, duration) -> lastSeen = index
+                position > 60_000 -> lastStarted = index
+            }
+        }
+        if (lastStarted > lastSeen) return ordered[lastStarted]
+        return if (lastSeen >= 0) ordered.getOrNull(lastSeen + 1) else null
+    }
+}

@@ -303,7 +303,7 @@ class PlayerActivity : ComponentActivity() {
             val request = vod
             if (request != null) {
                 vodTitle = request.title
-                val resume = container.content.resumePosition(request.key)
+                val resume = if (intent.getBooleanExtra(EXTRA_FROM_START, false)) 0L else container.content.resumePosition(request.key)
                 // Datei-Hash, bevor der Player verbindet (danach nie parallel): Damit findet OpenSubtitles
                 // Untertitel, die zeitgenau zu genau dieser Datei passen.
                 if (settings.onlineSubtitlesEnabled && request.kind != HistoryKind.CATCHUP) {
@@ -2592,6 +2592,7 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_CHANNEL_KEY = "channel_key"
         private const val EXTRA_GROUP = "group"
         private const val EXTRA_FAVORITES = "favorites"
+        private const val EXTRA_FROM_START = "from_start"
         private const val EXTRA_VOD_KEY = "vod_key"
         private const val EXTRA_VOD_KIND = "vod_kind"
         private const val EXTRA_VOD_TITLE = "vod_title"
@@ -2627,7 +2628,8 @@ class PlayerActivity : ComponentActivity() {
         fun startLive(context: Context, channelKey: String, group: String?, favoritesOnly: Boolean = false) =
             context.startActivity(liveIntent(context, channelKey, group, favoritesOnly))
 
-        fun startVod(context: Context, request: VodRequest) = context.startActivity(vodIntent(context, request))
+        fun startVod(context: Context, request: VodRequest, fromStart: Boolean = false) =
+            context.startActivity(vodIntent(context, request).putExtra(EXTRA_FROM_START, fromStart))
 
         /** Vergangene Sendung aus dem Archiv des Anbieters: läuft wie ein Film (spulbar). */
         fun startCatchup(context: Context, channel: ChannelEntity, programme: ProgrammeEntity, url: String) = startVod(

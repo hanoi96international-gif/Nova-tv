@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import de.ayutv.data.parse.ProgrammeText
 import de.ayutv.data.parse.Teams
 import de.ayutv.data.parse.XtreamEpisode
+import de.ayutv.data.parse.XtreamMovieInfo
 import de.ayutv.data.parse.headline
 import de.ayutv.data.parse.isSportEvent
 import de.ayutv.data.reminders.Reminder
@@ -261,6 +262,25 @@ class ContentRepository(
     }
 
     suspend fun clearHistory() = db.history().clear()
+
+    fun historyOf(key: String) = db.history().observeByKey(key)
+
+    /** Verlauf aller Folgen einer Serie, nach Folgen-Kennung. */
+    fun episodeHistory(seriesKey: String) = db.history().observeWithPrefix(Episodes.key(seriesKey, ""))
+
+    /** Von Hand als gesehen / nicht gesehen markieren (lange OK auf einer Folge). */
+    suspend fun setWatched(entry: HistoryEntity, watched: Boolean) {
+        val duration = entry.durationMs.takeIf { it > 0 } ?: 1L
+        db.history().upsert(entry.copy(positionMs = if (watched) duration else 0L, durationMs = duration, watchedAt = System.currentTimeMillis()))
+    }
+
+    /** Angaben zum Film beim Anbieter (Handlung, Besetzung, Trailer); null, wenn das Panel keine liefert. */
+    suspend fun movieInfo(movie: VodEntity): XtreamMovieInfo? = withContext(Dispatchers.IO) {
+        val playlist = db.playlists().byId(movie.playlistId) ?: return@withContext null
+        if (playlist.type != PlaylistType.XTREAM) return@withContext null
+        val id = XtreamClient.movieIdOf(movie.url) ?: return@withContext null
+        runCatching { XtreamClient.of(http, playlist).movieInfo(id) }.getOrNull()
+    }
 
     // ---------------------------------------------------------------- Gruppen ein-/ausblenden
 
