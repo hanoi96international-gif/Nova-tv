@@ -1313,6 +1313,7 @@ class PlayerActivity : ComponentActivity() {
         val format = group.getTrackFormat(index)
         selectTrack(group, index)
         liveSourceLanguage = Languages.normalize(format.language)
+        unlabelledTexts.clear()
         cueTranslations.clear()
         liveTranslateTarget = target
         startAhead(format, target)
@@ -1332,7 +1333,6 @@ class PlayerActivity : ComponentActivity() {
         aheadTranslations.clear()
         aheadFormat = format
         val translator = Translators.from(settings) ?: return
-        val source = liveSourceLanguage
         val bitmap = format.isBitmapSubtitle()
         if (bitmap) {
             embedded?.readImagesOf(format)
@@ -1367,7 +1367,7 @@ class PlayerActivity : ComponentActivity() {
                 try {
                     val started = SystemClock.elapsedRealtime()
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
-                    aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, source).first()
+                    aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, sourceFor(text)).first()
                     Log.i(SUBTITLE_TAG, "Vorlauf ${(next.startMs - position) / 1000} s, ${SystemClock.elapsedRealtime() - started} ms: $text → ${aheadTranslations[next.startMs]}")
                     failures = 0
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1389,6 +1389,23 @@ class PlayerActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    /** Gelesene Zeilen einer Spur ohne Sprachangabe, um ihre Sprache zu erkennen. */
+    private val unlabelledTexts = ArrayList<String>()
+
+    /**
+     * Sprache der Quellspur. Nennt die Spur keine (Live-TV: „Spur 1“), wird sie am Text erkannt, sonst
+     * würde deutscher Text als Englisch übersetzt.
+     */
+    private fun sourceFor(text: String): String? {
+        liveSourceLanguage?.let { return it }
+        unlabelledTexts += text
+        if (unlabelledTexts.size > 20) unlabelledTexts.removeAt(0)
+        return Languages.guess(unlabelledTexts)?.also {
+            liveSourceLanguage = it
+            subtitleStatus = "Untertitel erkannt als ${Languages.label(it)}"
         }
     }
 
@@ -1721,7 +1738,8 @@ class PlayerActivity : ComponentActivity() {
         cueJob?.cancel()
         cueJob = lifecycleScope.launch {
             val translator = Translators.from(settings) ?: return@launch
-            runCatching { translator.translate(listOf(text), target, liveSourceLanguage).first() }
+            val source = sourceFor(text)
+            runCatching { translator.translate(listOf(text), target, source).first() }
                 .onSuccess {
                     cueTranslations[text] = it
                     translatedCue = it
