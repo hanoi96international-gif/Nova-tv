@@ -153,6 +153,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         return
     }
 
+    var mappingFor by remember { mutableStateOf<PlaylistEntity?>(null) }
+    mappingFor?.let { target ->
+        GuideMappingScreen(target, onClose = { mappingFor = null })
+        return
+    }
+
     if (pickingLanguage) {
         BackHandler { pickingLanguage = false }
         LanguageList(selected = settings.subtitleLanguage) { code ->
@@ -206,6 +212,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             confirmingDelete = confirmDelete == playlist.id,
                             onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
                             onGroups = { onManageGroups(playlist) },
+                            onMapGuide = { mappingFor = playlist },
                             onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
                             onDelete = {
                                 if (confirmDelete == playlist.id) {
@@ -521,6 +528,28 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         }
                     }
                     item {
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        val zone = java.util.TimeZone.getDefault()
+                        val name = zone.getDisplayName(zone.inDaylightTime(Date()), java.util.TimeZone.LONG, java.util.Locale.GERMAN)
+                        SettingRow(
+                            "Uhrzeit und Zeitzone",
+                            zone.id,
+                            when {
+                                de.ayutv.AppTime.corrected ->
+                                    "Der Fire TV steht auf ${de.ayutv.AppTime.deviceZone}. DnA-TV rechnet trotzdem mit $name, Uhr und TV-Guide stimmen. " +
+                                        "Für andere Apps am Fire TV: Einstellungen → Präferenzen → Datum und Uhrzeit → Zeitzone. OK öffnet die Einstellung, falls möglich."
+                                de.ayutv.AppTime.deviceOnUtc ->
+                                    "Der Fire TV steht auf UTC: Uhr und TV-Guide sind dann verschoben. Bitte die Zeitzone einstellen " +
+                                        "(Einstellungen → Präferenzen → Datum und Uhrzeit). OK öffnet die Einstellung, falls möglich."
+                                else -> "$name, wie am Gerät eingestellt."
+                            },
+                        ) {
+                            runCatching {
+                                context.startActivity(android.content.Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                            }
+                        }
+                    }
+                    item {
                         val shift = settings.epgShiftHours
                         SettingRow(
                             "TV-Guide-Zeitverschiebung",
@@ -719,9 +748,16 @@ private fun PlaylistRow(
     confirmingDelete: Boolean,
     onToggle: () -> Unit,
     onGroups: () -> Unit,
+    onMapGuide: () -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Wie viele Sender ein Programm haben, woher es kommt und welche keins haben.
+    val container = LocalContainer.current
+    val guide by produceState<PlaylistRepository.EpgStatus?>(null, playlist.id, playlist.lastEpgSync) {
+        value = withContext(Dispatchers.IO) { container.playlists.epgStatus(playlist.id) }
+    }
+    val missingGuide = guide?.missing?.isNotEmpty() == true
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -743,11 +779,6 @@ private fun PlaylistRow(
             }
             val state = if (playlist.enabled) "" else " · ausgeschaltet, erscheint nirgends"
             Text("$type · $synced$state", color = AyuColors.TextSecondary, fontSize = 13.sp)
-            // Wie viele Sender ein Programm haben, woher es kommt und welche keins haben.
-            val container = LocalContainer.current
-            val guide by produceState<PlaylistRepository.EpgStatus?>(null, playlist.id, playlist.lastEpgSync) {
-                value = withContext(Dispatchers.IO) { container.playlists.epgStatus(playlist.id) }
-            }
             guide?.let { g ->
                 val sources = g.sources.filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }
                 Text(
@@ -756,13 +787,17 @@ private fun PlaylistRow(
                 )
                 if (g.missing.isNotEmpty()) {
                     Text(
-                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " … (ganze Liste: Einrichtung per Handy)" else ""),
+                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " … (ganze Liste: „TV-Guide zuordnen“)" else ""),
                         color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 2,
                     )
                 }
             }
         }
         OutlinedButton(onClick = onGroups) { Text("Gruppen") }
+        if (missingGuide) {
+            Spacer(Modifier.width(10.dp))
+            OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
+        }
         Spacer(Modifier.width(10.dp))
         OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
         Spacer(Modifier.width(10.dp))

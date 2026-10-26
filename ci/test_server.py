@@ -8,10 +8,13 @@ import json
 import os
 import re
 import sys
+import time
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "ci-media")
+# Startzeit des wackeligen Senders: Er „läuft“ ab Serverstart, wie ein echter Live-Sender.
+FLAKY_EPOCH = time.time()
 USER, PASSWORD = "ayu", "test"
 
 LIVE = [
@@ -85,10 +88,15 @@ class Handler(SimpleHTTPRequestHandler):
         path = os.path.join(ROOT, "hd50.ts")
         size = os.path.getsize(path)
         rate = size / 90.0  # Bytes pro Sekunde (90 s Video)
-        start = 0
         m = re.match(r"bytes=(\d+)-", self.headers.get("Range", ""))
         if m:
             start = int(m.group(1)) % size
+        else:
+            # Wie ein echter Live-Server: dort, wo der Sender gerade ist, mit 2 s Vorlauf aus dem Puffer.
+            # Nach einem Abbruch kommen diese 2 s also noch einmal (der Player muss sie überspringen).
+            live = (time.time() - FLAKY_EPOCH) * rate
+            start = int(max(0.0, live - rate * 2)) % size
+            start -= start % 188
         self.send_response(200)
         self.send_header("Content-Type", "video/mp2t")
         self.end_headers()

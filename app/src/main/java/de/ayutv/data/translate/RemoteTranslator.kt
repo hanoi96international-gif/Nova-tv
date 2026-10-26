@@ -84,6 +84,9 @@ class RemoteTranslator(private val context: Context) : Translator {
     /** Sprachpaare und Texterkennung, die schon einmal geantwortet haben (danach ist das Modell geladen). */
     private val warm = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
+    /** Modell dieser Richtung ist schon geladen (hat schon einmal geantwortet). */
+    fun isWarm(source: String?, target: String): Boolean = "${source ?: "en"}-$target" in warm
+
     override suspend fun translate(texts: List<String>, target: String, source: String?): List<String> {
         val pair = "${source ?: "en"}-$target"
         val reply = call(TRANSLATE, Bundle().apply {

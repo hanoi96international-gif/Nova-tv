@@ -371,7 +371,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
-            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive)
+            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
         }
         Spacer(Modifier.height(10.dp))
         Text(
@@ -552,7 +552,7 @@ private fun VodControls(activity: PlayerActivity) {
         }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
-            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive)
+            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
         }
         Spacer(Modifier.height(10.dp))
         Text(
@@ -564,7 +564,7 @@ private fun VodControls(activity: PlayerActivity) {
 }
 
 @Composable
-private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean) {
+private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, drops: String) {
     val parts = buildList {
         add("Puffer %.1f s".format(bufferedMs / 1000f) + if (cushion) " (wird aufgefüllt)" else "")
         if (stats.width > 0) add("${stats.width}×${stats.height}")
@@ -578,6 +578,7 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean) {
         if (stats.bandwidth > 0) add("Leitung %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
         add("Verworfene Frames: ${stats.droppedFrames}")
         if (stats.startupMs > 0) add("Start in ${stats.startupMs} ms")
+        if (drops.isNotEmpty()) add(drops)
     }
     Text(parts.joinToString("  ·  "), color = AyuColors.Accent, fontSize = 13.sp)
 }
@@ -674,6 +675,9 @@ private fun TracksOverlay(activity: PlayerActivity) {
             item {
                 OptionRow("📺 Programm falsch? TV-Guide zuordnen …", selected = false) { activity.openEpgPicker() }
             }
+        }
+        if (activity.vlcAvailable) item {
+            OptionRow("▶ In VLC öffnen (wenn dieser Stream hier hakt)", selected = false) { activity.openInVlc() }
         }
         item { MenuHeader("Untertitel") }
         item {

@@ -65,6 +65,10 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE `key` = :key")
     suspend fun byKey(key: String): ChannelEntity?
 
+    /** Sender einer Playlist nach Zeile, sonst (nach neuem Laden) nach Name. */
+    @Query("SELECT * FROM channels WHERE playlistId = :playlistId AND (id = :rowId OR name = :name) ORDER BY (id = :rowId) DESC, id LIMIT 1")
+    suspend fun find(playlistId: Long, rowId: Long, name: String): ChannelEntity?
+
     @Query("SELECT * FROM visible_channels WHERE number = :number ORDER BY id LIMIT 1")
     suspend fun byNumber(number: Int): ChannelEntity?
 

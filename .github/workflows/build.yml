@@ -9,6 +9,8 @@ on:
 
 permissions:
   contents: write
+  # Artefakte früherer Läufe lesen (Build aus dem PR auf main übernehmen).
+  actions: read
 
 # Neuer Push auf denselben PR: den alten Lauf abbrechen (main und Tags laufen immer zu Ende).
 concurrency:
@@ -45,56 +47,146 @@ jobs:
           name: ffmpeg-aar
           path: ffmpeg-aar/*.aar
 
+  # Debug-App, Test-APK und Unit-Tests. Läuft parallel zur Release-App (jede in einem eigenen Runner:
+  # zwei Kotlin-Übersetzungen auf einem Runner bremsten sich gegenseitig auf fast eine Stunde aus).
+  # Auf main kommt der Build aus dem PR mit genau diesem Quellstand (Git-Tree), statt neu zu bauen.
   build:
     needs: ffmpeg
     runs-on: ubuntu-latest
+    outputs:
+      apks: ci-apks-${{ steps.tree.outputs.hash }}
     steps:
       - uses: actions/checkout@v5
 
+      - name: Quellstand
+        id: tree
+        run: echo "hash=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+
+      - name: Build aus dem PR übernehmen
+        id: reuse
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ci/reuse-artifact.sh "ci-apks-${{ steps.tree.outputs.hash }}" app/build/outputs/apk
+
       - uses: actions/download-artifact@v5
+        if: steps.reuse.outcome != 'success'
         with:
           name: ffmpeg-aar
           path: app/libs
 
       - uses: actions/setup-java@v5
+        if: steps.reuse.outcome != 'success'
         with:
           distribution: temurin
           java-version: 17
 
       - uses: gradle/actions/setup-gradle@v5
+        if: steps.reuse.outcome != 'success'
 
-      - name: Tests und APKs bauen
+      - name: Tests und Debug-APKs bauen
+        if: steps.reuse.outcome != 'success'
         env:
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-        # Auch die Test-APK: Gerätetest und ARM-Test nehmen diese APKs, statt alles noch einmal zu bauen
-        # (auf langsamen Runnern je fast eine Stunde).
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease assembleDebugAndroidTest
+        # Auch die Test-APK: Gerätetest, Handy-Test und ARM-Test nehmen diese APKs, statt neu zu bauen.
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleDebugAndroidTest
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ci-apks-${{ steps.tree.outputs.hash }}
+          path: |
+            app/build/outputs/apk/debug/
+            app/build/outputs/apk/androidTest/
+          retention-days: 14
+
+  # Release-App (R8). Auf main ebenfalls aus dem PR übernommen, wenn der Quellstand gleich ist.
+  release:
+    needs: ffmpeg
+    runs-on: ubuntu-latest
+    outputs:
+      apk: release-apk-${{ steps.tree.outputs.hash }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Quellstand
+        id: tree
+        run: echo "hash=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+
+      - name: Build aus dem PR übernehmen
+        id: reuse
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ci/reuse-artifact.sh "release-apk-${{ steps.tree.outputs.hash }}" app/build/outputs/apk/release
+
+      - uses: actions/download-artifact@v5
+        if: steps.reuse.outcome != 'success'
+        with:
+          name: ffmpeg-aar
+          path: app/libs
+
+      - uses: actions/setup-java@v5
+        if: steps.reuse.outcome != 'success'
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v5
+        if: steps.reuse.outcome != 'success'
+
+      - name: Release-APK bauen
+        if: steps.reuse.outcome != 'success'
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
+        run: ./gradlew --no-daemon assembleRelease
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: release-apk-${{ steps.tree.outputs.hash }}
+          path: app/build/outputs/apk/release/
+          retention-days: 14
 
       - name: APK umbenennen
         run: |
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk out/DnA-TV.apk
-          cp app/build/outputs/apk/debug/app-debug.apk out/DnA-TV-debug.apk
 
       - uses: actions/upload-artifact@v5
         with:
           name: DnA-TV-apk
           path: out/*.apk
 
-      - uses: actions/upload-artifact@v5
+  # Jede neue Version (versionName) auf main erzeugt ein eigenes Release mit Tag v<versionName>.
+  publish:
+    needs: [build, release]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
         with:
-          name: ci-apks
-          path: app/build/outputs/apk/
-          retention-days: 3
+          name: ${{ needs.build.outputs.apks }}
+          path: apk
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.release.outputs.apk }}
+          path: apk/release
+
+      - name: APKs umbenennen
+        run: |
+          mkdir -p out
+          cp apk/release/app-release.apk out/DnA-TV.apk
+          cp apk/debug/app-debug.apk out/DnA-TV-debug.apk
 
       - name: Versionsnummer lesen
         id: version
         run: echo "name=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)" >> "$GITHUB_OUTPUT"
 
-      # Jede neue Version (versionName) auf main erzeugt ein eigenes Release mit Tag v<versionName>.
       - name: Release veröffentlichen
-        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-        continue-on-error: true
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.name }}
@@ -129,7 +221,7 @@ jobs:
       - name: APKs aus dem Build übernehmen
         uses: actions/download-artifact@v5
         with:
-          name: ci-apks
+          name: ${{ needs.build.outputs.apks }}
           path: app/build/outputs/apk
       - name: Selbsttest mit 32-Bit-ARM
         uses: reactivecircus/android-emulator-runner@v2
@@ -156,7 +248,7 @@ jobs:
 
   # Ergebnisse landen im Branch ci-results (Screenshots, results.txt, gfxinfo, logcat).
   device:
-    needs: build
+    needs: [build, release]
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
@@ -189,8 +281,14 @@ jobs:
       - name: APKs aus dem Build übernehmen
         uses: actions/download-artifact@v5
         with:
-          name: ci-apks
+          name: ${{ needs.build.outputs.apks }}
           path: app/build/outputs/apk
+
+      - name: Release-APK aus dem Build übernehmen
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.release.outputs.apk }}
+          path: app/build/outputs/apk/release
 
       # Upgrade-Test: Die Version aus main zuerst installieren, dann die neue darüber. So fällt eine
       # fehlerhafte Datenbank-Migration auf, bevor sie auf dem Fire TV die Playlists kostet.
@@ -261,7 +359,7 @@ jobs:
       - name: APKs aus dem Build übernehmen
         uses: actions/download-artifact@v5
         with:
-          name: ci-apks
+          name: ${{ needs.build.outputs.apks }}
           path: app/build/outputs/apk
 
       - name: Handy-Test im Emulator

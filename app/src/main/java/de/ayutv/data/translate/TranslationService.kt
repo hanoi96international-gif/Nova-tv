@@ -42,8 +42,9 @@ class TranslationService : Service() {
             .readTimeout(60, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build()
-        // Rechenkern: zwei Threads (mit Hintergrund-Vorrang), er braucht kaum Speicher. ONNX Runtime: einer.
-        val threads = if (Engine.select(filesDir) == Engine.Kind.KERN) 2 else 1
+        // Rechenkern: mehrere Threads (mit Hintergrund-Vorrang), er braucht kaum Speicher. Auf dem Fire TV
+        // Stick 4K (4 Kerne, Bild und Ton im Video-Chip) drei, ein Kern bleibt für Oberfläche und Ton. ONNX Runtime: einer.
+        val threads = if (Engine.select(filesDir) == Engine.Kind.KERN) (Runtime.getRuntime().availableProcessors() - 1).coerceIn(2, 3) else 1
         translator = OnDeviceTranslator(filesDir, http, ::freeMemoryMb, threads = threads, lowMemory = ::lowMemory).apply {
             onProgress = ::progress
             trace = ::step

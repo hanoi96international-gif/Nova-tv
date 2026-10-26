@@ -13,6 +13,7 @@ import android.os.PowerManager
 import android.util.Log
 import de.ayutv.AyuApp
 import de.ayutv.R
+import de.ayutv.player.TsReplayFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -110,8 +111,11 @@ class RecordingService : Service() {
         if (r.url.contains(".m3u8", ignoreCase = true)) throw IOException("Sender mit HLS-Stream lassen sich nicht aufnehmen")
         val file = recordings.file(r)
         var failures = 0
+        // Nach dem Neuverbinden schicken viele Server die letzten Sekunden noch einmal: nicht doppelt aufnehmen.
+        val replay = TsReplayFilter()
         while (scope.isActive && System.currentTimeMillis() < r.until && recordings.all.value.any { it.id == r.id }) {
             if (recordings.freeBytes() < MIN_FREE) throw IOException("Speicher voll")
+            replay.reconnected()
             try {
                 val request = Request.Builder().url(r.url).header("User-Agent", r.userAgent).build()
                 http.newCall(request).execute().use { response ->
@@ -121,11 +125,14 @@ class RecordingService : Service() {
                         val buffer = ByteArray(64 * 1024)
                         var written = file.length()
                         var reported = 0L
+                        val write: (ByteArray, Int, Int) -> Unit = { b, o, l ->
+                            out.write(b, o, l)
+                            written += l
+                        }
                         while (System.currentTimeMillis() < r.until) {
                             val n = input.read(buffer)
                             if (n < 0) break
-                            out.write(buffer, 0, n)
-                            written += n
+                            replay.process(buffer, 0, n, write)
                             failures = 0
                             if (written - reported > REPORT_EVERY) {
                                 reported = written
