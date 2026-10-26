@@ -110,13 +110,15 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     }
     val context = LocalContext.current
     var backupInfo by remember { mutableStateOf<String?>(null) }
+    // Optionales Passwort für Sicherungen (verschlüsselt die Datei; ohne steht alles lesbar darin).
+    var backupPassword by remember { mutableStateOf("") }
     val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             backupInfo = runCatching {
-                val text = Backup(container).create()
+                val text = Backup(container).create(backupPassword.ifBlank { null })
                 withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } }
-                "Sicherung gespeichert."
+                if (backupPassword.isBlank()) "Sicherung gespeichert (ohne Passwort)." else "Sicherung mit Passwort gespeichert."
             }.getOrElse { "Speichern fehlgeschlagen: ${it.message}" }
         }
     }
@@ -126,7 +128,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             backupInfo = runCatching {
                 val text = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } }
                     ?: error("Datei nicht lesbar")
-                Backup(container).restore(text)
+                Backup(container).restore(text, backupPassword.ifBlank { null })
             }.getOrElse { it.message ?: "Einspielen fehlgeschlagen" }
         }
     }
@@ -560,11 +562,20 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     if (touch) {
                         item {
+                            de.ayutv.ui.components.TvTextField(
+                                backupPassword,
+                                { backupPassword = it },
+                                "Passwort für die Sicherung (empfohlen)",
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                                password = true,
+                            )
+                        }
+                        item {
                             SettingRow(
                                 "Sicherung speichern",
                                 backupInfo.orEmpty(),
                                 "Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, Vereine und Einstellungen in eine Datei, " +
-                                    "z. B. für ein neues Handy oder den Fire TV. Gut aufbewahren. Ohne Kindersicherung.",
+                                    "z. B. für ein neues Handy oder den Fire TV. Mit Passwort verschlüsselt, ohne lesbar. Ohne Kindersicherung.",
                             ) {
                                 val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.GERMANY).format(java.util.Date())
                                 runCatching { saveBackup.launch("dna-tv-sicherung-$day.json") }

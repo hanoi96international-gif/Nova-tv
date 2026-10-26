@@ -7,6 +7,9 @@ import de.ayutv.data.db.GroupKind
 import de.ayutv.data.db.HiddenGroupEntity
 import de.ayutv.data.db.PlaylistEntity
 import de.ayutv.data.db.PlaylistType
+import de.ayutv.data.security.Credentials
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -24,13 +27,35 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /**
- * Sicherung als JSON-Datei: Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, Einstellungen
+ * Sicherung als JSON-Datei, auf Wunsch mit Passwort verschlüsselt: Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, Einstellungen
  * (auch gefolgte Vereine) und gelernte Intros. Beim Einspielen bekommen Playlists neue Nummern; Favoriten
  * und Gruppen werden darauf umgeschrieben. Schon vorhandene Playlists werden nicht doppelt angelegt.
  */
 class Backup(private val container: AppContainer) {
 
-    suspend fun create(): String {
+    /** Sicherung als Text; mit [password] verschlüsselt (sonst stehen die Zugangsdaten lesbar darin). */
+    suspend fun create(password: String? = null): String {
+        val plain = createPlain()
+        if (password.isNullOrEmpty()) return plain
+        val sealed = withContext(Dispatchers.Default) { BackupCrypto.seal(plain, password) }
+        return PRETTY.encodeToString(JsonObject.serializer(), buildJsonObject {
+            put("format", FORMAT)
+            put("version", 1)
+            put("app", BuildConfig.VERSION_NAME)
+            put("encrypted", buildJsonObject {
+                put("salt", sealed.salt)
+                put("iv", sealed.iv)
+                put("data", sealed.data)
+                put("iterations", sealed.iterations)
+            })
+        })
+    }
+
+    /** Mit Passwort geschützt? Dann braucht [restore] das Passwort. */
+    fun needsPassword(text: String): Boolean =
+        runCatching { Json.parseToJsonElement(text).jsonObject["encrypted"] is JsonObject }.getOrDefault(false)
+
+    private suspend fun createPlain(): String {
         val db = container.db
         val json = buildJsonObject {
             put("format", FORMAT)
@@ -52,7 +77,7 @@ class Backup(private val container: AppContainer) {
                     put("url", p.url)
                     p.epgUrl?.let { put("epgUrl", it) }
                     p.username?.let { put("username", it) }
-                    p.password?.let { put("password", it) }
+                    Credentials.reveal(p.password)?.let { put("password", it) }
                     put("enabled", p.enabled)
                     p.timezone?.let { put("timezone", it) }
                 })
@@ -76,10 +101,21 @@ class Backup(private val container: AppContainer) {
     }
 
     /** Spielt eine Sicherung ein und sagt in einem Satz, was übernommen wurde. */
-    suspend fun restore(text: String): String {
+    suspend fun restore(text: String, password: String? = null): String {
         val root = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull()
             ?: throw IllegalArgumentException("Das ist keine DnA-TV-Sicherung (kein JSON).")
         if (root["format"]?.jsonPrimitive?.contentOrNull != FORMAT) throw IllegalArgumentException("Das ist keine DnA-TV-Sicherung.")
+        (root["encrypted"] as? JsonObject)?.let { e ->
+            if (password.isNullOrEmpty()) throw IllegalArgumentException("Diese Sicherung ist mit einem Passwort geschützt – bitte Passwort eingeben.")
+            val sealed = BackupCrypto.Sealed(
+                salt = e.string("salt") ?: throw IllegalArgumentException("Sicherung beschädigt."),
+                iv = e.string("iv") ?: throw IllegalArgumentException("Sicherung beschädigt."),
+                data = e.string("data") ?: throw IllegalArgumentException("Sicherung beschädigt."),
+                iterations = e.long("iterations")?.toInt() ?: throw IllegalArgumentException("Sicherung beschädigt."),
+            )
+            val inner = withContext(Dispatchers.Default) { BackupCrypto.open(sealed, password) }
+            return restore(inner)
+        }
         val db = container.db
 
         root["settings"]?.let { settings ->

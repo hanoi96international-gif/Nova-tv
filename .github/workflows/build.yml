@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# Neuer Push auf denselben PR: den alten Lauf abbrechen (main und Tags laufen immer zu Ende).
+concurrency:
+  group: build-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # FFmpeg-Tondecoder (DTS, TrueHD, AC-3/E-AC-3 …) für Media3 bauen. Dauert beim ersten Mal einige
   # Minuten, danach kommt das Ergebnis aus dem Cache (Schlüssel: Bauskript + Media3-Version).

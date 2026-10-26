@@ -1,5 +1,6 @@
 package de.ayutv.data
 
+import de.ayutv.data.security.Credentials
 import android.content.Context
 import de.ayutv.BuildConfig
 import androidx.datastore.preferences.core.Preferences
@@ -221,7 +222,9 @@ class SettingsStore(private val context: Context) {
                 is Set<*> -> "stringSets"
                 else -> continue
             }
-            out.getOrPut(type) { linkedMapOf() }[key.name] = value
+            // Passwörter im Klartext: Der Schlüssel des Keystores gilt nur auf diesem Gerät.
+            val portable = if (key == Keys.osPassword) Credentials.reveal(value as? String).orEmpty() else value
+            out.getOrPut(type) { linkedMapOf() }[key.name] = portable
         }
         return out
     }
@@ -233,10 +236,20 @@ class SettingsStore(private val context: Context) {
             values["booleans"]?.allowed()?.forEach { (k, v) -> (v as? Boolean)?.let { prefs[booleanPreferencesKey(k)] = it } }
             values["ints"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[intPreferencesKey(k)] = it.toInt() } }
             values["longs"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[longPreferencesKey(k)] = it.toLong() } }
-            values["strings"]?.allowed()?.forEach { (k, v) -> (v as? String)?.let { prefs[stringPreferencesKey(k)] = it } }
+            values["strings"]?.allowed()?.forEach { (k, v) ->
+                (v as? String)?.let { prefs[stringPreferencesKey(k)] = if (k == Keys.osPassword.name) Credentials.protect(it).orEmpty() else it }
+            }
             values["stringSets"]?.allowed()?.forEach { (k, v) ->
                 (v as? Collection<*>)?.let { prefs[stringSetPreferencesKey(k)] = it.filterIsInstance<String>().toSet() }
             }
+        }
+    }
+
+    /** Einmalig: ein unverschlüsselt gespeichertes Passwort (ältere Versionen) verschlüsseln. */
+    suspend fun protectStoredSecrets() {
+        context.settingsDataStore.edit { prefs ->
+            val stored = prefs[Keys.osPassword]
+            if (!stored.isNullOrEmpty() && !Credentials.isProtected(stored)) prefs[Keys.osPassword] = Credentials.protect(stored).orEmpty()
         }
     }
 
@@ -269,7 +282,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.osKey] = next.openSubtitlesKey.trim()
             prefs[Keys.osOn] = next.onlineSubtitles
             prefs[Keys.osUser] = next.openSubtitlesUser.trim()
-            prefs[Keys.osPassword] = next.openSubtitlesPassword
+            prefs[Keys.osPassword] = Credentials.protect(next.openSubtitlesPassword).orEmpty()
             prefs[Keys.timeshift] = next.liveTimeshift
             prefs[Keys.timeshiftMinutes] = next.timeshiftMinutes
             prefs[Keys.autoNext] = next.autoNextEpisode
@@ -305,7 +318,7 @@ class SettingsStore(private val context: Context) {
         openSubtitlesKey = this[Keys.osKey].orEmpty(),
         onlineSubtitles = this[Keys.osOn] ?: true,
         openSubtitlesUser = this[Keys.osUser].orEmpty(),
-        openSubtitlesPassword = this[Keys.osPassword].orEmpty(),
+        openSubtitlesPassword = Credentials.reveal(this[Keys.osPassword]).orEmpty(),
         liveTimeshift = this[Keys.timeshift] ?: true,
         timeshiftMinutes = this[Keys.timeshiftMinutes]?.takeIf { it in TIMESHIFT_MINUTES } ?: 30,
         autoNextEpisode = this[Keys.autoNext] ?: true,

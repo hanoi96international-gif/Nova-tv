@@ -9,6 +9,7 @@ import de.ayutv.data.parse.XtreamMovieInfo
 import de.ayutv.data.parse.XtreamParsing
 import de.ayutv.data.parse.XtreamSeries
 import de.ayutv.data.parse.XtreamVod
+import de.ayutv.data.security.Credentials
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -73,6 +74,6 @@ class XtreamClient(
         }
 
         fun of(http: OkHttpClient, playlist: PlaylistEntity) =
-            XtreamClient(http, playlist.url, playlist.username.orEmpty(), playlist.password.orEmpty())
+            XtreamClient(http, playlist.url, playlist.username.orEmpty(), Credentials.reveal(playlist.password).orEmpty())
     }
 }

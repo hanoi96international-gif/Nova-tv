@@ -123,7 +123,11 @@ class PhoneSetupServer(private val container: AppContainer) {
             return
         }
         if (route == "/$pin/backup") {
-            val bytes = Backup(container).create().toByteArray(Charsets.UTF_8)
+            // Mit Passwort (Formular, POST) verschlüsselt, sonst lesbar.
+            val password = if (method == "POST") {
+                parseForm(ByteArray(length).also { readFully(input, it) }.toString(Charsets.UTF_8))["backup_password"]
+            } else null
+            val bytes = Backup(container).create(password?.takeIf { it.isNotEmpty() }).toByteArray(Charsets.UTF_8)
             val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.GERMANY).format(java.util.Date())
             respondBytes(client, "application/json; charset=utf-8", bytes, "Content-Disposition: attachment; filename=\"dna-tv-sicherung-$day.json\"\r\n")
             return
@@ -131,7 +135,8 @@ class PhoneSetupServer(private val container: AppContainer) {
         if (route == "/$pin/restore" && method == "POST") {
             val raw = ByteArray(length).also { readFully(input, it) }
             val text = multipartFile(raw, contentType) ?: raw.toString(Charsets.UTF_8)
-            val line = runCatching { Backup(container).restore(text) }
+            val password = multipartField(raw, contentType, "backup_password")
+            val line = runCatching { Backup(container).restore(text, password) }
                 .fold({ KeyCheck.Line(true, it) }, { KeyCheck.Line(false, it.message ?: "Sicherung konnte nicht eingespielt werden") })
             _state.value = _state.value.copy(lastSaved = (if (line.ok) "✓ " else "✗ ") + line.text)
             respond(client, 200, page(container.settings.current(), listOf(line)) + guideReport())
@@ -226,11 +231,15 @@ class PhoneSetupServer(private val container: AppContainer) {
 
             <h2>Sicherung</h2>
             <p>Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, gefolgte Vereine und alle Einstellungen
-            in einer Datei. Damit ist ein neuer Fire TV in einer Minute eingerichtet. Die Datei enthält Passwörter:
-            gut aufbewahren. Die Kindersicherung wird nicht mitgesichert.</p>
-            <p><a href="/$pin/backup" download>⬇ Sicherung herunterladen</a></p>
+            in einer Datei. Damit ist ein neuer Fire TV in einer Minute eingerichtet. Mit Passwort wird die Datei
+            verschlüsselt (empfohlen, sie enthält die Zugangsdaten). Die Kindersicherung wird nicht mitgesichert.</p>
+            <form method=post action="/$pin/backup">
+            <label>Passwort für die Sicherung (empfohlen)<input name=backup_password type=password autocomplete=new-password></label>
+            <button>⬇ Sicherung herunterladen</button>
+            </form>
             <form method=post action="/$pin/restore" enctype="multipart/form-data">
             <label>Sicherung einspielen<input name=backup type=file accept=".json,application/json"></label>
+            <label>Passwort (falls vergeben)<input name=backup_password type=password autocomplete=current-password></label>
             <button>Sicherung einspielen</button>
             </form>
         """.trimIndent()
@@ -305,6 +314,18 @@ class PhoneSetupServer(private val container: AppContainer) {
         val part = text.split("--$boundary").firstOrNull { "filename=" in it.substringBefore("\r\n\r\n") } ?: return null
         val content = part.substringAfter("\r\n\r\n", "").removeSuffix("\r\n")
         return content.toByteArray(Charsets.ISO_8859_1).toString(Charsets.UTF_8).takeIf { it.isNotBlank() }
+    }
+
+    /** Textfeld [name] aus einem multipart-Formular. */
+    private fun multipartField(body: ByteArray, contentType: String, name: String): String? {
+        val boundary = contentType.substringAfter("boundary=", "").trim('"').takeIf { it.isNotEmpty() } ?: return null
+        val text = body.toString(Charsets.ISO_8859_1)
+        val part = text.split("--$boundary").firstOrNull {
+            val head = it.substringBefore("\r\n\r\n")
+            "name=\"$name\"" in head && "filename=" !in head
+        } ?: return null
+        return part.substringAfter("\r\n\r\n", "").removeSuffix("\r\n")
+            .toByteArray(Charsets.ISO_8859_1).toString(Charsets.UTF_8).takeIf { it.isNotEmpty() }
     }
 
     private fun readLine(input: InputStream): String? {

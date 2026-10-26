@@ -18,6 +18,7 @@ import de.ayutv.data.parse.EpgSources
 import de.ayutv.data.parse.M3uParser
 import de.ayutv.data.parse.XmltvParser
 import kotlinx.coroutines.Dispatchers
+import de.ayutv.data.security.Credentials
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -93,7 +94,17 @@ class PlaylistRepository(
 
     val playlists = db.playlists().observeAll()
 
-    suspend fun add(playlist: PlaylistEntity): Long = db.playlists().insert(playlist)
+    suspend fun add(playlist: PlaylistEntity): Long =
+        db.playlists().insert(playlist.copy(password = withContext(Dispatchers.Default) { Credentials.protect(playlist.password) }))
+
+    /** Einmalig: Passwörter aus älteren Versionen verschlüsselt ablegen. */
+    suspend fun protectStoredPasswords() = withContext(Dispatchers.Default) {
+        for (p in db.playlists().all()) {
+            if (p.password.isNullOrEmpty() || Credentials.isProtected(p.password)) continue
+            val protected = Credentials.protect(p.password)
+            if (Credentials.isProtected(protected)) db.playlists().setPassword(p.id, protected)
+        }
+    }
 
     /** Playlist ein- oder ausschalten. Daten bleiben erhalten; eine nie geladene Playlist wird jetzt geladen. */
     suspend fun setEnabled(id: Long, enabled: Boolean) {

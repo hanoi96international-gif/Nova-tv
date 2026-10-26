@@ -61,5 +61,10 @@ class AppContainer(context: Context) {
     init {
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)
         Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)
+        // Passwörter älterer Versionen verschlüsseln (einmalig, danach ohne Wirkung).
+        scope.launch {
+            runCatching { playlists.protectStoredPasswords() }
+            runCatching { settings.protectStoredSecrets() }
+        }
     }
 }
