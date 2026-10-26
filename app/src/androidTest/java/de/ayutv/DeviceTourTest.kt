@@ -190,8 +190,10 @@ class DeviceTourTest {
             log("sport: events=${events.map { de.ayutv.data.parse.ProgrammeText.headline(it.programme.title, it.programme.subtitle) }} reminders=${reminders.map { it.title }} variants=${variants.map { it.name }}")
             assertTrue("Spiel fehlt in der Sport-Übersicht", events.any { it.programme.subtitle?.contains("Dortmund") == true })
             // Die Erinnerung gilt der besten Fassung unter allen Sendern mit diesem Programm (nicht unbedingt diesem).
-            val withGuide = channels.filter { it.epgId == "hd.test" }.map { it.key }.toSet()
-            assertTrue("Keine Erinnerung für den Verein", reminders.any { it.channelKey in withGuide })
+            // (auch aus einer anderen Playlist: der Xtream-Testsender hat dieselbe EPG-Kennung).
+            val remindedChannels = runBlocking { reminders.mapNotNull { container.content.channel(it.channelKey) } }
+            log("sport_reminder_channels=${remindedChannels.map { "${it.name}/${it.epgId}" }}")
+            assertTrue("Keine Erinnerung für den Verein", remindedChannels.any { it.epgId == "hd.test" })
         }
 
         // 2. Oberfläche per Fernbedienung durchgehen
