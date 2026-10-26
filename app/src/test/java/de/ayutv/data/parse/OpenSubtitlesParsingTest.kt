@@ -7,6 +7,22 @@ import org.junit.Test
 class OpenSubtitlesParsingTest {
 
     @Test
+    fun vipAccountsUseTheirOwnServer() {
+        assertEquals("https://vip-api.opensubtitles.com/api/v1", OpenSubtitlesParsing.loginApi("""{"token":"x","base_url":"vip-api.opensubtitles.com","status":200}"""))
+        assertEquals("https://api.opensubtitles.com/api/v1", OpenSubtitlesParsing.loginApi("""{"token":"x","base_url":"api.opensubtitles.com"}"""))
+        // Nur Adressen von OpenSubtitles: ein Token geht nie an einen fremden Server.
+        assertEquals(null, OpenSubtitlesParsing.loginApi("""{"token":"x","base_url":"evil.example.com"}"""))
+        assertEquals(null, OpenSubtitlesParsing.loginApi("""{"token":"x"}"""))
+    }
+
+    @Test
+    fun rejectedTokenIsRecognised() {
+        assertEquals(true, OpenSubtitlesParsing.isTokenProblem(401, "{}"))
+        assertEquals(true, OpenSubtitlesParsing.isTokenProblem(403, """{"message":"invalid token"}"""))
+        assertEquals(false, OpenSubtitlesParsing.isTokenProblem(406, """{"message":"You have downloaded your allowed 5 subtitles"}"""))
+    }
+
+    @Test
     fun hashOfZeroBytesIsFileSize() {
         val zero = ByteArray(MovieHash.CHUNK)
         assertEquals("0000000000020000", MovieHash.compute(131_072L, zero, zero))

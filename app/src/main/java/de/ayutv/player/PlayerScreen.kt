@@ -270,7 +270,8 @@ fun PlayerScreen(activity: PlayerActivity) {
         activity.subtitleStatus?.let { status ->
             Text(
                 status,
-                modifier = Modifier.align(Alignment.TopEnd).padding(28.dp)
+                // Rechts steht bei offenem Menü die Spurenliste: dann links oben, sonst überdecken sich beide.
+                modifier = Modifier.align(if (activity.overlay == Overlay.TRACKS) Alignment.TopStart else Alignment.TopEnd).padding(28.dp)
                     .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
                 color = Color.White,
                 fontSize = 14.sp,

@@ -174,6 +174,22 @@ object OpenSubtitlesParsing {
     fun loginToken(body: String): String? =
         (json.parseToJsonElement(body) as? JsonObject)?.primitive("token")?.contentOrNull
 
+    /**
+     * Adresse, an die Anfragen mit diesem Token gehen müssen (bei VIP-Konten „vip-api.opensubtitles.com“).
+     * Ein Token gilt nur dort; an der normalen Adresse antwortet OpenSubtitles mit „invalid token“.
+     */
+    fun loginApi(body: String): String? = runCatching {
+        val host = (json.parseToJsonElement(body) as? JsonObject)?.primitive("base_url")?.contentOrNull?.trim()
+            ?.removePrefix("https://")?.removePrefix("http://")?.substringBefore('/')
+        host?.takeIf { OPENSUBTITLES_HOST.matches(it) }?.let { "https://$it/api/v1" }
+    }.getOrNull()
+
+    private val OPENSUBTITLES_HOST = Regex("^[a-z0-9.-]+\\.opensubtitles\\.(com|org)$")
+
+    /** Antwort bedeutet: Token abgelaufen oder ungültig (neu anmelden statt aufgeben). */
+    fun isTokenProblem(code: Int, body: String): Boolean =
+        code == 401 || message(body)?.contains("token", ignoreCase = true) == true
+
     fun message(body: String): String? = runCatching {
         (json.parseToJsonElement(body) as? JsonObject)?.primitive("message")?.contentOrNull
     }.getOrNull()

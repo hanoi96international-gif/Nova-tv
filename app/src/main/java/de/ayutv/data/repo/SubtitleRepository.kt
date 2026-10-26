@@ -44,6 +44,8 @@ class SubtitleRepository(
 ) {
     private val tokenLock = Mutex()
     private var token: String? = null
+    /** Adresse, an der das Token gilt (VIP-Konten haben eine eigene). */
+    private var tokenApi: String = API
     private var tokenFor: String? = null
     private var tokenAt = 0L
     @Volatile
@@ -378,21 +380,61 @@ class SubtitleRepository(
         }
     }
 
+    private class TokenRejected : IOException("invalid token")
+
+    /**
+     * Download-Adresse einer Datei. Mit Konto (höheres Kontingent) über das Token; lehnt OpenSubtitles das
+     * Token ab (abgelaufen, anderswo abgemeldet, falscher Server), einmal neu anmelden, sonst ohne Konto laden.
+     */
     private suspend fun downloadLink(apiKey: String, fileId: Long, settings: AppSettings): String? {
         val bearer = loginToken(apiKey, settings)
+        try {
+            return requestDownload(apiKey, fileId, bearer, tokenApi)
+        } catch (e: TokenRejected) {
+            Log.w(TAG, "Token abgelehnt, melde neu an")
+        }
+        forgetToken()
+        val fresh = loginToken(apiKey, settings)
+        if (fresh != null) {
+            try {
+                return requestDownload(apiKey, fileId, fresh, tokenApi)
+            } catch (e: TokenRejected) {
+                Log.w(TAG, "Auch das neue Token abgelehnt, lade ohne Konto")
+            }
+        }
+        // Ohne Konto: kleineres Tageskontingent, aber es geht weiter. Eine Weile nicht neu anmelden.
+        blockLogin()
+        return requestDownload(apiKey, fileId, null, API)
+    }
+
+    private fun requestDownload(apiKey: String, fileId: Long, bearer: String?, api: String): String? {
         val payload = buildJsonObject { put("file_id", fileId) }.toString()
         val request = apiRequest(apiKey)
-            .url("$API/download")
+            .url("${if (bearer != null) api else API}/download")
             .post(payload.toRequestBody(JSON))
             .apply { if (bearer != null) header("Authorization", "Bearer $bearer") }
             .build()
         http.newCall(request).execute().use { response ->
             val body = response.body.string()
             if (!response.isSuccessful) {
+                if (bearer != null && OpenSubtitlesParsing.isTokenProblem(response.code, body)) throw TokenRejected()
                 throw IOException(OpenSubtitlesParsing.message(body) ?: "Download nicht möglich (HTTP ${response.code})")
             }
             return OpenSubtitlesParsing.downloadLink(body)
         }
+    }
+
+    private suspend fun forgetToken() = tokenLock.withLock {
+        token = null
+        tokenFor = null
+        tokenApi = API
+    }
+
+    /** Nach abgelehntem Token: eine Weile ohne Konto laden, statt bei jeder Datei neu anzumelden. */
+    private suspend fun blockLogin() = tokenLock.withLock {
+        token = null
+        tokenApi = API
+        tokenAt = System.currentTimeMillis()
     }
 
     /** Mit Konto gibt es ein höheres Tageskontingent. Ohne Konto wird anonym geladen. */
@@ -412,12 +454,18 @@ class SubtitleRepository(
             put("password", settings.openSubtitlesPassword)
         }.toString()
         val request = apiRequest(apiKey).url("$API/login").post(payload.toRequestBody(JSON)).build()
+        var api = API
         return runCatching {
             http.newCall(request).execute().use { response ->
-                OpenSubtitlesParsing.loginToken(response.body.string()).takeIf { response.isSuccessful }
+                val body = response.body.string()
+                if (!response.isSuccessful) Log.w(TAG, "Anmeldung bei OpenSubtitles fehlgeschlagen: HTTP ${response.code} ${OpenSubtitlesParsing.message(body)}")
+                // VIP-Konten: Das Token gilt nur am eigenen Server (sonst „invalid token“).
+                OpenSubtitlesParsing.loginApi(body)?.let { api = it }
+                OpenSubtitlesParsing.loginToken(body).takeIf { response.isSuccessful }
             }
         }.getOrNull().also {
             token = it
+            tokenApi = api
             tokenFor = account
             tokenAt = now
         }
