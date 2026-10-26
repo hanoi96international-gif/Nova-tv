@@ -50,6 +50,7 @@ class AppContainer(context: Context) {
     @Volatile var foreground: java.lang.ref.WeakReference<android.app.Activity>? = null
     val remote = de.ayutv.data.remote.RemoteServer(context, this)
     val recordings = de.ayutv.data.record.Recordings(context)
+    val profiles = de.ayutv.data.profile.Profiles(context, this)
     val updates = de.ayutv.data.update.Updater(context, http)
     val parental = ParentalControl(context, db)
 

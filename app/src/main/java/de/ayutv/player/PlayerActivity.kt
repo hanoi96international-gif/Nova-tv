@@ -715,6 +715,8 @@ class PlayerActivity : ComponentActivity() {
         container.scope.launch { container.content.recordLive(channel) }
         checkMobileData()
         preferSmallVariant(channel)
+        // Läuft gerade Chromecast: den neuen Sender dort weiterspielen.
+        castingTo?.let { startCasting(it) }
     }
 
     // ---------------------------------------------------------------- Zeitversatz (Live anhalten)
@@ -1985,6 +1987,50 @@ class PlayerActivity : ComponentActivity() {
                 textDisabled = true
             }
             text != null && externalLanguage == null && hasTextTrack(text) -> selectTextLanguage(text)
+        }
+    }
+
+    // ---------------------------------------------------------------- Chromecast (Handy)
+
+    /** Chromecast möglich (Handy mit Google-Play-Diensten). */
+    val castAvailable: Boolean by lazy { de.ayutv.player.cast.Cast.available(this) }
+    /** Name des Chromecast, auf dem gerade gespielt wird. */
+    var castingTo by mutableStateOf<String?>(null); private set
+
+    fun toggleCast() {
+        if (castingTo != null) {
+            de.ayutv.player.cast.Cast.stop(this)
+            return
+        }
+        de.ayutv.player.cast.Cast.choose(
+            this,
+            onConnected = { name -> startCasting(name) },
+            onEnded = {
+                castingTo = null
+                message = "Chromecast beendet – läuft wieder hier"
+                player?.play()
+            },
+        )
+    }
+
+    private fun startCasting(name: String) {
+        val p = player ?: return
+        val media = if (isLive) {
+            playing?.let { c ->
+                val title = nowNext.firstOrNull()?.headline()?.ifEmpty { null }
+                de.ayutv.player.cast.Cast.Media(c.url, c.name, title, c.logo, live = true, positionMs = 0)
+            }
+        } else {
+            vod?.let { de.ayutv.player.cast.Cast.Media(it.url, it.title, it.subtitle, it.image, live = false, positionMs = p.currentPosition) }
+        }
+        if (media == null || media.url.startsWith("file:")) {
+            message = "Aufnahmen und Downloads lassen sich nicht übertragen"
+            return
+        }
+        if (de.ayutv.player.cast.Cast.play(this, media)) {
+            castingTo = name
+            p.pause()
+            message = "📺 Läuft auf $name (📺 nochmal: zurück aufs Handy)"
         }
     }
 

@@ -472,6 +472,7 @@ private fun TouchButtons(activity: PlayerActivity, modifier: Modifier = Modifier
             button("⏩") { activity.pressKey(KeyEvent.KEYCODE_DPAD_RIGHT) }
         }
         button("CC") { activity.pressKey(KeyEvent.KEYCODE_MENU) }
+        if (activity.castAvailable) button(if (activity.castingTo != null) "📺✓" else "📺") { activity.toggleCast() }
         button("✕") { activity.finish() }
     }
 }

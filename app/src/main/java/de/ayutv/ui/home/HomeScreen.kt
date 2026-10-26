@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -60,6 +62,11 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val minute by rememberMinuteTicker()
     val recordings by container.recordings.all.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<String?>(null) }
+    var pickingProfile by remember { mutableStateOf(false) }
+    if (pickingProfile) {
+        ProfilePicker(onClose = { pickingProfile = false })
+        return
+    }
 
     var recentChannels by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var recommendations by remember { mutableStateOf<List<Recommendation>>(emptyList()) }
@@ -88,6 +95,8 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                     SyncBanner(sync)
                     de.ayutv.ui.components.UpdateBanner(Modifier.padding(top = 8.dp))
                 }
+                ProfileChip { pickingProfile = true }
+                Spacer(Modifier.width(16.dp))
                 Text(formatTime(minute), style = MaterialTheme.typography.headlineSmall, color = AyuColors.TextSecondary)
             }
         }

@@ -229,6 +229,9 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorites")
     suspend fun all(): List<FavoriteEntity>
 
+    @Query("DELETE FROM favorites")
+    suspend fun clear()
+
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE `key` = :key)")
     suspend fun isFavorite(key: String): Boolean
 }

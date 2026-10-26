@@ -85,6 +85,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Chromecast (Handy mit Google-Play-Diensten) -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="de.ayutv.player.cast.CastOptionsProvider" />
+
         <!-- Heruntergeladenes Update an den Paket-Installer übergeben -->
         <provider
             android:name="androidx.core.content.FileProvider"
