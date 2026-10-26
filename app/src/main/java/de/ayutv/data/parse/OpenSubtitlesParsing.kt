@@ -122,18 +122,23 @@ object OpenSubtitlesParsing {
         .thenBy { it.hearingImpaired }
         .thenByDescending { it.downloads }
 
+    /** Nach Güte: Hash-Treffer, von Menschen (nicht maschinell) übersetzt, ohne Hörgeschädigten-Angaben, oft geladen. */
+    fun byQuality(candidates: List<SubtitleCandidate>): List<SubtitleCandidate> = candidates.sortedWith(QUALITY)
+
     /**
-     * Bei gleicher Güte die Datei mit der Bildrate des Films nach vorn: Sie passt ohne Umrechnung
-     * (25 statt 23,976 fps läuft sonst nach einer Stunde 2,5 Minuten auseinander). Hash-Treffer bleiben vorn.
+     * Die Datei mit der Bildrate des Films nach vorn, aber nur, wenn sie fast so gut ist wie die beste
+     * (gleiche Art, mindestens halb so oft geladen). Die Bildraten-Angaben bei OpenSubtitles fehlen oder
+     * stimmen oft nicht; eine selten geladene Datei war meist die falsche Fassung. Hash-Treffer bleiben vorn.
      */
     fun preferFrameRate(candidates: List<SubtitleCandidate>, frameRate: Float?): List<SubtitleCandidate> {
-        if (frameRate == null || frameRate <= 1f) return candidates
-        fun fits(c: SubtitleCandidate) = when {
-            c.fps == null -> 1
-            kotlin.math.abs(c.fps - frameRate) < 0.05 -> 0
-            else -> 2
-        }
-        return candidates.sortedWith(compareByDescending<SubtitleCandidate> { it.hashMatch }.thenBy { it.translated }.thenBy(::fits))
+        if (frameRate == null || frameRate <= 1f || candidates.size < 2) return candidates
+        fun fits(c: SubtitleCandidate) = c.fps != null && kotlin.math.abs(c.fps - frameRate) < 0.05
+        val best = candidates.first()
+        if (best.hashMatch || fits(best)) return candidates
+        val alternative = candidates.firstOrNull { c ->
+            fits(c) && c.translated == best.translated && c.hearingImpaired == best.hearingImpaired && c.downloads * 2 >= best.downloads
+        } ?: return candidates
+        return listOf(alternative) + (candidates - alternative)
     }
 
     /** „Serie – S1 E2“, „Serie S01E02“, „Serie 1x02“: Name, Staffel, Folge. Sonst null. */

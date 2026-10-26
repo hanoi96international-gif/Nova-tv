@@ -50,6 +50,7 @@ import de.ayutv.data.DeviceInfo
 import de.ayutv.data.Languages
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
+import de.ayutv.data.IntroStore
 import de.ayutv.hideSystemBars
 import de.ayutv.ui.components.FitToScreen
 import de.ayutv.ui.components.hasTouchscreen
@@ -233,7 +234,14 @@ class PlayerActivity : ComponentActivity() {
     /** Knopf „Intro überspringen“ (Serien). */
     var introVisible by mutableStateOf(false); private set
     private var introLearned: IntroSkip.Intro? = null
-    private var introUsed = false
+    /** Wie oft schon übersprungen (Rückblick, dann Intro: der Knopf kommt danach wieder). */
+    private var introSkips = 0
+    private var introHiddenUntil = 0L
+    /** Am Ton erkannter Intro-Klang dieser Serie, und wohin das gerade erkannte Intro reicht (ms, -1 = noch nicht). */
+    private var introFingerprint: IntroStore.Fingerprint? = null
+    private var introAudioEnd = -1L
+    private var introSearchJob: Job? = null
+    private var openingLearned = false
     /** Letztes Überspringen: von wo, wohin (inkl. Korrekturen) und wann, zum Lernen der Intro-Länge. */
     private var introFrom = -1L
     private var introTo = 0L
@@ -919,12 +927,62 @@ class PlayerActivity : ComponentActivity() {
         val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
         introLearned = container.intros.get(seriesKey)
         lifecycleScope.launch { nextEpisode = container.content.nextEpisode(request.key) }
+        lifecycleScope.launch { introFingerprint = withContext(Dispatchers.IO) { container.intros.fingerprint(seriesKey) } }
+    }
+
+    /** Läuft gerade das bekannte Intro? Am Ton der letzten Sekunden suchen (alle 2 s, in den ersten Minuten). */
+    private fun searchIntroByAudio(position: Long) {
+        val fingerprint = introFingerprint ?: return
+        if (introAudioEnd >= 0 || position > OPENING_MS || introSearchJob?.isActive == true) return
+        val from = (position - INTRO_SEARCH_BACK_MS).coerceAtLeast(0)
+        introSearchJob = lifecycleScope.launch(Dispatchers.Default) {
+            val heard = heardSpeech.levels(from, position)
+            val at = IntroMatch.find(heard, fingerprint.pattern, 0, heard.size) ?: return@launch
+            val end = from + (at + fingerprint.lengthBins) * 100L
+            withContext(Dispatchers.Main) { if (end > position + 3_000) introAudioEnd = end }
+        }
+    }
+
+    /**
+     * Folge verlassen: Anfang dieser Folge mit dem der zuletzt gesehenen vergleichen. Der gemeinsame Abschnitt
+     * ist die Titelmusik; ihr Anfang wird gespeichert und in den nächsten Folgen am Ton wiedererkannt.
+     */
+    private fun learnOpening(request: VodRequest) {
+        if (openingLearned || request.kind != HistoryKind.EPISODE) return
+        val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
+        val opening = heardSpeech.levels(0, OPENING_MS)
+        val heard = opening.count { !it.isNaN() }
+        if (heard < opening.size / 3) return
+        openingLearned = true
+        val intros = container.intros
+        container.scope.launch(Dispatchers.Default) {
+            val previous = intros.opening(seriesKey)
+            val segment = previous?.let { IntroMatch.commonSegment(opening, it) }
+            if (segment != null && segment.length in INTRO_MIN_BINS..INTRO_MAX_BINS) {
+                // Muster aus der Folge nehmen, in der der Anfang vollständig gehört wurde.
+                val fromCurrent = opening.copyOfRange(segment.startA, segment.startA + INTRO_PATTERN_BINS)
+                val pattern = if (fromCurrent.none { it.isNaN() }) fromCurrent
+                    else previous!!.copyOfRange(segment.startB, segment.startB + INTRO_PATTERN_BINS)
+                if (pattern.none { it.isNaN() }) intros.saveFingerprint(seriesKey, IntroStore.Fingerprint(pattern, segment.length))
+                Log.i(TAG, "Intro erkannt: bei ${segment.startA / 10} s, ${segment.length / 10} s lang")
+            }
+            // Für den nächsten Vergleich den vollständigeren Anfang behalten.
+            if (previous == null || heard >= previous.count { !it.isNaN() }) intros.saveOpening(seriesKey, opening)
+        }
     }
 
     private fun updateEpisodeCards(request: VodRequest) {
         val p = player ?: return
         val position = positionMs
-        introVisible = !introUsed && p.playbackState == Player.STATE_READY && IntroSkip.visible(position, introLearned)
+        searchIntroByAudio(position)
+        introVisible = p.playbackState == Player.STATE_READY && when {
+            // Am Ton erkannt: genau solange das Intro läuft.
+            introAudioEnd > 0 -> position < introAudioEnd - 2_000
+            // Am Ton erkanntes Intro schon übersprungen.
+            introAudioEnd == 0L -> false
+            // Sonst nach Zeit; nach einem Sprung kurz weg, dann wieder da (erst Rückblick, dann Intro).
+            else -> introSkips < MAX_INTRO_SKIPS && SystemClock.elapsedRealtime() > introHiddenUntil && IntroSkip.visible(position, introLearned)
+        }
         // Korrekturen nach dem Überspringen gelten als Intro-Länge.
         if (introFrom >= 0 && SystemClock.elapsedRealtime() - introAt > IntroSkip.LEARN_WINDOW_MS) {
             IntroSkip.learn(introFrom, introTo)?.let { intro ->
@@ -941,8 +999,18 @@ class PlayerActivity : ComponentActivity() {
     private fun skipIntro() {
         val p = player ?: return
         val from = p.currentPosition
+        if (introAudioEnd > from) {
+            // Am Ton erkannt: genau ans Ende, nichts zu lernen.
+            p.seekTo(introAudioEnd)
+            positionMs = introAudioEnd
+            introAudioEnd = 0
+            introVisible = false
+            subtitleStatus = "Intro übersprungen"
+            return
+        }
         val to = IntroSkip.target(from, introLearned)
-        introUsed = true
+        introSkips++
+        introHiddenUntil = SystemClock.elapsedRealtime() + 4_000
         introVisible = false
         introFrom = from
         introTo = to
@@ -2290,6 +2358,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        vod?.let(::learnOpening)
         // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
         if (inPip) {
             inPip = false
@@ -2364,6 +2433,13 @@ class PlayerActivity : ComponentActivity() {
         /** „Nächste Folge“ erscheint in den letzten Sekunden einer Folge. */
         private const val NEXT_CARD_MS = 20_000L
         private const val NEXT_COUNTDOWN_SECONDS = 10
+        /** Die ersten Minuten einer Folge: darin wird das Intro gesucht und gelernt. */
+        private const val OPENING_MS = 8 * 60_000L
+        private const val INTRO_SEARCH_BACK_MS = 40_000L
+        private const val INTRO_PATTERN_BINS = 80
+        private const val INTRO_MIN_BINS = 150
+        private const val INTRO_MAX_BINS = 2_400
+        private const val MAX_INTRO_SKIPS = 3
         /** Näher als das am Live-Bild gilt als live. */
         private const val LIVE_EDGE_MS = 4_000L
         /** Mindestens so viel freier Speicher, sonst kein Zeitversatz. */

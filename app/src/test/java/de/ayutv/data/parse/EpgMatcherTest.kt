@@ -125,6 +125,29 @@ class EpgMatcherTest {
     }
 
     @Test
+    fun skySportAustria() {
+        val m = EpgMatcher().apply {
+            addGuideChannel("Sky.Sport.Austria.1.HD.de", listOf("Sky Sport Austria 1 HD"))
+            addGuideChannel("Sky.Sport.Austria.2.HD.de", listOf("Sky Sport Austria 2 HD"))
+            addGuideChannel("Sky.Sport.Austria.de", listOf("Sky Sport Austria"))
+            addGuideChannel("Sky.Sport.1.de", listOf("Sky Sport 1"))
+        }
+        assertEquals("Sky.Sport.Austria.1.HD.de", m.match(null, "AT: SKY SPORT AUSTRIA 1 HD"))
+        assertEquals("Sky.Sport.Austria.1.HD.de", m.match(null, "AT| SKY SPORTS AUSTRIA 1 HD"))
+        assertEquals("Sky.Sport.Austria.1.HD.de", m.match(null, "AT: SKY SPORT ÖSTERREICH 1"))
+        assertEquals("Sky.Sport.Austria.2.HD.de", m.match(null, "AT: Sky Austria 2"))
+        assertEquals("Sky.Sport.1.de", m.match(null, "DE: SKY SPORT 1 HD"))
+        // Kennung des Anbieters gehört zu einem anderen Sender: als unpassend erkennen
+        assertEquals("Sky.Sport.1.de", m.match("Sky.Sport.1.de", "AT: SKY SPORT AUSTRIA 1"))
+        assertEquals(false, m.fitsName("Sky.Sport.1.de", "AT: SKY SPORT AUSTRIA 1"))
+        assertEquals(true, m.fitsName("Sky.Sport.1.de", "DE: SKY SPORT 1 FHD"))
+        assertEquals(true, m.fitsName("Sky.Sport.Austria.1.HD.de", "|AT| Sky Sport Austria 1 ᴴᴰ"))
+        assertEquals(true, matcher.fitsName("BibelTV.de", "DE: Bibel"))
+        assertEquals(true, matcher.fitsName("DasErste.de", "DE: Das Erste HD"))
+        assertEquals(true, matcher.fitsName("unbekannt.de", "Irgendwas"))
+    }
+
+    @Test
     fun countryDecidesBetweenSameNames() {
         check("VOX.de", "VOX HD")
         check("VOX.at", "AT: VOX Austria")

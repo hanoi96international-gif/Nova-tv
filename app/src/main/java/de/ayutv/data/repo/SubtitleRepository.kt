@@ -129,7 +129,7 @@ class SubtitleRepository(
             candidates = search(apiKey, buildMap {
                 put("moviehash", hash)
                 if (language != null) put("languages", language)
-            }).filter { it.hashMatch && it.fileId !in bad }
+            }).filter { it.hashMatch && it.fileId !in bad }.let(OpenSubtitlesParsing::byQuality)
         }
         if (candidates.isEmpty()) {
             source = Source.TITLE
@@ -142,6 +142,9 @@ class SubtitleRepository(
                     if (language != null) put("languages", language)
                     // Manche Treffer gehören zu einem anderen Titel (z. B. eine Serienfolge): aussortieren.
                 }).filter { it.fileId !in bad && (it.tmdbId == null || it.tmdbId.toString() == tmdb) }
+                    // Wie bei der Titelsuche nach Güte ordnen: Sonst kam in der Reihenfolge von OpenSubtitles oft
+                    // eine maschinell übersetzte oder selten geladene Datei zuerst (und erst „Falsche Untertitel“ half).
+                    .let(OpenSubtitlesParsing::byQuality)
             }
             // Serienfolge („Serie – S1 E2“): genau diese Folge suchen, nicht irgendeine der Serie.
             val episodeOf = OpenSubtitlesParsing.episodeOf(title)

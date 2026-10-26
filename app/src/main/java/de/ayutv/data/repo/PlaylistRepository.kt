@@ -392,6 +392,8 @@ class PlaylistRepository(
     ) {
         val covered = HashSet<Long>()
         val taken = HashSet<String>()
+        // Sender, deren Kennung beim Anbieter nicht zum Namen passt: Das freie EPG darf sie neu zuordnen.
+        val suspects = HashSet<Long>()
         val counts = ArrayList<Pair<String, Int>>()
         var cleared = false
         var firstError: Exception? = null
@@ -399,7 +401,9 @@ class PlaylistRepository(
         val sources = if (preferExtra) extra.map { it to true } + own.map { it to false } else own.map { it to false } + extra.map { it to true }
         for ((index, entry) in sources.withIndex()) {
             val (url, isPublic) = entry
-            val open = channels.filter { it.id !in covered }
+            val open = channels.filter { it.id !in covered } +
+                // Ohne die fragliche Kennung: Ein Treffer im freien EPG bekommt dessen Kennung (setEpgId).
+                if (isPublic) channels.filter { it.id in suspects }.map { it.copy(epgId = null) } else emptyList()
             if (open.isEmpty()) break
             if (isPublic && open.none { it.id in visible && EpgMatcher.analyse(it.name, isId = false).country in GERMAN_SPEAKING }) continue
             val source = try {
@@ -414,11 +418,12 @@ class PlaylistRepository(
                 val used = HashSet<String>()
                 db.runInTransaction(Runnable {
                     if (!cleared) db.programmes().deleteForPlaylist(playlist.id)
-                    importEpgSource(playlist, source, open, shift, taken, found, used)
+                    importEpgSource(playlist, source, open, shift, taken, found, used, if (isPublic) null else suspects)
                 })
                 cleared = true
                 covered += found
                 taken += used
+                if (isPublic) suspects -= found
                 counts += EpgSources.label(url) to found.count { it in visible }
                 Log.i(TAG, "EPG-Quelle ${index + 1} (${EpgSources.label(url)}): ${found.size} von ${open.size} Sendern")
             } catch (e: Exception) {
@@ -461,6 +466,8 @@ class PlaylistRepository(
         taken: Set<String>,
         found: MutableSet<Long>,
         used: MutableSet<String>,
+        /** Hier eintragen, wessen Kennung nicht zum Sendernamen passt (null = nicht prüfen). */
+        suspects: MutableSet<Long>? = null,
     ) {
         val now = System.currentTimeMillis()
         // Mit Archiv (Catch-up) auch vergangene Tage behalten, sonst nur die letzten 2 Stunden.
@@ -497,7 +504,13 @@ class PlaylistRepository(
                 prepared = true
                 val matcher = EpgMatcher()
                 for ((guideId, names) in parser.channels) matcher.addGuideChannel(guideId, names)
-                if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { link(it, channel) }
+                if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { guideId ->
+                    link(guideId, channel)
+                    if (suspects != null && !channel.epgId.isNullOrBlank() && !matcher.fitsName(guideId, channel.name)) {
+                        Log.i(TAG, "Kennung „${channel.epgId}“ passt nicht zu „${channel.name}“ (EPG-Sender $guideId)")
+                        suspects += channel.id
+                    }
+                }
             }
             targets[id]?.let { return it }
             if (id in unknown) return null
