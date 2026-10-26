@@ -151,6 +151,20 @@ class EpgMatcher(private val country: String = "de") {
         private val MARKS = Regex("""\p{M}+""")
         private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
 
+        /** Wie verschieden zwei Namenskerne sind (Bearbeitungsabstand); gleiche zuerst, leere zuletzt. */
+        fun editDistance(a: String, b: String): Int {
+            if (a.isEmpty() || b.isEmpty()) return 1_000
+            if (a == b) return -1
+            val prev = IntArray(b.length + 1) { it }
+            val cur = IntArray(b.length + 1)
+            for (i in 1..a.length) {
+                cur[0] = i
+                for (j in 1..b.length) cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+                cur.copyInto(prev)
+            }
+            return prev[b.length]
+        }
+
         /** Name oder Kennung auf ihren Kern bringen (öffentlich für Tests und die Suche nach Sendern). */
         fun analyse(raw: String, isId: Boolean): Key {
             var text = Normalizer.normalize(raw, Normalizer.Form.NFKD).replace(MARKS, "").lowercase()

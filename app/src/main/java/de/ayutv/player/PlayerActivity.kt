@@ -900,6 +900,8 @@ class PlayerActivity : ComponentActivity() {
 
     fun closeOverlay() {
         overlay = Overlay.NONE
+        // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
+        epgPicker = false
     }
 
     private fun onDigit(digit: Int) {
@@ -1261,10 +1263,24 @@ class PlayerActivity : ComponentActivity() {
         val channel = current ?: return
         epgOverride = container.epgOverrides.get(channel.key)
         epgPicker = true
+        epgChoicesLoading = true
+        overlayToken++
         lifecycleScope.launch {
-            epgChoices = withContext(Dispatchers.IO) { container.playlists.guideChannels(channel.playlistId) }
+            // Laden und nach Ähnlichkeit sortieren im Hintergrund: Es sind oft Tausende Sender, im
+            // Bedienungs-Thread stand der Fire TV dabei sekundenlang still.
+            epgChoices = withContext(Dispatchers.Default) {
+                val all = container.playlists.guideChannels(channel.playlistId)
+                val wanted = de.ayutv.data.parse.EpgMatcher.analyse(channel.name, isId = false).strong
+                all.map { it to de.ayutv.data.parse.EpgMatcher.editDistance(wanted, de.ayutv.data.parse.EpgMatcher.analyse(it.name, isId = false).strong) }
+                    .sortedBy { it.second }
+                    .map { it.first }
+            }
+            epgChoicesLoading = false
         }
     }
+
+    /** Die Liste der TV-Guide-Sender wird noch geladen und sortiert. */
+    var epgChoicesLoading by mutableStateOf(false); private set
 
     fun closeEpgPicker() {
         epgPicker = false

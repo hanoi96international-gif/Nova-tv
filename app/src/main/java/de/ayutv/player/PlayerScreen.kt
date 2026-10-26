@@ -312,7 +312,9 @@ fun PlayerScreen(activity: PlayerActivity) {
             // Angehalten: Leiste bleibt. Nicht isPlaying nehmen: beim Laden ist das auch false, dann
             // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
             Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
-            Overlay.CHANNELS, Overlay.TRACKS -> 15_000L
+            // Beim Zuordnen des TV-Guides (Suchen, Blättern in langen Listen) nicht von selbst schließen.
+            Overlay.TRACKS -> if (activity.epgPicker) Long.MAX_VALUE else 15_000L
+            Overlay.CHANNELS -> 15_000L
         }
         delay(timeout)
         activity.closeOverlay()
@@ -808,14 +810,10 @@ private fun EpgPicker(activity: PlayerActivity) {
     val channel = activity.current ?: return
     var filter by remember { mutableStateOf("") }
     val firstItem = remember { FocusRequester() }
-    val wanted = remember(channel.name) { de.ayutv.data.parse.EpgMatcher.analyse(channel.name, isId = false).strong }
-    // Nach Ähnlichkeit sortiert, einmal je geladener Liste; das Suchfeld filtert nur noch.
-    val ranked = remember(activity.epgChoices, wanted) {
-        activity.epgChoices.sortedBy { c -> epgDistance(wanted, de.ayutv.data.parse.EpgMatcher.analyse(c.name, isId = false).strong) }
-    }
-    val choices = remember(ranked, filter) {
+    // Schon nach Ähnlichkeit sortiert (im Hintergrund, PlayerActivity.openEpgPicker); das Suchfeld filtert nur noch.
+    val choices = remember(activity.epgChoices, filter) {
         val f = filter.trim().lowercase()
-        ranked.filter { f.isEmpty() || f in it.name.lowercase() || f in it.id.lowercase() }.take(300)
+        activity.epgChoices.asSequence().filter { f.isEmpty() || f in it.name.lowercase() || f in it.id.lowercase() }.take(300).toList()
     }
     LazyColumn(
         modifier = Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.94f)),
@@ -830,7 +828,10 @@ private fun EpgPicker(activity: PlayerActivity) {
         if (activity.epgOverride != null) item {
             OptionRow("↺ Wieder automatisch zuordnen", selected = false) { activity.assignEpg(null) }
         }
-        if (activity.epgChoices.isEmpty()) item { MenuHint("Noch kein TV-Guide geladen.") }
+        when {
+            activity.epgChoicesLoading -> item { MenuHint("Sender der TV-Guides werden geladen …") }
+            activity.epgChoices.isEmpty() -> item { MenuHint("Noch kein TV-Guide geladen.") }
+        }
         choices.forEachIndexed { index, c ->
             item(key = c.id) {
                 OptionRow(
@@ -847,20 +848,6 @@ private fun EpgPicker(activity: PlayerActivity) {
             delay(16)
         }
     }
-}
-
-/** Wie verschieden zwei Namenskerne sind (Bearbeitungsabstand): ähnliche Sender oben in der Auswahl. */
-private fun epgDistance(a: String, b: String): Int {
-    if (a.isEmpty() || b.isEmpty()) return 1_000
-    if (a == b) return -1
-    val prev = IntArray(b.length + 1) { it }
-    val cur = IntArray(b.length + 1)
-    for (i in 1..a.length) {
-        cur[0] = i
-        for (j in 1..b.length) cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
-        cur.copyInto(prev)
-    }
-    return prev[b.length]
 }
 
 /** Untertitel des Players im gewählten Aussehen. */
