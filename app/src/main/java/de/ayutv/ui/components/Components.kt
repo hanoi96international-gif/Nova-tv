@@ -197,10 +197,12 @@ fun PosterCard(
     modifier: Modifier = Modifier,
     progress: Float? = null,
     subtitle: String? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     Column(modifier.width(150.dp)) {
         Card(
             onClick = onClick,
+            onLongClick = onLongClick,
             modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f),
             colors = CardDefaults.colors(containerColor = AyuColors.Surface),
             border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, AyuColors.Accent))),

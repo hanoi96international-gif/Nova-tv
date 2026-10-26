@@ -64,7 +64,10 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         }
         runCatching { SyncWorker.schedule(this) }
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
-        container.scope.launch { container.reminders.rescheduleAll() }
+        container.scope.launch {
+            container.reminders.rescheduleAll()
+            container.recordings.rescheduleAll()
+        }
     }
 
     private fun processName(): String =

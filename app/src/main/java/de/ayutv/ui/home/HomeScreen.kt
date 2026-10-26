@@ -31,6 +31,7 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.repo.Recommendation
 import de.ayutv.player.PlayerActivity
+import de.ayutv.data.record.Recording
 import de.ayutv.player.VodRequest
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.components.ChannelCard
@@ -57,6 +58,8 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val recentSeries by content.recentSeries.collectAsStateWithLifecycle(emptyList())
     val sync by container.playlists.state.collectAsStateWithLifecycle()
     val minute by rememberMinuteTicker()
+    val recordings by container.recordings.all.collectAsStateWithLifecycle()
+    var pendingDelete by remember { mutableStateOf<String?>(null) }
 
     var recentChannels by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var recommendations by remember { mutableStateOf<List<Recommendation>>(emptyList()) }
@@ -112,6 +115,49 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                                     context,
                                     VodRequest(entry.key, entry.kind, entry.title, entry.subtitle, entry.image, entry.url),
                                 )
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        if (recordings.isNotEmpty()) {
+            item(key = "recordings", contentType = "posterRow") {
+                PosterRow("⏺ Aufnahmen & Downloads") {
+                    items(recordings, key = { it.id }) { r ->
+                        PosterCard(
+                            title = r.title,
+                            image = r.image,
+                            subtitle = recordingStatus(r),
+                            progress = if (r.totalBytes > 0 && r.state == Recording.State.RUNNING) r.bytes.toFloat() / r.totalBytes else null,
+                            onClick = {
+                                if (r.state == Recording.State.SCHEDULED || r.bytes == 0L && r.state != Recording.State.DONE) {
+                                    android.widget.Toast.makeText(context, recordingStatus(r), android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val key = r.sourceKey ?: "rec:${r.id}"
+                                    PlayerActivity.startVod(
+                                        context,
+                                        VodRequest(
+                                            key,
+                                            if (de.ayutv.data.parse.Episodes.seriesKeyOf(key) != null) HistoryKind.EPISODE else HistoryKind.VOD,
+                                            r.title,
+                                            r.subtitle,
+                                            r.image,
+                                            android.net.Uri.fromFile(container.recordings.file(r)).toString(),
+                                        ),
+                                    )
+                                }
+                            },
+                            onLongClick = {
+                                // Zweimal lange drücken: löschen (einmal könnte ein Versehen sein).
+                                if (pendingDelete == r.id) {
+                                    pendingDelete = null
+                                    scope.launch { container.recordings.delete(r) }
+                                } else {
+                                    pendingDelete = r.id
+                                    android.widget.Toast.makeText(context, "Nochmal lange drücken: „${r.title}“ löschen", android.widget.Toast.LENGTH_SHORT).show()
+                                }
                             },
                         )
                     }
@@ -214,5 +260,18 @@ private fun ChannelRow(
                 )
             }
         }
+    }
+}
+
+/** Stand einer Aufnahme / eines Downloads in wenigen Worten. */
+private fun recordingStatus(r: Recording): String {
+    fun size(bytes: Long) = if (bytes >= 1_000_000_000) "%.1f GB".format(bytes / 1e9) else "${bytes / 1_000_000} MB"
+    val time = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+    return when (r.state) {
+        Recording.State.SCHEDULED -> if (r.kind == Recording.Kind.RECORDING) "Geplant: ${time.format(java.util.Date(r.start))}" else "Wartet …"
+        Recording.State.RUNNING -> if (r.kind == Recording.Kind.RECORDING) "⏺ Läuft · ${size(r.bytes)}"
+            else if (r.totalBytes > 0) "⬇ ${r.bytes * 100 / r.totalBytes} %" else "⬇ ${size(r.bytes)}"
+        Recording.State.DONE -> (if (r.kind == Recording.Kind.RECORDING) "${r.subtitle.orEmpty()} · " else "⬇ ") + size(r.bytes)
+        Recording.State.FAILED -> "✗ ${r.error ?: "Fehlgeschlagen"}"
     }
 }

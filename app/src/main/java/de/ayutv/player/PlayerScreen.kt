@@ -665,6 +665,9 @@ private fun TracksOverlay(activity: PlayerActivity) {
                 ) { activity.toggleFavorite() }
             }
             item {
+                OptionRow("⏺ Diese Sendung aufnehmen", selected = false) { activity.recordCurrent() }
+            }
+            item {
                 OptionRow("📺 Programm falsch? TV-Guide zuordnen …", selected = false) { activity.openEpgPicker() }
             }
         }

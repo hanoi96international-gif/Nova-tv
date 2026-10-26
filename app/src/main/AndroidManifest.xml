@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Updates direkt in der App installieren (Android fragt einmal nach „Unbekannte Apps“). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Aufnahmen und Downloads laufen als Dienst im Vordergrund weiter, auch wenn die App zu ist. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <!-- Fire TV / Android TV: keine Touch-Bedienung nötig, Leanback-Launcher unterstützen -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -69,6 +72,10 @@
             android:name=".data.translate.TranslationService"
             android:exported="false"
             android:process=":mt" />
+        <service
+            android:name=".data.record.RecordingService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <receiver
             android:name=".data.reminders.ReminderReceiver"
             android:exported="false">

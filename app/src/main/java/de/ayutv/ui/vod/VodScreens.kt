@@ -1,6 +1,7 @@
 package de.ayutv.ui.vod
 
 import de.ayutv.ui.components.isPortrait
+import de.ayutv.ui.components.isTouchDevice
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -250,6 +251,17 @@ private fun MovieDetail(movie: VodEntity) {
                     OutlinedButton(onClick = { scope.launch { content.toggleFavorite(movie.key) } }) {
                         Text(if (movie.key in favorites) "★ Favorit" else "☆ Merken")
                     }
+                    // Fürs Handy unterwegs: Film aufs Gerät laden (läuft im Hintergrund weiter).
+                    if (isTouchDevice) {
+                        val downloads by container.recordings.all.collectAsStateWithLifecycle()
+                        val loaded = downloads.any { it.sourceKey == movie.key && it.state != de.ayutv.data.record.Recording.State.FAILED }
+                        OutlinedButton(onClick = {
+                            if (!loaded) scope.launch {
+                                container.recordings.download(movie.key, movie.name, i?.genre, movie.poster, movie.url, container.settings.current().userAgent)
+                                android.widget.Toast.makeText(context, "⬇ Wird heruntergeladen – unter Start → Aufnahmen & Downloads", android.widget.Toast.LENGTH_LONG).show()
+                            }
+                        }) { Text(if (loaded) "⬇ Geladen" else "⬇ Herunterladen") }
+                    }
                 }
                 Spacer(Modifier.height(20.dp))
                 when {
@@ -294,7 +306,8 @@ private fun clockText(ms: Long): String {
 
 @Composable
 private fun SeriesDetail(series: SeriesEntity) {
-    val content = LocalContainer.current.content
+    val container = LocalContainer.current
+    val content = container.content
     val context = LocalContext.current
     var episodes by remember(series.key) { mutableStateOf<List<Pair<XtreamEpisode, String>>?>(null) }
     var error by remember(series.key) { mutableStateOf<String?>(null) }
@@ -387,6 +400,19 @@ private fun SeriesDetail(series: SeriesEntity) {
                             val fraction = h?.let { SeriesProgress.fraction(it.positionMs, it.durationMs) }
                             EpisodeRow(
                                 episode,
+                                onDownload = if (isTouchDevice) ({
+                                    scope.launch {
+                                        container.recordings.download(
+                                            de.ayutv.data.parse.Episodes.key(series.key, episode.id),
+                                            de.ayutv.data.parse.Episodes.title(series.name, episode),
+                                            episode.title,
+                                            episode.image ?: series.cover,
+                                            url,
+                                            container.settings.current().userAgent,
+                                        )
+                                        android.widget.Toast.makeText(context, "⬇ Folge wird heruntergeladen", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }) else null,
                                 watched = h != null && SeriesProgress.watched(h.positionMs, h.durationMs),
                                 progress = fraction,
                                 onLongClick = {
@@ -420,6 +446,7 @@ private fun EpisodeRow(
     watched: Boolean = false,
     progress: Float? = null,
     onLongClick: (() -> Unit)? = null,
+    onDownload: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -457,6 +484,14 @@ private fun EpisodeRow(
             }
             if (episode.durationSeconds > 0) {
                 Text("${episode.durationSeconds / 60} min", fontSize = 13.sp, color = AyuColors.TextSecondary)
+            }
+            onDownload?.let { download ->
+                Spacer(Modifier.width(10.dp))
+                Surface(
+                    onClick = download,
+                    shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(18.dp)),
+                    colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.Accent),
+                ) { Text("⬇", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) }
             }
         }
     }

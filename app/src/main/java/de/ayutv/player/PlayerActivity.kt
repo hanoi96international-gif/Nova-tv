@@ -1988,6 +1988,22 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /** Laufende Sendung aufnehmen (ohne Programmdaten: die nächste Stunde); nochmal = Aufnahme entfernen. */
+    fun recordCurrent() {
+        val channel = playing ?: return
+        val now = System.currentTimeMillis()
+        val programme = nowNext.firstOrNull { it.start <= now && it.stop > now }
+        val start = programme?.start ?: (now / 60_000 * 60_000)
+        val stop = programme?.stop ?: (start + 60 * 60_000)
+        val title = programme?.headline()?.ifEmpty { null } ?: channel.name
+        lifecycleScope.launch {
+            val on = container.recordings.toggleRecording(
+                channel.key, channel.name, title, channel.url, channel.userAgent ?: settings.userAgent, start, stop, programme?.icon ?: channel.logo,
+            )
+            message = if (on) "⏺ Wird aufgenommen bis ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(stop))}: $title" else "Aufnahme entfernt"
+        }
+    }
+
     fun setAudioMode(mode: AudioMode) {
         audioMode = mode
         enhance.mode = mode

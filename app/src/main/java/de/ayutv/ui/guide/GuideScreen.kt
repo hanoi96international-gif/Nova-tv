@@ -132,6 +132,21 @@ fun GuideScreen() {
     }
     val reminders by container.reminders.all.collectAsStateWithLifecycle(emptyList())
     val reminderIds = remember(reminders) { reminders.mapTo(HashSet()) { it.id } }
+    val recordings by container.recordings.all.collectAsStateWithLifecycle()
+    val recordingIds = remember(recordings) {
+        recordings.filter { it.kind == de.ayutv.data.record.Recording.Kind.RECORDING }.mapTo(HashSet()) { "${it.channelKey}@${it.start}" }
+    }
+    // Lange OK: laufende oder kommende Sendung aufnehmen (bzw. die Aufnahme wieder entfernen).
+    val record: (ChannelEntity, ProgrammeEntity) -> Unit = { channel, programme ->
+        if (programme.stop > System.currentTimeMillis()) scope.launch {
+            val on = container.recordings.toggleRecording(
+                channel.key, channel.name, programme.headline().ifEmpty { channel.name }, channel.url,
+                channel.userAgent ?: appSettings?.userAgent ?: de.ayutv.data.AppSettings.DEFAULT_USER_AGENT,
+                programme.start, programme.stop, programme.icon ?: channel.logo,
+            )
+            android.widget.Toast.makeText(context, if (on) "⏺ Wird aufgenommen: ${programme.headline()}" else "Aufnahme entfernt", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
     val play: (ChannelEntity, ProgrammeEntity?) -> Unit = { channel, programme ->
         val now = System.currentTimeMillis()
         if (programme != null && programme.start > now) {
@@ -207,9 +222,11 @@ fun GuideScreen() {
                         windowEnd = windowEnd,
                         now = minute,
                         reminderIds = reminderIds,
+                        recordingIds = recordingIds,
                         onShift = shift,
                         onFocusProgramme = { focused.value = channel to it },
                         onPlay = { programme -> play(channel, programme) },
+                        onRecord = { programme -> record(channel, programme) },
                     )
                 }
             }
@@ -267,11 +284,11 @@ private fun ProgrammePreview(
         val past = programme.stop <= now
         val archive = past && Catchup.url(playlists.firstOrNull { it.id == channel.playlistId }, channel, programme.start, programme.stop) != null
         val status = when {
-            programme.start <= now && programme.stop > now -> "● JETZT"
+            programme.start <= now && programme.stop > now -> "● JETZT · lange OK: aufnehmen"
             archive -> "↺ OK: aus dem Archiv abspielen"
             past -> "Vorbei"
-            "${channel.key}@${programme.start}" in reminderIds -> "🔔 Erinnerung an · OK: entfernen"
-            else -> "OK: Erinnerung setzen"
+            "${channel.key}@${programme.start}" in reminderIds -> "🔔 Erinnerung an · OK: entfernen · lange OK: aufnehmen"
+            else -> "OK: Erinnerung · lange OK: aufnehmen"
         }
         Text(
             "${channel.name} · ${formatTime(programme.start)} – ${formatTime(programme.stop)} · $status",
@@ -295,9 +312,11 @@ private fun GuideRow(
     windowEnd: Long,
     now: Long,
     reminderIds: Set<String>,
+    recordingIds: Set<String>,
     onShift: (Int) -> Boolean,
     onFocusProgramme: (ProgrammeEntity) -> Unit,
     onPlay: (ProgrammeEntity?) -> Unit,
+    onRecord: (ProgrammeEntity) -> Unit,
 ) {
     val metrics = LocalGuideMetrics.current
     Row(Modifier.height(ROW_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
@@ -332,6 +351,7 @@ private fun GuideRow(
                         val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
                         GuideCell(
                             title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
+                                (if ("${channel.key}@${p.start}" in recordingIds) "⏺ " else "") +
                                 (if (p.stop > now) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" },
                             time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
                             width = cell.width,
@@ -341,6 +361,7 @@ private fun GuideRow(
                             onShift = onShift,
                             onFocused = { onFocusProgramme(p) },
                             onClick = { onPlay(p) },
+                            onLongClick = if (p.stop > now) ({ onRecord(p) }) else null,
                         )
                     }
                 }
@@ -375,11 +396,13 @@ private fun GuideCell(
     last: Boolean,
     onShift: (Int) -> Boolean,
     onFocused: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
+        onLongClick = onLongClick,
         // Tippen: erst Vorschau zeigen (wie Fokussieren mit der Fernbedienung), zweites Tippen spielt.
         focusFirst = true,
         modifier = Modifier

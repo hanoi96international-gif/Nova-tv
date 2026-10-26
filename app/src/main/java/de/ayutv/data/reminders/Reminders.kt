@@ -132,6 +132,7 @@ class ReminderReceiver : BroadcastReceiver() {
                 app.container.scope.launch {
                     try {
                         app.container.reminders.rescheduleAll()
+                        app.container.recordings.rescheduleAll()
                     } finally {
                         pending.finish()
                     }
