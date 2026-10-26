@@ -72,4 +72,27 @@ object Languages {
     fun of(code: String?): Language? = normalize(code)?.let(byCode::get)
 
     fun label(code: String?): String = of(code)?.label ?: code.orEmpty()
+
+    private val HINTS = mapOf(
+        "de" to setOf("der", "die", "das", "und", "nicht", "ist", "ich", "du", "sie", "wir", "ein", "eine", "zu", "mit", "auf", "was", "ja", "nein", "auch", "noch", "aber", "doch", "mir", "dich", "hast", "bin"),
+        "en" to setOf("the", "and", "is", "you", "not", "it", "that", "to", "of", "what", "are", "was", "this", "have", "do", "don't", "i'm", "we", "my", "your", "be", "with", "just", "no", "yes", "can"),
+        "fr" to setOf("le", "la", "les", "et", "est", "je", "tu", "vous", "pas", "une", "un", "que", "qui", "c'est", "nous", "avec", "pour", "mais"),
+        "es" to setOf("el", "los", "las", "y", "es", "yo", "tú", "usted", "no", "una", "que", "qué", "con", "para", "pero", "está", "por"),
+        "it" to setOf("il", "lo", "gli", "e", "è", "io", "tu", "non", "una", "che", "con", "per", "ma", "sono", "questo"),
+        "tr" to setOf("ve", "bir", "bu", "ne", "değil", "ben", "sen", "için", "çok", "var", "yok", "mi", "da", "de"),
+    )
+
+    /**
+     * Sprache eines Untertitels erraten, wenn die Spur keine nennt (häufig bei Live-TV: „Spur 1“).
+     * Zählt typische kurze Wörter; null, wenn der Text zu kurz oder nicht eindeutig ist.
+     */
+    fun guess(texts: List<String>): String? {
+        val words = texts.joinToString(" ").lowercase()
+            .split(Regex("[^\\p{L}']+")).filter { it.isNotEmpty() }
+        if (words.size < 3) return null
+        val scores = HINTS.mapValues { (_, hints) -> words.count { it in hints } }
+        val best = scores.maxByOrNull { it.value } ?: return null
+        val second = scores.values.sortedDescending().getOrElse(1) { 0 }
+        return best.key.takeIf { best.value >= 2 && best.value > second }
+    }
 }

@@ -97,6 +97,8 @@ data class AppSettings(
     val internetGuide: Boolean = true,
     /** Freies EPG zuerst, der Anbieter füllt nur noch auf (bei Sport oft genauere Angaben, z. B. die Paarung). */
     val preferInternetGuide: Boolean = false,
+    /** Nur der eigene TV-Guide (freies EPG); der des Anbieters wird nicht geladen (oft falsche Zeiten). */
+    val ownGuideOnly: Boolean = true,
     /** Vereine, deren Spiele automatisch eine Erinnerung bekommen. */
     val followedTeams: Set<String> = emptySet(),
     /** Gleiche Sender in mehreren Qualitäten (SD, HD, 4K, RAW, Backup) als einen Eintrag zeigen. */
@@ -160,6 +162,7 @@ class SettingsStore(private val context: Context) {
         val epgShift = intPreferencesKey("epg_shift_hours")
         val internetGuide = booleanPreferencesKey("internet_guide")
         val preferInternetGuide = booleanPreferencesKey("prefer_internet_guide")
+        val ownGuideOnly = booleanPreferencesKey("own_guide_only")
         val followedTeams = stringSetPreferencesKey("followed_teams")
         val mergeVariants = booleanPreferencesKey("merge_variants")
         val countryChoiceDone = booleanPreferencesKey("country_choice_done")
@@ -268,6 +271,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.epgShift] = next.epgShiftHours
             prefs[Keys.internetGuide] = next.internetGuide
             prefs[Keys.preferInternetGuide] = next.preferInternetGuide
+            prefs[Keys.ownGuideOnly] = next.ownGuideOnly
             prefs[Keys.followedTeams] = next.followedTeams
             prefs[Keys.mergeVariants] = next.mergeVariants
             prefs[Keys.countryChoiceDone] = next.countryChoiceDone
@@ -305,6 +309,7 @@ class SettingsStore(private val context: Context) {
         epgShiftHours = this[Keys.epgShift] ?: 0,
         internetGuide = this[Keys.internetGuide] ?: true,
         preferInternetGuide = this[Keys.preferInternetGuide] ?: false,
+        ownGuideOnly = this[Keys.ownGuideOnly] ?: true,
         followedTeams = this[Keys.followedTeams] ?: emptySet(),
         mergeVariants = this[Keys.mergeVariants] ?: true,
         countryChoiceDone = this[Keys.countryChoiceDone] ?: false,

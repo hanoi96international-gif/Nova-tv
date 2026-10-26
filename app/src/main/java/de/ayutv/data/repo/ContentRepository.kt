@@ -173,7 +173,9 @@ class ContentRepository(
     suspend fun programmesInRange(channels: List<ChannelEntity>, from: Long, to: Long): Map<String, List<ProgrammeEntity>> {
         val ids = channels.mapNotNull { it.epgId?.takeIf(String::isNotEmpty) }.distinct()
         if (ids.isEmpty()) return emptyMap()
+        // Mehrere Playlists mit denselben Sendern: jede Sendung nur einmal.
         return ids.chunked(SQL_CHUNK).flatMap { db.programmes().inRange(it, from, to) }.groupBy { it.channelEpgId }
+            .mapValues { (_, list) -> list.distinctBy { it.start } }
     }
 
     /** Archiv-Adresse einer vergangenen Sendung oder null (Sender ohne Archiv, zu alt). */

@@ -69,6 +69,8 @@ class PlaylistRepository(
         val userAgent = settings.current().userAgent
         importHttp = http.newBuilder()
             .readTimeout(120, TimeUnit.SECONDS)
+            // Obergrenze je Datei: Ein Server, der nur tröpfelt, hält den Import sonst ewig fest.
+            .callTimeout(20, TimeUnit.MINUTES)
             .addInterceptor { chain ->
                 val request = chain.request()
                 chain.proceed(if (request.header("User-Agent") == null) request.newBuilder().header("User-Agent", userAgent).build() else request)
@@ -109,10 +111,36 @@ class PlaylistRepository(
     /** Playlist ein- oder ausschalten. Daten bleiben erhalten; eine nie geladene Playlist wird jetzt geladen. */
     suspend fun setEnabled(id: Long, enabled: Boolean) {
         db.playlists().setEnabled(id, enabled)
-        if (enabled && db.playlists().byId(id)?.lastSync == 0L) sync(id)
+        if (!enabled) {
+            // Ausgeschaltet: auch ihr Programm weg, sonst erscheinen Sendungen doppelt (gleiche Sender-Kennung).
+            withContext(Dispatchers.IO) { db.programmes().deleteForPlaylist(id) }
+            db.playlists().setLastEpgSync(id, 0)
+            return
+        }
+        val playlist = db.playlists().byId(id) ?: return
+        if (playlist.lastSync == 0L) sync(id) else if (playlist.lastEpgSync == 0L) syncEpg(id)
     }
 
-    suspend fun delete(id: Long) = mutex.withLock {
+    /**
+     * Playlist löschen. Lädt sie gerade (oder hängt beim Laden), wird das Laden abgebrochen. Lädt eine andere,
+     * wird nicht darauf gewartet: Das Löschen ist eine eigene Datenbank-Transaktion.
+     */
+    suspend fun delete(id: Long) {
+        if (importing == id) cancelImport()
+        if (importing == null || importing == id) mutex.withLock { deleteNow(id) } else deleteNow(id)
+    }
+
+    /** Laufenden Import abbrechen (auch blockierende Downloads). */
+    private fun cancelImport() {
+        importJob?.cancel()
+        importHttp.dispatcher.cancelAll()
+    }
+
+    /** Playlist, die gerade lädt (Sender oder TV-Guide), und der Ladevorgang selbst. */
+    @Volatile private var importing: Long? = null
+    @Volatile private var importJob: kotlinx.coroutines.Job? = null
+
+    private suspend fun deleteNow(id: Long) {
         withContext(Dispatchers.IO) {
             db.runInTransaction(Runnable {
                 db.channels().deleteForPlaylist(id)
@@ -160,6 +188,8 @@ class PlaylistRepository(
             if (rematch || now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
         }
         if (rematch) runCatching { statusDir.mkdirs(); versionFile.writeText(EPG_MATCH_VERSION) }
+        // Programm ausgeschalteter Playlists entfernen (ältere Versionen ließen es liegen: doppelte Sendungen).
+        for (playlist in db.playlists().all()) if (!playlist.enabled) withContext(Dispatchers.IO) { db.programmes().deleteForPlaylist(playlist.id) }
         val archiveDays = db.channels().maxCatchupDaysAll().coerceIn(0, MAX_ARCHIVE_DAYS)
         db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
     }
@@ -177,8 +207,11 @@ class PlaylistRepository(
     }
 
     private suspend fun syncNow(playlistId: Long, withEpg: Boolean) {
-        val playlist = db.playlists().byId(playlistId) ?: return
         val ok = mutex.withLock {
+            // Erst hier lesen: Während auf die Sperre gewartet wurde, kann die Playlist gelöscht worden sein.
+            val playlist = db.playlists().byId(playlistId) ?: return
+            importing = playlistId
+            importJob = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
             prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: Sender werden geladen …")
             try {
@@ -193,10 +226,18 @@ class PlaylistRepository(
                 db.playlists().update(updated.copy(enabled = enabled))
                 _state.value = SyncState.Idle
                 true
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _state.value = SyncState.Idle
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "Sync fehlgeschlagen", e)
-                _state.value = SyncState.Failed("${playlist.name}: ${e.message ?: e.javaClass.simpleName}")
+                // Abgebrochen, weil die Playlist gelöscht wurde: keine Fehlermeldung.
+                _state.value = if (db.playlists().byId(playlistId) == null) SyncState.Idle
+                else SyncState.Failed("${playlist.name}: ${e.message ?: e.javaClass.simpleName}")
                 false
+            } finally {
+                importing = null
+                importJob = null
             }
         }
         if (ok && withEpg) syncEpg(playlistId)
@@ -261,12 +302,12 @@ class PlaylistRepository(
 
         // Erst alles herunterladen. Scheitern Filme oder Serien, bleiben die bisherigen erhalten,
         // statt dass die Bibliothek bis zum nächsten Abgleich leer ist.
-        val liveFile = fetch(client.apiUrl("get_live_streams"), "xtream-${playlist.id}-live.json")
+        val liveFile = fetch(client.apiUrl("get_live_streams"), "xtream-${playlist.id}-live.json", "${playlist.name}: Sender werden geladen")
         _state.value = SyncState.Running("${playlist.name}: Filme werden geladen …")
-        val vodFile = runCatching { fetch(client.apiUrl("get_vod_streams"), "xtream-${playlist.id}-vod.json") }
+        val vodFile = runCatching { fetch(client.apiUrl("get_vod_streams"), "xtream-${playlist.id}-vod.json", "${playlist.name}: Filme werden geladen") }
             .onFailure { Log.w(TAG, "Filme konnten nicht geladen werden", it) }.getOrNull()
         _state.value = SyncState.Running("${playlist.name}: Serien werden geladen …")
-        val seriesFile = runCatching { fetch(client.apiUrl("get_series"), "xtream-${playlist.id}-series.json") }
+        val seriesFile = runCatching { fetch(client.apiUrl("get_series"), "xtream-${playlist.id}-series.json", "${playlist.name}: Serien werden geladen") }
             .onFailure { Log.w(TAG, "Serien konnten nicht geladen werden", it) }.getOrNull()
 
         try { db.runInTransaction(Runnable {
@@ -343,15 +384,19 @@ class PlaylistRepository(
         mutex.withLock {
             // Erst hier lesen: Während auf die Sperre gewartet wurde, kann die Playlist geändert oder gelöscht worden sein.
             val playlist = db.playlists().byId(playlistId) ?: return
-            val own = when (playlist.type) {
+            val current = settings.current()
+            // Standard: nur der eigene TV-Guide (freies EPG). Der des Anbieters hat oft falsche Zeiten
+            // (z. B. eine Stunde daneben nach der Zeitumstellung) und wird dann gar nicht geladen.
+            val own = if (current.ownGuideOnly) emptyList() else when (playlist.type) {
                 PlaylistType.M3U -> EpgSources.forM3u(playlist.epgUrl, playlist.url)
                 PlaylistType.XTREAM -> EpgSources.forXtream(playlist.epgUrl, XtreamClient.of(http, playlist).epgUrl)
             }
-            val current = settings.current()
-            val extra = if (current.internetGuide) EpgSources.PUBLIC.filter { it !in own } else emptyList()
+            val extra = if (current.ownGuideOnly || current.internetGuide) EpgSources.PUBLIC.filter { it !in own } else emptyList()
             if (own.isEmpty() && extra.isEmpty()) return
             prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: TV-Guide wird geladen …")
+            importing = playlistId
+            importJob = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
             try {
                 // Von Hand zugeordnete Sender: Ihre Kennung gilt, egal was der Anbieter liefert.
                 val chosen = overrides?.all().orEmpty()
@@ -362,13 +407,20 @@ class PlaylistRepository(
                 val shift = current.epgShiftHours * HOUR
                 withContext(importDispatcher) {
                     for ((id, guideId) in forced) db.channels().setEpgId(id, guideId)
-                    importEpg(playlist, own, extra, channels, visible, shift, current.internetGuide && current.preferInternetGuide, forced.keys)
+                    importEpg(playlist, own, extra, channels, visible, shift, current.ownGuideOnly || current.internetGuide && current.preferInternetGuide, forced.keys)
                 }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _state.value = SyncState.Idle
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "EPG fehlgeschlagen", e)
-                _state.value = SyncState.Failed("TV-Guide: ${e.message ?: e.javaClass.simpleName}")
+                _state.value = if (db.playlists().byId(playlistId) == null) SyncState.Idle
+                else SyncState.Failed("TV-Guide: ${e.message ?: e.javaClass.simpleName}")
+            } finally {
+                importing = null
+                importJob = null
             }
         }
     }
@@ -602,7 +654,7 @@ class PlaylistRepository(
      * Netzaussetzer nicht den ganzen Import ab, und die Datenbank-Transaktion hält keine Verbindung offen.
      * Lokale Pfade werden direkt verwendet.
      */
-    private fun fetch(url: String, name: String): File {
+    private fun fetch(url: String, name: String, progress: String? = null): File {
         if (!url.startsWith("http://", true) && !url.startsWith("https://", true)) return File(url.removePrefix("file://"))
         importDir.mkdirs()
         val target = File(importDir, name)
@@ -611,7 +663,23 @@ class PlaylistRepository(
             try {
                 importHttp.newCall(Request.Builder().url(url).build()).execute().use { response ->
                     if (!response.isSuccessful) throw IOException("HTTP ${response.code} beim Laden von ${url.substringBefore('?')}")
-                    target.outputStream().use { out -> response.body.byteStream().copyTo(out, 64 * 1024) }
+                    target.outputStream().use { out ->
+                        val input = response.body.byteStream()
+                        val buffer = ByteArray(64 * 1024)
+                        var total = 0L
+                        var shown = 0L
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            out.write(buffer, 0, n)
+                            total += n
+                            // Fortschritt zeigen: Große Listen brauchen Minuten, so sieht man, dass es weitergeht.
+                            if (progress != null && total - shown >= 1_000_000) {
+                                shown = total
+                                _state.value = SyncState.Running("$progress … ${"%.1f".format(java.util.Locale.GERMANY, total / 1e6)} MB")
+                            }
+                        }
+                    }
                 }
                 return target
             } catch (e: IOException) {
@@ -671,7 +739,7 @@ class PlaylistRepository(
         private const val MAX_MISSING_LISTED = 20_000
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "4"
+        private const val EPG_MATCH_VERSION = "5"
         /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
         private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }

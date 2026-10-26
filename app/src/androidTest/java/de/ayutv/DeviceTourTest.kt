@@ -134,7 +134,8 @@ class DeviceTourTest {
             assertTrue("EPG-Abgleich auf Android: ${key.strong}", key.strong == "skysportbundesliga1" && key.country == "de")
         }
         // Die Abschnitte unten prüfen den TV-Guide des Testservers; das freie EPG aus dem Internet erst am Ende.
-        runBlocking { container.settings.update { it.copy(internetGuide = false, countryChoiceDone = true) } }
+        // Der Testserver liefert den TV-Guide wie ein Anbieter: ihn hier ausdrücklich zulassen (Standard ist „nur eigener“).
+        runBlocking { container.settings.update { it.copy(internetGuide = false, ownGuideOnly = false, countryChoiceDone = true) } }
 
         // 1. Playlist + EPG importieren
         val started = System.currentTimeMillis()

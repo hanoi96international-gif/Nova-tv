@@ -491,23 +491,25 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
-                            "TV-Guide aus dem Internet",
+                            "TV-Guide",
                             when {
-                                !settings.internetGuide -> "Aus"
-                                settings.preferInternetGuide -> "Bevorzugen"
-                                else -> "Ergänzen"
+                                settings.ownGuideOnly -> "Nur eigener"
+                                !settings.internetGuide -> "Nur vom Anbieter"
+                                settings.preferInternetGuide -> "Eigener zuerst, Anbieter ergänzt"
+                                else -> "Anbieter zuerst, eigener ergänzt"
                             },
-                            "Freies EPG für Deutschland, Österreich und die Schweiz (epgshare01), höchstens einmal am Tag geladen. " +
-                                "Ergänzen: nur für Sender, die beim Anbieter fehlen (oft Sky, DAZN). Bevorzugen: zuerst aus dem Internet " +
-                                "(meist genauer, z. B. mit Fußball-Paarungen), der Anbieter füllt den Rest. Der Guide wird danach neu geladen.",
+                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01), richtige Zeiten auch nach " +
+                                "der Zeitumstellung. Der TV-Guide des Anbieters liegt oft daneben; „Nur eigener“ lädt ihn gar nicht. " +
+                                "Der Guide wird nach dem Umschalten neu geladen.",
                         ) {
                             scope.launch {
-                                // Ergänzen → Bevorzugen → Aus → Ergänzen
+                                // Nur eigener → Eigener zuerst → Anbieter zuerst → Nur Anbieter → Nur eigener
                                 container.settings.update {
                                     when {
-                                        !it.internetGuide -> it.copy(internetGuide = true, preferInternetGuide = false)
-                                        it.preferInternetGuide -> it.copy(internetGuide = false, preferInternetGuide = false)
-                                        else -> it.copy(preferInternetGuide = true)
+                                        it.ownGuideOnly -> it.copy(ownGuideOnly = false, internetGuide = true, preferInternetGuide = true)
+                                        it.internetGuide && it.preferInternetGuide -> it.copy(preferInternetGuide = false)
+                                        it.internetGuide -> it.copy(internetGuide = false)
+                                        else -> it.copy(ownGuideOnly = true, internetGuide = true, preferInternetGuide = false)
                                     }
                                 }
                                 epgReloadJob?.cancel()
