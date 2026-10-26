@@ -129,11 +129,14 @@ interface ProgrammeDao {
     @Query("DELETE FROM programmes WHERE stop < :before")
     suspend fun deleteEndedBefore(before: Long)
 
-    @Query("SELECT * FROM programmes WHERE channelEpgId IN (:epgIds) AND stop > :from AND start < :to ORDER BY start")
+    @Query(
+        """SELECT * FROM programmes WHERE channelEpgId IN (:epgIds) AND stop > :from AND start < :to
+           AND playlistId IN (SELECT id FROM playlists WHERE enabled = 1) ORDER BY start"""
+    )
     suspend fun inRange(epgIds: List<String>, from: Long, to: Long): List<ProgrammeEntity>
 
     /** Alles, was gerade läuft: eine Abfrage statt vieler IN-Listen bei großen Senderlisten. */
-    @Query("SELECT * FROM programmes WHERE stop > :now AND start <= :now")
+    @Query("SELECT * FROM programmes WHERE stop > :now AND start <= :now AND playlistId IN (SELECT id FROM playlists WHERE enabled = 1)")
     suspend fun airingAt(now: Long): List<ProgrammeEntity>
 
     /** Mögliche Sportsendungen im Zeitraum auf sichtbaren Sendern (grob; genau prüft ProgrammeText.isSportEvent). */
@@ -150,7 +153,10 @@ interface ProgrammeDao {
     )
     suspend fun sportBetween(from: Long, to: Long, limit: Int): List<ProgrammeEntity>
 
-    @Query("SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from ORDER BY start LIMIT :limit")
+    @Query(
+        """SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from
+           AND playlistId IN (SELECT id FROM playlists WHERE enabled = 1) ORDER BY start LIMIT :limit"""
+    )
     suspend fun upcoming(epgId: String, from: Long, limit: Int): List<ProgrammeEntity>
 
     @Query("""SELECT * FROM programmes WHERE (title LIKE '%' || :query || '%' OR subtitle LIKE '%' || :query || '%') AND stop > :now

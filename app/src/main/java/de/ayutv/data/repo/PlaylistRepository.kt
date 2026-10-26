@@ -111,7 +111,14 @@ class PlaylistRepository(
     /** Playlist ein- oder ausschalten. Daten bleiben erhalten; eine nie geladene Playlist wird jetzt geladen. */
     suspend fun setEnabled(id: Long, enabled: Boolean) {
         db.playlists().setEnabled(id, enabled)
-        if (enabled && db.playlists().byId(id)?.lastSync == 0L) sync(id)
+        if (!enabled) {
+            // Ausgeschaltet: auch ihr Programm weg, sonst erscheinen Sendungen doppelt (gleiche Sender-Kennung).
+            withContext(Dispatchers.IO) { db.programmes().deleteForPlaylist(id) }
+            db.playlists().setLastEpgSync(id, 0)
+            return
+        }
+        val playlist = db.playlists().byId(id) ?: return
+        if (playlist.lastSync == 0L) sync(id) else if (playlist.lastEpgSync == 0L) syncEpg(id)
     }
 
     /**
@@ -181,6 +188,8 @@ class PlaylistRepository(
             if (rematch || now - fresh.lastEpgSync > EPG_MAX_AGE) syncEpg(fresh.id)
         }
         if (rematch) runCatching { statusDir.mkdirs(); versionFile.writeText(EPG_MATCH_VERSION) }
+        // Programm ausgeschalteter Playlists entfernen (ältere Versionen ließen es liegen: doppelte Sendungen).
+        for (playlist in db.playlists().all()) if (!playlist.enabled) withContext(Dispatchers.IO) { db.programmes().deleteForPlaylist(playlist.id) }
         val archiveDays = db.channels().maxCatchupDaysAll().coerceIn(0, MAX_ARCHIVE_DAYS)
         db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
     }
@@ -375,12 +384,14 @@ class PlaylistRepository(
         mutex.withLock {
             // Erst hier lesen: Während auf die Sperre gewartet wurde, kann die Playlist geändert oder gelöscht worden sein.
             val playlist = db.playlists().byId(playlistId) ?: return
-            val own = when (playlist.type) {
+            val current = settings.current()
+            // Standard: nur der eigene TV-Guide (freies EPG). Der des Anbieters hat oft falsche Zeiten
+            // (z. B. eine Stunde daneben nach der Zeitumstellung) und wird dann gar nicht geladen.
+            val own = if (current.ownGuideOnly) emptyList() else when (playlist.type) {
                 PlaylistType.M3U -> EpgSources.forM3u(playlist.epgUrl, playlist.url)
                 PlaylistType.XTREAM -> EpgSources.forXtream(playlist.epgUrl, XtreamClient.of(http, playlist).epgUrl)
             }
-            val current = settings.current()
-            val extra = if (current.internetGuide) EpgSources.PUBLIC.filter { it !in own } else emptyList()
+            val extra = if (current.ownGuideOnly || current.internetGuide) EpgSources.PUBLIC.filter { it !in own } else emptyList()
             if (own.isEmpty() && extra.isEmpty()) return
             prepareImportClient()
             _state.value = SyncState.Running("${playlist.name}: TV-Guide wird geladen …")
@@ -396,7 +407,7 @@ class PlaylistRepository(
                 val shift = current.epgShiftHours * HOUR
                 withContext(importDispatcher) {
                     for ((id, guideId) in forced) db.channels().setEpgId(id, guideId)
-                    importEpg(playlist, own, extra, channels, visible, shift, current.internetGuide && current.preferInternetGuide, forced.keys)
+                    importEpg(playlist, own, extra, channels, visible, shift, current.ownGuideOnly || current.internetGuide && current.preferInternetGuide, forced.keys)
                 }
                 db.playlists().setLastEpgSync(playlist.id, System.currentTimeMillis())
                 _state.value = SyncState.Idle
@@ -728,7 +739,7 @@ class PlaylistRepository(
         private const val MAX_MISSING_LISTED = 20_000
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "4"
+        private const val EPG_MATCH_VERSION = "5"
         /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
         private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }

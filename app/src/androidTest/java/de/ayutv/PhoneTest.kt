@@ -95,7 +95,7 @@ class PhoneTest {
         val container = app.container
         val base = "http://10.0.2.2:8000"
         runBlocking {
-            container.settings.update { it.copy(internetGuide = false, countryChoiceDone = true) }
+            container.settings.update { it.copy(internetGuide = false, ownGuideOnly = false, countryChoiceDone = true) }
             if (container.db.playlists().all().isEmpty()) {
                 val id = container.playlists.add(PlaylistEntity(name = "CI-Test", type = PlaylistType.M3U, url = "$base/playlist.m3u", epgUrl = "$base/epg.xml"))
                 container.playlists.sync(id)
