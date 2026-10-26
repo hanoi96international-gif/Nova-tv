@@ -288,7 +288,9 @@ fun PlayerScreen(activity: PlayerActivity) {
             // Angehaltenes Live-TV: Leiste stehen lassen, damit man sieht, wie weit es zurückliegt.
             Overlay.INFO -> if (activity.timeshifted && activity.player?.playWhenReady == false) Long.MAX_VALUE
                 else if (activity.showTech) 10_000L else 5_000L
-            Overlay.CONTROLS -> if (activity.player?.isPlaying == false) Long.MAX_VALUE else 4_000L
+            // Angehalten: Leiste bleibt. Nicht isPlaying nehmen: beim Laden ist das auch false, dann
+            // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
+            Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             Overlay.CHANNELS, Overlay.TRACKS -> 15_000L
         }
         delay(timeout)

@@ -189,7 +189,9 @@ class DeviceTourTest {
             val variants = runBlocking { container.content.variantsOf(channel) }
             log("sport: events=${events.map { de.ayutv.data.parse.ProgrammeText.headline(it.programme.title, it.programme.subtitle) }} reminders=${reminders.map { it.title }} variants=${variants.map { it.name }}")
             assertTrue("Spiel fehlt in der Sport-Übersicht", events.any { it.programme.subtitle?.contains("Dortmund") == true })
-            assertTrue("Keine Erinnerung für den Verein", reminders.any { it.channelKey == channel.key })
+            // Die Erinnerung gilt der besten Fassung unter allen Sendern mit diesem Programm (nicht unbedingt diesem).
+            val withGuide = channels.filter { it.epgId == "hd.test" }.map { it.key }.toSet()
+            assertTrue("Keine Erinnerung für den Verein", reminders.any { it.channelKey in withGuide })
         }
 
         // 2. Oberfläche per Fernbedienung durchgehen
