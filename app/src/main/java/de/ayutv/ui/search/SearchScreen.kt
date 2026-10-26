@@ -204,6 +204,21 @@ fun SearchScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         if (results.programmes.isNotEmpty()) {
             item {
+                // Stichwort-Alarm: künftig an jede Sendung mit diesem Begriff erinnern.
+                val term = query.trim()
+                val settingsNow by container.settings.settings.collectAsStateWithLifecycle(null)
+                val following = settingsNow?.alertKeywords.orEmpty().any { it.equals(term, ignoreCase = true) }
+                Chip(if (following) "🔔 „$term“: Erinnerung an" else "🔔 An Sendungen mit „$term“ erinnern") {
+                    scope.launch {
+                        container.settings.update { s ->
+                            val rest = s.alertKeywords.filterNot { it.equals(term, ignoreCase = true) }.toSet()
+                            s.copy(alertKeywords = if (following) rest else rest + term)
+                        }
+                        container.refreshTeamReminders()
+                    }
+                }
+            }
+            item {
                 ResultRow("Im TV", results.programmes.size) {
                     items(results.programmes, key = { it.first.id }) { (programme, channel) ->
                         ProgrammeResult(programme, channel?.name) {

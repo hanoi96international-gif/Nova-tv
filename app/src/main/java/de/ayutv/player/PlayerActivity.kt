@@ -44,6 +44,12 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import de.ayutv.AyuApp
 import de.ayutv.data.AppSettings
+import de.ayutv.data.AspectMode
+import de.ayutv.data.AudioMode
+import de.ayutv.data.PlayerMemory
+import de.ayutv.data.SubtitleBackground
+import de.ayutv.data.SubtitleColor
+import de.ayutv.data.SubtitlePosition
 import de.ayutv.data.AudioOutput
 import de.ayutv.data.BufferProfile
 import de.ayutv.data.DeviceInfo
@@ -195,6 +201,16 @@ class PlayerActivity : ComponentActivity() {
     private var syncJob: Job? = null
     /** Mitgehörter Ton (nur Filme): zeigt, wann gesprochen wird, wenn der Film keine eigenen Untertitel hat. */
     private val heardSpeech = SpeechActivity()
+    /** Nachtmodus / Dialoge verstärken, im Ton des Players. */
+    private val enhance = AudioEnhance()
+    var audioMode by mutableStateOf(AudioMode.NORMAL); private set
+    /** Untertitel-Aussehen aus den Einstellungen. */
+    var subtitleLook by mutableStateOf(SubtitleLook()); private set
+    /** Gemerkte Spuren dieses Senders/dieser Serie schon angewendet. */
+    private var memoryApplied = false
+    /** Schlaf-Timer: Ende (Uhrzeit, ms) oder 0 = aus. */
+    var sleepAt by mutableLongStateOf(0L); private set
+    private var sleepJob: Job? = null
     private var heardSpeechKey: String? = null
     /** Wie viele Sekunden Ton schon mitgehört wurden (für den Gerätetest). */
     val speechHeardSeconds: Int get() = heardSpeech.seconds()
@@ -253,6 +269,11 @@ class PlayerActivity : ComponentActivity() {
     private var aheadJob: Job? = null
     var translatedCue by mutableStateOf<String?>(null); private set
     var languagePicker by mutableStateOf(false); private set
+    /** Auswahl „Programm zuordnen“ (TV-Guide von Hand) für den laufenden Sender. */
+    var epgPicker by mutableStateOf(false); private set
+    var epgChoices by mutableStateOf<List<de.ayutv.data.repo.PlaylistRepository.GuideChannel>>(emptyList()); private set
+    /** Von Hand gewählte Zuordnung des laufenden Senders, oder null. */
+    var epgOverride by mutableStateOf<String?>(null); private set
     val preferredSubtitleLanguage: String get() = if (::settings.isInitialized) settings.subtitleLanguage else "en"
     val translationAvailable: Boolean get() = ::settings.isInitialized && settings.translationEnabled
 
@@ -272,6 +293,9 @@ class PlayerActivity : ComponentActivity() {
             // Einmaliges Laden eines Sprachmodells für die Übersetzung auf dem Gerät anzeigen.
             Translators.remote.onProgress = { text -> runOnUiThread { subtitleStatus = text } }
             subtitleScale = settings.subtitleSize.scale
+            subtitleLook = SubtitleLook(settings.subtitleColor, settings.subtitleBackground, settings.subtitlePosition)
+            audioMode = settings.audioMode
+            enhance.mode = settings.audioMode
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
@@ -317,6 +341,7 @@ class PlayerActivity : ComponentActivity() {
             this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm,
             speech = heardSpeech.takeIf { vod != null },
             timeshift = timeshift.takeIf { vod == null },
+            enhance = enhance,
         )
         headers = built.headers
         trackSelector = built.trackSelector
@@ -475,6 +500,8 @@ class PlayerActivity : ComponentActivity() {
     private fun displaySwitching() = frameRateMatcher.switching || SystemClock.elapsedRealtime() < displaySwitchGraceUntil
 
     private fun resetStreamState() {
+        memoryApplied = false
+        aspect = memoryKey()?.let { container.playerMemory.get(it).aspect } ?: AspectMode.FIT
         everReady = false
         rebufferedThisStream = false
         fatalError = false
@@ -1226,6 +1253,33 @@ class PlayerActivity : ComponentActivity() {
         textDisabled = false
     }
 
+    fun openEpgPicker() {
+        val channel = current ?: return
+        epgOverride = container.epgOverrides.get(channel.key)
+        epgPicker = true
+        lifecycleScope.launch {
+            epgChoices = withContext(Dispatchers.IO) { container.playlists.guideChannels(channel.playlistId) }
+        }
+    }
+
+    fun closeEpgPicker() {
+        epgPicker = false
+    }
+
+    /** Programm für den laufenden Sender festlegen ([guideId] = null: wieder automatisch) und den TV-Guide neu laden. */
+    fun assignEpg(guideId: String?) {
+        val channel = current ?: return
+        container.epgOverrides.set(channel.key, guideId)
+        epgPicker = false
+        closeOverlay()
+        message = if (guideId == null) "Zuordnung zurückgesetzt – TV-Guide wird neu geladen …" else "TV-Guide wird neu zugeordnet …"
+        handler.postDelayed({ message = null }, 3_000)
+        container.scope.launch {
+            container.playlists.syncEpg(channel.playlistId)
+            container.content.channel(channel.key)?.let { fresh -> withContext(Dispatchers.Main) { if (current?.key == fresh.key) loadChannelInfo(fresh) } }
+        }
+    }
+
     fun openLanguagePicker() {
         languagePicker = true
         overlayToken++
@@ -1741,10 +1795,16 @@ class PlayerActivity : ComponentActivity() {
             textDisabled = false
             stopLiveTranslation()
         }
+        // Für diesen Sender / diese Serie merken.
+        val language = group.getTrackFormat(index).language?.takeIf { it != "und" }
+        if (language != null) memoryKey()?.let { key ->
+            container.playerMemory.update(key) { if (group.type == C.TRACK_TYPE_AUDIO) it.copy(audio = language) else it.copy(text = language) }
+        }
     }
 
     fun setTextEnabled(enabled: Boolean) {
         val p = player ?: return
+        if (!enabled) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = PlayerMemory.OFF) } }
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
             .apply { if (!enabled) clearOverridesOfType(C.TRACK_TYPE_TEXT) }
@@ -1831,8 +1891,8 @@ class PlayerActivity : ComponentActivity() {
     /** Kurze Rückmeldung zu einer Wischgeste (Lautstärke, Helligkeit, Spulen), mittig im Bild. */
     var gestureInfo by mutableStateOf<String?>(null); private set
     private var gestureInfoJob: Job? = null
-    /** Bild füllt den Bildschirm (Ränder abgeschnitten) statt ganz zu sehen. */
-    var zoomed by mutableStateOf(false); private set
+    /** Bildformat: ganz, füllen (Ränder abgeschnitten) oder gestreckt; gemerkt je Sender/Serie/Film. */
+    var aspect by mutableStateOf(AspectMode.FIT); private set
     /** Läuft als kleines Fenster über anderen Apps (Bild-in-Bild). */
     var inPip by mutableStateOf(false); private set
     private var volumeLevel = -1f
@@ -1885,9 +1945,89 @@ class PlayerActivity : ComponentActivity() {
 
     /** Zwei Finger auseinander: Bild füllt den Bildschirm; zusammen: wieder ganz. */
     fun zoomGesture(fill: Boolean) {
-        if (zoomed == fill) return
-        zoomed = fill
+        if ((aspect == AspectMode.ZOOM) == fill) return
+        setAspect(if (fill) AspectMode.ZOOM else AspectMode.FIT)
         showGestureInfo(if (fill) "Bild füllt den Bildschirm" else "Ganzes Bild")
+    }
+
+    fun setAspect(mode: AspectMode) {
+        aspect = mode
+        memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(aspect = mode) } }
+    }
+
+    // ---------------------------------------------------------------- Merken, Ton-Modus, Schlaf-Timer
+
+    /** Wofür Spuren und Bildformat gemerkt werden: Sender, Serie (alle Folgen gleich) oder Film. */
+    private fun memoryKey(): String? = vod?.let { Episodes.seriesKeyOf(it.key) ?: it.key } ?: playing?.key
+
+    /** Beim ersten Mal, wenn die Spuren des Streams bekannt sind: zuletzt gewählten Ton und Untertitel einstellen. */
+    private fun applyMemory(tracks: Tracks) {
+        if (memoryApplied || tracks.isEmpty) return
+        val key = memoryKey() ?: return
+        memoryApplied = true
+        val choice = container.playerMemory.get(key)
+        val p = player ?: return
+        choice.audio?.let { language ->
+            val match = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+                .flatMap { g -> (0 until g.length).filter { g.isTrackSupported(it) }.map { g to it } }
+                .firstOrNull { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) == Languages.normalize(language) }
+            if (match != null && !match.first.isTrackSelected(match.second)) {
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setOverrideForType(TrackSelectionOverride(match.first.mediaTrackGroup, match.second))
+                    .build()
+            }
+        }
+        val text = choice.text
+        when {
+            choice.textOff -> if (!textDisabled) {
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).clearOverridesOfType(C.TRACK_TYPE_TEXT).build()
+                textDisabled = true
+            }
+            text != null && externalLanguage == null && hasTextTrack(text) -> selectTextLanguage(text)
+        }
+    }
+
+    fun setAudioMode(mode: AudioMode) {
+        audioMode = mode
+        enhance.mode = mode
+        container.scope.launch { container.settings.update { it.copy(audioMode = mode) } }
+    }
+
+    /**
+     * Schlaf-Timer: nach [minutes] anhalten und den Player schließen. 0 = aus, [SLEEP_END] = am Ende der
+     * laufenden Sendung bzw. des Films.
+     */
+    fun setSleepTimer(minutes: Int) {
+        sleepJob?.cancel()
+        sleepJob = null
+        val now = System.currentTimeMillis()
+        sleepAt = when {
+            minutes == 0 -> 0L
+            minutes == SLEEP_END && isLive -> nowNext.firstOrNull()?.stop?.takeIf { it > now } ?: 0L
+            minutes == SLEEP_END -> player?.let { p -> (p.duration - p.currentPosition).takeIf { p.duration > 0 && it > 0 }?.let { now + it } } ?: 0L
+            else -> now + minutes * 60_000L
+        }
+        if (sleepAt == 0L) {
+            if (minutes != 0) message = "Ende unbekannt – bitte eine feste Zeit wählen"
+            return
+        }
+        message = "Schlaf-Timer: Ende um ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(sleepAt))}"
+        sleepJob = lifecycleScope.launch {
+            var warned = false
+            while (true) {
+                val left = sleepAt - System.currentTimeMillis()
+                if (left <= 0) break
+                if (!warned && left <= 60_000) {
+                    warned = true
+                    message = "Schlaf-Timer: noch 1 Minute (☰ → Schlaf-Timer zum Verlängern)"
+                }
+                delay(minOf(left, 5_000))
+            }
+            sleepAt = 0L
+            player?.pause()
+            finish()
+        }
     }
 
     /** Home-Taste während der Wiedergabe: als kleines Fenster weiterlaufen (Handy, Tablet). */
@@ -2006,6 +2146,7 @@ class PlayerActivity : ComponentActivity() {
 
         override fun onTracksChanged(tracks: Tracks) {
             this@PlayerActivity.tracks = tracks
+            applyMemory(tracks)
             checkAudioSupport(tracks)
             updateFormats()
             if (externalLanguage != null) selectSyncReference()
@@ -2232,6 +2373,7 @@ class PlayerActivity : ComponentActivity() {
             if (event.action == KeyEvent.ACTION_UP) {
                 when {
                     languagePicker -> closeLanguagePicker()
+                    epgPicker -> closeEpgPicker()
                     overlay != Overlay.NONE -> closeOverlay()
                     else -> finish()
                 }
@@ -2430,6 +2572,8 @@ class PlayerActivity : ComponentActivity() {
         private const val VOD_STALL_SECONDS = 20
         /** Über die ganze Bildschirmbreite wischen spult so weit. */
         private const val SWIPE_SEEK_MS = 120_000f
+        /** Schlaf-Timer bis zum Ende der Sendung / des Films. */
+        const val SLEEP_END = -1
         /** „Nächste Folge“ erscheint in den letzten Sekunden einer Folge. */
         private const val NEXT_CARD_MS = 20_000L
         private const val NEXT_COUNTDOWN_SECONDS = 10
@@ -2520,6 +2664,13 @@ data class VodRequest(
     val subtitle: String?,
     val image: String?,
     val url: String,
+)
+
+/** Wie Untertitel aussehen (aus den Einstellungen). */
+data class SubtitleLook(
+    val color: SubtitleColor = SubtitleColor.WHITE,
+    val background: SubtitleBackground = SubtitleBackground.OUTLINE,
+    val position: SubtitlePosition = SubtitlePosition.NORMAL,
 )
 
 data class StreamStats(

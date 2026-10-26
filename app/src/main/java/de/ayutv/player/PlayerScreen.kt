@@ -42,7 +42,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +68,10 @@ import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Tracks
 import androidx.media3.ui.AspectRatioFrameLayout
+import de.ayutv.data.AspectMode
+import de.ayutv.data.AudioMode
+import de.ayutv.data.SubtitleBackground
+import de.ayutv.data.SubtitlePosition
 import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.PlayerView
@@ -98,18 +105,7 @@ fun PlayerScreen(activity: PlayerActivity) {
                         // Beim Umschalten das letzte Bild stehen lassen statt schwarz zu blenden.
                         setKeepContentOnPlayerReset(true)
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        // Untertitel für den Fernseher: weiße Schrift mit schwarzem Rand, ohne Kasten.
                         subtitleView?.apply {
-                            setStyle(
-                                CaptionStyleCompat(
-                                    AndroidColor.WHITE,
-                                    AndroidColor.TRANSPARENT,
-                                    AndroidColor.TRANSPARENT,
-                                    CaptionStyleCompat.EDGE_TYPE_OUTLINE,
-                                    AndroidColor.BLACK,
-                                    null,
-                                )
-                            )
                             setApplyEmbeddedFontSizes(false)
                             setBottomPaddingFraction(0.07f)
                         }
@@ -119,13 +115,20 @@ fun PlayerScreen(activity: PlayerActivity) {
                 update = {
                     it.player = player
                     // Zwei-Finger-Zoom (Handy): Bild füllt den Bildschirm, Ränder werden abgeschnitten.
-                    it.resizeMode = if (activity.zoomed) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    it.resizeMode = when (activity.aspect) {
+                        AspectMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        AspectMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        AspectMode.STRETCH -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    }
                     it.subtitleView?.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * activity.subtitleScale)
+                    // Untertitel für den Fernseher: Farbe, Rand/Schatten/Kasten aus den Einstellungen; eingebettete Stile zählen nicht.
+                    it.subtitleView?.setApplyEmbeddedStyles(false)
+                    it.subtitleView?.setStyle(captionStyle(activity.subtitleLook))
                     // Eigene Einblendung (Übersetzung, geladene Datei): Die Spur des Players läuft nur als Taktgeber mit.
                     it.subtitleView?.visibility = if (activity.ownSubtitles) View.INVISIBLE else View.VISIBLE
                     // Untertitel über die Steuerleiste anheben, solange sie sichtbar ist.
                     val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
-                    it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else 0.07f)
+                    it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else activity.subtitleLook.position.bottomFraction)
                 },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -236,13 +239,30 @@ fun PlayerScreen(activity: PlayerActivity) {
             activity.translatedCue?.let { cue ->
                 // Über die Steuerleiste anheben, solange sie sichtbar ist (wie beim Player).
                 val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
+                val look = activity.subtitleLook
+                val bottom = when (look.position) {
+                    SubtitlePosition.LOW -> 20.dp
+                    SubtitlePosition.NORMAL -> 40.dp
+                    SubtitlePosition.HIGH -> 80.dp
+                }
                 Text(
                     cue,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 64.dp, end = 64.dp, bottom = if (barVisible) 200.dp else 40.dp),
-                    color = Color.White,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(start = 64.dp, end = 64.dp, bottom = if (barVisible) 200.dp else bottom)
+                        .then(
+                            if (look.background == SubtitleBackground.BOX) {
+                                Modifier.background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 2.dp)
+                            } else Modifier
+                        ),
+                    color = Color(look.color.argb),
                     fontSize = (22 * activity.subtitleScale).sp,
                     textAlign = TextAlign.Center,
-                    style = TextStyle(shadow = Shadow(Color.Black, Offset(2f, 2f), blurRadius = 6f)),
+                    style = TextStyle(
+                        shadow = when (look.background) {
+                            SubtitleBackground.BOX -> null
+                            SubtitleBackground.OUTLINE -> Shadow(Color.Black, Offset(0f, 0f), blurRadius = 4f)
+                            SubtitleBackground.SHADOW -> Shadow(Color.Black, Offset(3f, 3f), blurRadius = 6f)
+                        },
+                    ),
                 )
             }
         }
@@ -618,6 +638,10 @@ private fun TracksOverlay(activity: PlayerActivity) {
         LanguagePicker(activity)
         return
     }
+    if (activity.epgPicker) {
+        EpgPicker(activity)
+        return
+    }
     val tracks = activity.tracks
     // Ton: auch Spuren zeigen, die das Gerät nicht abspielen kann, damit klar ist, warum es still bleibt.
     val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO, includeUnsupported = true) }
@@ -639,6 +663,9 @@ private fun TracksOverlay(activity: PlayerActivity) {
                     selected = false,
                     modifier = Modifier.focusRequester(firstItem),
                 ) { activity.toggleFavorite() }
+            }
+            item {
+                OptionRow("📺 Programm falsch? TV-Guide zuordnen …", selected = false) { activity.openEpgPicker() }
             }
         }
         item { MenuHeader("Untertitel") }
@@ -699,6 +726,28 @@ private fun TracksOverlay(activity: PlayerActivity) {
         if (audio.isNotEmpty() && audio.none { it.supported }) {
             item { MenuHint("Keine dieser Tonspuren kann das Gerät wiedergeben. Abhilfe: AV-Receiver/Soundbar per HDMI oder einen anderen Stream wählen.") }
         }
+        item { MenuHeader("Klang") }
+        AudioMode.entries.forEach { mode ->
+            item { OptionRow(mode.label, activity.audioMode == mode) { activity.setAudioMode(mode) } }
+        }
+        item { MenuHint("Wirkt, wenn der Ton im Gerät dekodiert wird – nicht bei Dolby/DTS, das an Soundbar oder Receiver geht (Einstellungen → Tonausgabe: „Immer im Gerät dekodieren“).") }
+        item { MenuHeader("Bild") }
+        AspectMode.entries.forEach { mode ->
+            item { OptionRow(mode.label, activity.aspect == mode) { activity.setAspect(mode) } }
+        }
+        item { MenuHeader("Schlaf-Timer") }
+        if (activity.sleepAt > 0) {
+            item { MenuHint("Endet um ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(activity.sleepAt))}") }
+            item { OptionRow("Aus", selected = false) { activity.setSleepTimer(0) } }
+        }
+        listOf(15, 30, 45, 60, 90, 120).forEach { minutes ->
+            item { OptionRow("In $minutes Minuten", selected = false) { activity.setSleepTimer(minutes) } }
+        }
+        item {
+            OptionRow(if (activity.isLive) "Am Ende der Sendung" else "Am Ende des Films / der Folge", selected = false) {
+                activity.setSleepTimer(PlayerActivity.SLEEP_END)
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -744,6 +793,84 @@ private fun LanguagePicker(activity: PlayerActivity) {
         }
     }
 }
+
+/**
+ * TV-Guide von Hand zuordnen: alle Sender der geladenen EPGs, die mit ähnlichem Namen zuerst. Die Wahl gilt
+ * dauerhaft für diesen Sender (auch nach dem Neuladen der Playlist).
+ */
+@Composable
+private fun EpgPicker(activity: PlayerActivity) {
+    val channel = activity.current ?: return
+    var filter by remember { mutableStateOf("") }
+    val firstItem = remember { FocusRequester() }
+    val wanted = remember(channel.name) { de.ayutv.data.parse.EpgMatcher.analyse(channel.name, isId = false).strong }
+    // Nach Ähnlichkeit sortiert, einmal je geladener Liste; das Suchfeld filtert nur noch.
+    val ranked = remember(activity.epgChoices, wanted) {
+        activity.epgChoices.sortedBy { c -> epgDistance(wanted, de.ayutv.data.parse.EpgMatcher.analyse(c.name, isId = false).strong) }
+    }
+    val choices = remember(ranked, filter) {
+        val f = filter.trim().lowercase()
+        ranked.filter { f.isEmpty() || f in it.name.lowercase() || f in it.id.lowercase() }.take(300)
+    }
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.94f)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp, horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        item { MenuHeader("Programm für „${channel.name}“") }
+        item { MenuHint("Den Sender wählen, dessen Programm stimmt. Gilt dauerhaft, der TV-Guide wird danach neu geladen.") }
+        item {
+            de.ayutv.ui.components.TvTextField(filter, { filter = it }, "Suchen", modifier = Modifier.fillMaxWidth())
+        }
+        if (activity.epgOverride != null) item {
+            OptionRow("↺ Wieder automatisch zuordnen", selected = false) { activity.assignEpg(null) }
+        }
+        if (activity.epgChoices.isEmpty()) item { MenuHint("Noch kein TV-Guide geladen.") }
+        choices.forEachIndexed { index, c ->
+            item(key = c.id) {
+                OptionRow(
+                    "${c.name}  ·  ${c.source}",
+                    selected = c.id == (activity.epgOverride ?: channel.epgId),
+                    modifier = if (index == 0) Modifier.focusRequester(firstItem) else Modifier,
+                ) { activity.assignEpg(c.id) }
+            }
+        }
+    }
+    LaunchedEffect(choices.isNotEmpty()) {
+        repeat(5) {
+            if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
+}
+
+/** Wie verschieden zwei Namenskerne sind (Bearbeitungsabstand): ähnliche Sender oben in der Auswahl. */
+private fun epgDistance(a: String, b: String): Int {
+    if (a.isEmpty() || b.isEmpty()) return 1_000
+    if (a == b) return -1
+    val prev = IntArray(b.length + 1) { it }
+    val cur = IntArray(b.length + 1)
+    for (i in 1..a.length) {
+        cur[0] = i
+        for (j in 1..b.length) cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+        cur.copyInto(prev)
+    }
+    return prev[b.length]
+}
+
+/** Untertitel des Players im gewählten Aussehen. */
+private fun captionStyle(look: SubtitleLook): CaptionStyleCompat = CaptionStyleCompat(
+    look.color.argb,
+    if (look.background == SubtitleBackground.BOX) 0xB3000000.toInt() else AndroidColor.TRANSPARENT,
+    AndroidColor.TRANSPARENT,
+    when (look.background) {
+        SubtitleBackground.OUTLINE -> CaptionStyleCompat.EDGE_TYPE_OUTLINE
+        SubtitleBackground.SHADOW -> CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW
+        SubtitleBackground.BOX -> CaptionStyleCompat.EDGE_TYPE_NONE
+    },
+    AndroidColor.BLACK,
+    null,
+)
 
 /** Wie die geladenen Untertitel gerade liegen, in Worten. */
 private fun syncHint(activity: PlayerActivity): String {

@@ -101,6 +101,9 @@ interface ChannelDao {
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
     fun setEpgId(id: Long, epgId: String)
 
+    @Query("SELECT id, `key` FROM channels WHERE playlistId = :playlistId")
+    suspend fun keysFor(playlistId: Long): List<ChannelKeyId>
+
     @Query("SELECT COALESCE(MAX(catchupDays), 0) FROM channels WHERE playlistId = :playlistId")
     fun maxCatchupDays(playlistId: Long): Int
 

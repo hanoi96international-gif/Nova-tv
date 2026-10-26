@@ -14,6 +14,7 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
 import de.ayutv.data.parse.ChannelVariants
+import de.ayutv.data.db.ProgrammeFlags
 import de.ayutv.data.parse.Countries
 import kotlinx.coroutines.flow.first
 import de.ayutv.data.parse.ProgrammeText
@@ -118,6 +119,31 @@ class ContentRepository(
             val pairing = ProgrammeText.pairing(p.title, p.subtitle) ?: return@filter false
             p.start > System.currentTimeMillis() && teams.any { Teams.plays(it, pairing, p.title + " " + p.subtitle.orEmpty()) }
         }.map { Reminder(it.channel.key, it.channel.name, it.programme.headline(), it.programme.start) }
+    }
+
+    /**
+     * Stichwort-Alarm: kommende Sendungen mit einem der [words] im Titel oder Untertitel (keine Wiederholungen),
+     * je auf dem besten Sender, höchstens [perWord] je Begriff.
+     */
+    suspend fun keywordReminders(words: Set<String>, days: Int = 7, perWord: Int = 20): List<Reminder> {
+        val now = System.currentTimeMillis()
+        val until = now + days * 24 * HOUR
+        val out = ArrayList<Reminder>()
+        for (word in words.map { it.trim() }.filter { it.length >= 3 }) {
+            val found = db.programmes().search(word, now, 400)
+                .filter { it.start > now && it.start < until && (it.flags and ProgrammeFlags.REPEAT) == 0 }
+                .distinctBy { it.start to it.title.lowercase() }
+                .sortedBy { it.start }
+                .take(perWord)
+            if (found.isEmpty()) continue
+            val channels = found.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
+                .flatMap { db.channels().allByEpgIds(it) }.groupBy { it.epgId }
+            for (p in found) {
+                val channel = channels[p.channelEpgId]?.minByOrNull { ChannelVariants.rank(it.name) } ?: continue
+                out += Reminder(channel.key, channel.name, p.headline(), p.start)
+            }
+        }
+        return out
     }
 
     suspend fun toggleFavorite(key: String): Boolean {

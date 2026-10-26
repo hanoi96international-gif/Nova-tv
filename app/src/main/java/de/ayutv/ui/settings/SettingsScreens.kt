@@ -273,6 +273,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
+                            "Klang",
+                            settings.audioMode.label,
+                            "Nachtmodus: laute Stellen leiser, leise lauter. Dialoge verstärken: Sprache lauter als Musik und Effekte. Auch im Film über ☰.",
+                        ) { update { it.copy(audioMode = it.audioMode.cycle()) } }
+                    }
+                    item {
+                        SettingRow(
                             "Zusätzliche Tondecoder (FFmpeg)",
                             if (AudioDecoders.ffmpegAvailable) "Aktiv" else "Nicht enthalten",
                             "Spielt DTS, Dolby TrueHD, Dolby Digital (Plus) u. a. auch ohne AV-Receiver ab." +
@@ -314,8 +321,23 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         ) { pickingLanguage = true }
                     }
                     item {
-                        SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung: weiße Schrift mit schwarzem Rand.") {
+                        SettingRow("Größe", settings.subtitleSize.label, "Gut lesbar aus Sofa-Entfernung.") {
                             update { it.copy(subtitleSize = it.subtitleSize.next()) }
+                        }
+                    }
+                    item {
+                        SettingRow("Schriftfarbe", settings.subtitleColor.label, "Gelb ist auf hellen Bildern besser lesbar.") {
+                            update { it.copy(subtitleColor = it.subtitleColor.cycle()) }
+                        }
+                    }
+                    item {
+                        SettingRow("Hintergrund", settings.subtitleBackground.label, "Rand, Schatten oder ein dunkler Kasten hinter der Schrift.") {
+                            update { it.copy(subtitleBackground = it.subtitleBackground.cycle()) }
+                        }
+                    }
+                    item {
+                        SettingRow("Position", settings.subtitlePosition.label, "Etwas höher, wenn der Fernseher den unteren Rand abschneidet.") {
+                            update { it.copy(subtitlePosition = it.subtitlePosition.cycle()) }
                         }
                     }
                     item {
@@ -389,6 +411,22 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
 
                 }
                 SettingsPage.DISPLAY -> {
+                    item {
+                        var words by remember(settings.alertKeywords) { mutableStateOf(settings.alertKeywords.sorted().joinToString(", ")) }
+                        TvTextField(
+                            words,
+                            { words = it },
+                            "Stichwort-Alarm: Begriffe mit Komma, z. B. „Tatort, Champions League“ (Erinnerung an jede neue Sendung damit)",
+                            imeAction = ImeAction.Done,
+                            onImeAction = {
+                                update { it.copy(alertKeywords = words.split(',').map(String::trim).filter { w -> w.length >= 3 }.toSet()) }
+                                container.scope.launch {
+                                    delay(500)
+                                    container.refreshTeamReminders()
+                                }
+                            },
+                        )
+                    }
                     item {
                         SettingRow(
                             "TV-Guide im Menü",
@@ -497,6 +535,29 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     item { ParentalSettings() }
                 }
                 SettingsPage.DATA -> {
+                    item {
+                        val update by container.updates.state.collectAsStateWithLifecycle()
+                        val context = LocalContext.current
+                        SettingRow(
+                            "App-Version ${BuildConfig.VERSION_NAME}",
+                            de.ayutv.ui.components.updateText(update) ?: when (update) {
+                                de.ayutv.data.update.Updater.State.Checking -> "Suche …"
+                                de.ayutv.data.update.Updater.State.UpToDate -> "Aktuell"
+                                else -> "Nach Updates suchen"
+                            },
+                            "Neue Versionen kommen direkt von GitHub und werden über die alte installiert (Einstellungen und Playlists bleiben). " +
+                                "Beim ersten Mal fragt Android, ob DnA-TV Apps installieren darf.",
+                        ) {
+                            scope.launch {
+                                val release = when (val s = update) {
+                                    is de.ayutv.data.update.Updater.State.Available -> s.release
+                                    is de.ayutv.data.update.Updater.State.Ready -> s.release
+                                    else -> container.updates.check(force = true)
+                                }
+                                if (release != null) container.updates.downloadAndInstall(release) { context.startActivity(it) }
+                            }
+                        }
+                    }
                     if (touch) {
                         item {
                             SettingRow(
@@ -568,6 +629,9 @@ private fun LanguageList(selected: String, onSelect: (String) -> Unit) {
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 }
 private fun SubtitleSize.next(): SubtitleSize = SubtitleSize.entries[(ordinal + 1) % SubtitleSize.entries.size]
+
+/** Nächster Wert einer Auswahl (Einstellungen per OK durchschalten). */
+private inline fun <reified T : Enum<T>> T.cycle(): T = enumValues<T>().let { it[(ordinal + 1) % it.size] }
 
 /** Speichert bei jeder Eingabe: Auf Fire TV schließt man die Tastatur oft mit "Zurück" statt "Fertig". */
 @Composable

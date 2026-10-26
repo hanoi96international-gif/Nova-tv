@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.padding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -82,6 +83,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text("Willkommen zurück", style = MaterialTheme.typography.headlineMedium)
                     SyncBanner(sync)
+                    de.ayutv.ui.components.UpdateBanner(Modifier.padding(top = 8.dp))
                 }
                 Text(formatTime(minute), style = MaterialTheme.typography.headlineSmall, color = AyuColors.TextSecondary)
             }

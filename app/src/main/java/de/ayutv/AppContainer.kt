@@ -32,7 +32,8 @@ class AppContainer(context: Context) {
         .followSslRedirects(true)
         .build()
 
-    val playlists = PlaylistRepository(db, http, settings, context.cacheDir)
+    val epgOverrides = de.ayutv.data.EpgOverrides(context)
+    val playlists = PlaylistRepository(db, http, settings, context.cacheDir, epgOverrides)
     val content = ContentRepository(db, http)
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
     val subtitles = SubtitleRepository(http, context.filesDir).also { repo ->
@@ -44,13 +45,16 @@ class AppContainer(context: Context) {
 
     val reminders = Reminders(context)
     val intros = de.ayutv.data.IntroStore(context)
+    val playerMemory = de.ayutv.data.PlayerMemory(context)
+    val updates = de.ayutv.data.update.Updater(context, http)
     val parental = ParentalControl(context, db)
 
     /** Spiele der gefolgten Vereine als Erinnerungen vormerken (nach jedem TV-Guide-Update). */
     suspend fun refreshTeamReminders() {
         runCatching {
-            val teams = settings.current().followedTeams
-            if (teams.isNotEmpty()) reminders.ensure(content.teamReminders(teams))
+            val current = settings.current()
+            if (current.followedTeams.isNotEmpty()) reminders.ensure(content.teamReminders(current.followedTeams))
+            if (current.alertKeywords.isNotEmpty()) reminders.ensure(content.keywordReminders(current.alertKeywords))
         }.onFailure { android.util.Log.w("AyuTeams", "Vereins-Erinnerungen", it) }
     }
 

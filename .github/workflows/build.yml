@@ -61,7 +61,9 @@ jobs:
       - name: Tests und APKs bauen
         env:
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
+        # Auch die Test-APK: Gerätetest und ARM-Test nehmen diese APKs, statt alles noch einmal zu bauen
+        # (auf langsamen Runnern je fast eine Stunde).
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease assembleDebugAndroidTest
 
       - name: APK umbenennen
         run: |
@@ -73,6 +75,12 @@ jobs:
         with:
           name: DnA-TV-apk
           path: out/*.apk
+
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk/
+          retention-days: 3
 
       - name: Versionsnummer lesen
         id: version
@@ -113,8 +121,11 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-      - name: APKs bauen
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest
+      - name: APKs aus dem Build übernehmen
+        uses: actions/download-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk
       - name: Selbsttest mit 32-Bit-ARM
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -170,10 +181,11 @@ jobs:
           ci/make-test-media.sh ci-media
           nohup python3 ci/test_server.py ci-media > http.log 2>&1 &
 
-      - name: APKs bauen
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-        run: ./gradlew --no-daemon assembleDebug assembleDebugAndroidTest assembleRelease
+      - name: APKs aus dem Build übernehmen
+        uses: actions/download-artifact@v5
+        with:
+          name: ci-apks
+          path: app/build/outputs/apk
 
       # Upgrade-Test: Die Version aus main zuerst installieren, dann die neue darüber. So fällt eine
       # fehlerhafte Datenbank-Migration auf, bevor sie auf dem Fire TV die Playlists kostet.

@@ -9,6 +9,8 @@
     <!-- Erinnerungen an Sendungen: Benachrichtigung und nach Neustart wieder einplanen -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Updates direkt in der App installieren (Android fragt einmal nach „Unbekannte Apps“). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Fire TV / Android TV: keine Touch-Bedienung nötig, Leanback-Launcher unterstützen -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -75,6 +77,17 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <!-- Heruntergeladenes Update an den Paket-Installer übergeben -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Keine Telemetrie der ONNX Runtime (würde Nutzungsdaten an Microsoft senden). -->
         <provider
