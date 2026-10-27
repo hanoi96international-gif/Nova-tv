@@ -538,6 +538,8 @@ class DeviceTourTest {
                 scenario.onActivity { it.player?.seekTo(30_000) }
                 val introShown = waitFor(5_000) { scenario.read { it.introVisible } }
                 shot("31_episode_intro")
+                // Zustand beim Drücken, damit ein Fehlschlag erklärbar ist.
+                val beforeKey = scenario.read { "state=${it.player?.playbackState} overlay=${it.overlay} intro=${it.introVisible} pos=${it.player?.currentPosition}" }
                 key(KeyEvent.KEYCODE_DPAD_CENTER)
                 val skipped = waitFor(5_000) { scenario.read { (it.player?.currentPosition ?: 0) > 100_000 } }
                 // Nächste Folge: am Ende Hinweis mit Countdown, eine andere Taste hält ihn an
@@ -548,7 +550,8 @@ class DeviceTourTest {
                 key(KeyEvent.KEYCODE_DPAD_LEFT)
                 val stopped = waitFor(3_000) { scenario.read { it.nextCountdown } < 0 }
                 log(
-                    "episode_extras: intro_shown=$introShown skipped=$skipped next=${scenario.read { it.nextEpisode?.episode?.title }} " +
+                    "episode_extras: intro_shown=$introShown skipped=$skipped ($beforeKey, nach OK pos=${scenario.read { it.player?.currentPosition }}) " +
+                        "next=${scenario.read { it.nextEpisode?.episode?.title }} " +
                         "countdown=$countdown countdown_stopped=$stopped"
                 )
                 assertTrue("Serienextras: intro=$introShown skipped=$skipped next=$next countdown=$countdown stopped=$stopped",

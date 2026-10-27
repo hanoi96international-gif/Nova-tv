@@ -1059,7 +1059,10 @@ class PlayerActivity : ComponentActivity() {
         val p = player ?: return
         val position = positionMs
         searchIntroByAudio(position)
-        introVisible = p.playbackState == Player.STATE_READY && when {
+        // Auch während kurzem Nachladen (z. B. direkt nach dem Spulen) stehen lassen: Sonst verschwindet der
+        // Knopf für einen Moment, und OK blendet stattdessen die Steuerleiste ein.
+        val playing = p.playbackState == Player.STATE_READY || p.playbackState == Player.STATE_BUFFERING && everReady
+        introVisible = playing && when {
             // Am Ton erkannt: genau solange das Intro läuft.
             introAudioEnd > 0 -> position < introAudioEnd - 2_000
             // Am Ton erkanntes Intro schon übersprungen.
