@@ -180,9 +180,10 @@ class SubtitleRepository(
         }
         // Gleich gute Dateien: die mit der Bildrate des Films zuerst.
         candidates = OpenSubtitlesParsing.preferFrameRate(candidates, film.frameRate)
-        // Höchstens zwei Dateien laden (Tageslimit): Passt die Länge der ersten gar nicht zum Film
-        // (andere Fassung, anderer Film), die nächste nehmen.
-        for ((attempt, best) in candidates.take(2).withIndex()) {
+        // Höchstens drei Dateien laden (Tageslimit): Passt die Länge nicht zum Film (andere Fassung, anderer
+        // Film), die nächste nehmen. Passt sie nur mit PAL-Umrechnung, wird die gleich voreingestellt.
+        val tries = candidates.take(3)
+        for ((attempt, best) in tries.withIndex()) {
             val link = downloadLink(apiKey, best.fileId, settings) ?: return null
             val actualLanguage = language ?: best.language.ifEmpty { "xx" }
             val text = http.newCall(Request.Builder().url(link).build()).execute().use { response ->
@@ -190,8 +191,9 @@ class SubtitleRepository(
                 response.body.string()
             }
             val last = OpenSubtitlesParsing.lastCueEndMs(text)
-            val fits = best.hashMatch || film.durationMs <= 0 || last == null || OpenSubtitlesParsing.plausibleLength(last, film.durationMs)
-            if (!fits && attempt == 0 && candidates.size > 1) {
+            val fit = if (best.hashMatch || film.durationMs <= 0 || last == null) OpenSubtitlesParsing.LengthFit(1.0, 0)
+                else OpenSubtitlesParsing.lengthFit(last, film.durationMs, best.fps, film.frameRate)
+            if (fit == null && attempt < tries.lastIndex) {
                 Log.i(TAG, "„${best.release}“ endet bei ${last?.div(60_000)} min, Film dauert ${film.durationMs / 60_000} min: nächste Datei")
                 language?.let { lang -> runCatching { badFile(key, lang).appendText("${best.fileId}\n") } }
                 continue
@@ -199,6 +201,11 @@ class SubtitleRepository(
             val target = cacheFile(key, actualLanguage)
             writeAtomically(target, text)
             runCatching { sourceFile(key, actualLanguage).writeText(best.fileId.toString()) }
+            // Neue Datei: eine für die alte gespeicherte Ausrichtung gilt nicht mehr. Passt die Länge nur mit
+            // anderer Bildrate, gleich umrechnen; die Ausrichtung im Player sucht dann nur noch den Versatz.
+            val ratio = fit?.ratio ?: 1.0
+            if (ratio != 1.0) Log.i(TAG, "„${best.release}“ passt nur mit Faktor $ratio zur Filmlänge: voreingestellt")
+            saveTiming(key, actualLanguage, SavedTiming(ratio, 0L, 0L))
             return Result(target, source, language = actualLanguage)
         }
         return null

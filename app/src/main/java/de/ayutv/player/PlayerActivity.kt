@@ -1642,7 +1642,8 @@ class PlayerActivity : ComponentActivity() {
         val saved = vod?.let { container.subtitles.timing(it.key, language) }
         subtitleTiming = saved?.let { SubtitleTiming(it.ratio, it.offsetMs) } ?: SubtitleTiming()
         subtitleDelayMs = saved?.manualMs ?: 0L
-        subtitleAutoSynced = saved != null && (saved.offsetMs != 0L || saved.ratio != 1.0)
+        // Nur die Bildrate aus der Filmlänge voreingestellt (Versatz 0): der Versatz muss noch gesucht werden.
+        subtitleAutoSynced = saved != null && (saved.offsetMs != 0L || saved.manualMs != 0L)
         syncedBySpeech = false
         syncedByReference = false
         externalExact = false

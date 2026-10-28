@@ -125,4 +125,25 @@ class OpenSubtitlesParsingTest {
         assertEquals(false, OpenSubtitlesParsing.plausibleLength(60 * 60_000L, 115 * 60_000L))
         assertEquals(false, OpenSubtitlesParsing.plausibleLength(140 * 60_000L, 115 * 60_000L))
     }
+
+    @Test
+    fun lengthDecidesEditionAndFrameRate() {
+        val min = 60_000L
+        // Kinofassung 115 min, Untertitel enden 4 min vor Schluss: passt ohne Umrechnung.
+        assertEquals(1.0, OpenSubtitlesParsing.lengthFit(111 * min, 115 * min)!!.ratio, 0.0)
+        // Extended (12 min länger) oder eine Folge statt des Films: passt nicht.
+        assertEquals(null, OpenSubtitlesParsing.lengthFit(127 * min, 115 * min))
+        assertEquals(null, OpenSubtitlesParsing.lengthFit(70 * min, 115 * min))
+        // Untertitel für 23,976 Bilder/s, Film mit 25 (PAL, 4 % kürzer): endet sonst nach dem Film.
+        val pal = OpenSubtitlesParsing.lengthFit(118 * min, 115 * min)!!
+        assertEquals(23.976 / 25.0, pal.ratio, 1e-9)
+        // Passt es ohne Umrechnung nicht, gehen die Angaben zur Bildrate vor der PAL-Vermutung.
+        assertEquals(25.0 / 23.976, OpenSubtitlesParsing.lengthFit(99 * min, 115 * min, subtitleFps = 25.0, videoFps = 23.976f)!!.ratio, 1e-6)
+        assertEquals(1.0, OpenSubtitlesParsing.lengthFit(110 * min, 115 * min, subtitleFps = 25.0, videoFps = 23.976f)!!.ratio, 0.0)
+        // Kurze Clips: keine Aussage möglich.
+        assertEquals(1.0, OpenSubtitlesParsing.lengthFit(2 * min, 5 * min)!!.ratio, 0.0)
+        // Serienfolge 45 min: Abspann höchstens 6–7 min.
+        assertEquals(1.0, OpenSubtitlesParsing.lengthFit(42 * min, 45 * min)!!.ratio, 0.0)
+        assertEquals(null, OpenSubtitlesParsing.lengthFit(30 * min, 45 * min))
+    }
 }
