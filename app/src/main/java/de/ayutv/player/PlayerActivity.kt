@@ -1643,6 +1643,7 @@ class PlayerActivity : ComponentActivity() {
         externalLanguage = language
         manualAnchor = null
         manualSync = false
+        alternativeTried = false
         externalCues = cues
         externalTexts = texts
         referenceStarts.clear()
@@ -1898,6 +1899,11 @@ class PlayerActivity : ComponentActivity() {
                         "${window / 60} min Ton geprüft, noch kein eindeutiger Takt – prüft weiter"
                     }
                 }
+                if (fit == null && window >= SPEECH_COMPARE_SECONDS && !subtitleAutoSynced && externalTexts == null && !alternativeTried) {
+                    // Drei Minuten Gespräch und kein Takt: mit dem nächsten Treffer der Suche vergleichen (ein Download).
+                    alternativeTried = true
+                    if (tryAlternative(position)) return@launch
+                }
                 if (fit == null && window >= SPEECH_WRONG_FILE_SECONDS && !subtitleAutoSynced && externalTexts == null) {
                     // Eine Viertelstunde Gespräch und kein gemeinsamer Takt: Die Datei gehört zu einem anderen Film.
                     replaceWrongSubtitles()
@@ -1931,6 +1937,37 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private var replacedSubtitles = 0
+    /** Für die geladene Datei wurde schon ein weiterer Treffer am Ton verglichen. */
+    private var alternativeTried = false
+
+    /**
+     * Die geladene Datei findet am Ton keinen Takt: den nächsten Treffer derselben Suche laden und mit demselben
+     * Ton prüfen. Findet er einen Takt, wird er übernommen (true); sonst bleibt alles, wie es ist.
+     */
+    private suspend fun tryAlternative(position: Long): Boolean {
+        val request = vod ?: return false
+        val language = externalLanguage ?: return false
+        if (!container.subtitles.hasAlternatives(request.key, language)) return false
+        speechSyncInfo = "Kein Takt gefunden, vergleiche mit einer anderen Untertitel-Datei …"
+        val alternative = runCatching { container.subtitles.downloadAlternative(request.key, language, settings, filmInfo()) }
+            .onFailure { describeOnlineProblem(it) }.getOrNull() ?: return false
+        val cues = withContext(Dispatchers.IO) { parseCues(alternative.file) }
+        val fit = withContext(Dispatchers.Default) {
+            SpeechSync.estimate(heardSpeech.signal(position - SPEECH_WINDOW_MS, position + 5_000), cues.map { it.start to it.end })
+        }
+        if (fit == null || externalLanguage != language || subtitleAutoSynced) {
+            Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt auch nicht besser")
+            container.subtitles.dropAlternative(alternative)
+            return false
+        }
+        Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt zum Ton: ${fit.timing} (Güte ${fit.votes / 10.0})")
+        val file = container.subtitles.adoptAlternative(request.key, language, alternative)
+        subtitleFiles[language] = file
+        beginExternal(language, parseCues(file), null)
+        applyFit(fit.timing, bySpeech = true, toleranceMs = 0)
+        subtitleStatus = "Eine andere Untertitel-Datei passt zum Ton: übernommen und ausgerichtet ($subtitleShiftLabel)"
+        return true
+    }
 
     /** Von Hand aus dem Menü: Die eingeblendeten Untertitel gehören nicht zu diesem Film. */
     fun reportWrongSubtitles() {
@@ -2975,6 +3012,8 @@ class PlayerActivity : ComponentActivity() {
         private const val SPEECH_WINDOW_MS = 15 * 60_000L
         /** So viel Ton im Fenster ohne Übereinstimmung: falsche Datei. */
         private const val SPEECH_WRONG_FILE_SECONDS = 14 * 60
+        /** Nach so viel Gespräch ohne Takt wird ein weiterer Treffer der Suche verglichen. */
+        private const val SPEECH_COMPARE_SECONDS = 3 * 60
         private const val VIDEO_FREEZE_SECONDS = 6
         private const val CUSHION_LOW_MS = 2_500L
         private const val CUSHION_HIGH_MS = 5_000L

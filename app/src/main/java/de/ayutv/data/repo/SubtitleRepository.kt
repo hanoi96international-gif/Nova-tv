@@ -206,9 +206,71 @@ class SubtitleRepository(
             val ratio = fit?.ratio ?: 1.0
             if (ratio != 1.0) Log.i(TAG, "„${best.release}“ passt nur mit Faktor $ratio zur Filmlänge: voreingestellt")
             saveTiming(key, actualLanguage, SavedTiming(ratio, 0L, 0L))
+            // Nach Titel gefunden: die nächsten Treffer merken. Findet der Player am Ton keinen Takt, vergleicht
+            // er mit ihnen, statt eine Viertelstunde auf die falsche Datei zu warten.
+            val rest = if (source == Source.HASH) emptyList() else candidates.drop(attempt + 1).take(MAX_ALTERNATIVES)
+            runCatching {
+                altFile(key, actualLanguage).writeText(rest.joinToString("") { "${it.fileId}\t${it.fps ?: ""}\t${it.release.replace('\t', ' ').replace('\n', ' ')}\n" })
+            }
             return Result(target, source, language = actualLanguage)
         }
         return null
+    }
+
+    /** Eine weitere Datei derselben Suche, noch nicht übernommen ([file] liegt neben der gespeicherten). */
+    data class Alternative(val file: File, val fileId: Long, val ratio: Double, val release: String)
+
+    /** Noch nicht geprüfte weitere Treffer für [key]/[language]. */
+    fun hasAlternatives(key: String, language: String): Boolean =
+        runCatching { altFile(key, language).readLines().any { it.isNotBlank() } }.getOrDefault(false)
+
+    /**
+     * Lädt den nächsten gemerkten Treffer (ein Download), ohne die jetzige Datei zu ersetzen. Passt seine Länge
+     * nicht zum Film, wird er übersprungen. null: keiner mehr da oder Download nicht möglich.
+     */
+    suspend fun downloadAlternative(key: String, language: String, settings: AppSettings, film: FilmInfo): Alternative? = withContext(Dispatchers.IO) {
+        val apiKey = settings.openSubtitlesApiKey.ifEmpty { return@withContext null }
+        val list = altFile(key, language)
+        while (true) {
+            val lines = runCatching { list.readLines().filter { it.isNotBlank() } }.getOrDefault(emptyList())
+            val next = lines.firstOrNull() ?: return@withContext null
+            runCatching { list.writeText(lines.drop(1).joinToString("") { "$it\n" }) }
+            val parts = next.split('\t')
+            val fileId = parts[0].toLongOrNull() ?: continue
+            if (fileId in badFileIds(key, language)) continue
+            val link = downloadLink(apiKey, fileId, settings) ?: return@withContext null
+            val text = http.newCall(Request.Builder().url(link).build()).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Untertitel-Download: HTTP ${response.code}")
+                response.body.string()
+            }
+            val last = OpenSubtitlesParsing.lastCueEndMs(text)
+            val fit = if (film.durationMs <= 0 || last == null) OpenSubtitlesParsing.LengthFit(1.0, 0)
+                else OpenSubtitlesParsing.lengthFit(last, film.durationMs, parts.getOrNull(1)?.toDoubleOrNull(), film.frameRate)
+            if (fit == null) {
+                runCatching { badFile(key, language).appendText("$fileId\n") }
+                continue
+            }
+            val target = File(cacheFile(key, language).path.removeSuffix(".srt") + ".next.srt")
+            writeAtomically(target, text)
+            return@withContext Alternative(target, fileId, fit.ratio, parts.getOrNull(2).orEmpty())
+        }
+        null
+    }
+
+    /** Die weitere Datei passt besser: Sie wird die gespeicherte, die bisherige kommt nie wieder. */
+    fun adoptAlternative(key: String, language: String, alternative: Alternative): File {
+        markWrong(key, language)
+        val target = cacheFile(key, language)
+        writeAtomically(target, alternative.file.readText())
+        alternative.file.delete()
+        runCatching { sourceFile(key, language).writeText(alternative.fileId.toString()) }
+        saveTiming(key, language, SavedTiming(alternative.ratio, 0L, 0L))
+        return target
+    }
+
+    /** Die weitere Datei passt nicht besser: verwerfen (nicht als falsch merken, der Ton reichte vielleicht nur nicht). */
+    fun dropAlternative(alternative: Alternative) {
+        alternative.file.delete()
     }
 
     /**
@@ -513,6 +575,8 @@ class SubtitleRepository(
 
     private fun badFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".bad")
 
+    private fun altFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".alt")
+
     private fun timingFile(key: String, language: String): File = File(cacheFile(key, language).path.removeSuffix(".srt") + ".sync")
 
     private fun cacheFile(key: String, language: String): File {
@@ -523,6 +587,8 @@ class SubtitleRepository(
     private companion object {
         const val TAG = "Subtitles"
         const val HASH_DURING_PLAYBACK = false
+        /** So viele weitere Treffer werden für den Vergleich am Ton gemerkt (jeder kostet einen Download). */
+        const val MAX_ALTERNATIVES = 2
         const val TOKEN_TTL = 23 * 3_600_000L
         const val LOGIN_RETRY = 10 * 60_000L
         const val API = "https://api.opensubtitles.com/api/v1"
