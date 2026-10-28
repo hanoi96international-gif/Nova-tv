@@ -951,6 +951,7 @@ class PlayerActivity : ComponentActivity() {
 
     fun closeOverlay() {
         overlay = Overlay.NONE
+        syncPanel = false
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
     }
@@ -1265,7 +1266,7 @@ class PlayerActivity : ComponentActivity() {
         externalExact = result.source == SubtitleRepository.Source.HASH
         subtitleStatus = when (result.source) {
             SubtitleRepository.Source.HASH -> "Untertitel geladen, passend zur Datei"
-            SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden)"
+            SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden). Daneben? ☰ → Untertitel-Zeit einstellen"
             SubtitleRepository.Source.TRANSLATED -> "Untertitel übersetzt (${result.translator})"
             SubtitleRepository.Source.CACHE -> "Untertitel: ${Languages.label(language)}"
         }
@@ -1575,6 +1576,8 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun beginExternal(language: String, cues: List<TimedCue>, texts: java.util.concurrent.atomic.AtomicReferenceArray<String>?) {
         externalLanguage = language
+        manualAnchor = null
+        manualSync = false
         externalCues = cues
         externalTexts = texts
         referenceStarts.clear()
@@ -1610,6 +1613,63 @@ class PlayerActivity : ComponentActivity() {
     fun shiftSubtitles(deltaMs: Long) {
         subtitleDelayMs += deltaMs
         subtitleStatus = "Untertitel ${formatShift(subtitleDelayMs + subtitleTiming.offsetMs)}"
+        saveTiming()
+    }
+
+    /** Gesamtverschiebung der geladenen Untertitel gegenüber der Datei, für die Anzeige. */
+    val subtitleShiftLabel: String get() = formatShift(subtitleTiming.offsetMs + subtitleDelayMs) +
+        if (subtitleTiming.ratio != 1.0) ", Bildrate korrigiert" else ""
+
+    /** Untertitel-Zeit von Hand einstellen (Feld im Menü, schließt nicht von selbst). */
+    var syncPanel by mutableStateOf(false); private set
+
+    fun openSyncPanel() {
+        syncPanel = true
+        overlayToken++
+    }
+
+    fun closeSyncPanel() {
+        syncPanel = false
+        overlayToken++
+    }
+
+    class SyncLine(val start: Long, val text: String, val upcoming: Boolean)
+
+    /** Zeilen der geladenen Datei rund um die jetzige Stelle, zum Antippen, sobald eine gesprochen wird. */
+    fun syncLines(): List<SyncLine> {
+        val at = subtitleTimeAt(player?.currentPosition ?: 0L)
+        return externalCues.filter { it.start in at - SYNC_LINES_BACK_MS..at + SYNC_LINES_AHEAD_MS }
+            .map { SyncLine(it.start, it.text.replace('\n', ' '), it.start >= at) }
+    }
+
+    /** Zuletzt von Hand festgelegte Zeile (Filmzeit, Zeit in der Datei), für die Bildraten-Korrektur aus zwei Punkten. */
+    private var manualAnchor: Pair<Long, Long>? = null
+    /** Von Hand an einer Zeile ausgerichtet: Die automatische Ausrichtung überschreibt das nicht mehr. */
+    private var manualSync = false
+
+    /**
+     * Die Zeile mit Beginn [cueStart] wird gerade gesprochen: so verschieben, dass sie genau jetzt beginnt.
+     * Ein Druck genügt, egal wie weit die Untertitel daneben lagen. Ein zweiter Druck mindestens drei
+     * Minuten später erkennt auch eine falsche Bildrate (Untertitel laufen langsam auseinander).
+     */
+    fun anchorSubtitle(cueStart: Long) {
+        val position = (player?.currentPosition ?: return) - REACTION_MS
+        val previous = manualAnchor
+        val ratio = previous?.takeIf { abs(cueStart - it.second) >= 3 * 60_000L }?.let { (video, subtitle) ->
+            val raw = (position - video).toDouble() / (cueStart - subtitle)
+            SYNC_RATIOS.minByOrNull { abs(it - raw) }?.takeIf { abs(it - raw) / it < 0.003 }
+        }
+        if (ratio != null && ratio != subtitleTiming.ratio) {
+            subtitleTiming = SubtitleTiming(ratio, position - (cueStart * ratio).toLong())
+            subtitleDelayMs = 0
+        } else {
+            subtitleDelayMs = position - subtitleTiming.toVideo(cueStart)
+        }
+        manualAnchor = position to cueStart
+        manualSync = true
+        subtitleAutoSynced = true
+        speechSyncInfo = "Von Hand ausgerichtet"
+        subtitleStatus = "Untertitel ausgerichtet ($subtitleShiftLabel)"
         saveTiming()
     }
 
@@ -1665,6 +1725,8 @@ class PlayerActivity : ComponentActivity() {
 
     /** Automatisch gefundene Lage übernehmen, wenn sie spürbar von der jetzigen abweicht. */
     private fun applyFit(timing: SubtitleTiming, bySpeech: Boolean, toleranceMs: Long) {
+        // Von Hand an einer Zeile ausgerichtet: Das ist genauer als jede Schätzung, nicht wieder verstellen.
+        if (manualSync) return
         // Von Hand verschoben, bevor überhaupt automatisch ausgerichtet war: Das war der Versuch, denselben
         // Versatz auszugleichen, den die Ausrichtung jetzt genau kennt.
         if (!subtitleAutoSynced) subtitleDelayMs = 0L
@@ -2791,6 +2853,12 @@ class PlayerActivity : ComponentActivity() {
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 8
         private const val VLC_PACKAGE = "org.videolan.vlc"
+        /** So viel später drückt man OK, nachdem man die Zeile gehört hat. */
+        private const val REACTION_MS = 400L
+        private const val SYNC_LINES_BACK_MS = 2 * 60_000L
+        private const val SYNC_LINES_AHEAD_MS = 3 * 60_000L
+        /** Übliche Bildraten-Unterschiede zwischen Untertitel-Datei und Film. */
+        private val SYNC_RATIOS = listOf(1.0, 25.0 / 23.976, 23.976 / 25.0, 24.0 / 23.976, 23.976 / 24.0, 25.0 / 24.0, 24.0 / 25.0)
         private const val DROP_WINDOW_MS = 10 * 60_000L
         /** Angenommene Dauer einer Einblendung ohne bekanntes Ende (Live-Übersetzung, Zeilen überspringen). */
         private const val ASSUMED_LINE_MS = 3_000L
