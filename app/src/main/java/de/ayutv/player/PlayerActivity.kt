@@ -1154,9 +1154,16 @@ class PlayerActivity : ComponentActivity() {
      * bevorzugten Sprache, wird sie geladen (OpenSubtitles, sonst Übersetzung).
      */
     private fun maybeAutoSubtitles() {
-        if (vod == null || autoSubtitleTried || !settings.subtitlesAutoOn) return
+        if (vod == null || autoSubtitleTried) return
+        // Serie: Untertitel, die man bei einer Folge geladen hat, kommen bei der nächsten von selbst.
+        val remembered = memoryKey()?.let { container.playerMemory.get(it) }?.takeUnless { it.textOff }?.load
+        if (!settings.subtitlesAutoOn && remembered == null) return
         autoSubtitleTried = true
-        val language = settings.subtitleLanguage
+        val language = remembered ?: settings.subtitleLanguage
+        if (remembered != null) {
+            loadSubtitles(language)
+            return
+        }
         if (hasTextTrack(language)) return
         if (language in subtitleFiles || settings.onlineSubtitlesEnabled || settings.translationEnabled) loadSubtitles(language)
     }
@@ -1170,6 +1177,7 @@ class PlayerActivity : ComponentActivity() {
      */
     fun loadSubtitles(language: String) {
         val request = vod
+        if (request != null) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = null, load = language) } }
         languagePicker = false
         closeOverlay()
         stopLiveTranslation()
@@ -1681,6 +1689,23 @@ class PlayerActivity : ComponentActivity() {
     val subtitleShiftLabel: String get() = formatShift(subtitleTiming.offsetMs + subtitleDelayMs) +
         if (subtitleTiming.ratio != 1.0) ", Bildrate korrigiert" else ""
 
+    /**
+     * Wie sicher die Untertitel gerade zum Bild passen, als kurze Zeile für die Info-Leiste (null: keine
+     * Untertitel von außen und keine Übersetzung).
+     */
+    val syncBadge: String? get() {
+        if (externalLanguage == null) return if (liveTranslateTarget != null) "✓ Untertitel zeitgenau (Spur des Films übersetzt)" else null
+        val info = speechSyncInfo
+        return when {
+            manualSync -> "✓ Untertitel von Hand ausgerichtet ($subtitleShiftLabel)"
+            syncedByReference -> "✓ Untertitel an der Spur des Films ausgerichtet"
+            externalExact -> "✓ Untertitel passen genau zu dieser Datei"
+            subtitleAutoSynced && syncedBySpeech -> "✓ Untertitel am Ton ausgerichtet ($subtitleShiftLabel)"
+            subtitleAutoSynced -> "✓ Untertitel: gespeicherte Ausrichtung ($subtitleShiftLabel)"
+            else -> "◌ Untertitel noch nicht geprüft" + (info?.let { " – $it" } ?: "") + ". Passt es nicht: ☰ → Untertitel-Zeit einstellen"
+        }
+    }
+
     /** Untertitel-Zeit von Hand einstellen (Feld im Menü, schließt nicht von selbst). */
     var syncPanel by mutableStateOf(false); private set
 
@@ -2078,13 +2103,13 @@ class PlayerActivity : ComponentActivity() {
         // Für diesen Sender / diese Serie merken.
         val language = group.getTrackFormat(index).language?.takeIf { it != "und" }
         if (language != null) memoryKey()?.let { key ->
-            container.playerMemory.update(key) { if (group.type == C.TRACK_TYPE_AUDIO) it.copy(audio = language) else it.copy(text = language) }
+            container.playerMemory.update(key) { if (group.type == C.TRACK_TYPE_AUDIO) it.copy(audio = language) else it.copy(text = language, load = null) }
         }
     }
 
     fun setTextEnabled(enabled: Boolean) {
         val p = player ?: return
-        if (!enabled) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = PlayerMemory.OFF) } }
+        if (!enabled) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = PlayerMemory.OFF, load = null) } }
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
             .apply { if (!enabled) clearOverridesOfType(C.TRACK_TYPE_TEXT) }

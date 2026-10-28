@@ -16,7 +16,11 @@ enum class AspectMode(val label: String) {
 class PlayerMemory(context: Context) {
     private val prefs = context.getSharedPreferences("player_memory", Context.MODE_PRIVATE)
 
-    data class Choice(val audio: String? = null, val text: String? = null, val aspect: AspectMode? = null) {
+    /**
+     * [load]: Untertitel, die von außen kamen (OpenSubtitles, Übersetzung) – bei einer Serie lädt die nächste
+     * Folge sie von selbst wieder, auch wenn „Untertitel automatisch an“ aus ist.
+     */
+    data class Choice(val audio: String? = null, val text: String? = null, val aspect: AspectMode? = null, val load: String? = null) {
         /** Untertitel bewusst ausgeschaltet. */
         val textOff: Boolean get() = text == OFF
     }
@@ -31,7 +35,7 @@ class PlayerMemory(context: Context) {
     companion object {
         const val OFF = "-"
 
-        fun encode(c: Choice): String = listOf(c.audio.orEmpty(), c.text.orEmpty(), c.aspect?.name.orEmpty()).joinToString("|")
+        fun encode(c: Choice): String = listOf(c.audio.orEmpty(), c.text.orEmpty(), c.aspect?.name.orEmpty(), c.load.orEmpty()).joinToString("|")
 
         fun decode(raw: String?): Choice {
             if (raw.isNullOrEmpty()) return Choice()
@@ -40,6 +44,7 @@ class PlayerMemory(context: Context) {
                 audio = parts.getOrNull(0)?.takeIf { it.isNotEmpty() },
                 text = parts.getOrNull(1)?.takeIf { it.isNotEmpty() },
                 aspect = parts.getOrNull(2)?.let { name -> AspectMode.entries.firstOrNull { it.name == name } },
+                load = parts.getOrNull(3)?.takeIf { it.isNotEmpty() },
             )
         }
     }

@@ -373,6 +373,10 @@ private fun LiveInfoBar(activity: PlayerActivity) {
             Spacer(Modifier.height(12.dp))
             TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
         }
+        activity.syncBadge?.let { badge ->
+            Spacer(Modifier.height(8.dp))
+            Text(badge, color = Color(0xFF7FD69B), fontSize = 14.sp, maxLines = 1)
+        }
         Spacer(Modifier.height(10.dp))
         Text(
             if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
@@ -553,6 +557,10 @@ private fun VodControls(activity: PlayerActivity) {
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
             TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
+        }
+        activity.syncBadge?.let { badge ->
+            Spacer(Modifier.height(8.dp))
+            Text(badge, color = if (badge.startsWith("✓")) Color(0xFF7FD69B) else Color(0xFFFFC870), fontSize = 14.sp, maxLines = 2)
         }
         Spacer(Modifier.height(10.dp))
         Text(
