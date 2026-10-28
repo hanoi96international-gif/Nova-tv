@@ -1508,7 +1508,23 @@ class PlayerActivity : ComponentActivity() {
                 try {
                     val started = SystemClock.elapsedRealtime()
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
-                    aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, sourceFor(text)).first()
+                    // Geht der Satz in den nächsten Einblendungen weiter, alle zusammen übersetzen und wieder aufteilen.
+                    val chain = if (text.isBlank() || bitmap) emptyList() else sentenceAfter(store, format, next, text)
+                    if (text.isBlank()) {
+                        aheadTranslations[next.startMs] = ""
+                    } else if (chain.isEmpty()) {
+                        aheadTranslations[next.startMs] = translator.translate(listOf(text), target, sourceFor(text)).first()
+                    } else {
+                        val all = listOf(next) + chain
+                        val texts = all.map { it.text.orEmpty() }
+                        val sentence = translator.translate(listOf(texts.joinToString(" ") { de.ayutv.data.translate.SubtitleSentences.plain(it) }), target, sourceFor(text)).first()
+                        val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, texts.map { it.length })
+                        all.forEachIndexed { k, entry ->
+                            val part = de.ayutv.data.translate.SubtitleSentences.wrap(parts[k])
+                            aheadTranslations[entry.startMs] = part
+                            if (k > 0) aheadDone[entry.startMs] = part
+                        }
+                    }
                     val took = SystemClock.elapsedRealtime() - started
                     if (text.isNotBlank()) {
                         aheadDone[next.startMs] = aheadTranslations.getValue(next.startMs)
@@ -1546,6 +1562,23 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Folgende Text-Einblendungen, in denen der Satz von [first] weitergeht (höchstens zwei, noch nicht übersetzt). */
+    private fun sentenceAfter(store: EmbeddedSubtitles, format: Format, first: EmbeddedSubtitles.Entry, text: String): List<EmbeddedSubtitles.Entry> {
+        val chain = ArrayList<EmbeddedSubtitles.Entry>()
+        var previous = first
+        var previousText = text
+        for (entry in store.upcoming(format, first.startMs + 1, 2) { true }) {
+            val next = entry.text ?: break
+            if (entry.startMs in aheadTranslations) break
+            val gap = if (previous.endMs >= 0) entry.startMs - previous.endMs else entry.startMs - previous.startMs - ASSUMED_LINE_MS
+            if (gap > 1_500 || !de.ayutv.data.translate.SubtitleSentences.continues(previousText, next)) break
+            chain += entry
+            previous = entry
+            previousText = next
+        }
+        return chain
     }
 
     /**
@@ -1676,6 +1709,7 @@ class PlayerActivity : ComponentActivity() {
         textDisabled = false
         selectSyncReference()
         startSpeechSync()
+        if (!subtitleAutoSynced) adoptTimingFromOtherLanguage(language, cues)
         externalJob?.cancel()
         externalJob = lifecycleScope.launch {
             while (true) {
@@ -1686,6 +1720,31 @@ class PlayerActivity : ComponentActivity() {
                     ?.joinToString("\n") { shown?.get(it) ?: cues[it].text }
                 delay(100)
             }
+        }
+    }
+
+    /**
+     * Ist für diesen Film schon eine andere Sprache ausgerichtet (am Ton, an einer Zeile, per Datei-Hash), deren
+     * Zeiten als Taktgeber nehmen: Gesprochen wird in jeder Sprache zur selben Zeit. So passt eine Übersetzung oder
+     * eine zweite Sprache sofort, ohne erneut zuzuhören. Aus derselben Vorlage übersetzte Dateien passen exakt.
+     */
+    private fun adoptTimingFromOtherLanguage(language: String, cues: List<TimedCue>) {
+        val request = vod ?: return
+        if (cues.size < SubtitleSync.MIN_REFERENCES) return
+        lifecycleScope.launch {
+            val fit = withContext(Dispatchers.Default) {
+                container.subtitles.cachedAll(request.key).filterKeys { it != language }.firstNotNullOfOrNull { (other, file) ->
+                    val timing = container.subtitles.timing(request.key, other)?.takeIf { it.offsetMs != 0L || it.manualMs != 0L } ?: return@firstNotNullOfOrNull null
+                    val reference = SubtitleTiming(timing.ratio, timing.offsetMs)
+                    val starts = parseCues(file).map { reference.toVideo(it.start) + timing.manualMs }
+                    SubtitleSync.estimate(starts, cues.map { it.start })?.let { other to it }
+                }
+            } ?: return@launch
+            if (externalLanguage != language || subtitleAutoSynced) return@launch
+            val (other, found) = fit
+            Log.i(SUBTITLE_TAG, "Ausrichtung von ${Languages.label(other)} übernommen: ${found.timing}")
+            applyFit(found.timing, bySpeech = false, toleranceMs = 0)
+            speechSyncInfo = "Von den schon ausgerichteten Untertiteln (${Languages.label(other)}) übernommen, wird am Ton nachgeprüft"
         }
     }
 
@@ -1726,14 +1785,76 @@ class PlayerActivity : ComponentActivity() {
     /** Untertitel-Zeit von Hand einstellen (Feld im Menü, schließt nicht von selbst). */
     var syncPanel by mutableStateOf(false); private set
 
+    /**
+     * Ausrichten mit einem Druck: unten steht groß die Zeile, die als Nächstes kommt. Sobald man sie hört, OK.
+     * ◀ ▶ nimmt die vorige/nächste Zeile, ▲ ▼ schiebt um eine halbe Sekunde. Kein Suchen in einer Liste.
+     */
+    var syncCandidate by mutableStateOf(-1); private set
+    /** Rückmeldung nach dem Druck („✓ ausgerichtet …“), sonst null. */
+    var syncConfirmed by mutableStateOf<String?>(null); private set
+    private var syncCloseJob: Job? = null
+
     fun openSyncPanel() {
+        closeOverlay()
+        syncCandidate = nextCueIndex()
+        syncConfirmed = null
         syncPanel = true
-        overlayToken++
     }
 
     fun closeSyncPanel() {
+        syncCloseJob?.cancel()
         syncPanel = false
+        syncConfirmed = null
         overlayToken++
+    }
+
+    /** Die Zeile, die nach der jetzigen Ausrichtung als Nächstes beginnt. */
+    private fun nextCueIndex(): Int {
+        val at = subtitleTimeAt(player?.currentPosition ?: 0L)
+        val index = externalCues.indexOfFirst { it.start >= at - 500 }
+        return if (index < 0) externalCues.lastIndex else index
+    }
+
+    /** Beginn der angezeigten Zeile in der Datei (für Tests). */
+    val syncCandidateStart: Long? get() = externalCues.getOrNull(syncCandidate)?.start
+
+    fun syncCue(index: Int): String? = externalCues.getOrNull(index)?.let { cue ->
+        (externalTexts?.get(index) ?: cue.text).replace('\n', ' ')
+    }
+
+    fun syncStep(delta: Int) {
+        if (externalCues.isEmpty()) return
+        syncCloseJob?.cancel()
+        syncConfirmed = null
+        syncCandidate = (syncCandidate + delta).coerceIn(0, externalCues.lastIndex)
+    }
+
+    /** Die angezeigte Zeile wird gerade gesprochen. */
+    fun syncConfirm() {
+        val cue = externalCues.getOrNull(syncCandidate) ?: return
+        anchorSubtitle(cue.start)
+        syncConfirmed = "✓ Ausgerichtet ($subtitleShiftLabel). Passt es noch nicht ganz: in ein paar Minuten einfach noch eine Zeile bestätigen."
+        syncCandidate = nextCueIndex()
+        syncCloseJob?.cancel()
+        syncCloseJob = lifecycleScope.launch {
+            delay(5_000)
+            closeSyncPanel()
+        }
+    }
+
+    /** Tasten, solange die Ausrichtungsleiste offen ist. OK wirkt schon beim Drücken (genauer). */
+    private fun handleSyncKey(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> if (event.repeatCount == 0) syncConfirm()
+            KeyEvent.KEYCODE_DPAD_LEFT -> syncStep(-1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> syncStep(+1)
+            KeyEvent.KEYCODE_DPAD_UP -> { syncCloseJob?.cancel(); shiftSubtitles(-500) }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { syncCloseJob?.cancel(); shiftSubtitles(500) }
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> player?.let { it.playWhenReady = !it.playWhenReady }
+            else -> return false
+        }
+        return true
     }
 
     class SyncLine(val start: Long, val text: String, val upcoming: Boolean)
@@ -2096,6 +2217,10 @@ class PlayerActivity : ComponentActivity() {
             val i = cues.indexOfFirst { it.end > at }
             return if (i < 0) cues.size else i
         }
+        // Sätze über mehrere Einblendungen als Ganzes übersetzen, dann wieder aufteilen.
+        val sentenceCues = cues.map { de.ayutv.data.translate.SubtitleSentences.Cue(it.start, it.end, it.text) }
+        val groups = de.ayutv.data.translate.SubtitleSentences.groups(sentenceCues)
+        val groupOf = IntArray(cues.size).also { index -> groups.forEachIndexed { g, range -> range.forEach { index[it] = g } } }
         fileTranslationJob = lifecycleScope.launch {
             var done = 0
             fileTranslationInfo = "Übersetzung startet …"
@@ -2106,10 +2231,19 @@ class PlayerActivity : ComponentActivity() {
                     val next = (from until cues.size).firstOrNull { translations.get(it) == null }
                         ?: (0 until from).firstOrNull { translations.get(it) == null }
                         ?: break
-                    val indices = (next until minOf(cues.size, next + batch)).filter { translations.get(it) == null }
-                    val result = translator.translate(indices.map { cues[it].text }, target, sourceLanguage)
-                    indices.forEachIndexed { k, index -> translations.set(index, result.getOrElse(k) { cues[index].text }) }
-                    done += indices.size
+                    val chosen = (groupOf[next] until minOf(groups.size, groupOf[next] + batch)).map { groups[it] }
+                        .filter { range -> range.any { translations.get(it) == null } }
+                    val result = translator.translate(chosen.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, target, sourceLanguage)
+                    chosen.forEachIndexed { k, range ->
+                        val sentence = result.getOrNull(k)
+                        if (sentence == null) {
+                            range.forEach { translations.set(it, cues[it].text) }
+                            return@forEachIndexed
+                        }
+                        val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, range.map { cues[it].text.length })
+                        range.forEachIndexed { j, index -> translations.set(index, de.ayutv.data.translate.SubtitleSentences.wrap(parts[j])) }
+                    }
+                    done += chosen.sumOf { it.count() }
                     // Wie weit die Übersetzung vor der aktuellen Stelle ist (im Untertitel-Menü zu sehen).
                     val ahead = (indexAt(player?.currentPosition ?: 0L) until cues.size).takeWhile { translations.get(it) != null }.count()
                     fileTranslationInfo = "Übersetzt: $done von ${cues.size} Zeilen · ab hier $ahead Zeilen fertig"
@@ -2967,6 +3101,7 @@ class PlayerActivity : ComponentActivity() {
         if (code == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
                 when {
+                    syncPanel && overlay == Overlay.NONE -> closeSyncPanel()
                     languagePicker -> closeLanguagePicker()
                     epgPicker -> closeEpgPicker()
                     pipChoices != null -> closePipPicker()
@@ -2978,6 +3113,7 @@ class PlayerActivity : ComponentActivity() {
         }
         // Noch nicht bereit (Einstellungen/Player werden geladen).
         if (player == null) return super.dispatchKeyEvent(event)
+        if (syncPanel && overlay == Overlay.NONE && handleSyncKey(event)) return true
         // In Senderliste und Spurmenü übernimmt Compose die Navigation.
         if (overlay == Overlay.CHANNELS || overlay == Overlay.TRACKS) {
             if (event.action == KeyEvent.ACTION_DOWN) overlayToken++

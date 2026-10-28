@@ -111,12 +111,19 @@ class Pretranslation(private val context: Context, private val container: AppCon
         if (cues.isEmpty()) return 0
         val partial = container.subtitles.lineTranslations(item.key, PARTIAL_TRACK, item.language).toMutableMap()
         fun startOf(cue: SrtCue) = millis(cue.start) ?: 0L
+        // Sätze über mehrere Einblendungen als Ganzes übersetzen (wie im Player).
+        val sentenceCues = cues.map { de.ayutv.data.translate.SubtitleSentences.Cue(startOf(it), millis(it.end) ?: startOf(it), it.text) }
+        val groups = de.ayutv.data.translate.SubtitleSentences.groups(sentenceCues)
+        val translator = Translators.from(container.settings.current()) ?: Translators.remote
         try {
-            for (chunk in cues.filter { startOf(it) !in partial }.chunked(BATCH)) {
+            for (chunk in groups.filter { range -> range.any { startOf(cues[it]) !in partial } }.chunked(BATCH)) {
                 if (timeLeft() < 20_000) return null
-                val texts = chunk.map { Srt.plainText(it.text) }
-                val result = (Translators.from(container.settings.current()) ?: Translators.remote).translate(texts, item.language, source.language)
-                chunk.forEachIndexed { k, cue -> partial[startOf(cue)] = result.getOrElse(k) { texts[k] } }
+                val result = translator.translate(chunk.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, item.language, source.language)
+                chunk.forEachIndexed { k, range ->
+                    val sentence = result.getOrNull(k) ?: return@forEachIndexed
+                    val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, range.map { Srt.plainText(cues[it].text).length })
+                    range.forEachIndexed { j, index -> partial[startOf(cues[index])] = de.ayutv.data.translate.SubtitleSentences.wrap(parts[j]) }
+                }
             }
         } finally {
             container.subtitles.saveLineTranslations(item.key, PARTIAL_TRACK, item.language, partial)

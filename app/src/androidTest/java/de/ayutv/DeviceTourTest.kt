@@ -514,17 +514,22 @@ class DeviceTourTest {
                 )
                 assertTrue("Untertitel nicht automatisch ausgerichtet", synced)
 
-                // Von Hand: Zeile wählen und „jetzt gesprochen“ drücken. Die Zeile muss sofort zu sehen sein.
+                // Von Hand: Leiste öffnen, mit ▶ eine spätere Zeile wählen, OK „jetzt gesprochen“. Die Zeile muss sofort zu sehen sein.
                 scenario.onActivity { it.openTracks(); it.openSyncPanel() }
                 Thread.sleep(1_500)
                 shot("24b_subtitle_manual")
-                val line = scenario.read { a -> a.syncLines().firstOrNull { it.upcoming && it.start > 30_000 } }
-                checkNotNull(line) { "Keine Zeilen zum Ausrichten" }
-                scenario.onActivity { it.anchorSubtitle(line.start) }
-                val anchored = waitFor(2_000) { scenario.read { it.translatedCue } == line.text }
-                log("subtitle_manual: line=${line.text} anchored=$anchored shift=${scenario.read { it.subtitleShiftLabel }}")
-                scenario.onActivity { it.closeOverlay() }
-                assertTrue("Ausrichten an einer Zeile wirkt nicht (${scenario.read { it.translatedCue }} statt ${line.text})", anchored)
+                var steps = 0
+                while ((scenario.read { it.syncCandidateStart } ?: 0L) <= 30_000 && steps++ < 40) {
+                    key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(150)
+                }
+                val text = scenario.read { it.syncCue(it.syncCandidate) }
+                checkNotNull(text) { "Keine Zeilen zum Ausrichten" }
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                val anchored = waitFor(2_000) { scenario.read { it.translatedCue?.replace('\n', ' ') } == text }
+                shot("24c_subtitle_manual_done")
+                log("subtitle_manual: steps=$steps line=$text anchored=$anchored shift=${scenario.read { it.subtitleShiftLabel }} confirmed=${scenario.read { it.syncConfirmed }}")
+                key(KeyEvent.KEYCODE_BACK)
+                assertTrue("Ausrichten an einer Zeile wirkt nicht (${scenario.read { it.translatedCue }} statt $text)", anchored)
             }
         }
 

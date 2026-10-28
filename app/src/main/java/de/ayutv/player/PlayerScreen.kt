@@ -144,6 +144,10 @@ fun PlayerScreen(activity: PlayerActivity) {
             PipWindow(pip, activity.pipChannel?.name.orEmpty(), Modifier.align(Alignment.BottomEnd))
         }
 
+        if (activity.syncPanel && activity.overlay == Overlay.NONE) {
+            SyncBar(activity, Modifier.align(Alignment.BottomCenter))
+        }
+
         activity.dueReminder?.let { reminder ->
             Column(
                 Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 32.dp).width(460.dp)
@@ -262,7 +266,7 @@ fun PlayerScreen(activity: PlayerActivity) {
         if (activity.ownSubtitles) {
             activity.translatedCue?.let { cue ->
                 // Über die Steuerleiste anheben, solange sie sichtbar ist (wie beim Player).
-                val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
+                val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO || activity.syncPanel
                 val look = activity.subtitleLook
                 val bottom = when (look.position) {
                     SubtitlePosition.LOW -> 20.dp
@@ -337,7 +341,7 @@ fun PlayerScreen(activity: PlayerActivity) {
             // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
             Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             // Beim Zuordnen des TV-Guides (Suchen, Blättern in langen Listen) nicht von selbst schließen.
-            Overlay.TRACKS -> if (activity.epgPicker || activity.syncPanel || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
+            Overlay.TRACKS -> if (activity.epgPicker || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
             Overlay.CHANNELS -> 15_000L
         }
         delay(timeout)
@@ -683,10 +687,6 @@ private fun TracksOverlay(activity: PlayerActivity) {
         PipPicker(activity, choices)
         return
     }
-    if (activity.syncPanel) {
-        SyncPanel(activity)
-        return
-    }
     val tracks = activity.tracks
     // Ton: auch Spuren zeigen, die das Gerät nicht abspielen kann, damit klar ist, warum es still bleibt.
     val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO, includeUnsupported = true) }
@@ -956,64 +956,44 @@ private fun PipWindow(player: androidx.media3.exoplayer.ExoPlayer, label: String
     }
 }
 
-/**
- * Untertitel-Zeit von Hand: Zeile wählen und OK drücken, sobald sie gesprochen wird (ein Druck, egal wie weit
- * daneben). Oder in Schritten verschieben, ohne das Menü jedes Mal neu zu öffnen.
- */
+/** Ausrichten mit einem Druck: die nächste Zeile groß, OK sobald sie gesprochen wird. */
 @Composable
-private fun SyncPanel(activity: PlayerActivity) {
-    val lines = remember { activity.syncLines() }
-    val firstUpcoming = remember(lines) { lines.indexOfFirst { it.upcoming }.coerceAtLeast(0) }
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (firstUpcoming + 3).coerceAtLeast(0))
-    val focusLine = remember { FocusRequester() }
-    val focusStep = remember { FocusRequester() }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxHeight().width(500.dp).background(Color.Black.copy(alpha = 0.94f)),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp, horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+private fun SyncBar(activity: PlayerActivity, modifier: Modifier) {
+    val index = activity.syncCandidate
+    Column(
+        modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp)
+            .background(Color.Black.copy(alpha = 0.88f), RoundedCornerShape(14.dp))
+            .border(2.dp, AyuColors.Accent, RoundedCornerShape(14.dp))
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item { MenuHeader("Untertitel-Zeit: ${activity.subtitleShiftLabel}") }
-        item {
-            MenuHint(
-                "Am schnellsten: unten eine Zeile wählen, die gleich kommt, und OK drücken, sobald sie gesprochen wird. " +
-                    "Ein zweites Mal ein paar Minuten später korrigiert auch auseinanderlaufende Untertitel."
-            )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Untertitel ausrichten", color = AyuColors.Accent, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text("jetzt ${activity.subtitleShiftLabel}", color = AyuColors.TextSecondary, fontSize = 14.sp)
         }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
-                listOf(-10_000L to "−10 s", -1_000L to "−1 s", -250L to "−¼ s", 250L to "+¼ s", 1_000L to "+1 s", 10_000L to "+10 s")
-                    .forEachIndexed { index, (delta, label) ->
-                        Surface(
-                            onClick = { activity.shiftSubtitles(delta) },
-                            modifier = if (index == 2) Modifier.focusRequester(focusStep) else Modifier,
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-                            colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.Accent),
-                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-                        ) { Text(label, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) }
-                    }
-            }
-        }
-        item { MenuHint("− früher einblenden, + später einblenden") }
-        item { MenuHeader("Zeile wählen, OK beim Sprechen") }
-        if (lines.isEmpty()) item { MenuHint("Hier gibt es gerade keine Zeilen.") }
-        lines.forEachIndexed { index, line ->
-            item {
-                OptionRow(
-                    line.text,
-                    selected = false,
-                    modifier = if (index == firstUpcoming) Modifier.focusRequester(focusLine) else Modifier,
-                ) { activity.anchorSubtitle(line.start) }
-            }
-        }
-        item { OptionRow("Fertig", selected = false) { activity.closeSyncPanel() } }
-    }
-    LaunchedEffect(Unit) {
-        repeat(5) {
-            val target = if (lines.isEmpty()) focusStep else focusLine
-            if (runCatching { target.requestFocus() }.isSuccess) return@LaunchedEffect
-            delay(16)
-        }
+        activity.syncCue(index - 1)?.let { Text(it, color = AyuColors.TextSecondary, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp)) }
+        Text(
+            activity.syncCue(index)?.let { "„$it“" } ?: "Keine Zeilen geladen",
+            color = Color.White,
+            fontSize = 26.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 3,
+            modifier = Modifier.padding(vertical = 6.dp),
+        )
+        activity.syncCue(index + 1)?.let { Text(it, color = AyuColors.TextSecondary, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Text(
+            activity.syncConfirmed ?: "OK drücken, sobald diese Zeile gesprochen wird",
+            color = if (activity.syncConfirmed != null) Color(0xFF7FD69B) else Color.White,
+            fontSize = 17.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Text(
+            "◀ ▶ andere Zeile   ·   ▲ früher  ▼ später (½ s)   ·   ⏯ Pause   ·   Zurück: fertig",
+            color = AyuColors.TextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }
 

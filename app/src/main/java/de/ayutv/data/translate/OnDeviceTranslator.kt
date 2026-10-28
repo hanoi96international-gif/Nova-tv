@@ -95,7 +95,7 @@ class OnDeviceTranslator(
                 }
             }
         }
-        return if (dialog) translated.joinToString("\n") { "- $it" } else translated.single()
+        return if (dialog) translated.joinToString("\n") { "- $it" } else SubtitleSentences.wrap(translated.single())
     }
 
     /** Lädt (einmalig herunter und) in den Speicher. Höchstens zwei Modelle gleichzeitig (Brücke über Englisch). */
