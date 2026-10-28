@@ -64,6 +64,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             container.refreshTeamReminders()
         }
         runCatching { SyncWorker.schedule(this) }
+        runCatching { de.ayutv.data.repo.PretranslateWorker.schedule(this) }
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
         container.scope.launch {
             container.reminders.rescheduleAll()

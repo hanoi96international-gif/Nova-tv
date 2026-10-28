@@ -390,6 +390,23 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
                     }
                     item {
+                        val pretranslation = remember { de.ayutv.data.repo.Pretranslation(context, container) }
+                        var last by remember { mutableStateOf(pretranslation.lastResult) }
+                        SettingRow(
+                            "Vorübersetzen in der Ruhezeit",
+                            onOff(settings.pretranslate),
+                            "Wenn der Fire TV nicht benutzt wird: Untertitel für „Weiter schauen“ und die nächste Folge vorab holen " +
+                                "und bei Bedarf übersetzen (Sprache wie zuletzt bei der Serie gewählt). Beim Schauen sind sie sofort da." +
+                                (last?.let { "\nZuletzt $it" } ?: ""),
+                        ) { update { it.copy(pretranslate = !it.pretranslate) } }
+                        if (settings.pretranslate) {
+                            SettingRow("Jetzt vorbereiten", "", "Startet sofort statt in der Ruhezeit (läuft im Hintergrund, einige Minuten).") {
+                                de.ayutv.data.repo.PretranslateWorker.runNow(context)
+                                last = "läuft …"
+                            }
+                        }
+                    }
+                    item {
                         var testResult by remember { mutableStateOf("Prüft Texterkennung und Übersetzung auf diesem Gerät") }
                         SettingRow(
                             "Übersetzer testen",

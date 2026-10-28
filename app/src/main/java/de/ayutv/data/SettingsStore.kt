@@ -134,6 +134,8 @@ data class AppSettings(
     val phoneRemote: Boolean = true,
     /** Zuletzt gewählte Sprache der Live-Übersetzung: deren Modell wird vorab geladen ("" = noch keine). */
     val lastTranslationTarget: String = "",
+    /** In der Ruhezeit Untertitel für „Weiter schauen“ und die nächste Folge vorab holen und übersetzen. */
+    val pretranslate: Boolean = true,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -189,6 +191,7 @@ class SettingsStore(private val context: Context) {
         val dataSaver = booleanPreferencesKey("data_saver")
         val alertKeywords = stringSetPreferencesKey("alert_keywords")
         val phoneRemote = booleanPreferencesKey("phone_remote")
+        val pretranslate = booleanPreferencesKey("pretranslate")
         val lastTranslationTarget = stringPreferencesKey("last_translation_target")
     }
 
@@ -300,6 +303,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.alertKeywords] = next.alertKeywords
             prefs[Keys.phoneRemote] = next.phoneRemote
             prefs[Keys.lastTranslationTarget] = next.lastTranslationTarget
+            prefs[Keys.pretranslate] = next.pretranslate
         }
     }
 
@@ -339,6 +343,7 @@ class SettingsStore(private val context: Context) {
         alertKeywords = this[Keys.alertKeywords] ?: emptySet(),
         phoneRemote = this[Keys.phoneRemote] ?: true,
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
+        pretranslate = this[Keys.pretranslate] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

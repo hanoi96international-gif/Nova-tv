@@ -2068,6 +2068,9 @@ class PlayerActivity : ComponentActivity() {
         }
         val translator = Translators.from(settings) ?: return
         val translations = java.util.concurrent.atomic.AtomicReferenceArray<String>(cues.size)
+        // In der Ruhezeit oder beim letzten Schauen schon übersetzte Zeilen gleich übernehmen.
+        val partial = container.subtitles.lineTranslations(request.key, de.ayutv.data.repo.Pretranslation.PARTIAL_TRACK, target)
+        cues.forEachIndexed { i, cue -> partial[cue.start]?.let { translations.set(i, it) } }
         // Wie geladene Untertitel einblenden (verschiebbar, automatisch ausgerichtet); fertig
         // übersetzte Zeilen ersetzen nach und nach das Original.
         beginExternal(target, cues, translations)
@@ -2102,6 +2105,9 @@ class PlayerActivity : ComponentActivity() {
                 loadedLanguages = subtitleFiles.keys.toList()
                 Log.i(SUBTITLE_TAG, "Übersetzung von ${cues.size} Zeilen fertig und gespeichert")
             } catch (e: kotlinx.coroutines.CancellationException) {
+                // Abgebrochen (Film beendet, andere Untertitel): Bisheriges für das nächste Mal aufheben.
+                val lines = cues.indices.mapNotNull { i -> translations.get(i)?.let { cues[i].start to it } }.toMap()
+                container.subtitles.saveLineTranslations(request.key, de.ayutv.data.repo.Pretranslation.PARTIAL_TRACK, target, lines)
                 throw e
             } catch (e: Exception) {
                 Log.w(SUBTITLE_TAG, "Übersetzung der Datei fehlgeschlagen", e)

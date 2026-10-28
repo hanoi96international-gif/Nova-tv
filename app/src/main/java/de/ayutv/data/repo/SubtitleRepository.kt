@@ -250,7 +250,7 @@ class SubtitleRepository(
                 runCatching { badFile(key, language).appendText("$fileId\n") }
                 continue
             }
-            val target = File(cacheFile(key, language).path.removeSuffix(".srt") + ".next.srt")
+            val target = File(cacheFile(key, language).path.removeSuffix(".srt") + ".next")
             writeAtomically(target, text)
             return@withContext Alternative(target, fileId, fit.ratio, parts.getOrNull(2).orEmpty())
         }
