@@ -47,7 +47,8 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import de.ayutv.data.parse.ProgrammeText
 import de.ayutv.data.parse.Teams
-import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.pairing
+import de.ayutv.data.parse.sportHeadline
 import de.ayutv.data.repo.ContentRepository.SportEvent
 import de.ayutv.player.PlayerActivity
 import de.ayutv.ui.LocalContainer
@@ -110,7 +111,7 @@ fun SportScreen() {
         when (filter) {
             SportFilter.ALL -> true
             SportFilter.FOOTBALL -> Regex("(?i)fu(ß|ss)ball|bundesliga|liga|league|pokal|\\bBL\\b").containsMatchIn(p.title + " " + p.category.orEmpty())
-            SportFilter.TEAMS -> ProgrammeText.pairing(p.title, p.subtitle)?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
+            SportFilter.TEAMS -> p.pairing()?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
         }
     }
     val live = shown.filter { it.programme.start <= now && it.programme.stop > now }
@@ -168,10 +169,10 @@ fun SportScreen() {
             }
         }
         choosing?.let { e ->
-            val pairing = ProgrammeText.pairing(e.programme.title, e.programme.subtitle)
+            val pairing = e.programme.pairing()
             val sides = pairing?.let { Teams.ofPairing(it) }.orEmpty()
             FollowDialog(
-                title = e.programme.headline(),
+                title = e.programme.sportHeadline(),
                 teams = sides,
                 followed = teams,
                 channels = listOf(e.channel) + e.alsoOn,
@@ -220,7 +221,7 @@ private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick:
                 Text("bis ${formatTime(p.stop)}", color = AyuColors.TextSecondary, fontSize = 12.sp)
             }
             Column(Modifier.weight(1f)) {
-                Text(p.headline(), fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
+                Text(p.sportHeadline(), fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
                 if (running) {
                     val done = ((now - p.start).toFloat() / (p.stop - p.start).coerceAtLeast(1)).coerceIn(0f, 1f)
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth(0.5f).height(3.dp).background(AyuColors.TextSecondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp))) {

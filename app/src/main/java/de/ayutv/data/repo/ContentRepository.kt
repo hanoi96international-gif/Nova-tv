@@ -22,6 +22,8 @@ import de.ayutv.data.parse.Teams
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.data.parse.XtreamMovieInfo
 import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.pairing
+import de.ayutv.data.parse.sportHeadline
 import de.ayutv.data.parse.isSportEvent
 import de.ayutv.data.reminders.Reminder
 import kotlinx.coroutines.Dispatchers
@@ -109,7 +111,7 @@ class ContentRepository(
         return withContext(Dispatchers.Default) {
             programmes.flatMap { p -> channels[p.channelEpgId].orEmpty().map { p to it } }
                 .filter { (p, c) -> p.isSportEvent(ProgrammeText.isSportChannel(c.name)) }
-                .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to p.headline().lowercase() }
+                .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to ProgrammeText.sportKey(p.title, p.subtitle, p.description, p.channelEpgId) }
                 .values.map { same ->
                     val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) })
                     val (p, c) = same.minWith(best)
@@ -130,9 +132,9 @@ class ContentRepository(
         if (teams.isEmpty()) return emptyList()
         return sportEvents(hours = days * 24).filter { e ->
             val p = e.programme
-            val pairing = ProgrammeText.pairing(p.title, p.subtitle) ?: return@filter false
+            val pairing = p.pairing() ?: return@filter false
             p.start > System.currentTimeMillis() && teams.any { Teams.plays(it, pairing, p.title + " " + p.subtitle.orEmpty()) }
-        }.map { Reminder(it.channel.key, it.channel.name, it.programme.headline(), it.programme.start) }
+        }.map { Reminder(it.channel.key, it.channel.name, it.programme.sportHeadline(), it.programme.start) }
     }
 
     /**
