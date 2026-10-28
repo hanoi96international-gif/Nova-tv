@@ -1186,12 +1186,12 @@ class PlayerActivity : ComponentActivity() {
             //    Auf schwachen Geräten (32 Bit, wenig RAM) laufen Texterkennung und Übersetzung neben 4K
             //    nicht zuverlässig: Dort zuerst fertige Untertitel (werden automatisch ausgerichtet).
             val embeddedSource = if (settings.translationEnabled) bestTranslationSource(allowForced = false) else null
-            // Langsamer Übersetzer (Fire TV Stick: 32 Bit, Rechenkern ohne native Bibliothek): Die Live-Übersetzung
-            // kommt dort mit dem Sprechen kaum mit. Fertige Untertitel in der Zielsprache gehen vor.
+            // Eingebettete Textspur (meist Deutsch oder Englisch) geht immer vor: passt zeitgenau, kein Download,
+            // kein Ausrichten. Kommt das Gerät mit der Übersetzung nicht hinterher, wechselt startAhead selbst
+            // auf fertige Untertitel. Nur Bild-Untertitel (Texterkennung) sind auf langsamen Geräten zu teuer.
             val slowDevice = DeviceInfo.isWeak(this@PlayerActivity) || Translators.remote.engine == de.ayutv.data.translate.Engine.Kind.KERN
             val heavy = embeddedSource != null && embeddedSource.let { (g, i) -> g.getTrackFormat(i).isBitmapSubtitle() } && slowDevice
-            val readyFirst = slowDevice && request != null && settings.onlineSubtitlesEnabled
-            if (embeddedSource != null && !heavy && !readyFirst) {
+            if (embeddedSource != null && !heavy) {
                 startLiveTranslation(language, embeddedSource)
                 return@launch
             }
@@ -1423,8 +1423,12 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun startAhead(format: Format, target: String) {
         aheadJob?.cancel()
+        saveAheadTranslations()
         aheadTranslations.clear()
+        aheadDone.clear()
         aheadFormat = format
+        val request = vod
+        aheadKey = request?.let { Triple(it.key, format.id ?: format.language ?: "spur", target) }
         val translator = Translators.from(settings) ?: return
         val bitmap = format.isBitmapSubtitle()
         if (bitmap) {
@@ -1433,6 +1437,14 @@ class PlayerActivity : ComponentActivity() {
             if (!isLive) player?.let { it.seekTo(it.currentPosition) }
         }
         aheadJob = lifecycleScope.launch {
+            // Schon früher übersetzte Zeilen dieser Spur (Zurückspulen, erneutes Schauen): sofort da, nichts neu rechnen.
+            aheadKey?.let { (key, track, language) ->
+                val stored = withContext(Dispatchers.IO) { container.subtitles.lineTranslations(key, track, language) }
+                aheadTranslations.putAll(stored)
+                aheadDone.putAll(stored)
+                if (stored.isNotEmpty()) Log.i(SUBTITLE_TAG, "${stored.size} schon übersetzte Zeilen geladen")
+            }
+            var unsaved = 0
             launch {
                 while (true) {
                     val store = embedded
@@ -1474,6 +1486,13 @@ class PlayerActivity : ComponentActivity() {
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
                     aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, sourceFor(text)).first()
                     val took = SystemClock.elapsedRealtime() - started
+                    if (text.isNotBlank()) {
+                        aheadDone[next.startMs] = aheadTranslations.getValue(next.startMs)
+                        if (++unsaved >= 10) {
+                            unsaved = 0
+                            saveAheadTranslations()
+                        }
+                    }
                     Log.i(SUBTITLE_TAG, "Vorlauf ${(next.startMs - position) / 1000} s, $took ms: $text → ${aheadTranslations[next.startMs]}")
                     if (text.isNotBlank() && done++ > 0) lineMs = if (lineMs == 0L) took else (lineMs * 3 + took) / 4
                     if (!slowWarned && done >= 8 && skipped.size >= done) {
@@ -1531,6 +1550,17 @@ class PlayerActivity : ComponentActivity() {
         return "Dieses Gerät ist für Live-Übersetzung zu langsam ($seconds s pro Zeile). Ein Teil der Zeilen bleibt im Original.$tip"
     }
 
+    /** Erfolgreich übersetzte Zeilen der laufenden Live-Übersetzung (werden gespeichert) und wofür (Film, Spur, Sprache). */
+    private val aheadDone = HashMap<Long, String>()
+    private var aheadKey: Triple<String, String, String>? = null
+
+    private fun saveAheadTranslations() {
+        val (key, track, language) = aheadKey ?: return
+        if (aheadDone.isEmpty()) return
+        val lines = HashMap(aheadDone)
+        container.scope.launch(Dispatchers.IO) { container.subtitles.saveLineTranslations(key, track, language, lines) }
+    }
+
     /** Gelesene Zeilen einer Spur ohne Sprachangabe, um ihre Sprache zu erkennen. */
     private val unlabelledTexts = ArrayList<String>()
 
@@ -1568,6 +1598,9 @@ class PlayerActivity : ComponentActivity() {
         aheadJob?.cancel()
         aheadJob = null
         aheadFormat = null
+        saveAheadTranslations()
+        aheadKey = null
+        aheadDone.clear()
         aheadTranslations.clear()
         originalVisible = false
         embedded?.readImagesOf(null)
@@ -2835,6 +2868,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         vod?.let(::learnOpening)
+        saveAheadTranslations()
         // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
         if (inPip) {
             inPip = false
