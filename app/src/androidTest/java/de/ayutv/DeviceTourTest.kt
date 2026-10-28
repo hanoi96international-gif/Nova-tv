@@ -496,6 +496,18 @@ class DeviceTourTest {
                         "cue=${scenario.read { it.translatedCue }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(3)}"
                 )
                 assertTrue("Untertitel nicht automatisch ausgerichtet", synced)
+
+                // Von Hand: Zeile wählen und „jetzt gesprochen“ drücken. Die Zeile muss sofort zu sehen sein.
+                scenario.onActivity { it.openTracks(); it.openSyncPanel() }
+                Thread.sleep(1_500)
+                shot("24b_subtitle_manual")
+                val line = scenario.read { a -> a.syncLines().firstOrNull { it.upcoming && it.start > 30_000 } }
+                checkNotNull(line) { "Keine Zeilen zum Ausrichten" }
+                scenario.onActivity { it.anchorSubtitle(line.start) }
+                val anchored = waitFor(2_000) { scenario.read { it.translatedCue } == line.text }
+                log("subtitle_manual: line=${line.text} anchored=$anchored shift=${scenario.read { it.subtitleShiftLabel }}")
+                scenario.onActivity { it.closeOverlay() }
+                assertTrue("Ausrichten an einer Zeile wirkt nicht (${scenario.read { it.translatedCue }} statt ${line.text})", anchored)
             }
         }
 

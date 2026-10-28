@@ -951,6 +951,7 @@ class PlayerActivity : ComponentActivity() {
 
     fun closeOverlay() {
         overlay = Overlay.NONE
+        syncPanel = false
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
     }
@@ -1185,8 +1186,11 @@ class PlayerActivity : ComponentActivity() {
             //    Auf schwachen Geräten (32 Bit, wenig RAM) laufen Texterkennung und Übersetzung neben 4K
             //    nicht zuverlässig: Dort zuerst fertige Untertitel (werden automatisch ausgerichtet).
             val embeddedSource = if (settings.translationEnabled) bestTranslationSource(allowForced = false) else null
-            val heavy = embeddedSource != null && embeddedSource.let { (g, i) -> g.getTrackFormat(i).isBitmapSubtitle() } &&
-                DeviceInfo.isWeak(this@PlayerActivity)
+            // Eingebettete Textspur (meist Deutsch oder Englisch) geht immer vor: passt zeitgenau, kein Download,
+            // kein Ausrichten. Kommt das Gerät mit der Übersetzung nicht hinterher, wechselt startAhead selbst
+            // auf fertige Untertitel. Nur Bild-Untertitel (Texterkennung) sind auf langsamen Geräten zu teuer.
+            val slowDevice = DeviceInfo.isWeak(this@PlayerActivity) || Translators.remote.engine == de.ayutv.data.translate.Engine.Kind.KERN
+            val heavy = embeddedSource != null && embeddedSource.let { (g, i) -> g.getTrackFormat(i).isBitmapSubtitle() } && slowDevice
             if (embeddedSource != null && !heavy) {
                 startLiveTranslation(language, embeddedSource)
                 return@launch
@@ -1265,7 +1269,7 @@ class PlayerActivity : ComponentActivity() {
         externalExact = result.source == SubtitleRepository.Source.HASH
         subtitleStatus = when (result.source) {
             SubtitleRepository.Source.HASH -> "Untertitel geladen, passend zur Datei"
-            SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden)"
+            SubtitleRepository.Source.TITLE -> "Untertitel geladen (nach Titel gefunden). Daneben? ☰ → Untertitel-Zeit einstellen"
             SubtitleRepository.Source.TRANSLATED -> "Untertitel übersetzt (${result.translator})"
             SubtitleRepository.Source.CACHE -> "Untertitel: ${Languages.label(language)}"
         }
@@ -1419,8 +1423,12 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun startAhead(format: Format, target: String) {
         aheadJob?.cancel()
+        saveAheadTranslations()
         aheadTranslations.clear()
+        aheadDone.clear()
         aheadFormat = format
+        val request = vod
+        aheadKey = request?.let { Triple(it.key, format.id ?: format.language ?: "spur", target) }
         val translator = Translators.from(settings) ?: return
         val bitmap = format.isBitmapSubtitle()
         if (bitmap) {
@@ -1429,6 +1437,14 @@ class PlayerActivity : ComponentActivity() {
             if (!isLive) player?.let { it.seekTo(it.currentPosition) }
         }
         aheadJob = lifecycleScope.launch {
+            // Schon früher übersetzte Zeilen dieser Spur (Zurückspulen, erneutes Schauen): sofort da, nichts neu rechnen.
+            aheadKey?.let { (key, track, language) ->
+                val stored = withContext(Dispatchers.IO) { container.subtitles.lineTranslations(key, track, language) }
+                aheadTranslations.putAll(stored)
+                aheadDone.putAll(stored)
+                if (stored.isNotEmpty()) Log.i(SUBTITLE_TAG, "${stored.size} schon übersetzte Zeilen geladen")
+            }
+            var unsaved = 0
             launch {
                 while (true) {
                     val store = embedded
@@ -1470,12 +1486,20 @@ class PlayerActivity : ComponentActivity() {
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
                     aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, sourceFor(text)).first()
                     val took = SystemClock.elapsedRealtime() - started
+                    if (text.isNotBlank()) {
+                        aheadDone[next.startMs] = aheadTranslations.getValue(next.startMs)
+                        if (++unsaved >= 10) {
+                            unsaved = 0
+                            saveAheadTranslations()
+                        }
+                    }
                     Log.i(SUBTITLE_TAG, "Vorlauf ${(next.startMs - position) / 1000} s, $took ms: $text → ${aheadTranslations[next.startMs]}")
                     if (text.isNotBlank() && done++ > 0) lineMs = if (lineMs == 0L) took else (lineMs * 3 + took) / 4
                     if (!slowWarned && done >= 8 && skipped.size >= done) {
                         slowWarned = true
                         subtitleStatus = slowTranslationHint(target, lineMs)
                         Log.i(SUBTITLE_TAG, "Gerät zu langsam: $done Zeilen übersetzt, ${skipped.size} übersprungen, $lineMs ms pro Zeile")
+                        switchToReadySubtitles(target)
                     }
                     failures = 0
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1500,11 +1524,41 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Live-Übersetzung kommt nicht mit: Gibt es fertige Untertitel in der Zielsprache (OpenSubtitles), auf
+     * diese wechseln. Gibt es keine, läuft die Übersetzung weiter (lieber jede zweite Zeile als keine).
+     */
+    private fun switchToReadySubtitles(target: String) {
+        val request = vod ?: return
+        if (!settings.onlineSubtitlesEnabled) return
+        lifecycleScope.launch {
+            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, target, settings, filmInfo()) }
+                .onFailure { Log.i(SUBTITLE_TAG, "Keine fertigen Untertitel statt Live-Übersetzung: ${it.message}") }
+                .getOrNull() ?: return@launch
+            if (liveTranslateTarget != target) return@launch
+            stopLiveTranslation()
+            attachLoaded(target, found)
+            subtitleStatus = "Live-Übersetzung zu langsam für dieses Gerät: fertige Untertitel (${Languages.label(target)}) geladen, " +
+                "werden automatisch ausgerichtet (☰ → Untertitel-Zeit einstellen, falls nötig)"
+        }
+    }
+
     /** Ehrlich sagen, dass das Gerät nicht mitkommt, und was stattdessen hilft. */
     private fun slowTranslationHint(target: String, lineMs: Long): String {
         val seconds = String.format(Locale.GERMAN, "%.1f", lineMs / 1000f)
         val tip = if (vod != null) " Besser: ☰ → „${Languages.label(target)} laden“ (fertige Untertitel)." else ""
         return "Dieses Gerät ist für Live-Übersetzung zu langsam ($seconds s pro Zeile). Ein Teil der Zeilen bleibt im Original.$tip"
+    }
+
+    /** Erfolgreich übersetzte Zeilen der laufenden Live-Übersetzung (werden gespeichert) und wofür (Film, Spur, Sprache). */
+    private val aheadDone = HashMap<Long, String>()
+    private var aheadKey: Triple<String, String, String>? = null
+
+    private fun saveAheadTranslations() {
+        val (key, track, language) = aheadKey ?: return
+        if (aheadDone.isEmpty()) return
+        val lines = HashMap(aheadDone)
+        container.scope.launch(Dispatchers.IO) { container.subtitles.saveLineTranslations(key, track, language, lines) }
     }
 
     /** Gelesene Zeilen einer Spur ohne Sprachangabe, um ihre Sprache zu erkennen. */
@@ -1533,6 +1587,7 @@ class PlayerActivity : ComponentActivity() {
         cueJob?.cancel()
         fileTranslationJob?.cancel()
         fileTranslationJob = null
+        fileTranslationInfo = null
         externalJob?.cancel()
         externalJob = null
         syncJob?.cancel()
@@ -1543,6 +1598,9 @@ class PlayerActivity : ComponentActivity() {
         aheadJob?.cancel()
         aheadJob = null
         aheadFormat = null
+        saveAheadTranslations()
+        aheadKey = null
+        aheadDone.clear()
         aheadTranslations.clear()
         originalVisible = false
         embedded?.readImagesOf(null)
@@ -1575,6 +1633,8 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun beginExternal(language: String, cues: List<TimedCue>, texts: java.util.concurrent.atomic.AtomicReferenceArray<String>?) {
         externalLanguage = language
+        manualAnchor = null
+        manualSync = false
         externalCues = cues
         externalTexts = texts
         referenceStarts.clear()
@@ -1610,6 +1670,66 @@ class PlayerActivity : ComponentActivity() {
     fun shiftSubtitles(deltaMs: Long) {
         subtitleDelayMs += deltaMs
         subtitleStatus = "Untertitel ${formatShift(subtitleDelayMs + subtitleTiming.offsetMs)}"
+        saveTiming()
+    }
+
+    /** Fortschritt der vorausschauenden Übersetzung einer Untertitel-Datei (null = keine läuft). */
+    var fileTranslationInfo by mutableStateOf<String?>(null); private set
+
+    /** Gesamtverschiebung der geladenen Untertitel gegenüber der Datei, für die Anzeige. */
+    val subtitleShiftLabel: String get() = formatShift(subtitleTiming.offsetMs + subtitleDelayMs) +
+        if (subtitleTiming.ratio != 1.0) ", Bildrate korrigiert" else ""
+
+    /** Untertitel-Zeit von Hand einstellen (Feld im Menü, schließt nicht von selbst). */
+    var syncPanel by mutableStateOf(false); private set
+
+    fun openSyncPanel() {
+        syncPanel = true
+        overlayToken++
+    }
+
+    fun closeSyncPanel() {
+        syncPanel = false
+        overlayToken++
+    }
+
+    class SyncLine(val start: Long, val text: String, val upcoming: Boolean)
+
+    /** Zeilen der geladenen Datei rund um die jetzige Stelle, zum Antippen, sobald eine gesprochen wird. */
+    fun syncLines(): List<SyncLine> {
+        val at = subtitleTimeAt(player?.currentPosition ?: 0L)
+        return externalCues.filter { it.start in at - SYNC_LINES_BACK_MS..at + SYNC_LINES_AHEAD_MS }
+            .map { SyncLine(it.start, it.text.replace('\n', ' '), it.start >= at) }
+    }
+
+    /** Zuletzt von Hand festgelegte Zeile (Filmzeit, Zeit in der Datei), für die Bildraten-Korrektur aus zwei Punkten. */
+    private var manualAnchor: Pair<Long, Long>? = null
+    /** Von Hand an einer Zeile ausgerichtet: Die automatische Ausrichtung überschreibt das nicht mehr. */
+    private var manualSync = false
+
+    /**
+     * Die Zeile mit Beginn [cueStart] wird gerade gesprochen: so verschieben, dass sie genau jetzt beginnt.
+     * Ein Druck genügt, egal wie weit die Untertitel daneben lagen. Ein zweiter Druck mindestens drei
+     * Minuten später erkennt auch eine falsche Bildrate (Untertitel laufen langsam auseinander).
+     */
+    fun anchorSubtitle(cueStart: Long) {
+        val position = (player?.currentPosition ?: return) - REACTION_MS
+        val previous = manualAnchor
+        val ratio = previous?.takeIf { abs(cueStart - it.second) >= 3 * 60_000L }?.let { (video, subtitle) ->
+            val raw = (position - video).toDouble() / (cueStart - subtitle)
+            SYNC_RATIOS.minByOrNull { abs(it - raw) }?.takeIf { abs(it - raw) / it < 0.003 }
+        }
+        if (ratio != null && ratio != subtitleTiming.ratio) {
+            subtitleTiming = SubtitleTiming(ratio, position - (cueStart * ratio).toLong())
+            subtitleDelayMs = 0
+        } else {
+            subtitleDelayMs = position - subtitleTiming.toVideo(cueStart)
+        }
+        manualAnchor = position to cueStart
+        manualSync = true
+        subtitleAutoSynced = true
+        speechSyncInfo = "Von Hand ausgerichtet"
+        subtitleStatus = "Untertitel ausgerichtet ($subtitleShiftLabel)"
         saveTiming()
     }
 
@@ -1665,6 +1785,8 @@ class PlayerActivity : ComponentActivity() {
 
     /** Automatisch gefundene Lage übernehmen, wenn sie spürbar von der jetzigen abweicht. */
     private fun applyFit(timing: SubtitleTiming, bySpeech: Boolean, toleranceMs: Long) {
+        // Von Hand an einer Zeile ausgerichtet: Das ist genauer als jede Schätzung, nicht wieder verstellen.
+        if (manualSync) return
         // Von Hand verschoben, bevor überhaupt automatisch ausgerichtet war: Das war der Versuch, denselben
         // Versatz auszugleichen, den die Ausrichtung jetzt genau kennt.
         if (!subtitleAutoSynced) subtitleDelayMs = 0L
@@ -1893,6 +2015,8 @@ class PlayerActivity : ComponentActivity() {
             return if (i < 0) cues.size else i
         }
         fileTranslationJob = lifecycleScope.launch {
+            var done = 0
+            fileTranslationInfo = "Übersetzung startet …"
             val batch = if (translator.name == de.ayutv.data.translate.OnDeviceTranslator.NAME) 3 else 40
             try {
                 while (true) {
@@ -1903,9 +2027,14 @@ class PlayerActivity : ComponentActivity() {
                     val indices = (next until minOf(cues.size, next + batch)).filter { translations.get(it) == null }
                     val result = translator.translate(indices.map { cues[it].text }, target, sourceLanguage)
                     indices.forEachIndexed { k, index -> translations.set(index, result.getOrElse(k) { cues[index].text }) }
+                    done += indices.size
+                    // Wie weit die Übersetzung vor der aktuellen Stelle ist (im Untertitel-Menü zu sehen).
+                    val ahead = (indexAt(player?.currentPosition ?: 0L) until cues.size).takeWhile { translations.get(it) != null }.count()
+                    fileTranslationInfo = "Übersetzt: $done von ${cues.size} Zeilen · ab hier $ahead Zeilen fertig"
                 }
-                val done = cues.mapIndexed { i, cue -> cue.original.copy(text = translations.get(i) ?: cue.text) }
-                val saved = withContext(Dispatchers.IO) { container.subtitles.saveTranslation(request.key, target, done) }
+                fileTranslationInfo = null
+                val finished = cues.mapIndexed { i, cue -> cue.original.copy(text = translations.get(i) ?: cue.text) }
+                val saved = withContext(Dispatchers.IO) { container.subtitles.saveTranslation(request.key, target, finished) }
                 subtitleFiles[target] = saved
                 loadedLanguages = subtitleFiles.keys.toList()
                 Log.i(SUBTITLE_TAG, "Übersetzung von ${cues.size} Zeilen fertig und gespeichert")
@@ -2739,6 +2868,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         vod?.let(::learnOpening)
+        saveAheadTranslations()
         // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
         if (inPip) {
             inPip = false
@@ -2791,6 +2921,12 @@ class PlayerActivity : ComponentActivity() {
         private val STANDARD_FRAME_RATES = listOf(23.976f, 24f, 25f, 29.97f, 30f, 48f, 50f, 59.94f, 60f)
         private const val LIVE_STALL_SECONDS = 8
         private const val VLC_PACKAGE = "org.videolan.vlc"
+        /** So viel später drückt man OK, nachdem man die Zeile gehört hat. */
+        private const val REACTION_MS = 400L
+        private const val SYNC_LINES_BACK_MS = 2 * 60_000L
+        private const val SYNC_LINES_AHEAD_MS = 3 * 60_000L
+        /** Übliche Bildraten-Unterschiede zwischen Untertitel-Datei und Film. */
+        private val SYNC_RATIOS = listOf(1.0, 25.0 / 23.976, 23.976 / 25.0, 24.0 / 23.976, 23.976 / 24.0, 25.0 / 24.0, 24.0 / 25.0)
         private const val DROP_WINDOW_MS = 10 * 60_000L
         /** Angenommene Dauer einer Einblendung ohne bekanntes Ende (Live-Übersetzung, Zeilen überspringen). */
         private const val ASSUMED_LINE_MS = 3_000L

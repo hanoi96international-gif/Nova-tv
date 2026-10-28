@@ -305,6 +305,30 @@ class SubtitleRepository(
         return target
     }
 
+    /**
+     * Übersetzte Zeilen einer eingebetteten Spur (Beginn der Zeile → Text). Beim Zurückspulen und beim
+     * nächsten Schauen stehen sie sofort da, statt auf dem Gerät noch einmal gerechnet zu werden.
+     */
+    fun lineTranslations(key: String, track: String, language: String): Map<Long, String> = runCatching {
+        lineFile(key, track, language).readLines().mapNotNull { line ->
+            val tab = line.indexOf('\t')
+            if (tab <= 0) null else line.substring(0, tab).toLongOrNull()?.let { it to line.substring(tab + 1).replace("\\n", "\n") }
+        }.toMap()
+    }.getOrDefault(emptyMap())
+
+    fun saveLineTranslations(key: String, track: String, language: String, lines: Map<Long, String>) {
+        if (lines.isEmpty()) return
+        val target = lineFile(key, track, language).apply { parentFile?.mkdirs() }
+        runCatching {
+            writeAtomically(target, lines.entries.sortedBy { it.key }.joinToString("\n", postfix = "\n") { (start, text) ->
+                "$start\t" + text.replace("\n", "\\n").replace('\t', ' ')
+            })
+        }.onFailure { Log.w(TAG, "Übersetzte Zeilen nicht gespeichert", it) }
+    }
+
+    private fun lineFile(key: String, track: String, language: String) =
+        File(File(cacheDir, "subtitle-lines"), safeName("$key.$track") + ".$language.tsv")
+
     /** Alle gespeicherten Untertitel eines Films, nach Sprache. Werden beim Start gleich mitgegeben. */
     fun cachedAll(key: String): Map<String, File> {
         val prefix = safeName(key) + "."

@@ -13,8 +13,8 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 ROOT = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "ci-media")
-# Startzeit des wackeligen Senders: Er „läuft“ ab Serverstart, wie ein echter Live-Sender.
-FLAKY_EPOCH = time.time()
+# Startzeit des wackeligen Senders: Er „läuft“ ab dem ersten Abruf, wie ein echter Live-Sender.
+FLAKY_EPOCH = None
 USER, PASSWORD = "ayu", "test"
 
 LIVE = [
@@ -82,12 +82,16 @@ class Handler(SimpleHTTPRequestHandler):
         return self.serve_file()
 
     def serve_flaky(self):
-        """Wie ein wackeliger IPTV-Server: liefert hd50.ts in Echtzeit (nach kurzem Startschub) und
+        """Wie ein wackeliger IPTV-Server: liefert flaky.ts in Echtzeit (nach kurzem Startschub) und
         trennt die Verbindung nach 15 Sekunden. Der Player muss neu verbinden, ohne hängen zu bleiben."""
-        import time
-        path = os.path.join(ROOT, "hd50.ts")
+        global FLAKY_EPOCH
+        if FLAKY_EPOCH is None:
+            FLAKY_EPOCH = time.time()
+        path, seconds = os.path.join(ROOT, "flaky.ts"), 450.0  # 5 × 90 s (make-test-media.sh)
+        if not os.path.exists(path):
+            path, seconds = os.path.join(ROOT, "hd50.ts"), 90.0
         size = os.path.getsize(path)
-        rate = size / 90.0  # Bytes pro Sekunde (90 s Video)
+        rate = size / seconds  # Bytes pro Sekunde
         m = re.match(r"bytes=(\d+)-", self.headers.get("Range", ""))
         if m:
             start = int(m.group(1)) % size
