@@ -9,6 +9,9 @@ cd "$dir"
 # 1080p mit 50 fps, H.264, Keyframe jede Sekunde: typischer deutscher HD-Sender
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate=50" -f lavfi -i "sine=frequency=440:sample_rate=48000" \
   -t 90 -c:v libx264 -preset veryfast -b:v 8M -g 50 -pix_fmt yuv420p -c:a aac -b:a 128k -f mpegts hd50.ts
+# Für den „wackeligen“ Sender: derselbe Inhalt 7,5 Minuten lang mit durchlaufenden Zeitstempeln. Ein echter
+# Sender springt nicht alle 90 s in der Zeit zurück; das würde den Test des Neuverbindens verfälschen.
+ffmpeg -loglevel error -y -stream_loop 4 -i hd50.ts -c copy -f mpegts flaky.ts
 # 4K mit 25 fps, HEVC 10 Bit: der Härtefall
 ffmpeg -loglevel error -y -f lavfi -i "testsrc2=size=3840x2160:rate=25" -f lavfi -i "sine=frequency=330:sample_rate=48000" \
   -t 40 -c:v libx265 -preset ultrafast -b:v 15M -g 25 -pix_fmt yuv420p10le -x265-params log-level=error \
