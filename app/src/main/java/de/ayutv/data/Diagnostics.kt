@@ -85,6 +85,7 @@ object Diagnostics {
             val pairs = Translators.onDevice.installedPairs()
             out.append("Modelle ${pairs.joinToString().ifEmpty { "keine" }} (${Translators.onDevice.installedBytes() / 1_000_000} MB)\n")
             Translators.remote.lastPeakMb?.let { out.append("Speicher höchstens $it MB\n") }
+            out.append("Handy: ${de.ayutv.data.translate.PhoneHelper.describe()}\n")
         }
         file(SELFTEST_FILE)?.let { out.append("Letzter Test:\n").append(it).append('\n') }
         NativeCrashLog.last(context.filesDir)?.let { out.append("Letzter nativer Absturz:\n").append(it).append('\n') }

@@ -115,7 +115,7 @@ class Pretranslation(private val context: Context, private val container: AppCon
             for (chunk in cues.filter { startOf(it) !in partial }.chunked(BATCH)) {
                 if (timeLeft() < 20_000) return null
                 val texts = chunk.map { Srt.plainText(it.text) }
-                val result = Translators.remote.translate(texts, item.language, source.language)
+                val result = (Translators.from(container.settings.current()) ?: Translators.remote).translate(texts, item.language, source.language)
                 chunk.forEachIndexed { k, cue -> partial[startOf(cue)] = result.getOrElse(k) { texts[k] } }
             }
         } finally {

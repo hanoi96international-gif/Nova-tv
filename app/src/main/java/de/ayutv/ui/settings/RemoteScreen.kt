@@ -104,6 +104,8 @@ fun RemoteScreen(onClose: () -> Unit) {
                     paired = false
                 }) { Text("Anderer Fernseher") }
             }
+            Spacer(Modifier.height(16.dp))
+            PhoneTranslates(client)
             Spacer(Modifier.height(12.dp))
             OutlinedButton(onClick = {
                 send {
@@ -207,5 +209,75 @@ private fun RowScope.Key(label: String, key: String, onKey: (String) -> Unit, pr
         ),
     ) {
         Text(label, modifier = Modifier.align(Alignment.Center), fontSize = 20.sp)
+    }
+}
+
+/**
+ * Handy übersetzt für den Fernseher: Solange diese Seite offen ist, übersetzt das Handy die Untertitel, die der
+ * Fernseher braucht (schneller und ohne den knappen Speicher des Sticks). Meldet sich jede Minute neu.
+ */
+@Composable
+private fun PhoneTranslates(client: RemoteClient) {
+    val container = LocalContainer.current
+    val helper = remember { de.ayutv.data.remote.TranslationHelperServer() }
+    val state by helper.state.collectAsState()
+    var on by remember { mutableStateOf(false) }
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(on) {
+        // Bildschirm bleibt an: Im Ruhezustand schläft das WLAN des Handys, der Fernseher bekäme keine Antwort.
+        view.keepScreenOn = on
+        onDispose { view.keepScreenOn = false }
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            if (helper.state.value.address != null) {
+                helper.stop()
+                container.scope.launch { runCatching { client.registerHelper(null) } }
+            }
+        }
+    }
+    LaunchedEffect(on) {
+        if (!on) return@LaunchedEffect
+        val address = helper.start()
+        if (address == null) {
+            on = false
+            return@LaunchedEffect
+        }
+        var prepared = false
+        while (true) {
+            val languages = runCatching { client.registerHelper(address) }
+                .onFailure { helper.info("Fernseher nicht erreichbar (${it.message}), versuche es weiter …") }
+                .getOrNull()
+            if (languages != null && !prepared) {
+                prepared = true
+                // Sprachmodelle gleich laden (beim ersten Mal ca. 110 MB je Sprache), damit die erste Zeile nicht wartet.
+                for (language in languages.filter { it != "en" }) {
+                    helper.info("Lade Sprachmodell ${de.ayutv.data.Languages.label(language)} …")
+                    runCatching { de.ayutv.data.repo.Translators.remote.translate(listOf("Hello."), language, "en") }
+                        .onFailure { helper.info("Sprachmodell ${de.ayutv.data.Languages.label(language)}: ${it.message}") }
+                }
+                if (state.info?.startsWith("Lade") == true) helper.info(null)
+            }
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
+    Column(Modifier.fillMaxWidth().widthIn(max = 480.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (on) {
+            Button(onClick = {
+                on = false
+                helper.stop()
+                container.scope.launch { runCatching { client.registerHelper(null) } }
+            }) { Text("🧠 Handy übersetzt für den Fernseher: An") }
+        } else {
+            OutlinedButton(onClick = { on = true }) { Text("🧠 Handy übersetzt für den Fernseher") }
+        }
+        Text(
+            if (on) "${state.lines} Zeilen übersetzt. Diese Seite offen lassen, der Bildschirm bleibt an." + (state.info?.let { "\n$it" } ?: "")
+            else state.info ?: "Das Handy rechnet die Übersetzung der Untertitel, der Fire TV muss es nicht. Nur im selben WLAN.",
+            color = AyuColors.TextSecondary,
+            fontSize = 13.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }

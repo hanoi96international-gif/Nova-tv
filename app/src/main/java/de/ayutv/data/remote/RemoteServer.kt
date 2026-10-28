@@ -159,6 +159,15 @@ class RemoteServer(private val context: Context, private val container: AppConta
                 search(body.toString(Charsets.UTF_8).trim().take(200))
                 respond(client, 200, "text/plain", "ok".toByteArray())
             }
+            "/helper" -> {
+                // Handy meldet sich als Übersetzer (Adresse mit Schlüssel) oder ab (leer).
+                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                val address = body.toString(Charsets.UTF_8).trim().ifEmpty { null }
+                de.ayutv.data.translate.PhoneHelper.register(address, query["name"])
+                val s = container.settings.current()
+                val languages = listOf(s.subtitleLanguage, s.lastTranslationTarget).filter { it.isNotEmpty() }.distinct()
+                respond(client, 200, "application/json", """{"languages":[${languages.joinToString(",") { "\"${jsonEscape(it)}\"" }}]}""".toByteArray())
+            }
             "/report" -> respond(client, 200, "text/plain; charset=utf-8", de.ayutv.data.Diagnostics.build(context, container).toByteArray())
             "/sync" -> {
                 if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
