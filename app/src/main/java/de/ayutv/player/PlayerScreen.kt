@@ -709,6 +709,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
             item { OptionRow("Falsche Untertitel – andere laden", selected = false) { activity.reportWrongSubtitles() } }
             item { MenuHint(syncHint(activity)) }
             activity.speechSyncInfo?.let { info -> item { MenuHint("Ausrichtung: $info") } }
+            activity.fileTranslationInfo?.let { info -> item { MenuHint(info) } }
         }
         if (!activity.isLive) {
             if (preferred !in activity.loadedLanguages) {

@@ -1186,9 +1186,12 @@ class PlayerActivity : ComponentActivity() {
             //    Auf schwachen Geräten (32 Bit, wenig RAM) laufen Texterkennung und Übersetzung neben 4K
             //    nicht zuverlässig: Dort zuerst fertige Untertitel (werden automatisch ausgerichtet).
             val embeddedSource = if (settings.translationEnabled) bestTranslationSource(allowForced = false) else null
-            val heavy = embeddedSource != null && embeddedSource.let { (g, i) -> g.getTrackFormat(i).isBitmapSubtitle() } &&
-                DeviceInfo.isWeak(this@PlayerActivity)
-            if (embeddedSource != null && !heavy) {
+            // Langsamer Übersetzer (Fire TV Stick: 32 Bit, Rechenkern ohne native Bibliothek): Die Live-Übersetzung
+            // kommt dort mit dem Sprechen kaum mit. Fertige Untertitel in der Zielsprache gehen vor.
+            val slowDevice = DeviceInfo.isWeak(this@PlayerActivity) || Translators.remote.engine == de.ayutv.data.translate.Engine.Kind.KERN
+            val heavy = embeddedSource != null && embeddedSource.let { (g, i) -> g.getTrackFormat(i).isBitmapSubtitle() } && slowDevice
+            val readyFirst = slowDevice && request != null && settings.onlineSubtitlesEnabled
+            if (embeddedSource != null && !heavy && !readyFirst) {
                 startLiveTranslation(language, embeddedSource)
                 return@launch
             }
@@ -1477,6 +1480,7 @@ class PlayerActivity : ComponentActivity() {
                         slowWarned = true
                         subtitleStatus = slowTranslationHint(target, lineMs)
                         Log.i(SUBTITLE_TAG, "Gerät zu langsam: $done Zeilen übersetzt, ${skipped.size} übersprungen, $lineMs ms pro Zeile")
+                        switchToReadySubtitles(target)
                     }
                     failures = 0
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1498,6 +1502,25 @@ class PlayerActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Live-Übersetzung kommt nicht mit: Gibt es fertige Untertitel in der Zielsprache (OpenSubtitles), auf
+     * diese wechseln. Gibt es keine, läuft die Übersetzung weiter (lieber jede zweite Zeile als keine).
+     */
+    private fun switchToReadySubtitles(target: String) {
+        val request = vod ?: return
+        if (!settings.onlineSubtitlesEnabled) return
+        lifecycleScope.launch {
+            val found = runCatching { container.subtitles.find(request.key, request.url, request.title, target, settings, filmInfo()) }
+                .onFailure { Log.i(SUBTITLE_TAG, "Keine fertigen Untertitel statt Live-Übersetzung: ${it.message}") }
+                .getOrNull() ?: return@launch
+            if (liveTranslateTarget != target) return@launch
+            stopLiveTranslation()
+            attachLoaded(target, found)
+            subtitleStatus = "Live-Übersetzung zu langsam für dieses Gerät: fertige Untertitel (${Languages.label(target)}) geladen, " +
+                "werden automatisch ausgerichtet (☰ → Untertitel-Zeit einstellen, falls nötig)"
         }
     }
 
@@ -1534,6 +1557,7 @@ class PlayerActivity : ComponentActivity() {
         cueJob?.cancel()
         fileTranslationJob?.cancel()
         fileTranslationJob = null
+        fileTranslationInfo = null
         externalJob?.cancel()
         externalJob = null
         syncJob?.cancel()
@@ -1615,6 +1639,9 @@ class PlayerActivity : ComponentActivity() {
         subtitleStatus = "Untertitel ${formatShift(subtitleDelayMs + subtitleTiming.offsetMs)}"
         saveTiming()
     }
+
+    /** Fortschritt der vorausschauenden Übersetzung einer Untertitel-Datei (null = keine läuft). */
+    var fileTranslationInfo by mutableStateOf<String?>(null); private set
 
     /** Gesamtverschiebung der geladenen Untertitel gegenüber der Datei, für die Anzeige. */
     val subtitleShiftLabel: String get() = formatShift(subtitleTiming.offsetMs + subtitleDelayMs) +
@@ -1955,6 +1982,8 @@ class PlayerActivity : ComponentActivity() {
             return if (i < 0) cues.size else i
         }
         fileTranslationJob = lifecycleScope.launch {
+            var done = 0
+            fileTranslationInfo = "Übersetzung startet …"
             val batch = if (translator.name == de.ayutv.data.translate.OnDeviceTranslator.NAME) 3 else 40
             try {
                 while (true) {
@@ -1965,9 +1994,14 @@ class PlayerActivity : ComponentActivity() {
                     val indices = (next until minOf(cues.size, next + batch)).filter { translations.get(it) == null }
                     val result = translator.translate(indices.map { cues[it].text }, target, sourceLanguage)
                     indices.forEachIndexed { k, index -> translations.set(index, result.getOrElse(k) { cues[index].text }) }
+                    done += indices.size
+                    // Wie weit die Übersetzung vor der aktuellen Stelle ist (im Untertitel-Menü zu sehen).
+                    val ahead = (indexAt(player?.currentPosition ?: 0L) until cues.size).takeWhile { translations.get(it) != null }.count()
+                    fileTranslationInfo = "Übersetzt: $done von ${cues.size} Zeilen · ab hier $ahead Zeilen fertig"
                 }
-                val done = cues.mapIndexed { i, cue -> cue.original.copy(text = translations.get(i) ?: cue.text) }
-                val saved = withContext(Dispatchers.IO) { container.subtitles.saveTranslation(request.key, target, done) }
+                fileTranslationInfo = null
+                val finished = cues.mapIndexed { i, cue -> cue.original.copy(text = translations.get(i) ?: cue.text) }
+                val saved = withContext(Dispatchers.IO) { container.subtitles.saveTranslation(request.key, target, finished) }
                 subtitleFiles[target] = saved
                 loadedLanguages = subtitleFiles.keys.toList()
                 Log.i(SUBTITLE_TAG, "Übersetzung von ${cues.size} Zeilen fertig und gespeichert")
