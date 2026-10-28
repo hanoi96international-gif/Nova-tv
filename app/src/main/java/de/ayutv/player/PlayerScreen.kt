@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -136,6 +138,28 @@ fun PlayerScreen(activity: PlayerActivity) {
 
         if (activity.fatalError) {
             Box(Modifier.fillMaxSize().background(Color.Black))
+        }
+
+        activity.pipPlayer?.let { pip ->
+            PipWindow(pip, activity.pipChannel?.name.orEmpty(), Modifier.align(Alignment.BottomEnd))
+        }
+
+        activity.dueReminder?.let { reminder ->
+            Column(
+                Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 32.dp).width(460.dp)
+                    .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                    .border(2.dp, AyuColors.Accent, RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+            ) {
+                Text("⏰ Gleich auf ${reminder.channelName}", color = AyuColors.Accent, fontSize = 15.sp)
+                Text(reminder.title, color = Color.White, fontSize = 18.sp, maxLines = 2, modifier = Modifier.padding(top = 4.dp))
+                Text(
+                    "OK umschalten" + (if (activity.isLive) "  ·  ⏩ als kleines Bild" else "") + "  ·  Zurück ausblenden",
+                    color = AyuColors.TextSecondary,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
         }
 
         // Bild-in-Bild: nur das Bild, keine Leisten und Hinweise.
@@ -313,7 +337,7 @@ fun PlayerScreen(activity: PlayerActivity) {
             // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
             Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             // Beim Zuordnen des TV-Guides (Suchen, Blättern in langen Listen) nicht von selbst schließen.
-            Overlay.TRACKS -> if (activity.epgPicker || activity.syncPanel) Long.MAX_VALUE else 15_000L
+            Overlay.TRACKS -> if (activity.epgPicker || activity.syncPanel || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
             Overlay.CHANNELS -> 15_000L
         }
         delay(timeout)
@@ -655,6 +679,10 @@ private fun TracksOverlay(activity: PlayerActivity) {
         EpgPicker(activity)
         return
     }
+    activity.pipChoices?.let { choices ->
+        PipPicker(activity, choices)
+        return
+    }
     if (activity.syncPanel) {
         SyncPanel(activity)
         return
@@ -686,6 +714,13 @@ private fun TracksOverlay(activity: PlayerActivity) {
             }
             item {
                 OptionRow("📺 Programm falsch? TV-Guide zuordnen …", selected = false) { activity.openEpgPicker() }
+            }
+            if (activity.pipPlayer == null) item {
+                OptionRow("⧉ Zweites Spiel als kleines Bild (Konferenz) …", selected = false) { activity.openPipPicker() }
+            } else {
+                item { OptionRow("⇄ Bilder tauschen (auch mit ⏩)", selected = false) { activity.swapPip() } }
+                item { OptionRow("⧉ Anderes kleines Bild …", selected = false) { activity.openPipPicker() } }
+                item { OptionRow("✕ Kleines Bild schließen", selected = false) { activity.closePip() } }
             }
         }
         if (activity.vlcAvailable) item {
@@ -863,6 +898,61 @@ private fun EpgPicker(activity: PlayerActivity) {
             if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
             delay(16)
         }
+    }
+}
+
+/** Zweites Bild: laufende Spiele, voriger Sender, Favoriten. */
+@Composable
+private fun PipPicker(activity: PlayerActivity, choices: List<Pair<de.ayutv.data.db.ChannelEntity, String>>) {
+    val firstItem = remember { FocusRequester() }
+    LazyColumn(
+        modifier = Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.94f)),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp, horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        item { MenuHeader("Kleines Bild dazu") }
+        item { MenuHint("Läuft ohne Ton unten rechts. ⏩ tauscht die Bilder, ☰ schließt. Braucht eine zweite Verbindung beim Anbieter.") }
+        if (choices.isEmpty()) item { MenuHint("Gerade kein Spiel, kein voriger Sender und keine Favoriten.") }
+        choices.forEachIndexed { index, (channel, label) ->
+            item(key = channel.key) {
+                OptionRow(label, selected = false, modifier = if (index == 0) Modifier.focusRequester(firstItem) else Modifier) {
+                    activity.startPip(channel)
+                }
+            }
+        }
+    }
+    LaunchedEffect(choices.isNotEmpty()) {
+        repeat(5) {
+            if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
+}
+
+/** Das kleine Bild: eigene Fläche über dem Hauptbild (SurfaceView als Medien-Overlay). */
+@Composable
+private fun PipWindow(player: androidx.media3.exoplayer.ExoPlayer, label: String, modifier: Modifier) {
+    Column(modifier.padding(end = 36.dp, bottom = 36.dp).width(420.dp)) {
+        androidx.compose.runtime.key(player) {
+            AndroidView(
+                factory = { context ->
+                    android.view.SurfaceView(context).apply {
+                        setZOrderMediaOverlay(true)
+                        player.setVideoSurfaceView(this)
+                    }
+                },
+                onRelease = { view -> player.clearVideoSurfaceView(view) },
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                    .border(2.dp, Color.White.copy(alpha = 0.8f)),
+            )
+        }
+        Text(
+            "$label  ·  ⏩ tauschen",
+            color = Color.White,
+            fontSize = 13.sp,
+            maxLines = 1,
+            modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 8.dp, vertical = 3.dp),
+        )
     }
 }
 

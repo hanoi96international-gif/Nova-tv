@@ -189,6 +189,41 @@ object PlayerFactory {
         if (!live) player.setSeekParameters(SeekParameters.CLOSEST_SYNC)
         return Built(player, headers, trackSelector, subtitles)
     }
+
+    /**
+     * Zweites, kleines Bild (Konferenz): ohne Ton, ohne Untertitel, höchstens 720p und mit kleinem Puffer, damit
+     * es neben dem Hauptbild auf schwachen Sticks Platz hat.
+     */
+    fun createPreview(context: Context, http: OkHttpClient, userAgent: String): ExoPlayer {
+        val client = http.newBuilder()
+            .readTimeout(8, TimeUnit.SECONDS)
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .build()
+        val upstream = ResolvingDataSource.Factory(OkHttpDataSource.Factory(client)) { spec ->
+            spec.withAdditionalHeaders(mapOf("User-Agent" to userAgent))
+        }
+        val tsFlags = DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
+        val extractors = DefaultExtractorsFactory().setTsExtractorFlags(tsFlags)
+        val trackSelector = DefaultTrackSelector(context).apply {
+            setParameters(
+                buildUponParameters()
+                    .setMaxVideoSize(1280, 720)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            )
+        }
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(2_000, 10_000, 800, 1_500)
+            .setTargetBufferBytes(12 * MB)
+            .setPrioritizeTimeOverSizeThresholds(false)
+            .build()
+        return ExoPlayer.Builder(context, DefaultRenderersFactory(context).setEnableDecoderFallback(true))
+            .setMediaSourceFactory(StreamMediaSourceFactory(DefaultDataSource.Factory(context, upstream), extractors, tsFlags, live = true))
+            .setTrackSelector(trackSelector)
+            .setLoadControl(loadControl)
+            .build()
+            .apply { volume = 0f }
+    }
 }
 
 /**

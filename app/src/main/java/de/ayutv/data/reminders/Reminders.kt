@@ -138,7 +138,24 @@ class ReminderReceiver : BroadcastReceiver() {
                     }
                 }
             }
-            Reminders.ACTION_REMIND -> notify(context, intent)
+            Reminders.ACTION_REMIND -> {
+                notify(context, intent)
+                // Läuft gerade DnA-TV: im Bild einblenden (Benachrichtigungen erscheinen auf Fire TV über Apps kaum).
+                val channel = intent.getStringExtra(Reminders.EXTRA_CHANNEL) ?: return
+                app.container.dueReminder.value = Reminder(
+                    channel,
+                    intent.getStringExtra(Reminders.EXTRA_CHANNEL_NAME).orEmpty(),
+                    intent.getStringExtra(Reminders.EXTRA_TITLE).orEmpty(),
+                    intent.getLongExtra(Reminders.EXTRA_START, System.currentTimeMillis()),
+                )
+                if (app.container.foreground?.get() is de.ayutv.MainActivity) {
+                    android.widget.Toast.makeText(
+                        context,
+                        "Gleich auf ${intent.getStringExtra(Reminders.EXTRA_CHANNEL_NAME).orEmpty()}: ${intent.getStringExtra(Reminders.EXTRA_TITLE).orEmpty()}",
+                        android.widget.Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
         }
     }
 

@@ -3,6 +3,7 @@
 package de.ayutv.player
 
 import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.sportHeadline
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -294,6 +295,16 @@ class PlayerActivity : ComponentActivity() {
 
         if (hasTouchscreen()) hideSystemBars()
         setContent { AyuTheme { FitToScreen { PlayerScreen(this) } } }
+
+        // Anstoß eines gefolgten Vereins (oder andere Erinnerung), während hier etwas läuft: einblenden.
+        lifecycleScope.launch {
+            container.dueReminder.collect { reminder ->
+                if (reminder == null) return@collect
+                container.dueReminder.value = null
+                if (reminder.channelKey == playing?.key) return@collect
+                showReminder(reminder)
+            }
+        }
 
         lifecycleScope.launch {
             settings = container.settings.current()
@@ -954,6 +965,7 @@ class PlayerActivity : ComponentActivity() {
         syncPanel = false
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
+        pipChoices = null
     }
 
     private fun onDigit(digit: Int) {
@@ -2218,6 +2230,132 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    // ---------------------------------------------------------------- Anstoß-Hinweis
+
+    /** Fällige Erinnerung im Bild (OK schaltet um, ⏩ als kleines Bild, Zurück blendet aus). */
+    var dueReminder by mutableStateOf<de.ayutv.data.reminders.Reminder?>(null); private set
+    private var reminderJob: Job? = null
+
+    private fun showReminder(reminder: de.ayutv.data.reminders.Reminder) {
+        dueReminder = reminder
+        reminderJob?.cancel()
+        reminderJob = lifecycleScope.launch {
+            delay(REMINDER_VISIBLE_MS)
+            dueReminder = null
+        }
+    }
+
+    /** Taste, während der Hinweis zu sehen ist. true: verbraucht. */
+    private fun handleReminderKey(code: Int): Boolean {
+        val reminder = dueReminder ?: return false
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                dueReminder = null
+                lifecycleScope.launch {
+                    val channel = container.content.channel(reminder.channelKey) ?: return@launch
+                    if (isLive) playChannel(channel) else {
+                        startActivity(liveIntent(this@PlayerActivity, channel.key, null))
+                        finish()
+                    }
+                }
+            }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                if (!isLive) return false
+                dueReminder = null
+                lifecycleScope.launch { container.content.channel(reminder.channelKey)?.let(::startPip) }
+            }
+            KeyEvent.KEYCODE_BACK -> dueReminder = null
+            else -> return false
+        }
+        return true
+    }
+
+    // ---------------------------------------------------------------- Konferenz (zweites, kleines Bild)
+
+    /** Zweiter Sender als kleines Bild unten rechts (ohne Ton). ⏩ tauscht die Bilder. */
+    var pipPlayer by mutableStateOf<ExoPlayer?>(null); private set
+    var pipChannel by mutableStateOf<ChannelEntity?>(null); private set
+    /** Auswahl für das kleine Bild: laufende Spiele und der vorige Sender (Sender, Beschriftung). */
+    var pipChoices by mutableStateOf<List<Pair<ChannelEntity, String>>?>(null); private set
+    private var pipRetries = 0
+
+    fun openPipPicker() {
+        lifecycleScope.launch {
+            val now = System.currentTimeMillis()
+            val games = runCatching { container.content.sportEvents(hours = 1) }.getOrDefault(emptyList())
+                .filter { it.programme.start <= now && it.programme.stop > now && it.channel.key != playing?.key }
+                .map { it.channel to "⚽ ${it.programme.sportHeadline()} · ${it.channel.name}" }
+            val previous = previousChannel?.takeIf { p -> p.key != playing?.key && games.none { it.first.key == p.key } }
+                ?.let { listOf(it to "↩ Voriger Sender: ${it.name}") }.orEmpty()
+            val favorites = runCatching { container.content.zapList(null, favoritesOnly = true, merge = settings.mergeVariants) }.getOrDefault(emptyList())
+                .filter { f -> f.key != playing?.key && games.none { it.first.key == f.key } && previous.none { it.first.key == f.key } }
+                .take(12).map { it to "★ ${it.name}" }
+            pipChoices = games + previous + favorites
+            overlayToken++
+        }
+    }
+
+    fun closePipPicker() {
+        pipChoices = null
+        overlayToken++
+    }
+
+    fun startPip(channel: ChannelEntity) {
+        pipChoices = null
+        closeOverlay()
+        val main = playing
+        // Konto mit nur einer Verbindung: Zwei Sender desselben Anbieters gleichzeitig gehen nicht.
+        if (main != null && main.playlistId == channel.playlistId && container.accountLimits.maxConnections(channel.playlistId) == 1) {
+            message = "Dein Konto erlaubt nur 1 Verbindung: zwei Sender gleichzeitig gehen bei diesem Anbieter nicht."
+            handler.postDelayed({ message = null }, 8_000)
+            return
+        }
+        val preview = pipPlayer ?: PlayerFactory.createPreview(this, container.http, channel.userAgent ?: settings.userAgent).also { created ->
+            created.addListener(object : Player.Listener {
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.w(TAG, "Kleines Bild: ${error.errorCodeName}", error)
+                    if (pipRetries++ < 3) {
+                        handler.postDelayed({ pipPlayer?.let { it.prepare(); it.play() } }, 1_500)
+                        return
+                    }
+                    val limit = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+                    closePip()
+                    message = if (limit != null && limit in 400..499) {
+                        "Zweiter Sender abgelehnt (HTTP $limit) – vermutlich erlaubt das Konto nur eine Verbindung."
+                    } else "Zweites Bild nicht möglich: ${error.errorCodeName}"
+                    handler.postDelayed({ message = null }, 8_000)
+                }
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) pipRetries = 0
+                }
+            })
+        }
+        pipRetries = 0
+        val url = adaptLiveUrl(channel.url)
+        preview.setMediaItem(mediaItem(url, guessMime(url)))
+        preview.repeatMode = Player.REPEAT_MODE_ONE
+        preview.prepare()
+        preview.play()
+        pipPlayer = preview
+        pipChannel = channel
+        message = "Kleines Bild: ${channel.name} · ⏩ tauschen · ☰ schließen"
+        handler.postDelayed({ if (message?.startsWith("Kleines Bild") == true) message = null }, 5_000)
+    }
+
+    /** Hauptbild und kleines Bild tauschen (der Ton folgt dem Hauptbild). */
+    fun swapPip() {
+        val small = pipChannel ?: return
+        val main = playing ?: return
+        playChannel(small)
+        startPip(main)
+    }
+
+    fun closePip() {
+        pipPlayer?.release()
+        pipPlayer = null
+        pipChannel = null
+    }
+
     // ---------------------------------------------------------------- Gemeinsam
 
     private fun mediaItem(url: String, mime: String?): MediaItem =
@@ -2805,11 +2943,19 @@ class PlayerActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val code = event.keyCode
+        if (dueReminder != null && overlay != Overlay.CHANNELS && overlay != Overlay.TRACKS &&
+            (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_BACK ||
+                (code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && isLive))
+        ) {
+            if (event.action == KeyEvent.ACTION_UP) handleReminderKey(code)
+            return true
+        }
         if (code == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
                 when {
                     languagePicker -> closeLanguagePicker()
                     epgPicker -> closeEpgPicker()
+                    pipChoices != null -> closePipPicker()
                     overlay != Overlay.NONE -> closeOverlay()
                     else -> finish()
                 }
@@ -2871,7 +3017,7 @@ class PlayerActivity : ComponentActivity() {
             }
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> toggleLivePause(code)
             KeyEvent.KEYCODE_MEDIA_REWIND -> shiftLive(-(if (step > 0) step else 10_000L))
-            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> shiftLive(if (step > 0) step else 30_000L)
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> if (pipPlayer != null && !timeshifted && repeat == 0) swapPip() else shiftLive(if (step > 0) step else 30_000L)
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> onDigit(code - KeyEvent.KEYCODE_0)
             else -> return false
         }
@@ -2965,6 +3111,7 @@ class PlayerActivity : ComponentActivity() {
         }
         // Live-Streams im Hintergrund nicht weiterladen: spart Bandbreite und eine Verbindung beim Anbieter.
         player?.let { p -> if (isLive) p.stop() else p.pause() }
+        closePip()
     }
 
     override fun onDestroy() {
@@ -2975,6 +3122,7 @@ class PlayerActivity : ComponentActivity() {
         timeshift.buffer?.release()
         timeshift.buffer = null
         frameRateMatcher.reset()
+        closePip()
         player?.release()
         player = null
         // Keinen Verweis auf diese Activity im App-weiten Übersetzer behalten und den Übersetzer-Prozess
@@ -2990,6 +3138,7 @@ class PlayerActivity : ComponentActivity() {
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L
         private const val TAG = "AyuPlayer"
+        private const val REMINDER_VISIBLE_MS = 40_000L
         private val SRT_TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
         private const val DISPLAY_SWITCH_GRACE_MS = 6_000L
         const val SUBTITLE_TAG = "AyuSubtitles"

@@ -45,6 +45,8 @@ class AppContainer(val context: Context) {
     val searchRequests = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 
     val reminders = Reminders(context)
+    /** Erinnerung, die gerade fällig ist (Anstoß eines gefolgten Vereins …): der Player blendet sie ein. */
+    val dueReminder = kotlinx.coroutines.flow.MutableStateFlow<de.ayutv.data.reminders.Reminder?>(null)
     val intros = de.ayutv.data.IntroStore(context)
     val playerMemory = de.ayutv.data.PlayerMemory(context)
     /** Fenster der App im Vordergrund (für Tasten vom Handy). */
