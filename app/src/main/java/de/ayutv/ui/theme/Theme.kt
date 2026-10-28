@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
-import kotlinx.coroutines.launch
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
@@ -130,134 +129,50 @@ fun AyuTheme(content: @Composable () -> Unit) {
 }
 
 /**
- * Hintergrund der Menüs. Im Hannover-Design ein Stadionabend: tiefrot nach schwarz, zwei Flutlichtkegel, eine breite
- * Schärpe quer über den Bildschirm (Rot mit Linien in Weiß und Grün), eine riesige, angeschnittene 96 als Umriss,
- * ein Fanschal-Streifen oben und unten die Linie in Schwarz-Weiß-Grün. Eigenes Hintergrundbild und Logo
- * ([ThemeAssets]) kommen darunter bzw. groß als Wasserzeichen dazu. Klassisch: schlichtes Dunkelblau.
+ * Hintergrund der Menüs. Im Hannover-Design: Flutlicht von oben über einem tiefroten Stadionabend, feine
+ * Trikot-Nadelstreifen, eine große, kaum sichtbare 96 und unten eine Linie in Schwarz-Weiß-Grün.
+ * Klassisch: schlichtes Dunkelblau.
  */
 @Composable
 fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(modifier.fillMaxSize().background(AyuColors.Background)) {
         if (AyuColors.theme == UiTheme.HANNOVER) {
-            val photo = ThemeAssets.background
-            val logo = ThemeAssets.logo
             Canvas(Modifier.fillMaxSize()) {
                 val w = size.width
                 val h = size.height
-                if (photo != null) {
-                    // Eigenes Bild bildschirmfüllend (zugeschnitten), abgedunkelt, damit Schrift lesbar bleibt
-                    val scale = maxOf(w / photo.width, h / photo.height)
-                    val dw = photo.width * scale
-                    val dh = photo.height * scale
-                    drawImage(
-                        photo,
-                        dstOffset = androidx.compose.ui.unit.IntOffset(((w - dw) / 2).toInt(), ((h - dh) / 2).toInt()),
-                        dstSize = androidx.compose.ui.unit.IntSize(dw.toInt(), dh.toInt()),
-                    )
-                    drawRect(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.88f), Color.Black.copy(alpha = 0.62f), Color.Black.copy(alpha = 0.45f))))
-                } else {
-                    // Abendhimmel: oben dunkelrot, nach unten schwarz
-                    drawRect(Brush.verticalGradient(listOf(Color(0xFF45090E), Color(0xFF1A0709), Color(0xFF0C0909)), endY = h))
-                }
-                // Flutlichtkegel von den Masten oben links und rechts
-                for ((x, dir) in listOf(w * 0.08f to 1f, w * 0.92f to -1f)) {
-                    val cone = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(x, -h * 0.02f)
-                        lineTo(x + dir * w * 0.42f, h * 1.05f)
-                        lineTo(x + dir * w * 0.12f, h * 1.05f)
-                        close()
-                    }
-                    drawPath(cone, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.09f), Color.Transparent), startY = 0f, endY = h))
+                // Abendhimmel: oben dunkelrot, nach unten schwarz
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF3A0B0F), Color(0xFF160708), Color(0xFF0C0909)), endY = h))
+                // Zwei Flutlichter oben links und rechts
+                for (x in listOf(w * 0.12f, w * 0.88f)) {
                     drawCircle(
-                        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent), center = Offset(x, 0f), radius = h * 0.22f),
-                        radius = h * 0.22f,
-                        center = Offset(x, 0f),
+                        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent), center = Offset(x, -h * 0.05f), radius = h * 0.75f),
+                        radius = h * 0.75f,
+                        center = Offset(x, -h * 0.05f),
                     )
                 }
-                // Schärpe: breites rotes Band von unten links nach oben rechts, mit weißer und grüner Linie
-                val band = h * 0.34f
-                fun sash(offset: Float, thickness: Float, color: Color) {
-                    val path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(-w * 0.1f, h * 1.05f + offset)
-                        lineTo(w * 1.1f, h * 0.05f + offset)
-                        lineTo(w * 1.1f, h * 0.05f + offset + thickness)
-                        lineTo(-w * 0.1f, h * 1.05f + offset + thickness)
-                        close()
-                    }
-                    drawPath(path, color)
-                }
-                sash(-band / 2, band, Color(0xFFD2121A).copy(alpha = if (photo != null) 0.30f else 0.42f))
-                sash(-band / 2 - h * 0.018f, h * 0.008f, Color.White.copy(alpha = 0.55f))
-                sash(band / 2 + h * 0.010f, h * 0.008f, AyuColors.Green.copy(alpha = 0.65f))
-                // Glut in der Kurve unten
+                // Glut in der Mitte unten, wie Pyro in der Kurve
                 drawCircle(
-                    Brush.radialGradient(listOf(Color(0xFFFF3B1F).copy(alpha = 0.20f), Color.Transparent), center = Offset(w * 0.5f, h * 1.15f), radius = w * 0.6f),
-                    radius = w * 0.6f,
-                    center = Offset(w * 0.5f, h * 1.15f),
+                    Brush.radialGradient(listOf(Color(0xFFB0141B).copy(alpha = 0.22f), Color.Transparent), center = Offset(w * 0.5f, h * 1.1f), radius = w * 0.55f),
+                    radius = w * 0.55f,
+                    center = Offset(w * 0.5f, h * 1.1f),
                 )
-                // Trikot-Nadelstreifen
+                // Nadelstreifen schräg, sehr dezent
                 rotate(-18f) {
                     var x = -h
                     while (x < w + h) {
-                        drawLine(Color.White.copy(alpha = 0.022f), Offset(x, -h), Offset(x, h * 2), strokeWidth = 2f)
-                        x += 38f
+                        drawLine(Color.White.copy(alpha = 0.018f), Offset(x, -h), Offset(x, h * 2), strokeWidth = 2f)
+                        x += 42f
                     }
                 }
-                val native = drawContext.canvas.nativeCanvas
-                // Eigenes Logo groß und schräg rechts, angeschnitten, oder sonst eine riesige 96 als Umriss
-                if (logo != null) {
-                    val side = h * 0.95f
-                    val ratio = logo.width.toFloat() / logo.height
-                    val lw = if (ratio >= 1) side else side * ratio
-                    val lh = if (ratio >= 1) side / ratio else side
-                    rotate(-10f, pivot = Offset(w * 0.80f, h * 0.55f)) {
-                        drawImage(
-                            logo,
-                            dstOffset = androidx.compose.ui.unit.IntOffset((w * 0.80f - lw / 2).toInt(), (h * 0.55f - lh / 2).toInt()),
-                            dstSize = androidx.compose.ui.unit.IntSize(lw.toInt(), lh.toInt()),
-                            alpha = 0.16f,
-                        )
-                    }
-                } else {
-                    native.save()
-                    native.rotate(-10f, w * 0.82f, h * 0.6f)
-                    val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                        color = android.graphics.Color.argb(26, 210, 18, 26)
-                        textSize = h * 0.95f
+                // Große 96 unten rechts, kaum sichtbar
+                drawContext.canvas.nativeCanvas.apply {
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        color = android.graphics.Color.argb(14, 255, 255, 255)
+                        textSize = h * 0.62f
                         typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD_ITALIC)
-                        textAlign = android.graphics.Paint.Align.CENTER
+                        textAlign = android.graphics.Paint.Align.RIGHT
                     }
-                    val outline = android.graphics.Paint(fill).apply {
-                        color = android.graphics.Color.argb(46, 255, 255, 255)
-                        style = android.graphics.Paint.Style.STROKE
-                        strokeWidth = h * 0.006f
-                    }
-                    native.drawText("96", w * 0.86f, h * 0.92f, fill)
-                    native.drawText("96", w * 0.86f, h * 0.92f, outline)
-                    native.restore()
-                }
-                // Fanschal oben: Blöcke in Schwarz, Weiß, Grün mit „HANNOVER“
-                val scarf = h * 0.026f
-                val block = scarf * 9
-                var x = 0f
-                var i = 0
-                val label = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    textSize = scarf * 0.72f
-                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    letterSpacing = 0.25f
-                }
-                while (x < w) {
-                    val (bg, fg) = when (i % 3) {
-                        0 -> Color(0xFF111111) to android.graphics.Color.WHITE
-                        1 -> Color(0xFFF2F2F2) to android.graphics.Color.rgb(17, 17, 17)
-                        else -> Color(0xFF178F47) to android.graphics.Color.WHITE
-                    }
-                    drawRect(bg.copy(alpha = 0.9f), Offset(x, 0f), androidx.compose.ui.geometry.Size(block, scarf))
-                    label.color = fg
-                    native.drawText(if (i % 2 == 0) "HANNOVER" else "96", x + block / 2, scarf * 0.76f, label)
-                    x += block
-                    i++
+                    drawText("96", w * 0.98f, h * 0.96f, paint)
                 }
                 // Linie in Schwarz-Weiß-Grün am unteren Rand
                 val line = h * 0.006f
@@ -267,63 +182,6 @@ fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit
             }
         }
         content()
-    }
-}
-
-/**
- * Stadion-Intro beim Start (nur im Hannover-Design): Flutlicht geht an, Logo bzw. 96 kommt groß herein, dann
- * blendet alles in die App über. Knapp zwei Sekunden, die App lädt währenddessen schon dahinter.
- */
-@Composable
-fun StadiumIntro(onDone: () -> Unit) {
-    val lights = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
-    val badge = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0.4f) }
-    val fade = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(1f) }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.coroutineScope {
-            launch { lights.animateTo(1f, androidx.compose.animation.core.tween(500)) }
-            kotlinx.coroutines.delay(250)
-            launch { badge.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 260f)) }
-        }
-        kotlinx.coroutines.delay(650)
-        fade.animateTo(0f, androidx.compose.animation.core.tween(450))
-        onDone()
-    }
-    val logo = ThemeAssets.logo
-    Canvas(Modifier.fillMaxSize()) {
-        val w = size.width
-        val h = size.height
-        val a = fade.value
-        drawRect(Color.Black.copy(alpha = a))
-        drawRect(Brush.verticalGradient(listOf(Color(0xFF6A0A12).copy(alpha = 0.9f * a * lights.value), Color.Transparent), endY = h))
-        for (x in listOf(w * 0.08f, w * 0.92f)) {
-            drawCircle(
-                Brush.radialGradient(listOf(Color.White.copy(alpha = 0.55f * a * lights.value), Color.Transparent), center = Offset(x, 0f), radius = h * 0.5f),
-                radius = h * 0.5f,
-                center = Offset(x, 0f),
-            )
-        }
-        val scale = badge.value
-        if (logo != null) {
-            val side = h * 0.45f * scale
-            val ratio = logo.width.toFloat() / logo.height
-            val lw = if (ratio >= 1) side else side * ratio
-            val lh = if (ratio >= 1) side / ratio else side
-            drawImage(
-                logo,
-                dstOffset = androidx.compose.ui.unit.IntOffset((w / 2 - lw / 2).toInt(), (h / 2 - lh / 2).toInt()),
-                dstSize = androidx.compose.ui.unit.IntSize(lw.toInt(), lh.toInt()),
-                alpha = a,
-            )
-        } else {
-            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                color = android.graphics.Color.argb((255 * a).toInt(), 230, 30, 38)
-                textSize = h * 0.42f * scale
-                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD_ITALIC)
-                textAlign = android.graphics.Paint.Align.CENTER
-            }
-            drawContext.canvas.nativeCanvas.drawText("96", w / 2, h / 2 + h * 0.14f * scale, paint)
-        }
     }
 }
 
