@@ -137,7 +137,7 @@ data class AppSettings(
     /** In der Ruhezeit Untertitel für „Weiter schauen“ und die nächste Folge vorab holen und übersetzen. */
     val pretranslate: Boolean = true,
     /** Aussehen der Menüs. */
-    val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.HANNOVER,
+    val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.NORDLICHT,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -348,7 +348,7 @@ class SettingsStore(private val context: Context) {
         phoneRemote = this[Keys.phoneRemote] ?: true,
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
         pretranslate = this[Keys.pretranslate] ?: true,
-        uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.HANNOVER),
+        uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.NORDLICHT),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

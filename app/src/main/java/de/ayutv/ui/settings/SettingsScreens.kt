@@ -448,7 +448,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Design",
                             settings.uiTheme.label,
-                            "Hannover: Rot-Schwarz wie im Stadion, mit Flutlicht und Linie in Schwarz-Weiß-Grün. Klassisch: schlichtes Dunkelblau.",
+                            "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett, Fokus in kräftigem Indigo. Klassisch: schlichtes Dunkelblau.",
                         ) {
                             val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
                             de.ayutv.ui.theme.AyuColors.use(next)
