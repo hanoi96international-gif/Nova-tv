@@ -86,7 +86,10 @@ class ContentRepository(
     }
 
     /** Ein Spiel oder eine Live-Übertragung mit dem Sender, auf dem es läuft. */
-    data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val otherChannels: Int)
+    /** Ein Spiel auf dem besten Sender [channel]; [alsoOn]: dieselbe Übertragung auf anderen Sendern (je die beste Fassung). */
+    data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val alsoOn: List<ChannelEntity> = emptyList()) {
+        val otherChannels: Int get() = alsoOn.size
+    }
 
     /**
      * Sport von jetzt bis [hours] Stunden: nur Spiele und Live-Übertragungen (keine Magazine, Wiederholungen).
@@ -103,9 +106,14 @@ class ContentRepository(
             programmes.flatMap { p -> channels[p.channelEpgId].orEmpty().map { p to it } }
                 .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to p.headline().lowercase() }
                 .values.map { same ->
-                    val (p, c) = same.minWith(compareBy({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) }))
-                    // Weitere Sender, nicht weitere Fassungen desselben Senders.
-                    val others = same.map { ChannelVariants.key(it.second.name) ?: it.second.key }.distinct().size - 1
+                    val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) })
+                    val (p, c) = same.minWith(best)
+                    // Weitere Sender, nicht weitere Fassungen desselben Senders: je Sender die beste Fassung.
+                    fun variant(channel: ChannelEntity) = ChannelVariants.key(channel.name) ?: channel.key
+                    val others = same.filter { variant(it.second) != variant(c) }
+                        .groupBy { variant(it.second) }.values
+                        .map { it.minWith(best).second }
+                        .sortedWith(compareBy({ if (it.key in favorites) 0 else 1 }, { it.name }))
                     SportEvent(p, c, others)
                 }
                 .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
