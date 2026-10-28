@@ -267,14 +267,21 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
             .padding(vertical = 24.dp, horizontal = 10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
-            if (expanded) "DnA-TV" else "DnA",
-            fontWeight = FontWeight.Bold,
-            fontSize = if (expanded) 22.sp else 18.sp,
-            maxLines = 1,
-            color = AyuColors.Accent,
-            modifier = Modifier.padding(start = 12.dp, bottom = 18.dp),
-        )
+        val logo = de.ayutv.ui.theme.ThemeAssets.logo
+        Row(Modifier.padding(start = 6.dp, bottom = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (logo != null) {
+                androidx.compose.foundation.Image(logo, contentDescription = null, modifier = Modifier.size(40.dp))
+                if (expanded) Spacer(Modifier.width(10.dp))
+            }
+            if (logo == null || expanded) Text(
+                if (expanded) "DnA-TV" else "DnA",
+                fontWeight = FontWeight.Bold,
+                fontSize = if (expanded) 22.sp else 18.sp,
+                maxLines = 1,
+                color = AyuColors.Accent,
+                modifier = Modifier.padding(start = if (logo == null) 6.dp else 0.dp),
+            )
+        }
         sections.forEach { item ->
             val isSelected = item == selected
             Surface(

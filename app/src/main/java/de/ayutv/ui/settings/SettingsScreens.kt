@@ -448,13 +448,19 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Design",
                             settings.uiTheme.label,
-                            "Hannover: Rot-Schwarz wie im Stadion, mit Flutlicht und Linie in Schwarz-Weiß-Grün. Klassisch: schlichtes Dunkelblau.",
+                            "Hannover: Stadionabend in Rot-Schwarz mit Flutlicht, Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. " +
+                                "Eigenes Logo und Hintergrundbild: Daten & Info bzw. Playlists → Einrichtung per Handy → Design " +
+                                "(bleiben nur auf diesem Gerät). Klassisch: schlichtes Dunkelblau." +
+                                (if (de.ayutv.ui.theme.ThemeAssets.logo != null) " Eigenes Logo: ✓" else "") +
+                                (if (de.ayutv.ui.theme.ThemeAssets.background != null) " Eigenes Hintergrundbild: ✓" else ""),
                         ) {
                             val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
                             de.ayutv.ui.theme.AyuColors.use(next)
                             update { it.copy(uiTheme = next) }
                         }
                     }
+                    // Logo und Hintergrundbild kommen vom Handy (Einrichtungsseite, Abschnitt „Design“).
+                    if (!touch) item { PhoneSetupCard(phone, phone.lastSaved) }
                     item {
                         var words by remember(settings.alertKeywords) { mutableStateOf(settings.alertKeywords.sorted().joinToString(", ")) }
                         TvTextField(

@@ -7,6 +7,8 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.AyuRoot
 import de.ayutv.ui.components.FitToScreen
@@ -19,9 +21,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as AyuApp).container
         if (hasTouchscreen()) hideSystemBars()
+        // Stadion-Intro nur beim echten Start (nicht nach Drehen o. Ä.) und nur im Hannover-Design.
+        var intro by androidx.compose.runtime.mutableStateOf(savedInstanceState == null)
         setContent {
             CompositionLocalProvider(LocalContainer provides container) {
-                AyuTheme { FitToScreen { AyuRoot() } }
+                AyuTheme {
+                    FitToScreen {
+                        androidx.compose.foundation.layout.Box {
+                            AyuRoot()
+                            if (intro && de.ayutv.ui.theme.AyuColors.theme == de.ayutv.ui.theme.UiTheme.HANNOVER) {
+                                de.ayutv.ui.theme.StadiumIntro { intro = false }
+                            }
+                        }
+                    }
+                }
             }
         }
         handleSearchIntent(intent)

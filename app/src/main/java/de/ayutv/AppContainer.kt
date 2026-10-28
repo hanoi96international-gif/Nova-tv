@@ -72,6 +72,7 @@ class AppContainer(val context: Context) {
         Translators.withPhone = de.ayutv.data.translate.HelperAwareTranslator(Translators.remote, http)
         // Aussehen gleich anwenden (Menüs und Player lesen die Farben aus de.ayutv.ui.theme.AyuColors).
         scope.launch { runCatching { de.ayutv.ui.theme.AyuColors.use(settings.current().uiTheme) } }
+        scope.launch(Dispatchers.IO) { runCatching { de.ayutv.ui.theme.ThemeAssets.load(context) } }
         // Passwörter älterer Versionen verschlüsseln (einmalig, danach ohne Wirkung).
         scope.launch {
             runCatching { playlists.protectStoredPasswords() }

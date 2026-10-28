@@ -115,11 +115,29 @@ class PhoneSetupServer(private val container: AppContainer) {
             if (header.startsWith("Content-Type:", ignoreCase = true)) contentType = header.substringAfter(':').trim()
         }
         val route = path.substringBefore('?').trimEnd('/')
-        if (route != "/$pin" && route != "/$pin/backup" && route != "/$pin/restore" && route != "/$pin/report" && route != "/$pin/report.txt") {
+        if (route != "/$pin" && route != "/$pin/backup" && route != "/$pin/restore" && route != "/$pin/report" && route != "/$pin/report.txt" && route != "/$pin/theme") {
             // Falsche PIN: bremsen, damit sie sich nicht durchprobieren lässt; nach vielen Fehlversuchen neue PIN.
             delay(1_000)
             if (failures.incrementAndGet() > MAX_FAILURES) rotatePin()
             respond(client, 404, "<h1>Falsche Adresse</h1><p>Bitte die Adresse genau so eingeben, wie sie auf dem Fernseher steht.</p>")
+            return
+        }
+        if (route == "/$pin/theme" && method == "POST") {
+            val raw = ByteArray(length).also { readFully(input, it) }
+            val context = container.context
+            val lines = ArrayList<KeyCheck.Line>()
+            if (multipartField(raw, contentType, "reset") != null) {
+                de.ayutv.ui.theme.ThemeAssets.clear(context)
+                lines += KeyCheck.Line(true, "Eigene Bilder entfernt")
+            }
+            for ((name, kind) in listOf("logo" to de.ayutv.ui.theme.ThemeAssets.Kind.LOGO, "background" to de.ayutv.ui.theme.ThemeAssets.Kind.BACKGROUND)) {
+                val bytes = multipartBytes(raw, contentType, name)?.takeIf { it.isNotEmpty() } ?: continue
+                val ok = de.ayutv.ui.theme.ThemeAssets.save(context, kind, bytes)
+                lines += KeyCheck.Line(ok, if (ok) (if (kind == de.ayutv.ui.theme.ThemeAssets.Kind.LOGO) "Logo übernommen" else "Hintergrundbild übernommen") else "Datei ist kein Bild")
+            }
+            if (lines.isEmpty()) lines += KeyCheck.Line(false, "Keine Datei gewählt")
+            _state.value = _state.value.copy(lastSaved = lines.joinToString("\n") { (if (it.ok) "✓ " else "✗ ") + it.text })
+            respond(client, 200, page(container.settings.current(), lines) + guideReport())
             return
         }
         if (route == "/$pin/report.txt") {
@@ -245,6 +263,17 @@ class PhoneSetupServer(private val container: AppContainer) {
             <button>Speichern und prüfen</button>
             </form>
 
+            <h2>Design</h2>
+            <p>Eigenes Logo (z. B. das Wappen deines Vereins, am besten PNG mit durchsichtigem Hintergrund) und ein
+            Hintergrundbild für die Menüs (z. B. ein Stadionfoto). Die Bilder bleiben nur auf diesem Fernseher.
+            Wirkt im Design „Hannover Rot-Schwarz“.</p>
+            <form method=post action="/$pin/theme" enctype="multipart/form-data">
+            <label>Logo<input name=logo type=file accept="image/*"></label>
+            <label>Hintergrundbild<input name=background type=file accept="image/*"></label>
+            <label><input name=reset type=checkbox value=1 style="width:auto;display:inline;margin-right:8px">Eigene Bilder entfernen</label>
+            <button>Design übernehmen</button>
+            </form>
+
             <h2>Sicherung</h2>
             <p>Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, gefolgte Vereine und alle Einstellungen
             in einer Datei. Damit ist ein neuer Fire TV in einer Minute eingerichtet. Mit Passwort wird die Datei
@@ -332,6 +361,17 @@ class PhoneSetupServer(private val container: AppContainer) {
         return content.toByteArray(Charsets.ISO_8859_1).toString(Charsets.UTF_8).takeIf { it.isNotBlank() }
     }
 
+    /** Datei im Feld [name] eines multipart-Formulars, als Bytes (Bilder). */
+    private fun multipartBytes(body: ByteArray, contentType: String, name: String): ByteArray? {
+        val boundary = contentType.substringAfter("boundary=", "").trim('"').takeIf { it.isNotEmpty() } ?: return null
+        val text = body.toString(Charsets.ISO_8859_1)
+        val part = text.split("--$boundary").firstOrNull {
+            val head = it.substringBefore("\r\n\r\n")
+            "name=\"$name\"" in head && "filename=" in head
+        } ?: return null
+        return part.substringAfter("\r\n\r\n", "").removeSuffix("\r\n").toByteArray(Charsets.ISO_8859_1)
+    }
+
     /** Textfeld [name] aus einem multipart-Formular. */
     private fun multipartField(body: ByteArray, contentType: String, name: String): String? {
         val boundary = contentType.substringAfter("boundary=", "").trim('"').takeIf { it.isNotEmpty() } ?: return null
@@ -385,7 +425,7 @@ class PhoneSetupServer(private val container: AppContainer) {
         const val TAG = "PhoneSetup"
         const val PORT = 8095
         /** Groß genug für eine Sicherung mit vielen Favoriten. */
-        const val MAX_BODY = 4 * 1024 * 1024
+        const val MAX_BODY = 10 * 1024 * 1024
         const val MAX_CLIENTS = 4
         const val MAX_FAILURES = 20
     }
