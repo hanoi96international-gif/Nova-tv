@@ -136,4 +136,28 @@ class TimeshiftBufferTest {
         for (i in one.indices) b.write(one, i, 1)
         assertEquals(80L, b.latestMs)
     }
+
+    @Test
+    fun writingInTheBackgroundKeepsOrderAndTime() {
+        val direct = buffer()
+        feed(direct, fromMs = 0, seconds = 20)
+        wall = 0
+        val later = buffer()
+        val random = Random(1)
+        var ms = 0L
+        repeat(20 * 25) {
+            val data = packets(ms)
+            var i = 0
+            while (i < data.size) {
+                val n = minOf(data.size - i, 1 + random.nextInt(700))
+                later.writeLater(data, i, n)
+                i += n
+            }
+            ms += 40
+            wall += 40
+        }
+        later.awaitWritten()
+        assertEquals(direct.endOffset, later.endOffset)
+        assertTrue("${later.latestMs}", later.latestMs > 19_000)
+    }
 }

@@ -66,6 +66,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json(responses.get(action, []))
         if url.path == "/flaky.ts":
             return self.serve_flaky()
+        if url.path == "/stall.ts":
+            return self.serve_flaky(stall=True)
         if url.path == "/xmltv.php":
             self.path = "/epg.xml"
             return self.serve_file()
@@ -81,9 +83,11 @@ class Handler(SimpleHTTPRequestHandler):
             self.path = "/" + target
         return self.serve_file()
 
-    def serve_flaky(self):
+    def serve_flaky(self, stall=False):
         """Wie ein wackeliger IPTV-Server: liefert flaky.ts in Echtzeit (nach kurzem Startschub) und
-        trennt die Verbindung nach 15 Sekunden. Der Player muss neu verbinden, ohne hängen zu bleiben."""
+        trennt die Verbindung nach 15 Sekunden. Der Player muss neu verbinden, ohne hängen zu bleiben.
+        Mit stall: Statt zu trennen, schickt der Server 12 s lang nichts mehr (die Verbindung bleibt offen),
+        wie ein hängender Anbieter. Der Player muss das selbst merken und neu verbinden."""
         global FLAKY_EPOCH
         if FLAKY_EPOCH is None:
             FLAKY_EPOCH = time.time()
@@ -120,6 +124,8 @@ class Handler(SimpleHTTPRequestHandler):
                     ahead = (sent - burst) / rate - (time.time() - began)
                     if ahead > 0:
                         time.sleep(ahead)
+                if stall:
+                    time.sleep(12)
             except (BrokenPipeError, ConnectionResetError):
                 pass
         self.close_connection = True

@@ -144,6 +144,8 @@ class PlayerActivity : ComponentActivity() {
                 Log.i(SUBTITLE_TAG, value)
             }
         }
+    /** Wiedergabefehler dieser Sitzung (Neustarts des Players), für Diagnose und Tests. */
+    var playerErrors = 0; private set
     /** Alle Statusmeldungen dieser Sitzung (für Diagnose und Tests). */
     val statusHistory = mutableListOf<String>()
     val onlineSubtitlesAvailable: Boolean get() = !isLive && ::settings.isInitialized && settings.onlineSubtitlesEnabled
@@ -2741,6 +2743,9 @@ class PlayerActivity : ComponentActivity() {
         override fun onPlayerError(error: PlaybackException) {
             val p = player ?: return
             Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
+            playerErrors++
+            // Für den Fehlerbericht: welcher Fehler, mit der eigentlichen Ursache.
+            statusHistory += "Fehler ${error.errorCodeName}: ${(error.cause?.message ?: error.message).orEmpty().take(140)}"
             if (timeshifted) {
                 if (++timeshiftErrors <= 2) {
                     handler.postDelayed({ if (timeshifted) player?.let { enterTimeshift(currentTimeshiftMs(it), play = true) } }, 500)
@@ -2848,7 +2853,14 @@ class PlayerActivity : ComponentActivity() {
                 }
                 retries < MAX_RETRIES -> {
                     retries++
-                    message = "Verbindung wird wiederhergestellt … ($retries/$MAX_RETRIES)"
+                    // Erst Bescheid sagen, wenn nach 3 s noch kein Bild da ist: Meist läuft es nach dem Neustart gleich weiter.
+                    val generation = streamGeneration
+                    val attempt = retries
+                    handler.postDelayed({
+                        if (generation == streamGeneration && player?.playbackState != Player.STATE_READY) {
+                            message = "Verbindung wird wiederhergestellt … ($attempt/$MAX_RETRIES)"
+                        }
+                    }, 3_000)
                     retryLater()
                 }
                 else -> {

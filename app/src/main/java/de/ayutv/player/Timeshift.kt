@@ -22,6 +22,7 @@ import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.io.InterruptedIOException
+import java.net.SocketTimeoutException
 import java.io.RandomAccessFile
 import java.util.concurrent.TimeUnit
 
@@ -102,7 +103,7 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
         if (out.size < outLen + len) out = out.copyOf(maxOf(out.size * 2, outLen + len))
         System.arraycopy(data, off, out, outLen, len)
         outLen += len
-        tap?.takeIf { it.tapping }?.write(data, off, len)
+        tap?.takeIf { it.tapping }?.writeLater(data, off, len)
     }
 
     override fun addTransferListener(transferListener: TransferListener) {
@@ -137,7 +138,7 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
         val f = filter
         if (f == null) {
             val n = source.read(buffer, offset, length)
-            if (n > 0) tap?.takeIf { it.tapping }?.write(buffer, offset, n)
+            if (n > 0) tap?.takeIf { it.tapping }?.writeLater(buffer, offset, n)
             return n
         }
         if (length == 0) return 0
@@ -171,11 +172,14 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
                 val n = upstream.read(data, 0, data.size)
                 if (n != C.RESULT_END_OF_INPUT) return n
                 "Anbieter hat die Verbindung beendet"
-            } catch (e: InterruptedIOException) {
-                throw e
             } catch (e: IOException) {
+                // Abbrechen durch den Player (Umschalten, Beenden) weiterreichen. Eine Zeitüberschreitung ist
+                // dagegen ein hängender Anbieter (SocketTimeoutException ist auch eine InterruptedIOException):
+                // neu verbinden wie bei einem Abbruch, statt den Player mit einem Fehler neu starten zu lassen.
+                if (cancelled(e)) throw e
                 error = e
-                e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
+                if (e is InterruptedIOException) "Anbieter liefert nichts mehr (Zeitüberschreitung)"
+                else e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
             }
             if (!f.isTs) {
                 if (error != null) throw error
@@ -204,9 +208,8 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
                 upstream.open(spec)
                 filter?.reconnected()
                 return
-            } catch (e: InterruptedIOException) {
-                throw e
             } catch (e: IOException) {
+                if (cancelled(e)) throw e
                 last = e
             }
             attempt++
@@ -215,6 +218,13 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
             }
         }
     }
+
+    /**
+     * Vom Player abgebrochen (Thread unterbrochen). Eine Zeitüberschreitung beim Lesen ist auch eine
+     * InterruptedIOException (SocketTimeoutException, bei OkHttp „timeout“), gilt hier aber als Abbruch der Leitung.
+     */
+    private fun cancelled(e: IOException): Boolean =
+        e is InterruptedIOException && (Thread.currentThread().isInterrupted || (e !is SocketTimeoutException && e.message != "timeout"))
 
     override fun getUri(): Uri? = active?.uri
 
@@ -350,7 +360,7 @@ class TimeshiftRecorder(http: OkHttpClient, private val scope: CoroutineScope) {
             var failures = 0
             // Wiederholung nach dem Neuverbinden nicht doppelt in den Zwischenspeicher schreiben.
             val replay = seed?.copy() ?: TsReplayFilter()
-            val write: (ByteArray, Int, Int) -> Unit = { b, o, l -> buffer.write(b, o, l) }
+            val write: (ByteArray, Int, Int) -> Unit = { b, o, l -> buffer.writeLater(b, o, l) }
             while (isActive && !buffer.isReleased) {
                 replay.reconnected()
                 try {

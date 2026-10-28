@@ -406,6 +406,23 @@ class DeviceTourTest {
             }
         } }
 
+        // Anbieter hängt (schickt 12 s nichts, Verbindung bleibt offen): selbst merken und neu verbinden,
+        // ohne dass der Player mit einem Fehler neu startet („Verbindung wird wiederhergestellt“).
+        channels.firstOrNull { it.name == "Hängende Leitung" }?.let { stall -> section("stall") {
+            launchPlayer(PlayerActivity.liveIntent(app, stall.key, null)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                var playing = 0
+                repeat(60) {
+                    Thread.sleep(1_000)
+                    if (scenario.read { it.player?.isPlaying } == true) playing++
+                }
+                val errors = scenario.read { it.playerErrors }
+                log("stall: playing_s=$playing errors=$errors drops=${scenario.read { it.dropInfo }} message=${scenario.read { it.message }}")
+                assertTrue("Player startete $errors× mit Fehler neu statt selbst neu zu verbinden", errors == 0)
+                assertTrue("Bild lief nur $playing von 60 s", playing >= 30)
+            }
+        } }
+
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
         // OpenSubtitles (eingebauter Schlüssel): Zugang gültig, Suche nach einem bekannten Film liefert Treffer.
