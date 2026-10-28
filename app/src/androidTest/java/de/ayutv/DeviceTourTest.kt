@@ -201,22 +201,22 @@ class DeviceTourTest {
         section("ui") { ActivityScenario.launch(MainActivity::class.java).use {
             Thread.sleep(4_000)
             shot("01_home")
+            // OK auf einem Bereich der Leiste geht gleich hinein; ◀ führt zurück in die Leiste.
+            fun next(name: String) {
+                key(KeyEvent.KEYCODE_DPAD_LEFT, 4)
+                key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
+                shot(name)
+            }
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
             shot("02_live")
-            key(KeyEvent.KEYCODE_DPAD_RIGHT, 2); Thread.sleep(800)
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(800)
             shot("03_live_focus")
-            key(KeyEvent.KEYCODE_DPAD_LEFT, 3)
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("04_guide")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("04b_sport")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("05_movies")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_000)
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("06_search")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("07_settings")
+            next("04_guide")
+            next("04b_sport")
+            next("05_movies")
+            next("05b_series")
+            next("06_search")
+            next("07_settings")
         } }
 
         // 3. Live: Start, Zappen, Senderliste, Menü

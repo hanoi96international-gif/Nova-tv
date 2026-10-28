@@ -445,6 +445,17 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 }
                 SettingsPage.DISPLAY -> {
                     item {
+                        SettingRow(
+                            "Design",
+                            settings.uiTheme.label,
+                            "Hannover: Rot-Schwarz wie im Stadion, mit Flutlicht und Linie in Schwarz-Weiß-Grün. Klassisch: schlichtes Dunkelblau.",
+                        ) {
+                            val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
+                            de.ayutv.ui.theme.AyuColors.use(next)
+                            update { it.copy(uiTheme = next) }
+                        }
+                    }
+                    item {
                         var words by remember(settings.alertKeywords) { mutableStateOf(settings.alertKeywords.sorted().joinToString(", ")) }
                         TvTextField(
                             words,

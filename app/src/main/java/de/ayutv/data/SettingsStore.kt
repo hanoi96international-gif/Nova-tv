@@ -136,6 +136,8 @@ data class AppSettings(
     val lastTranslationTarget: String = "",
     /** In der Ruhezeit Untertitel für „Weiter schauen“ und die nächste Folge vorab holen und übersetzen. */
     val pretranslate: Boolean = true,
+    /** Aussehen der Menüs. */
+    val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.HANNOVER,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -192,6 +194,7 @@ class SettingsStore(private val context: Context) {
         val alertKeywords = stringSetPreferencesKey("alert_keywords")
         val phoneRemote = booleanPreferencesKey("phone_remote")
         val pretranslate = booleanPreferencesKey("pretranslate")
+        val uiTheme = stringPreferencesKey("ui_theme")
         val lastTranslationTarget = stringPreferencesKey("last_translation_target")
     }
 
@@ -304,6 +307,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.phoneRemote] = next.phoneRemote
             prefs[Keys.lastTranslationTarget] = next.lastTranslationTarget
             prefs[Keys.pretranslate] = next.pretranslate
+            prefs[Keys.uiTheme] = next.uiTheme.name
         }
     }
 
@@ -344,6 +348,7 @@ class SettingsStore(private val context: Context) {
         phoneRemote = this[Keys.phoneRemote] ?: true,
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
         pretranslate = this[Keys.pretranslate] ?: true,
+        uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.HANNOVER),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
