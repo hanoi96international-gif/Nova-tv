@@ -104,6 +104,18 @@ fun RemoteScreen(onClose: () -> Unit) {
                     paired = false
                 }) { Text("Anderer Fernseher") }
             }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = {
+                send {
+                    status = "Fehlerbericht wird geholt …"
+                    val text = client.report()
+                    val share = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, "DnA-TV Fehlerbericht (Fernseher)")
+                        .putExtra(android.content.Intent.EXTRA_TEXT, text)
+                    context.startActivity(android.content.Intent.createChooser(share, "Fehlerbericht senden"))
+                    status = null
+                }
+            }) { Text("Fehlerbericht vom Fernseher teilen") }
         }
         status?.let {
             Spacer(Modifier.height(12.dp))

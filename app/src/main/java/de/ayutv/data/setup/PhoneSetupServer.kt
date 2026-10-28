@@ -115,11 +115,27 @@ class PhoneSetupServer(private val container: AppContainer) {
             if (header.startsWith("Content-Type:", ignoreCase = true)) contentType = header.substringAfter(':').trim()
         }
         val route = path.substringBefore('?').trimEnd('/')
-        if (route != "/$pin" && route != "/$pin/backup" && route != "/$pin/restore") {
+        if (route != "/$pin" && route != "/$pin/backup" && route != "/$pin/restore" && route != "/$pin/report" && route != "/$pin/report.txt") {
             // Falsche PIN: bremsen, damit sie sich nicht durchprobieren lässt; nach vielen Fehlversuchen neue PIN.
             delay(1_000)
             if (failures.incrementAndGet() > MAX_FAILURES) rotatePin()
             respond(client, 404, "<h1>Falsche Adresse</h1><p>Bitte die Adresse genau so eingeben, wie sie auf dem Fernseher steht.</p>")
+            return
+        }
+        if (route == "/$pin/report.txt") {
+            val bytes = de.ayutv.data.Diagnostics.build(container.context, container).toByteArray(Charsets.UTF_8)
+            val stamp = java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.GERMANY).format(java.util.Date())
+            respondBytes(client, "text/plain; charset=utf-8", bytes, "Content-Disposition: attachment; filename=\"dna-tv-fehlerbericht-$stamp.txt\"\r\n")
+            return
+        }
+        if (route == "/$pin/report") {
+            val text = de.ayutv.data.Diagnostics.build(container.context, container)
+            respond(
+                client, 200,
+                "<h1>Fehlerbericht</h1><p>Ohne Passwörter und Zugangsdaten. Als Datei laden und an den Entwickler schicken " +
+                    "(oder unten alles markieren und kopieren).</p><p><a href=\"/$pin/report.txt\">Als Datei laden</a></p>" +
+                    "<textarea readonly rows=30>${esc(text)}</textarea>",
+            )
             return
         }
         if (route == "/$pin/backup") {

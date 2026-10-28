@@ -2870,6 +2870,12 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
         vod?.let(::learnOpening)
         saveAheadTranslations()
+        // Für den Fehlerbericht: was zuletzt lief und was der Player gemeldet hat.
+        de.ayutv.data.Diagnostics.savePlayerSession(
+            this,
+            if (isLive) playing?.name.orEmpty() else vodTitle,
+            statusHistory + listOf("Technik: $stats", "Abbrüche: ${dropInfo.ifEmpty { "keine" }}"),
+        )
         // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
         if (inPip) {
             inPip = false

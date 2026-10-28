@@ -399,6 +399,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             testResult = "Läuft … (beim ersten Mal werden die Modelle geladen)"
                             scope.launch {
                                 testResult = de.ayutv.data.translate.TranslatorSelfTest.run(settings.subtitleLanguage)
+                                de.ayutv.data.Diagnostics.saveSelfTest(context, testResult)
                                 // Übersetzer-Prozess wieder beenden: Speicher frei für die Wiedergabe.
                                 Translators.remote.release()
                             }
@@ -594,6 +595,40 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                     else -> container.updates.check(force = true)
                                 }
                                 if (release != null) container.updates.downloadAndInstall(release) { context.startActivity(it) }
+                            }
+                        }
+                    }
+                    item {
+                        var showReport by remember { mutableStateOf(false) }
+                        SettingRow(
+                            "Fehlerbericht",
+                            "",
+                            if (touch) "Gerät, Übersetzer, letzte Wiedergabe und Protokoll als Text teilen (ohne Passwörter)."
+                            else "Gerät, Übersetzer, letzte Wiedergabe und Protokoll (ohne Passwörter) aufs Handy holen und an den Entwickler schicken.",
+                        ) {
+                            if (touch) scope.launch {
+                                val text = de.ayutv.data.Diagnostics.build(context, container)
+                                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                    .putExtra(android.content.Intent.EXTRA_SUBJECT, "DnA-TV Fehlerbericht")
+                                    .putExtra(android.content.Intent.EXTRA_TEXT, text)
+                                runCatching { context.startActivity(android.content.Intent.createChooser(send, "Fehlerbericht senden")) }
+                            } else showReport = !showReport
+                        }
+                        if (showReport && !touch) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+                                val url = phone.url?.let { "$it/report" }
+                                if (url != null) {
+                                    QrCode(url, size = 150.dp)
+                                    Spacer(Modifier.width(16.dp))
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        if (url != null) "Code mit dem Handy scannen (gleiches WLAN): Dort steht der Bericht zum Kopieren und als Datei."
+                                        else phone.error ?: "Kein Heimnetz gefunden.",
+                                        fontSize = 14.sp,
+                                    )
+                                    url?.let { Text(it, color = AyuColors.Accent, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp)) }
+                                }
                             }
                         }
                     }

@@ -18,7 +18,7 @@ import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
-class AppContainer(context: Context) {
+class AppContainer(val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val settings = SettingsStore(context)
     val db = AyuDatabase.build(context)

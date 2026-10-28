@@ -27,9 +27,10 @@ class MainActivity : ComponentActivity() {
         handleSearchIntent(intent)
         // Ist beim letzten Mal etwas abgestürzt, den Grund zeigen (zum Fotografieren und Melden).
         if (savedInstanceState == null) CrashReport.takePending(this)?.let { report ->
+            de.ayutv.data.Diagnostics.saveCrash(this, report)
             android.app.AlertDialog.Builder(this)
                 .setTitle("Beim letzten Mal ist etwas schiefgegangen")
-                .setMessage("$report\n\nBitte ein Foto davon an den Entwickler schicken.")
+                .setMessage("$report\n\nAlles Weitere steht im Fehlerbericht: Einstellungen → Daten & Info → Fehlerbericht.")
                 .setPositiveButton("OK", null)
                 .show()
         }
