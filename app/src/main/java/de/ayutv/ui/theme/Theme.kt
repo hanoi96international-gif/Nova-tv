@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import kotlinx.coroutines.launch
 import androidx.tv.material3.LocalContentColor
@@ -28,7 +29,8 @@ import androidx.tv.material3.darkColorScheme
 /** Wählbares Aussehen der App. */
 enum class UiTheme(val label: String) {
     NORDLICHT("Nordlicht"),
-    CLASSIC("Klassisch Blau"),
+    HANNOVER("Hannover Rot-Schwarz"),
+    CLASSIC("Standard"),
 }
 
 /** Farben eines Aussehens. */
@@ -72,7 +74,24 @@ data class Palette(
             progress = Color(0xFF5EEAD4),
         )
 
+        /**
+         * Rot wie das Trikot, Schwarz, Weiß und ein Hauch Grün aus den Vereinsfarben. Fokus in kräftigem Rot,
+         * auf dem Fernseher von weitem zu sehen; Fortschritt in Rasengrün.
+         */
+        val HANNOVER = Palette(
+            background = Color(0xFF0C0909),
+            surface = Color(0xFF1A1213),
+            surfaceRaised = Color(0xFF2A1A1C),
+            accent = Color(0xFFFF3B3F),
+            accentSoft = Color(0xFFB0141B),
+            live = Color(0xFFFF5A3C),
+            textPrimary = Color(0xFFFFF7F5),
+            textSecondary = Color(0xFFBFAEAD),
+            progress = Color(0xFF1FB45A),
+        )
+
         fun of(theme: UiTheme) = when (theme) {
+            UiTheme.HANNOVER -> HANNOVER
             UiTheme.NORDLICHT -> NORDLICHT
             UiTheme.CLASSIC -> CLASSIC
         }
@@ -135,13 +154,169 @@ fun AyuTheme(content: @Composable () -> Unit) {
  */
 @Composable
 fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val aurora = AyuColors.theme == UiTheme.NORDLICHT
+    val theme = AyuColors.theme
     Box(
         modifier.fillMaxSize().background(AyuColors.Background)
-            .then(if (aurora) Modifier.drawWithCache { val sky = NorthernSky(size); onDrawBehind { sky.draw(this) } } else Modifier)
+            .then(
+                when (theme) {
+                    UiTheme.NORDLICHT -> Modifier.drawWithCache { val sky = NorthernSky(size); onDrawBehind { sky.draw(this) } }
+                    UiTheme.HANNOVER -> Modifier.drawWithCache { val stadium = StadiumNight(size); onDrawBehind { stadium.draw(this) } }
+                    UiTheme.CLASSIC -> Modifier
+                }
+            )
     ) {
         content()
     }
+}
+
+/**
+ * Hannover: Stadionabend, tiefrot nach schwarz, zwei Flutlichtkegel, eine breite rote Schärpe quer über den
+ * Bildschirm mit Linien in Weiß und Grün, eine riesige angeschnittene 96 als Umriss, ein Fanschal-Streifen oben
+ * (Schwarz/Weiß/Grün, „HANNOVER“, „96“), Glut in der Kurve, Nadelstreifen und unten die Linie in Schwarz-Weiß-Grün.
+ */
+private class StadiumNight(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val green = Color(0xFF1FB45A)
+    private val sky = Brush.verticalGradient(listOf(Color(0xFF45090E), Color(0xFF1A0709), Color(0xFF0C0909)), endY = h)
+    private val cones = listOf(w * 0.08f to 1f, w * 0.92f to -1f).map { (x, dir) ->
+        Triple(
+            androidx.compose.ui.graphics.Path().apply {
+                moveTo(x, -h * 0.02f)
+                lineTo(x + dir * w * 0.42f, h * 1.05f)
+                lineTo(x + dir * w * 0.12f, h * 1.05f)
+                close()
+            },
+            Offset(x, 0f),
+            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent), center = Offset(x, 0f), radius = h * 0.22f),
+        )
+    }
+    private val coneLight = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.09f), Color.Transparent), startY = 0f, endY = h)
+    private fun sash(offset: Float, thickness: Float) = androidx.compose.ui.graphics.Path().apply {
+        moveTo(-w * 0.1f, h * 1.05f + offset)
+        lineTo(w * 1.1f, h * 0.05f + offset)
+        lineTo(w * 1.1f, h * 0.05f + offset + thickness)
+        lineTo(-w * 0.1f, h * 1.05f + offset + thickness)
+        close()
+    }
+    private val band = h * 0.34f
+    private val sashes = listOf(
+        sash(-band / 2, band) to Color(0xFFD2121A).copy(alpha = 0.42f),
+        sash(-band / 2 - h * 0.018f, h * 0.008f) to Color.White.copy(alpha = 0.55f),
+        sash(band / 2 + h * 0.010f, h * 0.008f) to green.copy(alpha = 0.65f),
+    )
+    private val ember = Brush.radialGradient(listOf(Color(0xFFFF3B1F).copy(alpha = 0.20f), Color.Transparent), center = Offset(w * 0.5f, h * 1.15f), radius = w * 0.6f)
+    private val numberFill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.argb(26, 210, 18, 26)
+        textSize = h * 0.95f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD_ITALIC)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    private val numberOutline = android.graphics.Paint(numberFill).apply {
+        color = android.graphics.Color.argb(46, 255, 255, 255)
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = h * 0.006f
+    }
+    private val scarf = h * 0.026f
+    private val scarfLabel = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = scarf * 0.72f
+        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        textAlign = android.graphics.Paint.Align.CENTER
+        letterSpacing = 0.25f
+    }
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(sky)
+        for ((cone, center, glow) in cones) {
+            drawPath(cone, coneLight)
+            drawCircle(glow, radius = h * 0.22f, center = center)
+        }
+        for ((path, color) in sashes) drawPath(path, color)
+        drawCircle(ember, radius = w * 0.6f, center = Offset(w * 0.5f, h * 1.15f))
+        // Trikot-Nadelstreifen
+        rotate(-18f) {
+            var x = -h
+            while (x < w + h) {
+                drawLine(Color.White.copy(alpha = 0.022f), Offset(x, -h), Offset(x, h * 2), strokeWidth = 2f)
+                x += 38f
+            }
+        }
+        val native = drawContext.canvas.nativeCanvas
+        // Riesige, angeschnittene 96 rechts
+        native.save()
+        native.rotate(-10f, w * 0.82f, h * 0.6f)
+        native.drawText("96", w * 0.86f, h * 0.92f, numberFill)
+        native.drawText("96", w * 0.86f, h * 0.92f, numberOutline)
+        native.restore()
+        // Fanschal oben
+        val block = scarf * 9
+        var x = 0f
+        var i = 0
+        while (x < w) {
+            val (background, text) = when (i % 3) {
+                0 -> Color(0xFF111111) to android.graphics.Color.WHITE
+                1 -> Color(0xFFF2F2F2) to android.graphics.Color.rgb(17, 17, 17)
+                else -> Color(0xFF178F47) to android.graphics.Color.WHITE
+            }
+            drawRect(background.copy(alpha = 0.9f), Offset(x, 0f), androidx.compose.ui.geometry.Size(block, scarf))
+            scarfLabel.color = text
+            native.drawText(if (i % 2 == 0) "HANNOVER" else "96", x + block / 2, scarf * 0.76f, scarfLabel)
+            x += block
+            i++
+        }
+        // Linie in Schwarz-Weiß-Grün am unteren Rand
+        val line = h * 0.006f
+        drawRect(Color.Black, Offset(0f, h - line * 3), androidx.compose.ui.geometry.Size(w, line))
+        drawRect(Color.White.copy(alpha = 0.85f), Offset(0f, h - line * 2), androidx.compose.ui.geometry.Size(w, line))
+        drawRect(green, Offset(0f, h - line), androidx.compose.ui.geometry.Size(w, line))
+    }
+}
+
+/**
+ * Stadion-Intro (Hannover-Design): Flutlicht geht an, eine große 96 springt federnd herein, dann blendet alles
+ * in die App über. Knapp zwei Sekunden; die App lädt währenddessen schon dahinter.
+ */
+@Composable
+fun StadiumIntro(onDone: () -> Unit) {
+    val lights = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    val badge = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0.4f) }
+    val fade = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(1f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.coroutineScope {
+            launch { lights.animateTo(1f, androidx.compose.animation.core.tween(500)) }
+            kotlinx.coroutines.delay(250)
+            launch { badge.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.55f, stiffness = 260f)) }
+        }
+        kotlinx.coroutines.delay(500)
+        fade.animateTo(0f, androidx.compose.animation.core.tween(450))
+        onDone()
+    }
+    Box(
+        Modifier.fillMaxSize().drawWithCache {
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD_ITALIC)
+                textAlign = android.graphics.Paint.Align.CENTER
+            }
+            onDrawBehind {
+                val w = size.width
+                val h = size.height
+                val a = fade.value
+                drawRect(Color.Black.copy(alpha = a))
+                drawRect(Brush.verticalGradient(listOf(Color(0xFF6A0A12).copy(alpha = 0.9f * a * lights.value), Color.Transparent), endY = h))
+                for (x in listOf(w * 0.08f, w * 0.92f)) {
+                    drawCircle(
+                        Brush.radialGradient(listOf(Color.White.copy(alpha = 0.55f * a * lights.value), Color.Transparent), center = Offset(x, 0f), radius = h * 0.5f),
+                        radius = h * 0.5f,
+                        center = Offset(x, 0f),
+                    )
+                }
+                val scale = badge.value
+                paint.color = android.graphics.Color.argb((255 * a).toInt(), 230, 30, 38)
+                paint.textSize = h * 0.42f * scale
+                drawContext.canvas.nativeCanvas.drawText("96", w / 2, h / 2 + h * 0.14f * scale, paint)
+            }
+        }
+    )
 }
 
 /** Vorberechneter Nachthimmel für eine Bildschirmgröße. */

@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as AyuApp).container
         if (hasTouchscreen()) hideSystemBars()
-        // Kurzes Intro nur beim echten Start (nicht nach Drehen o. Ä.) und nur im Nordlicht-Design.
+        // Kurzes Intro nur beim echten Start (nicht nach Drehen o. Ä.), passend zum Design (Standard: keins).
         var intro by androidx.compose.runtime.mutableStateOf(savedInstanceState == null)
         setContent {
             CompositionLocalProvider(LocalContainer provides container) {
@@ -29,8 +29,10 @@ class MainActivity : ComponentActivity() {
                     FitToScreen {
                         androidx.compose.foundation.layout.Box {
                             AyuRoot()
-                            if (intro && de.ayutv.ui.theme.AyuColors.theme == de.ayutv.ui.theme.UiTheme.NORDLICHT) {
-                                de.ayutv.ui.theme.AuroraIntro { intro = false }
+                            if (intro) when (de.ayutv.ui.theme.AyuColors.theme) {
+                                de.ayutv.ui.theme.UiTheme.NORDLICHT -> de.ayutv.ui.theme.AuroraIntro { intro = false }
+                                de.ayutv.ui.theme.UiTheme.HANNOVER -> de.ayutv.ui.theme.StadiumIntro { intro = false }
+                                de.ayutv.ui.theme.UiTheme.CLASSIC -> Unit
                             }
                         }
                     }
