@@ -48,20 +48,31 @@ object ChannelVariants {
      * Eine Liste mit jedem Sender einmal: an der Stelle seines ersten Auftretens, in seiner besten Fassung.
      * [name] und [group] holen Name und Playlist aus den Einträgen (Sender verschiedener Playlists bleiben getrennt).
      */
-    fun <T> merge(items: List<T>, name: (T) -> String, group: (T) -> Long): List<T> {
+    fun <T> merge(items: List<T>, name: (T) -> String, group: (T) -> Long, score: (T) -> Int = { rank(name(it)) }): List<T> {
         val best = LinkedHashMap<Any, T>(items.size)
         for (item in items) {
             val key: Any = key(name(item))?.let { group(item) to it } ?: Any()
             val current = best[key]
-            if (current == null || rank(name(item)) < rank(name(current))) best[key] = item
+            if (current == null || score(item) < score(current)) best[key] = item
         }
         return best.values.toList()
     }
 
     /** Andere Fassungen desselben Senders aus [candidates], beste zuerst. */
-    fun <T> alternatives(target: T, candidates: List<T>, name: (T) -> String, group: (T) -> Long, same: (T, T) -> Boolean): List<T> {
+    fun <T> alternatives(
+        target: T,
+        candidates: List<T>,
+        name: (T) -> String,
+        group: (T) -> Long,
+        same: (T, T) -> Boolean,
+        score: (T) -> Int = { rank(name(it)) },
+    ): List<T> {
         val key = key(name(target)) ?: return emptyList()
         return candidates.filter { !same(it, target) && group(it) == group(target) && key(name(it)) == key }
-            .sortedBy { rank(name(it)) }
+            .sortedBy(score)
     }
+
+    /** Gruppen von Fassungen desselben Senders (nur Sender mit mehr als einer Fassung). */
+    fun <T> groups(items: List<T>, name: (T) -> String, group: (T) -> Long): List<List<T>> =
+        items.groupBy { item -> key(name(item))?.let { group(item) to it } }.filterKeys { it != null }.values.filter { it.size > 1 }
 }

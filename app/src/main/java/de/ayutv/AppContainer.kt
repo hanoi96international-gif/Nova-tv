@@ -52,6 +52,8 @@ class AppContainer(val context: Context) {
     /** Fenster der App im Vordergrund (für Tasten vom Handy). */
     @Volatile var foreground: java.lang.ref.WeakReference<android.app.Activity>? = null
     val remote = de.ayutv.data.remote.RemoteServer(context, this)
+    /** Gemessene Qualität der Senderfassungen ([de.ayutv.data.parse.ChannelQuality]). */
+    val qualityFile = java.io.File(context.filesDir, "channel_quality.tsv")
     val recordings = de.ayutv.data.record.Recordings(context)
     val profiles = de.ayutv.data.profile.Profiles(context, this)
     val updates = de.ayutv.data.update.Updater(context, http)
@@ -72,6 +74,11 @@ class AppContainer(val context: Context) {
         Translators.withPhone = de.ayutv.data.translate.HelperAwareTranslator(Translators.remote, http)
         // Aussehen gleich anwenden (Menüs und Player lesen die Farben aus de.ayutv.ui.theme.AyuColors).
         scope.launch { runCatching { de.ayutv.ui.theme.AyuColors.use(settings.current().uiTheme) } }
+        // Senderqualität: Gemessenes laden, Filter und Vorlieben aus den Einstellungen übernehmen.
+        scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.load(qualityFile) }
+        scope.launch {
+            settings.settings.collect { s -> de.ayutv.data.parse.ChannelQuality.configure(s.minQuality.height, s.preferUhd, s.hideBrokenChannels) }
+        }
         // Passwörter älterer Versionen verschlüsseln (einmalig, danach ohne Wirkung).
         scope.launch {
             runCatching { playlists.protectStoredPasswords() }

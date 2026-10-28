@@ -191,6 +191,32 @@ object PlayerFactory {
     }
 
     /**
+     * Für den Sender-Check: nur Spuren erkennen, nichts dekodieren (Bild, Ton und Untertitel aus). Läuft auf [looper].
+     */
+    fun createProbe(context: Context, http: OkHttpClient, userAgent: String, looper: android.os.Looper): ExoPlayer {
+        val client = http.newBuilder().readTimeout(8, TimeUnit.SECONDS).connectTimeout(6, TimeUnit.SECONDS).build()
+        val upstream = ResolvingDataSource.Factory(OkHttpDataSource.Factory(client)) { spec ->
+            spec.withAdditionalHeaders(mapOf("User-Agent" to userAgent))
+        }
+        val tsFlags = DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or DefaultTsPayloadReaderFactory.FLAG_DETECT_ACCESS_UNITS
+        val trackSelector = DefaultTrackSelector(context).apply {
+            setParameters(
+                buildUponParameters()
+                    .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+                    .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+            )
+        }
+        return ExoPlayer.Builder(context)
+            .setLooper(looper)
+            .setMediaSourceFactory(StreamMediaSourceFactory(DefaultDataSource.Factory(context, upstream), DefaultExtractorsFactory().setTsExtractorFlags(tsFlags), tsFlags, live = true))
+            .setTrackSelector(trackSelector)
+            .setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(1_000, 3_000, 500, 500).setTargetBufferBytes(4 * MB).build())
+            .build()
+            .apply { volume = 0f }
+    }
+
+    /**
      * Zweites, kleines Bild (Konferenz): ohne Ton, ohne Untertitel, höchstens 720p und mit kleinem Puffer, damit
      * es neben dem Hauptbild auf schwachen Sticks Platz hat.
      */

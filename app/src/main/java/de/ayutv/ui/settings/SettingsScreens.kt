@@ -528,6 +528,45 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
+                            "Mindestqualität",
+                            settings.minQuality.label,
+                            "Sender, deren Auflösung bekanntermaßen darunter liegt (gemessen oder laut Name wie „SD“), werden ausgeblendet. " +
+                                "Gibt es den Sender auch besser, bleibt die bessere Fassung. Unbekannte bleiben sichtbar.",
+                        ) { update { it.copy(minQuality = it.minQuality.next()) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Beste Fassung bei doppelten Sendern",
+                            if (settings.preferUhd) "4K, wenn vorhanden" else "Full HD (stabiler)",
+                            "Welche Fassung ein doppelt geführter Sender zeigt. Gemessenes zählt vor dem Namen; ausgefallene Fassungen kommen nach hinten.",
+                        ) { update { it.copy(preferUhd = !it.preferUhd) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Nicht laufende Fassungen ausblenden",
+                            onOff(settings.hideBrokenChannels),
+                            "Fassungen, die im Sender-Check oder beim Schauen zweimal nicht liefen, verschwinden aus den Listen.",
+                        ) { update { it.copy(hideBrokenChannels = !it.hideBrokenChannels) } }
+                    }
+                    item {
+                        val check = remember { de.ayutv.data.repo.ChannelCheck(context, container) }
+                        var last by remember { mutableStateOf(check.lastResult) }
+                        SettingRow(
+                            "Sender-Check in der Ruhezeit",
+                            onOff(settings.channelCheck),
+                            "Wenn der Fire TV nicht benutzt wird: jede Fassung doppelter Sender und deine Favoriten kurz anspielen " +
+                                "(ohne Bild und Ton) und Auflösung, Startzeit und Ausfälle merken. Gemessen: ${de.ayutv.data.parse.ChannelQuality.size} Fassungen." +
+                                (last?.let { "\nZuletzt $it" } ?: ""),
+                        ) { update { it.copy(channelCheck = !it.channelCheck) } }
+                        if (settings.channelCheck) {
+                            SettingRow("Jetzt prüfen", "", "Startet den Check sofort im Hintergrund (einige Minuten, nur solange nichts läuft).") {
+                                de.ayutv.data.repo.ChannelCheckWorker.runNow(context)
+                                last = "läuft …"
+                            }
+                        }
+                    }
+                    item {
+                        SettingRow(
                             "TV-Guide",
                             when {
                                 settings.ownGuideOnly -> "Nur eigener"

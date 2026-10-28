@@ -14,6 +14,7 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
 import de.ayutv.data.parse.ChannelVariants
+import de.ayutv.data.parse.ChannelQuality
 import de.ayutv.data.db.ProgrammeFlags
 import de.ayutv.data.parse.Countries
 import kotlinx.coroutines.flow.first
@@ -78,13 +79,17 @@ class ContentRepository(
 
     /** Jeder Sender einmal, in seiner besten Fassung (SD/HD/4K/RAW/Backup zusammengefasst). */
     suspend fun mergeVariants(channels: List<ChannelEntity>): List<ChannelEntity> = withContext(Dispatchers.Default) {
-        ChannelVariants.merge(channels, { it.name }, { it.playlistId })
+        // Erst die Mindestqualität (und ausgefallene, falls gewünscht), dann je Sender die beste Fassung.
+        ChannelVariants.merge(channels.filter { ChannelQuality.passes(it.key, it.name) }, { it.name }, { it.playlistId }, { ChannelQuality.score(it.key, it.name) })
     }
 
     /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
     suspend fun variantsOf(channel: ChannelEntity): List<ChannelEntity> = withContext(Dispatchers.Default) {
         if (ChannelVariants.key(channel.name) == null) return@withContext emptyList()
-        ChannelVariants.alternatives(channel, db.channels().visibleInPlaylist(channel.playlistId), { it.name }, { it.playlistId }) { a, b -> a.key == b.key }
+        ChannelVariants.alternatives(
+            channel, db.channels().visibleInPlaylist(channel.playlistId), { it.name }, { it.playlistId },
+            same = { a, b -> a.key == b.key }, score = { ChannelQuality.score(it.key, it.name) },
+        )
     }
 
     /** Ein Spiel oder eine Live-Übertragung mit dem Sender, auf dem es läuft. */
@@ -113,7 +118,7 @@ class ContentRepository(
                 .filter { (p, c) -> p.isSportEvent(ProgrammeText.isSportChannel(c.name)) }
                 .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to ProgrammeText.sportKey(p.title, p.subtitle, p.description, p.channelEpgId) }
                 .values.map { same ->
-                    val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) })
+                    val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelQuality.score(it.second.key, it.second.name) })
                     val (p, c) = same.minWith(best)
                     // Weitere Sender, nicht weitere Fassungen desselben Senders: je Sender die beste Fassung.
                     fun variant(channel: ChannelEntity) = ChannelVariants.key(channel.name) ?: channel.key
@@ -155,7 +160,7 @@ class ContentRepository(
             val channels = found.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
                 .flatMap { db.channels().allByEpgIds(it) }.groupBy { it.epgId }
             for (p in found) {
-                val channel = channels[p.channelEpgId]?.minByOrNull { ChannelVariants.rank(it.name) } ?: continue
+                val channel = channels[p.channelEpgId]?.minByOrNull { ChannelQuality.score(it.key, it.name) } ?: continue
                 out += Reminder(channel.key, channel.name, p.headline(), p.start)
             }
         }

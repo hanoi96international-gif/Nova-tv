@@ -87,7 +87,8 @@ fun LiveScreen() {
     // null = lädt noch (dann kein „Keine Sender“-Aufblitzen), leer = wirklich keine.
     val raw by channelsFlow.collectAsStateWithLifecycle(null)
     // Gleiche Sender in mehreren Qualitäten (SD/HD/4K/RAW/Backup) als ein Eintrag; Favoriten bleiben, wie sie sind.
-    val loaded by produceState<List<ChannelEntity>?>(null, raw, merge, selectedGroup) {
+    val loaded by produceState<List<ChannelEntity>?>(null, raw, merge, selectedGroup, appSettings?.minQuality, appSettings?.preferUhd, appSettings?.hideBrokenChannels) {
+        appSettings?.let { de.ayutv.data.parse.ChannelQuality.configure(it.minQuality.height, it.preferUhd, it.hideBrokenChannels) }
         val list = raw
         value = if (list == null) null else if (merge && selectedGroup != FAVORITES_GROUP) content.mergeVariants(list) else list
     }

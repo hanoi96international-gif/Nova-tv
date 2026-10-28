@@ -696,6 +696,8 @@ class PlayerActivity : ComponentActivity() {
      * nur einen Fehler zu zeigen. Liefert false, wenn es keine gibt (dann zeigt der Aufrufer [reason]).
      */
     private fun tryNextVariant(reason: String): Boolean {
+        // Diese Fassung ist ausgefallen: beim nächsten Mal weiter hinten einsortieren.
+        if (isLive) playing?.let { de.ayutv.data.parse.ChannelQuality.recordFailure(it.key) }
         if (vod != null || !settings.mergeVariants) return false
         val channel = playing ?: return false
         failedVariants += channel.key
@@ -2872,7 +2874,11 @@ class PlayerActivity : ComponentActivity() {
             }
         }
 
-        override fun onVideoSizeChanged(videoSize: VideoSize) = updateFormats()
+        override fun onVideoSizeChanged(videoSize: VideoSize) {
+            updateFormats()
+            // Gemessene Auflösung merken: bestimmt, welche Fassung doppelter Sender die beste ist, und den Qualitätsfilter.
+            if (isLive && videoSize.height > 0) playing?.let { de.ayutv.data.parse.ChannelQuality.recordPlayback(it.key, videoSize.height, stats.startupMs) }
+        }
 
         override fun onPlayerError(error: PlaybackException) {
             val p = player ?: return
@@ -3234,6 +3240,7 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
         vod?.let(::learnOpening)
         saveAheadTranslations()
+        container.scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.saveIfChanged(container.qualityFile) }
         // Für den Fehlerbericht: was zuletzt lief und was der Player gemeldet hat.
         de.ayutv.data.Diagnostics.savePlayerSession(
             this,

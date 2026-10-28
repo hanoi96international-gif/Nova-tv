@@ -819,6 +819,17 @@ class DeviceTourTest {
             log("playlist_toggle: before=$before off=$off search_off=$searchOff on=$on")
             assertTrue("Ausschalten wirkt nicht", off < before && searchOff == 0 && on == before)
         }
+        // Sender-Check: Auflösung ohne Dekodieren erkennen; eine kaputte Adresse gilt als „läuft nicht“
+        section("channel_check") {
+            val hd = live.firstOrNull { it.name == "HD Test 50fps" } ?: error("HD-Testsender fehlt")
+            val check = de.ayutv.data.repo.ChannelCheck(app, container)
+            val good = runBlocking { check.probe(hd) }
+            val bad = runBlocking { check.probe(hd.copy(key = "kaputt", url = "http://10.0.2.2:8000/gibt-es-nicht.ts")) }
+            log("channel_check: hd=${good.first}p in ${good.second} ms, kaputt=${bad.first}")
+            assertTrue("Auflösung nicht erkannt", good.first >= 720)
+            assertTrue("Kaputte Adresse als laufend erkannt", bad.first == 0)
+        }
+
         // Fehlerbericht: per Handy-Seite abrufbar, ohne Zugangsdaten
         section("report") {
             val server = de.ayutv.data.setup.PhoneSetupServer(container)
