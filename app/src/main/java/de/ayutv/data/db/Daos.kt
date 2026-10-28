@@ -151,7 +151,10 @@ interface ProgrammeDao {
            OR title LIKE '%ball%' OR title LIKE '%liga%' OR title LIKE '%league%' OR title LIKE '%sport%' OR title LIKE '%live%'
            OR title LIKE '%pokal%' OR title LIKE '%tennis%' OR title LIKE '%darts%' OR title LIKE '%formel%' OR title LIKE '%NFL%'
            OR title LIKE '%NBA%' OR title LIKE '%NHL%' OR title LIKE '%UFC%' OR title LIKE '%box%' OR subtitle LIKE '% – %'
-           OR subtitle LIKE '% - %')
+           OR subtitle LIKE '% - %' OR title LIKE '% – %' OR title LIKE '% - %' OR title LIKE '% vs%' OR subtitle LIKE '% vs%'
+           OR title LIKE '% v %' OR subtitle LIKE '% v %' OR title LIKE '% gegen %' OR subtitle LIKE '% gegen %'
+           OR channelEpgId IN (SELECT epgId FROM visible_channels WHERE name LIKE '%sport%' OR name LIKE '%dazn%'
+              OR name LIKE '%servus%' OR name LIKE '%magenta%' OR name LIKE '%eleven%' OR name LIKE '%laola%'))
            AND channelEpgId IN (SELECT epgId FROM visible_channels WHERE epgId IS NOT NULL AND epgId != '')
            ORDER BY start LIMIT :limit"""
     )

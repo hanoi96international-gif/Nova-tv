@@ -51,5 +51,18 @@ class ProgrammeTextTest {
         assertEquals(false, event("Fußball: Bundesliga", "Borussia Dortmund – Eintracht Frankfurt", "Fußball", de.ayutv.data.db.ProgrammeFlags.REPEAT))
         assertEquals(false, event("Tatort", "Der Fluch – Teil 2", "Krimi"))
         assertEquals("Borussia Dortmund – Eintracht Frankfurt", ProgrammeText.pairing("Fußball: Bundesliga", "Borussia Dortmund – Eintracht Frankfurt, 7. Spieltag"))
+        // Andere Schreibweisen der Paarung
+        assertEquals(true, event("Premier League: Liverpool vs. Chelsea", null, "Football"))
+        assertEquals(true, event("Liverpool v Chelsea", null, "Sport"))
+        assertEquals(true, event("FC Bayern München gegen 1. FC Magdeburg", null, "Fußball"))
+        // Sportsender ohne Sport-Kategorie im TV-Guide: Paarung genügt, Magazine bleiben draußen
+        fun onSportChannel(title: String, sub: String?, category: String?) = ProgrammeText.isSportEvent(title, sub, category, 0, sportChannel = true)
+        assertEquals(true, onSportChannel("FC Liverpool – FC Chelsea", null, null))
+        assertEquals(false, onSportChannel("Sky Sport News", null, "Nachrichten"))
+        assertEquals(false, onSportChannel("Highlights: FC Liverpool – FC Chelsea", null, null))
+        assertEquals(true, ProgrammeText.isSportChannel("|DE| SKY SPORT PREMIER LEAGUE FHD"))
+        assertEquals(true, ProgrammeText.isSportChannel("DAZN 1 HD"))
+        assertEquals(false, ProgrammeText.isSportChannel("Das Erste HD"))
+        assertEquals(listOf("Liverpool", "Chelsea"), Teams.ofPairing("Liverpool vs. Chelsea"))
     }
 }

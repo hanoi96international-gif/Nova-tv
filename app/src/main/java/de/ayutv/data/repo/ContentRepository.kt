@@ -96,7 +96,11 @@ class ContentRepository(
      * Läuft dasselbe Spiel auf mehreren Sendern, erscheint es einmal (bevorzugt auf einem Favoriten).
      */
     suspend fun sportEvents(hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> {
-        val programmes = db.programmes().sportBetween(now, now + hours * HOUR, 4_000).filter { it.isSportEvent() }
+        // Was jetzt läuft, vollständig (höchstens eine Sendung je Sender); danach die kommenden bis zur Grenze.
+        // Vorher war eine gemeinsame Grenze von 4000 bei großen Senderlisten schnell erreicht.
+        val airing = db.programmes().sportBetween(now, now + 1, 50_000)
+        val upcoming = db.programmes().sportBetween(now, now + hours * HOUR, 15_000)
+        val programmes = (airing + upcoming).distinctBy { it.id }
         if (programmes.isEmpty()) return emptyList()
         // Alle Fassungen je EPG-Kennung (HD, 4K, SD teilen sich oft eine): daraus die beste wählen.
         val channels = programmes.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
@@ -104,6 +108,7 @@ class ContentRepository(
         val favorites = db.favorites().keys().toHashSet()
         return withContext(Dispatchers.Default) {
             programmes.flatMap { p -> channels[p.channelEpgId].orEmpty().map { p to it } }
+                .filter { (p, c) -> p.isSportEvent(ProgrammeText.isSportChannel(c.name)) }
                 .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to p.headline().lowercase() }
                 .values.map { same ->
                     val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) })
