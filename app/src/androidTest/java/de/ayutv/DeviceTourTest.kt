@@ -797,6 +797,73 @@ class DeviceTourTest {
             log("playlist_toggle: before=$before off=$off search_off=$searchOff on=$on")
             assertTrue("Ausschalten wirkt nicht", off < before && searchOff == 0 && on == before)
         }
+        // Fehlerbericht: per Handy-Seite abrufbar, ohne Zugangsdaten
+        section("report") {
+            val server = de.ayutv.data.setup.PhoneSetupServer(container)
+            server.start()
+            try {
+                assertTrue("Keine Adresse", waitFor(5_000) { server.state.value.url != null })
+                val (code, text) = container.http.newCall(okhttp3.Request.Builder().url("${server.state.value.url}/report.txt").build()).execute()
+                    .use { it.code to it.body.string() }
+                val passwords = runBlocking { container.db.playlists().all() }.mapNotNull { it.password }
+                    .mapNotNull { runCatching { de.ayutv.data.security.Credentials.reveal(it) }.getOrDefault(it) }.filter { it.length >= 4 }
+                val leaked = passwords.filter { it in text }
+                log("report: code=$code bytes=${text.length} sections=${Regex("== (.+?) ==").findAll(text).map { it.groupValues[1] }.toList()} leaked=${leaked.size}")
+                assertTrue("Bericht unvollständig", code == 200 && "Fehlerbericht" in text && "== Protokoll ==" in text && "== Playlists ==" in text)
+                assertTrue("Passwort im Bericht", leaked.isEmpty() && !Regex("password=(?!\\*)").containsMatchIn(text))
+            } finally {
+                server.stop()
+            }
+        }
+
+        // Konferenz: zweites, kleines Bild, tauschen, schließen; Anstoß-Hinweis im Bild
+        val pipMain = live.firstOrNull { it.name == "HD Test 50fps" }
+        val pipSecond = live.firstOrNull { it.name == "HLS Test" }
+        if (pipMain != null && pipSecond != null) section("pip") {
+            val main = pipMain
+            val second = pipSecond
+            launchPlayer(PlayerActivity.liveIntent(app, main.key, null)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.startPip(second) }
+                val pipReady = waitFor(20_000) { scenario.read { it.pipPlayer?.playbackState } == Player.STATE_READY }
+                Thread.sleep(3_000)
+                shot("40_pip")
+                val pipFrames = scenario.read { it.pipPlayer?.videoFormat?.let { f -> "${f.width}x${f.height}" } }
+                key(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD)
+                val swapped = waitFor(15_000) { scenario.read { it.current?.key == second.key && it.pipChannel?.key == main.key } }
+                container.dueReminder.value = de.ayutv.data.reminders.Reminder(main.key, main.name, "Testspiel A – B", System.currentTimeMillis() + 60_000)
+                val shown = waitFor(3_000) { scenario.read { it.dueReminder != null } }
+                shot("41_reminder_overlay")
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                val switched = waitFor(10_000) { scenario.read { it.current?.key == main.key } }
+                scenario.onActivity { it.closePip() }
+                log("pip: ready=$pipReady format=$pipFrames swapped=$swapped reminder_shown=$shown switched=$switched message=${scenario.read { it.message }}")
+                assertTrue("Kleines Bild läuft nicht", pipReady && swapped)
+                assertTrue("Anstoß-Hinweis fehlt", shown && switched)
+            }
+        }
+
+        // Handy übersetzt: Schnittstelle des Helfers (hier im selben Gerät) beantwortet die Übersetzung
+        section("phone_helper") {
+            val helper = de.ayutv.data.remote.TranslationHelperServer()
+            val address = helper.start() ?: error("Helfer ohne Adresse")
+            try {
+                de.ayutv.data.translate.PhoneHelper.register(address, "CI")
+                val before = de.ayutv.data.translate.PhoneHelper.served
+                val result = runBlocking { de.ayutv.data.repo.Translators.withPhone.translate(listOf("Hello, how are you?", "Thank you."), "de", "en") }
+                val served = de.ayutv.data.translate.PhoneHelper.served - before
+                log("phone_helper: address=${address.substringBeforeLast('/')} served=$served helper_lines=${helper.state.value.lines} result=$result")
+                assertTrue("Handy hat nicht übersetzt", served == 2 && helper.state.value.lines == 2 && result.first() != "Hello, how are you?")
+                // Kein Schlüssel: abgewiesen
+                val wrong = container.http.newCall(okhttp3.Request.Builder().url(address.substringBeforeLast('/') + "/x/translate")
+                    .post("{}".toRequestBody("application/json".toMediaTypeOrNull())).build()).execute().use { it.code }
+                assertTrue("Ohne Schlüssel angenommen: $wrong", wrong == 404)
+            } finally {
+                de.ayutv.data.translate.PhoneHelper.register(null, null)
+                helper.stop()
+            }
+        }
+
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
     }
