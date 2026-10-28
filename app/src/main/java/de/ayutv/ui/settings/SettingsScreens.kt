@@ -448,7 +448,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Design",
                             settings.uiTheme.label,
-                            "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett. Hannover Rot-Schwarz: Stadionabend mit Flutlicht, " +
+                            "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett. Hannover 96: Stadionabend mit Flutlicht, " +
                                 "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Standard: schlichtes Dunkelblau. OK wechselt.",
                         ) {
                             val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]

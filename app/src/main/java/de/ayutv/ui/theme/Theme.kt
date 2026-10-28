@@ -29,7 +29,7 @@ import androidx.tv.material3.darkColorScheme
 /** Wählbares Aussehen der App. */
 enum class UiTheme(val label: String) {
     NORDLICHT("Nordlicht"),
-    HANNOVER("Hannover Rot-Schwarz"),
+    HANNOVER("Hannover 96"),
     CLASSIC("Standard"),
 }
 
@@ -170,9 +170,9 @@ fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit
 }
 
 /**
- * Hannover: Stadionabend, tiefrot nach schwarz, zwei Flutlichtkegel, eine breite rote Schärpe quer über den
+ * Hannover 96: Stadionabend, tiefrot nach schwarz, zwei Flutlichtkegel, eine breite rote Schärpe quer über den
  * Bildschirm mit Linien in Weiß und Grün, eine riesige angeschnittene 96 als Umriss, ein Fanschal-Streifen oben
- * (Schwarz/Weiß/Grün, „HANNOVER“, „96“), Glut in der Kurve, Nadelstreifen und unten die Linie in Schwarz-Weiß-Grün.
+ * (Schwarz/Weiß/Grün, „HANNOVER 96“, „96“), Glut in der Kurve, Nadelstreifen und unten die Linie in Schwarz-Weiß-Grün.
  */
 private class StadiumNight(size: androidx.compose.ui.geometry.Size) {
     private val w = size.width
@@ -260,7 +260,7 @@ private class StadiumNight(size: androidx.compose.ui.geometry.Size) {
             }
             drawRect(background.copy(alpha = 0.9f), Offset(x, 0f), androidx.compose.ui.geometry.Size(block, scarf))
             scarfLabel.color = text
-            native.drawText(if (i % 2 == 0) "HANNOVER" else "96", x + block / 2, scarf * 0.76f, scarfLabel)
+            native.drawText(if (i % 2 == 0) "HANNOVER 96" else "96", x + block / 2, scarf * 0.76f, scarfLabel)
             x += block
             i++
         }
@@ -273,7 +273,7 @@ private class StadiumNight(size: androidx.compose.ui.geometry.Size) {
 }
 
 /**
- * Stadion-Intro (Hannover-Design): Flutlicht geht an, eine große 96 springt federnd herein, dann blendet alles
+ * Stadion-Intro (Design Hannover 96): Flutlicht geht an, eine große 96 springt federnd herein, dann blendet alles
  * in die App über. Knapp zwei Sekunden; die App lädt währenddessen schon dahinter.
  */
 @Composable
