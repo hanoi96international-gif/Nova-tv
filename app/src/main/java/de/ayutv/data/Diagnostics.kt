@@ -57,6 +57,9 @@ object Diagnostics {
         }
         out.append("Zeitzone ${java.util.TimeZone.getDefault().id}\n")
 
+        section("Oberfläche")
+        out.append("Menüs: ${de.ayutv.ui.UiPerformance.summary()}\n")
+
         section("Einstellungen")
         runCatching {
             val s = container.settings.current()

@@ -160,9 +160,14 @@ fun AyuRoot() {
                         androidx.compose.animation.AnimatedContent(
                             targetState = section,
                             transitionSpec = {
-                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)) +
-                                    androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 24 }) togetherWith
-                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                                // Schwaches Gerät: sofort umschalten (eine Überblendung zeichnet zwei ganze Bildschirme).
+                                if (UiPerformance.reduced) {
+                                    androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                                } else {
+                                    (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)) +
+                                        androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 24 }) togetherWith
+                                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                                }
                             },
                             label = "section",
                         ) { shown ->
@@ -248,10 +253,15 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
     var expanded by remember { mutableStateOf(false) }
     val width by animateDpAsState(
         if (expanded) NAV_EXPANDED else NAV_COLLAPSED,
-        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 700f),
+        animationSpec = if (UiPerformance.reduced) androidx.compose.animation.core.snap()
+        else androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 700f),
         label = "nav",
     )
-    val dim by androidx.compose.animation.core.animateFloatAsState(if (expanded) 0.45f else 0f, androidx.compose.animation.core.tween(220), label = "dim")
+    val dim by androidx.compose.animation.core.animateFloatAsState(
+        if (expanded) 0.45f else 0f,
+        if (UiPerformance.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(220),
+        label = "dim",
+    )
     var enterTick by remember { mutableIntStateOf(0) }
     val initialFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current

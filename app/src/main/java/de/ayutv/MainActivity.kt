@@ -22,7 +22,8 @@ class MainActivity : ComponentActivity() {
         val container = (application as AyuApp).container
         if (hasTouchscreen()) hideSystemBars()
         // Kurzes Intro nur beim echten Start (nicht nach Drehen o. Ä.), passend zum Design (Standard: keins).
-        var intro by androidx.compose.runtime.mutableStateOf(savedInstanceState == null)
+        // Schwaches Gerät: kein Intro, die Zeit gehört dem Laden der App.
+        var intro by androidx.compose.runtime.mutableStateOf(savedInstanceState == null && !de.ayutv.ui.UiPerformance.reduced)
         setContent {
             CompositionLocalProvider(LocalContainer provides container) {
                 AyuTheme {

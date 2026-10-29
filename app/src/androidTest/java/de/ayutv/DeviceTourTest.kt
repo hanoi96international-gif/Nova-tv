@@ -923,6 +923,10 @@ class DeviceTourTest {
                     .mapNotNull { runCatching { de.ayutv.data.security.Credentials.reveal(it) }.getOrDefault(it) }.filter { it.length >= 4 }
                 val leaked = passwords.filter { it in text }
                 log("report: code=$code bytes=${text.length} sections=${Regex("== (.+?) ==").findAll(text).map { it.groupValues[1] }.toList()} leaked=${leaked.size}")
+                // Ruckel-Messung der Menüs: Bis hierher wurde die Oberfläche bedient, also müssen Bilder gezählt sein.
+                val frames = text.lines().firstOrNull { it.startsWith("Menüs:") }.orEmpty()
+                log("ui_frames: $frames reduced=${de.ayutv.ui.UiPerformance.reduced}")
+                assertTrue("Keine Bilder gemessen: $frames", Regex("Menüs: \\d+ Bilder").containsMatchIn(frames))
                 assertTrue("Bericht unvollständig", code == 200 && "Fehlerbericht" in text && "== Protokoll ==" in text && "== Playlists ==" in text)
                 assertTrue("Passwort im Bericht", leaked.isEmpty() && !Regex("password=(?!\\*)").containsMatchIn(text))
             } finally {
