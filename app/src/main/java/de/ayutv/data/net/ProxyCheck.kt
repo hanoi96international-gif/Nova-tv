@@ -25,13 +25,18 @@ object ProxyCheck {
         }
     }
 
+    /** Letztes Ergebnis (für die Anzeige im Player, ohne jedes Mal neu zu fragen). */
+    @Volatile var last: Result? = null
+        private set
+
     /** Dienste, die die eigene IP und das Land zurückgeben (der erste, der antwortet, zählt). */
     private val SERVICES = listOf("https://ipwho.is/", "https://api.country.is/")
 
     suspend fun run(http: OkHttpClient, config: ProxyConfig): Result = withContext(Dispatchers.IO) {
         val quick = http.newBuilder().connectTimeout(10, TimeUnit.SECONDS).readTimeout(10, TimeUnit.SECONDS).callTimeout(20, TimeUnit.SECONDS)
         val direct = runCatching { lookup(quick.proxy(Proxy.NO_PROXY).build()) }.getOrNull()
-        if (!config.complete) return@withContext Result(direct, null, "Adresse und Port eintragen")
+        // Auch bei ausgeschaltetem Proxy testbar (vor dem Einschalten), solange Adresse und Port da sind.
+        if (!config.complete) return@withContext Result(direct, null, "Adresse und Port eintragen").also { last = it }
         val viaProxy = quick.proxy(config.toProxy()).proxyAuthenticator { _, response ->
             // Eigene Anmeldung für den Test: die gerade eingetragenen Zugangsdaten, nicht die gespeicherten.
             if (response.code != 407 || config.user.isEmpty() || response.request.header("Proxy-Authorization") != null &&
@@ -42,7 +47,7 @@ object ProxyCheck {
         runCatching { lookup(viaProxy) }.fold(
             onSuccess = { Result(direct, it, null) },
             onFailure = { Result(direct, null, explain(it)) },
-        )
+        ).also { last = it }
     }
 
     private fun lookup(client: OkHttpClient): Seen {

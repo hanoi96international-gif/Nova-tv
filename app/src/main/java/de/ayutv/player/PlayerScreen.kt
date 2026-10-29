@@ -429,7 +429,7 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
-            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
+            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo, activity.routeLabel())
         }
         activity.syncBadge?.let { badge ->
             Spacer(Modifier.height(8.dp))
@@ -615,7 +615,7 @@ private fun VodControls(activity: PlayerActivity) {
         }
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
-            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
+            TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo, activity.routeLabel())
         }
         activity.syncBadge?.let { badge ->
             Spacer(Modifier.height(8.dp))
@@ -631,7 +631,7 @@ private fun VodControls(activity: PlayerActivity) {
 }
 
 @Composable
-private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, drops: String) {
+private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, drops: String, route: String) {
     val parts = buildList {
         add("Puffer %.1f s".format(bufferedMs / 1000f) + if (cushion) " (wird aufgefüllt)" else "")
         if (stats.width > 0) add("${stats.width}×${stats.height}")
@@ -646,6 +646,7 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, dro
         add("Verworfene Frames: ${stats.droppedFrames}")
         if (stats.startupMs > 0) add("Start in ${stats.startupMs} ms")
         if (drops.isNotEmpty()) add(drops)
+        add(route)
     }
     Text(parts.joinToString("  ·  "), color = AyuColors.Accent, fontSize = 13.sp)
 }
