@@ -958,8 +958,13 @@ class DeviceTourTest {
                 // Sender, den es hier nicht gibt (andere Playlist auf dem Handy): läuft direkt über die Adresse
                 val foreign = channel.url + "?vom=handy"
                 runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, foreign, "Vom Handy"), container.remote.address!!, container.remote.pin) }
+                // Der Player darf nur vom Hauptthread aus gelesen werden.
                 val foreignPlays = waitFor(15_000) {
-                    (container.foreground?.get() as? PlayerActivity)?.let { it.current?.url == foreign && it.player?.playbackState == Player.STATE_READY } == true
+                    var ready = false
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                        ready = (container.foreground?.get() as? PlayerActivity)?.let { it.current?.url == foreign && it.player?.playbackState == Player.STATE_READY } == true
+                    }
+                    ready
                 }
                 log("play_on_tv: tv=$name started=$started foreign=$foreignPlays")
                 assertTrue("Sender startet nicht auf dem Fernseher", started)
