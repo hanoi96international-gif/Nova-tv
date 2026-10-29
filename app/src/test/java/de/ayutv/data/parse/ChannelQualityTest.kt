@@ -54,13 +54,30 @@ class ChannelQualityTest {
     }
 
     @Test
+    fun stabilityRanksWatchedChannelsWithoutDropsFirst() {
+        ChannelQuality.recordPlayback("calm", 1080, 800)
+        ChannelQuality.recordWatch("calm", 3 * 3_600_000L, 0)
+        ChannelQuality.recordPlayback("shaky", 1080, 800)
+        ChannelQuality.recordWatch("shaky", 2 * 3_600_000L, 8)
+        ChannelQuality.recordCheck("checked", 1080, 1_200) // nur im Check gemessen
+        ChannelQuality.recordFailure("dead"); ChannelQuality.recordFailure("dead")
+        val order = listOf("shaky", "dead", "checked", "calm", "unknown").filter { ChannelQuality.stability(it) != null }
+            .sortedBy { ChannelQuality.stability(it) }
+        assertEquals(listOf("calm", "checked", "shaky"), order)
+    }
+
+    @Test
     fun savedAndLoaded() {
         val file = java.io.File.createTempFile("quality", ".tsv")
         ChannelQuality.recordPlayback("k1", 720, 1200, now = 5)
         ChannelQuality.saveIfChanged(file)
         ChannelQuality.clear()
         ChannelQuality.load(file)
-        assertEquals(ChannelQuality.Info(720, 1200, 0, 5), ChannelQuality.info("k1"))
+        ChannelQuality.recordWatch("k1", 600_000, 1, now = 6)
+        ChannelQuality.saveIfChanged(file)
+        ChannelQuality.clear()
+        ChannelQuality.load(file)
+        assertEquals(ChannelQuality.Info(720, 1200, 0, 5, 600_000, 1), ChannelQuality.info("k1"))
         file.delete()
     }
 }

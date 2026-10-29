@@ -718,8 +718,25 @@ class PlayerActivity : ComponentActivity() {
         return true
     }
 
+    /** Seit wann der jetzige Sender läuft und wie viele Wiedergabefehler es da schon gab (für die Stabilitätswertung). */
+    private var watchStartedAt = 0L
+    private var watchErrorsAtStart = 0
+
+    /** Für „Best of“: wie lange der Sender lief und wie oft dabei die Verbindung abbrach. Erst ab einer Minute. */
+    private fun recordWatch() {
+        val channel = playing ?: return
+        if (!isLive || watchStartedAt == 0L) return
+        val watched = SystemClock.elapsedRealtime() - watchStartedAt
+        watchStartedAt = 0L
+        if (watched < 60_000) return
+        de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
+    }
+
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
+        recordWatch()
+        watchStartedAt = SystemClock.elapsedRealtime()
+        watchErrorsAtStart = playerErrors
         if (!switchingVariant) failedVariants.clear()
         playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         playing = channel
@@ -3240,6 +3257,7 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
         vod?.let(::learnOpening)
         saveAheadTranslations()
+        recordWatch()
         container.scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.saveIfChanged(container.qualityFile) }
         // Für den Fehlerbericht: was zuletzt lief und was der Player gemeldet hat.
         de.ayutv.data.Diagnostics.savePlayerSession(

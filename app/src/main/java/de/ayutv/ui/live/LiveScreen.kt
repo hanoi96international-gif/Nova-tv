@@ -64,6 +64,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.lazy.rememberLazyListState
 
 const val FAVORITES_GROUP = "\u0000favoriten"
+/** „Best of“: die stabilsten Sender, nach Sport und normalem Fernsehen. */
+const val BEST_SPORT_GROUP = "\u0000best-sport"
+const val BEST_TV_GROUP = "\u0000best-tv"
+private fun isBestOf(group: String?) = group == BEST_SPORT_GROUP || group == BEST_TV_GROUP
 private const val NOW_PAGE = 30
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -82,7 +86,12 @@ fun LiveScreen() {
     val minute by rememberMinuteTicker()
 
     val channelsFlow = remember(selectedGroup) {
-        if (selectedGroup == FAVORITES_GROUP) content.favoriteChannels else content.channelsIn(selectedGroup)
+        when (selectedGroup) {
+            FAVORITES_GROUP -> content.favoriteChannels
+            // Best of: schon nach Stabilität sortiert und je Sender die beste Fassung
+            BEST_SPORT_GROUP, BEST_TV_GROUP -> kotlinx.coroutines.flow.flow { emit(content.bestOf(sport = selectedGroup == BEST_SPORT_GROUP)) }
+            else -> content.channelsIn(selectedGroup)
+        }
     }
     // null = lädt noch (dann kein „Keine Sender“-Aufblitzen), leer = wirklich keine.
     val raw by channelsFlow.collectAsStateWithLifecycle(null)
@@ -90,7 +99,7 @@ fun LiveScreen() {
     val loaded by produceState<List<ChannelEntity>?>(null, raw, merge, selectedGroup, appSettings?.minQuality, appSettings?.preferUhd, appSettings?.hideBrokenChannels) {
         appSettings?.let { de.ayutv.data.parse.ChannelQuality.configure(it.minQuality.height, it.preferUhd, it.hideBrokenChannels) }
         val list = raw
-        value = if (list == null) null else if (merge && selectedGroup != FAVORITES_GROUP) content.mergeVariants(list) else list
+        value = if (list == null) null else if (merge && selectedGroup != FAVORITES_GROUP && !isBestOf(selectedGroup)) content.mergeVariants(list) else list
     }
     val channels = loaded.orEmpty()
     val favoriteSet = remember(favoriteKeys) { favoriteKeys.toHashSet() }
@@ -130,9 +139,15 @@ fun LiveScreen() {
         }
     }
 
-    val entries = remember(groups, total, favoriteKeys.size) {
+    // Wie viele Sender in „Best of“ stehen (ändert sich, wenn geschaut oder geprüft wurde).
+    val bestCounts by produceState(0 to 0, total, appSettings?.minQuality) {
+        value = content.bestOf(sport = true).size to content.bestOf(sport = false).size
+    }
+    val entries = remember(groups, total, favoriteKeys.size, bestCounts) {
         buildList {
             add(CategoryEntry(FAVORITES_GROUP, "★ Favoriten", favoriteKeys.size, removable = false))
+            add(CategoryEntry(BEST_SPORT_GROUP, "🏆 Best of Sport", bestCounts.first, removable = false))
+            add(CategoryEntry(BEST_TV_GROUP, "🏆 Best of TV", bestCounts.second, removable = false))
             add(CategoryEntry(null, "Alle Sender", total))
             groups.forEach { add(CategoryEntry(it.name, it.name, it.count)) }
         }
@@ -156,8 +171,17 @@ fun LiveScreen() {
             Spacer(Modifier.weight(1f))
         } else if (channels.isEmpty()) {
             EmptyHint(
-                if (selectedGroup == FAVORITES_GROUP) "Noch keine Favoriten" else "Keine Sender",
-                if (selectedGroup == FAVORITES_GROUP) "Halte OK auf einem Sender gedrückt, um ihn zu den Favoriten hinzuzufügen." else "",
+                when {
+                    selectedGroup == FAVORITES_GROUP -> "Noch keine Favoriten"
+                    isBestOf(selectedGroup) -> "Noch keine Messungen"
+                    else -> "Keine Sender"
+                },
+                when {
+                    selectedGroup == FAVORITES_GROUP -> "Halte OK auf einem Sender gedrückt, um ihn zu den Favoriten hinzuzufügen."
+                    isBestOf(selectedGroup) -> "Hier stehen die stabilsten Sender, sobald sie geschaut oder im Sender-Check geprüft wurden " +
+                        "(Einstellungen → Bedienung & TV-Guide → Sender-Check → Jetzt prüfen)."
+                    else -> ""
+                },
                 Modifier.weight(1f),
             )
         } else {
@@ -175,7 +199,8 @@ fun LiveScreen() {
                         onFocused = { focusedState.value = channel },
                         onClick = {
                             val favoritesOnly = selectedGroup == FAVORITES_GROUP
-                            PlayerActivity.startLive(context, channel.key, selectedGroup.takeUnless { favoritesOnly }, favoritesOnly)
+                            // Best of hat keine Gruppe beim Anbieter: im Player durch alle Sender zappen.
+                            PlayerActivity.startLive(context, channel.key, selectedGroup.takeUnless { favoritesOnly || isBestOf(it) }, favoritesOnly)
                         },
                         onLongClick = {
                             // In der Favoriten-Gruppe verschwindet der Sender: vorher den Fokus weitergeben.

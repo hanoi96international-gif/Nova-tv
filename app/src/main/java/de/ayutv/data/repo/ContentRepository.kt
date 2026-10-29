@@ -83,6 +83,20 @@ class ContentRepository(
         ChannelVariants.merge(channels.filter { ChannelQuality.passes(it.key, it.name) }, { it.name }, { it.playlistId }, { ChannelQuality.score(it.key, it.name) })
     }
 
+    /**
+     * „Best of“: die stabilsten Sender (je Sender die beste Fassung), getrennt nach Sport ([sport] = true) und
+     * normalem Fernsehen. Zählt nur, was schon geschaut oder im Sender-Check gemessen wurde; die wenigsten
+     * Abbrüche je Stunde zuerst.
+     */
+    suspend fun bestOf(sport: Boolean, limit: Int = 60): List<ChannelEntity> = withContext(Dispatchers.Default) {
+        mergeVariants(db.channels().all())
+            .filter { (ProgrammeText.isSportChannel(it.name) || it.groupTitle.contains("sport", ignoreCase = true)) == sport }
+            .mapNotNull { channel -> ChannelQuality.stability(channel.key)?.let { channel to it } }
+            .sortedBy { it.second }
+            .take(limit)
+            .map { it.first }
+    }
+
     /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
     suspend fun variantsOf(channel: ChannelEntity): List<ChannelEntity> = withContext(Dispatchers.Default) {
         if (ChannelVariants.key(channel.name) == null) return@withContext emptyList()

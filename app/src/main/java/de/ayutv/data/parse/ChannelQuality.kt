@@ -11,7 +11,8 @@ import java.util.concurrent.ConcurrentHashMap
  * der Name verrät („FHD“, „4K“, „SD“ …).
  */
 object ChannelQuality {
-    data class Info(val height: Int, val startupMs: Long, val failures: Int, val checkedAt: Long) {
+    /** [watchedMs]/[drops]: wie lange insgesamt geschaut und wie oft dabei die Verbindung abbrach. */
+    data class Info(val height: Int, val startupMs: Long, val failures: Int, val checkedAt: Long, val watchedMs: Long = 0, val drops: Int = 0) {
         val broken: Boolean get() = failures >= 2
     }
 
@@ -38,16 +39,50 @@ object ChannelQuality {
     /** Beim Schauen gemessen (kostet nichts extra). */
     fun recordPlayback(key: String, height: Int, startupMs: Long, now: Long = System.currentTimeMillis()) {
         if (height <= 0) return
-        known[key] = Info(height, startupMs, 0, now)
+        val previous = known[key]
+        known[key] = Info(height, startupMs.takeIf { it > 0 } ?: previous?.startupMs ?: 0, 0, now, previous?.watchedMs ?: 0, previous?.drops ?: 0)
         dirty = true
     }
 
     /** Vom Check gemessen oder ausgefallen ([height] 0). */
     fun recordCheck(key: String, height: Int, startupMs: Long, now: Long = System.currentTimeMillis()) {
         val previous = known[key]
-        known[key] = if (height > 0) Info(height, startupMs, 0, now)
-        else Info(previous?.height ?: 0, previous?.startupMs ?: 0, (previous?.failures ?: 0) + 1, now)
+        known[key] = if (height > 0) Info(height, startupMs, 0, now, previous?.watchedMs ?: 0, previous?.drops ?: 0)
+        else Info(previous?.height ?: 0, previous?.startupMs ?: 0, (previous?.failures ?: 0) + 1, now, previous?.watchedMs ?: 0, previous?.drops ?: 0)
         dirty = true
+    }
+
+    /**
+     * Nach dem Schauen: [watchedMs] lang gelaufen, [drops] Verbindungsabbrüche. Ältere Erfahrung zählt mit der Zeit
+     * weniger (ab 20 Stunden wird halbiert), damit ein Sender, der besser geworden ist, wieder nach vorn kommt.
+     */
+    fun recordWatch(key: String, watchedMs: Long, drops: Int, now: Long = System.currentTimeMillis()) {
+        if (watchedMs <= 0) return
+        val previous = known[key] ?: Info(0, 0, 0, now)
+        var watched = previous.watchedMs + watchedMs
+        var dropped = previous.drops + drops
+        if (watched > 20 * HOUR) {
+            watched /= 2
+            dropped /= 2
+        }
+        known[key] = previous.copy(watchedMs = watched, drops = dropped, failures = if (drops == 0) 0 else previous.failures)
+        dirty = true
+    }
+
+    /**
+     * Wie stabil eine Fassung ist, kleiner = besser; null, wenn nichts bekannt ist oder sie ausgefallen ist.
+     * Zählt Abbrüche je Stunde Schauen am meisten, dann Ausfälle im Check, Startzeit und geringe Auflösung.
+     * Nur im Check Gemessenes (nie geschaut) kommt hinter erprobte Sender ohne Abbrüche.
+     */
+    fun stability(key: String): Int? {
+        val info = known[key] ?: return null
+        if (info.broken || (info.height <= 0 && info.watchedMs == 0L)) return null
+        val hours = info.watchedMs / HOUR.toDouble()
+        val dropsPerHour = if (hours >= 0.25) info.drops / hours else if (info.watchedMs > 0) info.drops * 2.0 else 0.0
+        var score = (dropsPerHour * 120).toInt() + info.failures * 300 + (info.startupMs / 40).toInt().coerceAtMost(250)
+        if (info.height in 1..719) score += 150
+        if (info.watchedMs == 0L) score += 60
+        return score
     }
 
     fun recordFailure(key: String, now: Long = System.currentTimeMillis()) = recordCheck(key, 0, 0, now)
@@ -100,7 +135,10 @@ object ChannelQuality {
         runCatching {
             file.takeIf { it.isFile }?.forEachLine { line ->
                 val p = line.split('\t')
-                if (p.size >= 5) known[p[0]] = Info(p[1].toIntOrNull() ?: 0, p[2].toLongOrNull() ?: 0, p[3].toIntOrNull() ?: 0, p[4].toLongOrNull() ?: 0)
+                if (p.size >= 5) known[p[0]] = Info(
+                    p[1].toIntOrNull() ?: 0, p[2].toLongOrNull() ?: 0, p[3].toIntOrNull() ?: 0, p[4].toLongOrNull() ?: 0,
+                    p.getOrNull(5)?.toLongOrNull() ?: 0, p.getOrNull(6)?.toIntOrNull() ?: 0,
+                )
             }
         }
     }
@@ -112,7 +150,8 @@ object ChannelQuality {
             val tmp = File(file.path + ".tmp")
             tmp.bufferedWriter().use { out ->
                 for ((key, i) in known) out.append(key.replace('\t', ' ')).append('\t').append(i.height.toString()).append('\t')
-                    .append(i.startupMs.toString()).append('\t').append(i.failures.toString()).append('\t').append(i.checkedAt.toString()).append('\n')
+                    .append(i.startupMs.toString()).append('\t').append(i.failures.toString()).append('\t').append(i.checkedAt.toString())
+                    .append('\t').append(i.watchedMs.toString()).append('\t').append(i.drops.toString()).append('\n')
             }
             tmp.renameTo(file)
         }
@@ -120,6 +159,8 @@ object ChannelQuality {
 
     /** Nur für Tests. */
     fun clear() = known.clear()
+
+    private const val HOUR = 3_600_000L
 
     private val UHD = Regex("""\b(uhd|4k|2160p?)\b""")
     private val FHD = Regex("""\b(fhd|1080[ip]?|full ?hd)\b""")
