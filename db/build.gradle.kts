@@ -1,9 +1,8 @@
-// Datenbank (Room) als eigenes Modul: Die Code-Erzeugung (KSP) muss so nur diese drei Dateien analysieren statt der
-// ganzen App. Im App-Modul brauchte sie über 40 Minuten (das Übersetzen selbst nur Sekunden).
+// Datenbank (Room) als eigenes Modul, Code-Erzeugung mit kapt: KSP wartete im CI über eine Stunde (kaum Rechenzeit),
+// selbst für diese drei Dateien. kapt ist für Room seit Jahren erprobt und hier in Sekunden fertig.
 plugins {
     id("com.android.library")
-    id("com.google.devtools.ksp")
-    id("androidx.room")
+    id("com.android.legacy-kapt")
 }
 
 android {
@@ -21,15 +20,17 @@ android {
     }
 }
 
-// Das Room-Plugin verwaltet die Schema-Dateien je Build-Variante.
-room {
-    schemaDirectory("$projectDir/schemas")
+kapt {
+    arguments {
+        arg("room.schemaLocation", layout.buildDirectory.dir("schemas").get().asFile.path)
+        arg("room.incremental", "true")
+    }
 }
 
 dependencies {
     val room = "2.8.5"
     api("androidx.room:room-runtime:$room")
     api("androidx.room:room-ktx:$room")
-    ksp("androidx.room:room-compiler:$room")
+    "kapt"("androidx.room:room-compiler:$room")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }
