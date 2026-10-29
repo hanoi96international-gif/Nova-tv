@@ -65,7 +65,12 @@ class RemoteServer(private val context: Context, private val container: AppConta
         val newScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e -> Log.w(TAG, "Fernbedienung", e) })
         scope = newScope
         newScope.launch {
-            val ip = localAddress() ?: return@launch
+            // Nach dem Einschalten ist das WLAN oft noch nicht da: warten statt aufgeben.
+            var ip = localAddress()
+            while (ip == null) {
+                delay(10_000)
+                ip = localAddress()
+            }
             val server = runCatching { ServerSocket(PORT, 8, InetAddress.getByName(ip)) }.getOrElse {
                 Log.w(TAG, "Port $PORT belegt", it)
                 return@launch

@@ -37,12 +37,13 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             if (event == Lifecycle.Event.ON_STOP && container.parental.unlocked.value) {
                 container.scope.launch { container.parental.lock() }
             }
-            // Handy als Fernbedienung: nur auf dem Fernseher und nur, solange DnA-TV zu sehen ist.
+            // Handy als Fernbedienung: nur auf dem Fernseher. Der Hintergrund-Dienst hält sie auch dann am Laufen,
+            // wenn DnA-TV nicht zu sehen ist (Übergabe vom Handy startet den Player von selbst).
             when (event) {
                 Lifecycle.Event.ON_START -> container.scope.launch {
                     if (!hasTouchscreen() && container.settings.current().phoneRemote) container.remote.start()
                 }
-                Lifecycle.Event.ON_STOP -> container.remote.stop()
+                Lifecycle.Event.ON_STOP -> if (!de.ayutv.data.remote.RemoteService.running) container.remote.stop()
                 else -> Unit
             }
         })
@@ -62,6 +63,10 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             container.parental.applyLocks()
             container.playlists.syncAll()
             container.refreshTeamReminders()
+        }
+        // Fernseher: auch im Hintergrund (und nach dem Einschalten) für das Handy erreichbar.
+        container.scope.launch {
+            if (!hasTouchscreen() && container.settings.current().phoneRemote) de.ayutv.data.remote.RemoteService.start(this@AyuApp)
         }
         runCatching { SyncWorker.schedule(this) }
         runCatching { de.ayutv.data.repo.PretranslateWorker.schedule(this) }

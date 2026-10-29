@@ -778,12 +778,19 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 onOff(settings.phoneRemote),
                                 if (settings.phoneRemote && address != null) {
                                     "In der DnA-TV-App auf dem Handy: Einstellungen → Fernseher fernbedienen. Adresse $address, PIN $pin. " +
-                                        "Oder den Code scannen (Fernbedienung im Browser). OK schaltet aus."
+                                        "Oder den Code scannen (Fernbedienung im Browser). Auch wenn DnA-TV nicht geöffnet ist: 📺 im Handy-Player " +
+                                        "startet Sender oder Film hier. OK schaltet aus."
                                 } else "Steuert DnA-TV vom Handy aus (gleiches WLAN, nur mit PIN) und gleicht Favoriten und Verlauf ab.",
                             ) {
                                 val on = !settings.phoneRemote
                                 update { it.copy(phoneRemote = on) }
-                                if (on) remote.start() else remote.stop()
+                                if (on) {
+                                    remote.start()
+                                    de.ayutv.data.remote.RemoteService.start(context)
+                                } else {
+                                    de.ayutv.data.remote.RemoteService.stop(context)
+                                    remote.stop()
+                                }
                             }
                             if (settings.phoneRemote && address != null) {
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
