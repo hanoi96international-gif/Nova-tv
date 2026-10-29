@@ -27,9 +27,16 @@ object Translators {
     /** [remote], aber über das Handy, solange eines mitrechnet ([de.ayutv.data.translate.PhoneHelper]). */
     lateinit var withPhone: Translator
 
+    /** Für Übersetzer über das Internet (DeepL). */
+    lateinit var http: okhttp3.OkHttpClient
+
+    private fun onDeviceTranslator(): Translator = if (::withPhone.isInitialized) withPhone else remote
+
     /** Übersetzer gemäß Einstellung, oder null, wenn die Übersetzung ausgeschaltet ist. */
     fun from(settings: AppSettings): Translator? = when (settings.translationProvider) {
-        TranslationProvider.ON_DEVICE -> if (::withPhone.isInitialized) withPhone else remote
+        TranslationProvider.ON_DEVICE -> onDeviceTranslator()
+        // Ohne Schlüssel oder wenn DeepL nicht kann: auf dem Gerät weiter.
+        TranslationProvider.DEEPL -> de.ayutv.data.translate.DeepLTranslator(http, settings.deeplKey, onDeviceTranslator())
         TranslationProvider.NONE -> null
     }
 }

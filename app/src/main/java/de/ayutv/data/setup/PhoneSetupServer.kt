@@ -176,6 +176,23 @@ class PhoneSetupServer(private val container: AppContainer) {
             field("os_key").takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesKey = it) }
             field("os_user").takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesUser = it) }
             form["os_password"]?.takeIf { it.isNotEmpty() }?.let { next = next.copy(openSubtitlesPassword = it) }
+            // DeepL: mit Schlüssel gleich als Übersetzer einstellen.
+            field("deepl_key").takeIf { it.isNotEmpty() }?.let {
+                next = next.copy(deeplKey = it, translationProvider = de.ayutv.data.TranslationProvider.DEEPL)
+            }
+            // Proxy: Adresse und Port zusammen, Zugangsdaten nur wenn ausgefüllt.
+            field("proxy_host").takeIf { it.isNotEmpty() }?.let { hostPort ->
+                val host = hostPort.substringBeforeLast(':').removePrefix("http://").removePrefix("socks5://").trim()
+                val port = hostPort.substringAfterLast(':', "").toIntOrNull() ?: field("proxy_port").toIntOrNull() ?: next.proxyPort
+                next = next.copy(
+                    proxyHost = host,
+                    proxyPort = port,
+                    proxyType = if (form["proxy_type"] == "socks5") de.ayutv.data.net.ProxyType.SOCKS5 else de.ayutv.data.net.ProxyType.HTTP,
+                    proxyMode = if (next.proxyMode == de.ayutv.data.net.ProxyMode.OFF) de.ayutv.data.net.ProxyMode.ALL else next.proxyMode,
+                )
+            }
+            field("proxy_user").takeIf { it.isNotEmpty() }?.let { next = next.copy(proxyUser = it) }
+            form["proxy_password"]?.takeIf { it.isNotEmpty() }?.let { next = next.copy(proxyPassword = it) }
             next
         }
         val lines = mutableListOf<KeyCheck.Line>()
@@ -231,6 +248,20 @@ class PhoneSetupServer(private val container: AppContainer) {
 
             <p>Übersetzen braucht nichts davon: DnA-TV übersetzt vorhandene Untertitel direkt auf dem Fire TV.
             OpenSubtitles liefert Untertitel für Filme, die selbst keine haben.</p>
+
+            <h2>Übersetzen über DeepL (empfohlen für den Fire TV Stick) ${status(settings.deeplKey.isNotBlank())}</h2>
+            <p>Schnell und in besserer Qualität als auf dem Gerät. Kostenloses Konto „DeepL API Free“ auf
+            <a href="https://www.deepl.com/pro-api" target=_blank>deepl.com/pro-api</a> anlegen (500.000 Zeichen im Monat frei),
+            dann unter „API-Schlüssel“ den Schlüssel kopieren (endet auf <b>:fx</b>). Mit dem Speichern wird DeepL als Übersetzer eingestellt.</p>
+            <label>DeepL-API-Schlüssel<input name=deepl_key autocomplete=off placeholder="${if (settings.deeplKey.isNotBlank()) "gespeichert – nur zum Ändern ausfüllen" else "…:fx"}"></label>
+
+            <h2>Proxy nur für DnA-TV (optional) ${status(settings.proxyHost.isNotBlank())}</h2>
+            <p>Zugangsdaten vom Proxy-Anbieter. Mit dem Speichern läuft DnA-TV über den Proxy (einschränken auf
+            einzelne Playlists: am Fernseher unter Einstellungen → Proxy).</p>
+            <label>Art<select name=proxy_type><option value=http${if (settings.proxyType == de.ayutv.data.net.ProxyType.HTTP) " selected" else ""}>HTTP</option><option value=socks5${if (settings.proxyType == de.ayutv.data.net.ProxyType.SOCKS5) " selected" else ""}>SOCKS5</option></select></label>
+            <label>Adresse:Port<input name=proxy_host autocomplete=off placeholder="${if (settings.proxyHost.isNotBlank()) esc(settings.proxyHost + ":" + settings.proxyPort) else "z. B. 203.0.113.5:8080"}"></label>
+            <label>Benutzer<input name=proxy_user autocomplete=off value="${esc(settings.proxyUser)}"></label>
+            <label>Passwort<input name=proxy_password type=password autocomplete=off placeholder="${if (settings.proxyPassword.isNotEmpty()) "gespeichert" else ""}"></label>
 
             <h2>Playlist hinzufügen (optional)</h2>
             <label>Name<input name=m3u_name placeholder="z. B. Mein Anbieter"></label>

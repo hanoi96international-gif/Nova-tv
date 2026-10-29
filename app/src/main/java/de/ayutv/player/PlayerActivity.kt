@@ -1425,8 +1425,11 @@ class PlayerActivity : ComponentActivity() {
         val target = settings.lastTranslationTarget.ifEmpty { return }
         val source = bestTranslationSource()?.let { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) } ?: return
         if (source == target || Translators.remote.isWarm(source, target)) return
-        // Rechnet das Handy mit, braucht der Fernseher das Modell nicht.
+        // Rechnet das Handy mit oder übersetzt DeepL, braucht der Fernseher das Modell nicht.
         if (de.ayutv.data.translate.PhoneHelper.usable) return
+        if (settings.translationProvider == de.ayutv.data.TranslationProvider.DEEPL && settings.deeplKey.isNotBlank() &&
+            de.ayutv.data.translate.DeepLTranslator.targetCode(target) != null
+        ) return
         warmUpJob = lifecycleScope.launch {
             runCatching { Translators.remote.translate(listOf("Hello."), target, source) }
                 .onFailure { Log.i(SUBTITLE_TAG, "Übersetzer vorab laden: ${it.message}") }

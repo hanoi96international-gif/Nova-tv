@@ -25,7 +25,7 @@ object KeyCheck {
     data class Line(val ok: Boolean, val text: String)
 
     suspend fun run(http: OkHttpClient, settings: AppSettings): List<Line> = withContext(Dispatchers.IO) {
-        listOf(openSubtitles(http, settings))
+        listOfNotNull(openSubtitles(http, settings), deepl(http, settings))
     }
 
     private fun openSubtitles(http: OkHttpClient, settings: AppSettings): Line {
@@ -66,6 +66,14 @@ object KeyCheck {
                 }
             }
         }.getOrElse { Line(false, "OpenSubtitles: keine Verbindung (${it.message})") }
+    }
+
+    private suspend fun deepl(http: OkHttpClient, settings: AppSettings): Line? {
+        if (settings.deeplKey.isBlank()) return null
+        return runCatching { de.ayutv.data.translate.DeepLTranslator(http, settings.deeplKey, null).usage() }.fold(
+            onSuccess = { Line(true, "DeepL: Schlüssel gültig, ${it.used} von ${it.limit} Zeichen in diesem Monat verbraucht") },
+            onFailure = { Line(false, it.message ?: "DeepL: keine Verbindung") },
+        )
     }
 
     private val AGENT = "DnATV v${BuildConfig.VERSION_NAME}"

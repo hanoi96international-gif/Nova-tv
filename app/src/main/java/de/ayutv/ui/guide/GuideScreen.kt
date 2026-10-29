@@ -126,9 +126,21 @@ fun GuideScreen() {
     // Mit Archiv lässt sich so weit zurückblättern, wie der Anbieter aufzeichnet (höchstens 7 Tage).
     val archiveDays = remember(channels) { channels.maxOfOrNull { it.catchupDays }?.coerceIn(0, 7) ?: 0 }
     val earliest = System.currentTimeMillis() / HALF_HOUR * HALF_HOUR - maxOf(2 * HALF_HOUR, archiveDays * DAY)
-    // Liefert false, wenn sich nichts verschieben lässt: Dann geht „links“ normal weiter (zur Navigation).
-    val shift: (Int) -> Boolean = { steps ->
+    // Ins Archiv (vor „jetzt“) nur mit ⏪ oder dem Knopf „früher“: Sonst müsste man mit ◀ durch bis zu 7 Tage
+    // blättern, bevor man wieder in die Seitenleiste kommt.
+    val shiftArchive: (Int) -> Boolean = { steps ->
         val target = (windowStart + steps * HALF_HOUR).coerceAtLeast(earliest)
+        (target != windowStart).also { if (it) windowStart = target }
+    }
+    // ◀ ▶ am Rand des Rasters: zurück höchstens bis „jetzt“. Liefert false, wenn sich nichts verschieben lässt:
+    // Dann geht „links“ normal weiter (in die Seitenleiste).
+    val shift: (Int) -> Boolean = { steps ->
+        val now = System.currentTimeMillis() / HALF_HOUR * HALF_HOUR
+        val target = when {
+            steps > 0 -> windowStart + steps * HALF_HOUR
+            windowStart <= now -> windowStart
+            else -> (windowStart + steps * HALF_HOUR).coerceAtLeast(now)
+        }
         (target != windowStart).also { if (it) windowStart = target }
     }
     val reminders by container.reminders.all.collectAsStateWithLifecycle(emptyList())
@@ -192,11 +204,18 @@ fun GuideScreen() {
             if (isTouchDevice) {
                 // Ohne Fernbedienung: Zeitfenster mit Knöpfen verschieben (sonst ◀ am ersten, ▶ am letzten Feld).
                 Row(Modifier.width(metrics.channelColumn + 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    GroupChip("◀ früher", false) { shift(-2) }
+                    GroupChip("◀ früher", false) { shiftArchive(-2) }
                     GroupChip("später ▶", false) { shift(+2) }
                 }
             } else {
-                Spacer(Modifier.width(metrics.channelColumn + 4.dp))
+                // Hinweis an der Stelle der Senderspalte: Archiv mit ⏪, sonst ◀ ▶ am Rand.
+                Text(
+                    "⏪ früher · ⏩ später",
+                    modifier = Modifier.width(metrics.channelColumn + 4.dp),
+                    color = AyuColors.TextSecondary,
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                )
             }
             for (i in 0 until 4) {
                 Text(
@@ -214,7 +233,17 @@ fun GuideScreen() {
             return@Column
         }
 
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+                // ⏪ ⏩ blättern überall im Raster: zurück auch ins Archiv.
+                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (event.key) {
+                    Key.MediaRewind -> { shiftArchive(-1); true }
+                    Key.MediaFastForward -> { shift(+1); true }
+                    else -> false
+                }
+            }
+        ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().focusRestorer(),
                 contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 32.dp),

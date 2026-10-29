@@ -42,6 +42,8 @@ enum class AudioOutput(val label: String) {
  */
 enum class TranslationProvider(val label: String) {
     ON_DEVICE("An (auf dem Gerät, unbegrenzt)"),
+    /** Über das Internet (eigener DeepL-Schlüssel): schnell, ohne Rechenlast auf dem Fire TV. */
+    DEEPL("DeepL (Internet, schnell)"),
     NONE("Aus"),
 }
 
@@ -176,6 +178,8 @@ data class AppSettings(
     val proxyPassword: String = "",
     /** IDs der Playlists, die über den Proxy laufen (bei [ProxyMode.SELECTED]). */
     val proxyPlaylists: Set<String> = emptySet(),
+    /** Eigener DeepL-API-Schlüssel (Free endet auf „:fx“). */
+    val deeplKey: String = "",
 ) {
     val proxyConfig: ProxyConfig
         get() = ProxyConfig(
@@ -255,9 +259,10 @@ class SettingsStore(private val context: Context) {
         val proxyUser = stringPreferencesKey("proxy_user")
         val proxyPassword = stringPreferencesKey("proxy_password")
         val proxyPlaylists = stringSetPreferencesKey("proxy_playlists")
+        val deeplKey = stringPreferencesKey("deepl_key")
 
         /** Verschlüsselt gespeicherte Werte (in Sicherungen im Klartext, der Schlüssel gilt nur auf diesem Gerät). */
-        val secrets = setOf(osPassword, proxyPassword)
+        val secrets = setOf(osPassword, proxyPassword, deeplKey)
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -387,6 +392,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.proxyUser] = next.proxyUser.trim()
             prefs[Keys.proxyPassword] = Credentials.protect(next.proxyPassword).orEmpty()
             prefs[Keys.proxyPlaylists] = next.proxyPlaylists
+            prefs[Keys.deeplKey] = Credentials.protect(next.deeplKey.trim()).orEmpty()
         }
     }
 
@@ -443,6 +449,7 @@ class SettingsStore(private val context: Context) {
         proxyUser = this[Keys.proxyUser].orEmpty(),
         proxyPassword = Credentials.reveal(this[Keys.proxyPassword]).orEmpty(),
         proxyPlaylists = this[Keys.proxyPlaylists] ?: emptySet(),
+        deeplKey = Credentials.reveal(this[Keys.deeplKey]).orEmpty(),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

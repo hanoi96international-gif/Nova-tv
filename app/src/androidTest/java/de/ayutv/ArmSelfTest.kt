@@ -13,7 +13,8 @@ import java.io.File
 
 /**
  * Wie auf dem Fire TV Stick 4K: App mit 32-Bit-ARM-Bibliotheken (im Emulator per ARM-Übersetzung).
- * Prüft Texterkennung und Übersetzung mit dem DnA-Rechenkern für mehrere Sprachen.
+ * Prüft Texterkennung und Übersetzung für mehrere Sprachen: zuerst mit ONNX Runtime (seit 0.33 auch auf 32 Bit
+ * die Voreinstellung), dann mit dem DnA-Rechenkern (Rückfall, falls ONNX Runtime auf einem Gerät abstürzt).
  */
 @RunWith(AndroidJUnit4::class)
 class ArmSelfTest {
@@ -27,20 +28,24 @@ class ArmSelfTest {
         }
         val failures = mutableListOf<String>()
         log("abis=${Build.SUPPORTED_ABIS.joinToString()} libs=${app.applicationInfo.nativeLibraryDir}")
-        // Je Runde ein frischer Übersetzer-Prozess (Speicher-Höchststand je Runde). Auf 32 Bit rechnet von
-        // selbst der DnA-Rechenkern (ONNX Runtime stürzt auf dem echten Fire TV Stick 4K ab).
+        // Je Runde ein frischer Übersetzer-Prozess (Speicher-Höchststand je Runde).
         val am = app.getSystemService(android.app.ActivityManager::class.java)
-        File(app.filesDir, "mt_engine").delete()
+        val override = File(app.filesDir, "mt_engine")
+        File(app.filesDir, "ort_crashed").delete()
         for ((round, language) in listOf("de", "es", "id", "fr").withIndex()) {
+            val kern = round >= 2
+            if (kern) override.writeText("kern") else override.delete()
             val result = runBlocking { TranslatorSelfTest.run(language) }
             Translators.remote.release()
             log("round $round $language: ${result.replace("\n", " | ")}")
             failures += result.lines().filterNot { "ok" in it || it.startsWith("Speicher") || it.startsWith("Prozessor") || it.startsWith("Rechenkern") }
-            if ("Rechenkern: DnA" !in result) failures += "Runde $round: nicht mit dem DnA-Rechenkern gerechnet"
+            val expected = if (kern) "Rechenkern: DnA" else "Rechenkern: ONNX"
+            if (expected !in result) failures += "Runde $round: nicht mit „${expected.removePrefix("Rechenkern: ")}“ gerechnet"
             Thread.sleep(1_000)
             am.runningAppProcesses.orEmpty().filter { it.processName.endsWith(":mt") }.forEach { android.os.Process.killProcess(it.pid) }
             Thread.sleep(1_500)
         }
+        override.delete()
         org.junit.Assert.assertTrue("Auf 32-Bit-ARM fehlgeschlagen: $failures", failures.isEmpty())
     }
 }

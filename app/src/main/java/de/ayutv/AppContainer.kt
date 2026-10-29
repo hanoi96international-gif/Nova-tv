@@ -118,6 +118,7 @@ class AppContainer(val context: Context) {
             AppProxy.configure(AppProxy.current, emptySet())
         }
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)
+        Translators.http = http
         Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)
         Translators.withPhone = de.ayutv.data.translate.HelperAwareTranslator(Translators.remote, http)
         // Aussehen gleich anwenden (Menüs und Player lesen die Farben aus de.ayutv.ui.theme.AyuColors).

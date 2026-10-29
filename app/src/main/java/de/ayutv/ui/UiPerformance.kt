@@ -22,6 +22,12 @@ object UiPerformance {
     @Volatile var reduced: Boolean = false
         private set
 
+    /** Nur für Tests: wie auf einem schwachen Stick (ohne Übergänge, Hintergrund kleiner gezeichnet). */
+    @androidx.annotation.VisibleForTesting
+    fun force(value: Boolean) {
+        reduced = value
+    }
+
     fun init(context: Context) {
         val lowRam = runCatching { context.getSystemService(ActivityManager::class.java).isLowRamDevice }.getOrDefault(false)
         reduced = lowRam || de.ayutv.data.DeviceInfo.isWeak(context)
