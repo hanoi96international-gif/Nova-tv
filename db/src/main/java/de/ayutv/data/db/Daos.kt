@@ -68,6 +68,10 @@ interface ChannelDao {
     @Query("SELECT * FROM channels WHERE `key` = :key")
     suspend fun byKey(key: String): ChannelEntity?
 
+    /** Für „Auf dem Fernseher abspielen“: Die Schlüssel unterscheiden sich je Gerät, die Adresse nicht. */
+    @Query("SELECT * FROM channels WHERE url = :url LIMIT 1")
+    suspend fun byUrl(url: String): ChannelEntity?
+
     /** Sender einer Playlist nach Zeile, sonst (nach neuem Laden) nach Name. */
     @Query("SELECT * FROM channels WHERE playlistId = :playlistId AND (id = :rowId OR name = :name) ORDER BY (id = :rowId) DESC, id LIMIT 1")
     suspend fun find(playlistId: Long, rowId: Long, name: String): ChannelEntity?
@@ -183,6 +187,9 @@ interface VodDao {
 
     @Query("SELECT * FROM visible_vod ORDER BY added DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<VodEntity>>
+
+    @Query("SELECT * FROM vod WHERE url = :url LIMIT 1")
+    suspend fun byUrl(url: String): VodEntity?
 
     /** Merkliste: gemerkte Filme, zuletzt gemerkte zuerst. */
     @Query("SELECT v.* FROM visible_vod v INNER JOIN favorites f ON f.`key` = v.`key` ORDER BY f.addedAt DESC")

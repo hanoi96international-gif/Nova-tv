@@ -100,6 +100,10 @@ class RemoteClient(private val context: Context, private val container: AppConta
         Regex("\"([a-z]{2,3})\"").findAll(body.substringAfter("languages")).map { it.groupValues[1] }.toList()
     }
 
+    /** Sender oder Film auf dem Fernseher starten (der holt den Stream selbst beim Anbieter). */
+    suspend fun play(request: RemotePlay, address: String = required(), pin: String = this.pin ?: throw IOException("Nicht gekoppelt")) =
+        withContext(Dispatchers.IO) { call(address, pin, "/play", request.encode()) }
+
     /** Fehlerbericht des Fernsehers (ohne Passwörter), zum Weiterschicken vom Handy. */
     suspend fun report(): String = withContext(Dispatchers.IO) { call(required(), pin!!, "/report", null) }
 
@@ -110,6 +114,7 @@ class RemoteClient(private val context: Context, private val container: AppConta
         if (body != null) builder.post(body.toRequestBody("text/plain; charset=utf-8".toMediaType()))
         http.newCall(builder.build()).execute().use { response ->
             if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben")
+            if (response.code == 404 && path.startsWith("/play")) throw IOException(response.body.string().ifBlank { "Auf dem Fernseher nicht gefunden" })
             if (!response.isSuccessful) throw IOException("Fernseher antwortet mit HTTP ${response.code}")
             return response.body.string()
         }

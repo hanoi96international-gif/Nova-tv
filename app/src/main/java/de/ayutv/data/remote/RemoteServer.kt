@@ -168,6 +168,14 @@ class RemoteServer(private val context: Context, private val container: AppConta
                 val languages = listOf(s.subtitleLanguage, s.lastTranslationTarget).filter { it.isNotEmpty() }.distinct()
                 respond(client, 200, "application/json", """{"languages":[${languages.joinToString(",") { "\"${jsonEscape(it)}\"" }}]}""".toByteArray())
             }
+            "/play" -> {
+                // Vom Handy übergeben: Sender oder Film hier abspielen.
+                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                val result = runCatching { play(RemotePlay.parse(body.toString(Charsets.UTF_8))) }
+                val error = result.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: result.getOrNull()
+                if (error != null) respond(client, 404, "text/plain; charset=utf-8", error.toByteArray())
+                else respond(client, 200, "text/plain", "ok".toByteArray())
+            }
             "/report" -> respond(client, 200, "text/plain; charset=utf-8", de.ayutv.data.Diagnostics.build(context, container).toByteArray())
             "/sync" -> {
                 if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
@@ -178,6 +186,28 @@ class RemoteServer(private val context: Context, private val container: AppConta
             }
             else -> respond(client, 404, "text/plain", ByteArray(0))
         }
+    }
+
+    /**
+     * Sender oder Film vom Handy hier starten. Die Schlüssel unterscheiden sich je Gerät (Playlist-Nummer),
+     * darum über die Adresse beim Anbieter zuordnen. Liefert eine Fehlermeldung oder null.
+     */
+    private suspend fun play(request: RemotePlay): String? {
+        val intent = if (request.live) {
+            val channel = container.db.channels().byUrl(request.url)
+                ?: return "Diesen Sender gibt es auf dem Fernseher nicht (andere Playlist?)"
+            de.ayutv.player.PlayerActivity.liveIntent(context, channel.key, group = null)
+        } else {
+            val key = container.db.vod().byUrl(request.url)?.key ?: request.key
+            de.ayutv.player.PlayerActivity.vodIntent(
+                context,
+                de.ayutv.player.VodRequest(key, request.kind, request.title, request.subtitle, request.image, request.url),
+            ).putExtra(de.ayutv.player.PlayerActivity.EXTRA_START_AT, request.positionMs)
+        }
+        withContext(Dispatchers.Main) {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+        }
+        return null
     }
 
     /** Taste im Vordergrund-Fenster der App auslösen, als käme sie von der Fernbedienung. */

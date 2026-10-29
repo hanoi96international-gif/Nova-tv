@@ -945,6 +945,28 @@ class DeviceTourTest {
             }
         }
 
+        // Vom Handy auf den Fernseher: /play startet den Sender (Zuordnung über die Adresse, nicht den Schlüssel)
+        section("play_on_tv") {
+            container.remote.start()
+            try {
+                assertTrue("Fernbedienung ohne Adresse", waitFor(5_000) { container.remote.address != null })
+                val channel = runBlocking { container.db.channels().all() }.first { it.name == "HLS Test" }
+                val client = de.ayutv.data.remote.RemoteClient(app, container)
+                val name = runBlocking { client.check(container.remote.address!!, container.remote.pin) }
+                runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, channel.url, channel.name), container.remote.address!!, container.remote.pin) }
+                val started = waitFor(10_000) { (container.foreground?.get() as? PlayerActivity)?.current?.key == channel.key }
+                val unknown = runCatching {
+                    runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, "http://nirgends/live/x.ts", "?"), container.remote.address!!, container.remote.pin) }
+                }.exceptionOrNull()?.message
+                log("play_on_tv: tv=$name started=$started unknown=$unknown")
+                assertTrue("Sender startet nicht auf dem Fernseher", started)
+                assertTrue("Unbekannter Sender ohne Meldung: $unknown", unknown?.contains("nicht") == true)
+            } finally {
+                (container.foreground?.get() as? PlayerActivity)?.let { activity -> activity.runOnUiThread { activity.finish() } }
+                container.remote.stop()
+            }
+        }
+
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
     }
