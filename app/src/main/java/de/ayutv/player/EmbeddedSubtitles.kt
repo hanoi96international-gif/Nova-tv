@@ -33,7 +33,10 @@ import java.util.concurrent.ConcurrentHashMap
  * VobSub) per Texterkennung lesen und übersetzen, bevor sie gebraucht werden: synchron zum Bild,
  * ohne Verzögerung. Gilt für alle Untertitelspuren, nicht nur die gerade gewählte.
  */
-class EmbeddedSubtitles {
+class EmbeddedSubtitles(
+    /** Bilder nicht nach 30 s verwerfen (nächtliches Lesen: die Texterkennung kommt hinterher). */
+    private val keepImages: Boolean = false,
+) {
     /** Eine Einblendung. [text] kommt aus Textspuren oder später aus der Texterkennung. */
     class Entry(val startMs: Long, @Volatile var endMs: Long, @Volatile var text: String?, @Volatile var image: GrayImage?)
 
@@ -133,7 +136,7 @@ class EmbeddedSubtitles {
             track.entries[startMs] = Entry(startMs, endMs, text, image)
             while (track.entries.size > MAX_ENTRIES) track.entries.pollFirstEntry()
             // Bilder längst vergangener Einblendungen braucht niemand mehr: Speicher freigeben.
-            if (image != null) track.entries.headMap(startMs - KEEP_IMAGES_BEHIND_MS).values.forEach { it.image = null }
+            if (image != null && !keepImages) track.entries.headMap(startMs - KEEP_IMAGES_BEHIND_MS).values.forEach { it.image = null }
         }
     }
 
@@ -169,12 +172,15 @@ class EmbeddedSubtitles {
     /** Hängt sich zwischen Extractor und Player und liest Untertitel-Samples mit. */
     fun tap(delegate: ExtractorsFactory): ExtractorsFactory = TapFactory(delegate, this)
 
-    private companion object {
-        const val MAX_ENTRIES = 3_000
-        const val OPEN_END_MS = 6_000L
-        const val MAX_HEIGHT_PER_IMAGE = 110
-        const val KEEP_IMAGES_BEHIND_MS = 30_000L
-        val BITMAP_TYPES = setOf(MimeTypes.APPLICATION_PGS, MimeTypes.APPLICATION_DVBSUBS, MimeTypes.APPLICATION_VOBSUB)
+    companion object {
+        /** Kennung einer Spur für gespeicherte Übersetzungen: gleich beim Schauen und beim nächtlichen Lesen. */
+        fun trackKey(format: Format): String = format.id ?: format.language ?: "spur"
+
+        private const val MAX_ENTRIES = 3_000
+        private const val OPEN_END_MS = 6_000L
+        private const val MAX_HEIGHT_PER_IMAGE = 110
+        private const val KEEP_IMAGES_BEHIND_MS = 30_000L
+        private val BITMAP_TYPES = setOf(MimeTypes.APPLICATION_PGS, MimeTypes.APPLICATION_DVBSUBS, MimeTypes.APPLICATION_VOBSUB)
     }
 }
 

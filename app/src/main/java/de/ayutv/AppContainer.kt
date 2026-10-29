@@ -14,6 +14,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import de.ayutv.data.net.AppProxy
+import de.ayutv.data.net.ProxyConfig
+import de.ayutv.data.net.ProxyMode
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -30,13 +36,21 @@ class AppContainer(val context: Context) {
         .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
         .retryOnConnectionFailure(true)
         .followSslRedirects(true)
+        // Proxy nur für DnA-TV (Einstellungen → Wiedergabe → Proxy); ohne Einstellung geht alles direkt.
+        .proxySelector(AppProxy.selector)
+        .proxyAuthenticator(AppProxy.authenticator)
+        .addNetworkInterceptor(AppProxy.interceptor)
         .build()
 
     val epgOverrides = de.ayutv.data.EpgOverrides(context)
     val accountLimits = de.ayutv.data.AccountLimits(context)
     val playlists = PlaylistRepository(db, http, settings, context.cacheDir, epgOverrides, accountLimits).also { repo ->
         // Nach jedem Laden einer Playlist kurz die wichtigsten Sender prüfen: „Best of“ ist so gleich gefüllt.
-        repo.onImported = { runCatching { de.ayutv.data.repo.ChannelCheckWorker.runQuick(context) } }
+        repo.onImported = {
+            runCatching { de.ayutv.data.repo.ChannelCheckWorker.runQuick(context) }
+            // Neue Server der Playlist für den Proxy übernehmen.
+            scope.launch { applyProxy() }
+        }
     }
     val content = ContentRepository(db, http)
     /** Spielstände für Sport-Übersicht und Tor-Hinweise. */
@@ -64,6 +78,27 @@ class AppContainer(val context: Context) {
     val updates = de.ayutv.data.update.Updater(context, http)
     val parental = ParentalControl(context, db)
 
+    /** Proxy-Einstellungen anwenden; bei „Nur ausgewählte Playlists“ deren Server ermitteln. */
+    suspend fun applyProxy(config: ProxyConfig? = null) {
+        val next = config ?: runCatching { settings.current().proxyConfig }.getOrElse { ProxyConfig() }
+        val hosts = if (next.active && next.mode == ProxyMode.SELECTED) {
+            withContext(Dispatchers.IO) { runCatching { proxyHosts(next.playlists) }.getOrDefault(emptySet()) }
+        } else emptySet()
+        AppProxy.configure(next, hosts)
+        // Offene Verbindungen nicht weiterverwenden: Sie liefen über den bisherigen Weg.
+        http.connectionPool.evictAll()
+    }
+
+    private suspend fun proxyHosts(ids: Set<Long>): Set<String> = buildSet {
+        for (id in ids) {
+            val playlist = db.playlists().byId(id) ?: continue
+            AppProxy.hostOf(playlist.url)?.let(::add)
+            AppProxy.hostOf(playlist.epgUrl)?.let(::add)
+            db.channels().originsOf(id).mapNotNullTo(this) { AppProxy.hostOf(it) }
+            db.vod().originsOf(id).mapNotNullTo(this) { AppProxy.hostOf(it) }
+        }
+    }
+
     /** Spiele der gefolgten Vereine als Erinnerungen vormerken (nach jedem TV-Guide-Update). */
     suspend fun refreshTeamReminders() {
         runCatching {
@@ -74,6 +109,14 @@ class AppContainer(val context: Context) {
     }
 
     init {
+        // SOCKS5 mit Anmeldung: Java holt die Zugangsdaten über den systemweiten Authenticator.
+        java.net.Authenticator.setDefault(AppProxy.socksAuthenticator)
+        scope.launch {
+            runCatching { settings.settings.map { it.proxyConfig }.distinctUntilChanged().collect { applyProxy(it) } }
+                .onFailure { android.util.Log.w("AyuProxy", "Einstellungen", it) }
+            // Nie hängen lassen: Ohne lesbare Einstellungen bleibt es beim letzten Stand (oder „kein Proxy“).
+            AppProxy.configure(AppProxy.current, emptySet())
+        }
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)
         Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)
         Translators.withPhone = de.ayutv.data.translate.HelperAwareTranslator(Translators.remote, http)
