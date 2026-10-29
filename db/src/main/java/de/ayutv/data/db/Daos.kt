@@ -4,8 +4,11 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
 import androidx.room.Update
 import androidx.room.Upsert
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -143,22 +146,12 @@ interface ProgrammeDao {
     @Query("SELECT * FROM programmes WHERE stop > :now AND start <= :now AND playlistId IN (SELECT id FROM playlists WHERE enabled = 1)")
     suspend fun airingAt(now: Long): List<ProgrammeEntity>
 
-    /** Mögliche Sportsendungen im Zeitraum auf sichtbaren Sendern (grob; genau prüft ProgrammeText.isSportEvent). */
-    @Query(
-        """SELECT * FROM programmes WHERE stop > :from AND start < :to AND (
-           category LIKE '%ball%' OR category LIKE '%sport%' OR category LIKE '%tennis%' OR category LIKE '%darts%'
-           OR category LIKE '%hockey%' OR category LIKE '%formel%' OR category LIKE '%box%' OR category LIKE '%golf%'
-           OR title LIKE '%ball%' OR title LIKE '%liga%' OR title LIKE '%league%' OR title LIKE '%sport%' OR title LIKE '%live%'
-           OR title LIKE '%pokal%' OR title LIKE '%tennis%' OR title LIKE '%darts%' OR title LIKE '%formel%' OR title LIKE '%NFL%'
-           OR title LIKE '%NBA%' OR title LIKE '%NHL%' OR title LIKE '%UFC%' OR title LIKE '%box%' OR subtitle LIKE '% – %'
-           OR subtitle LIKE '% - %' OR title LIKE '% – %' OR title LIKE '% - %' OR title LIKE '% vs%' OR subtitle LIKE '% vs%'
-           OR title LIKE '% v %' OR subtitle LIKE '% v %' OR title LIKE '% gegen %' OR subtitle LIKE '% gegen %'
-           OR channelEpgId IN (SELECT epgId FROM visible_channels WHERE name LIKE '%sport%' OR name LIKE '%dazn%'
-              OR name LIKE '%servus%' OR name LIKE '%magenta%' OR name LIKE '%eleven%' OR name LIKE '%laola%'))
-           AND channelEpgId IN (SELECT epgId FROM visible_channels WHERE epgId IS NOT NULL AND epgId != '')
-           ORDER BY start LIMIT :limit"""
-    )
-    suspend fun sportBetween(from: Long, to: Long, limit: Int): List<ProgrammeEntity>
+    /**
+     * Für Abfragen, die Room beim Bauen nicht prüfen soll (lange OR-Ketten bringen dessen SQL-Parser auf über eine
+     * Stunde). Aufruf über [sportBetween].
+     */
+    @RawQuery
+    suspend fun rawProgrammes(query: SupportSQLiteQuery): List<ProgrammeEntity>
 
     @Query(
         """SELECT * FROM programmes WHERE channelEpgId = :epgId AND stop > :from
@@ -358,3 +351,20 @@ interface LockedGroupDao {
     @Query("DELETE FROM locked_groups")
     suspend fun clear()
 }
+
+/** Mögliche Sportsendungen im Zeitraum auf sichtbaren Sendern (grob; genau prüft ProgrammeText.isSportEvent). */
+suspend fun ProgrammeDao.sportBetween(from: Long, to: Long, limit: Int): List<ProgrammeEntity> =
+    rawProgrammes(SimpleSQLiteQuery(SPORT_BETWEEN_SQL, arrayOf<Any>(from, to, limit)))
+
+private const val SPORT_BETWEEN_SQL = """SELECT * FROM programmes WHERE stop > ? AND start < ? AND (
+           category LIKE '%ball%' OR category LIKE '%sport%' OR category LIKE '%tennis%' OR category LIKE '%darts%'
+           OR category LIKE '%hockey%' OR category LIKE '%formel%' OR category LIKE '%box%' OR category LIKE '%golf%'
+           OR title LIKE '%ball%' OR title LIKE '%liga%' OR title LIKE '%league%' OR title LIKE '%sport%' OR title LIKE '%live%'
+           OR title LIKE '%pokal%' OR title LIKE '%tennis%' OR title LIKE '%darts%' OR title LIKE '%formel%' OR title LIKE '%NFL%'
+           OR title LIKE '%NBA%' OR title LIKE '%NHL%' OR title LIKE '%UFC%' OR title LIKE '%box%' OR subtitle LIKE '% – %'
+           OR subtitle LIKE '% - %' OR title LIKE '% – %' OR title LIKE '% - %' OR title LIKE '% vs%' OR subtitle LIKE '% vs%'
+           OR title LIKE '% v %' OR subtitle LIKE '% v %' OR title LIKE '% gegen %' OR subtitle LIKE '% gegen %'
+           OR channelEpgId IN (SELECT epgId FROM visible_channels WHERE name LIKE '%sport%' OR name LIKE '%dazn%'
+              OR name LIKE '%servus%' OR name LIKE '%magenta%' OR name LIKE '%eleven%' OR name LIKE '%laola%'))
+           AND channelEpgId IN (SELECT epgId FROM visible_channels WHERE epgId IS NOT NULL AND epgId != '')
+           ORDER BY start LIMIT ?"""

@@ -1,8 +1,10 @@
-// Datenbank (Room) als eigenes Modul, Code-Erzeugung mit kapt: KSP wartete im CI über eine Stunde (kaum Rechenzeit),
-// selbst für diese drei Dateien. kapt ist für Room seit Jahren erprobt und hier in Sekunden fertig.
+// Datenbank (Room) als eigenes Modul: Die Code-Erzeugung (KSP) läuft nur, wenn sich hier etwas ändert.
+// Achtung: Room prüft jede @Query beim Bauen mit einem SQL-Parser, der bei langen OR-Ketten exponentiell langsam
+// wird (40 Bedingungen: über eine Stunde). Solche Abfragen als @RawQuery schreiben (siehe sportBetween).
 plugins {
     id("com.android.library")
-    id("com.android.legacy-kapt")
+    id("com.google.devtools.ksp")
+    id("androidx.room")
 }
 
 android {
@@ -20,20 +22,15 @@ android {
     }
 }
 
-kapt {
-    arguments {
-        arg("room.schemaLocation", layout.buildDirectory.dir("schemas").get().asFile.path)
-        arg("room.incremental", "true")
-    }
+// Das Room-Plugin verwaltet die Schema-Dateien je Build-Variante.
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
     val room = "2.8.5"
     api("androidx.room:room-runtime:$room")
     api("androidx.room:room-ktx:$room")
-    "kapt"("androidx.room:room-compiler:$room")
-    // Room liest die Kotlin-Metadaten mit einer Bibliothek, die nur bis Kotlin 2.3 reicht; die Version passend zum
-    // Compiler (2.4) nachziehen.
-    "kapt"("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.21")
+    ksp("androidx.room:room-compiler:$room")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }

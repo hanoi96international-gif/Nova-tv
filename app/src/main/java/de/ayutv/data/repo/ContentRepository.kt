@@ -13,6 +13,7 @@ import de.ayutv.data.db.PlaylistType
 import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
+import de.ayutv.data.db.sportBetween
 import de.ayutv.data.parse.ChannelVariants
 import de.ayutv.data.parse.ChannelQuality
 import de.ayutv.data.db.ProgrammeFlags
