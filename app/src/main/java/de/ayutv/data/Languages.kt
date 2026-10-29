@@ -59,9 +59,16 @@ object Languages {
         "rum" to "ro", "alb" to "sq", "per" to "fa", "chi" to "zh", "nob" to "no", "nno" to "no",
     )
 
-    /** "ger", "deu", "de-DE", "DE" → "de"; null, wenn unbekannt. */
+    /** Veraltete Zwei-Buchstaben-Kennungen (ältere Java-Versionen, manche Dateien). */
+    private val LEGACY = mapOf("in" to "id", "iw" to "he", "ji" to "yi")
+
+    /** "ger", "deu", "de-DE", "DE", "ms-ind" → "de" bzw. "id"; null, wenn unbekannt. */
     fun normalize(code: String?): String? {
-        val raw = code?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_')?.takeIf { it.isNotEmpty() } ?: return null
+        val parts = code?.trim()?.lowercase()?.replace('_', '-')?.split('-') ?: return null
+        // Media3 schreibt Einzelsprachen als „Makrosprache-Einzelsprache“: „ms-ind“ ist Indonesisch (nicht Malaiisch),
+        // „no-nob“ Norwegisch. Die Einzelsprache zählt.
+        parts.getOrNull(1)?.takeIf { it.length == 3 }?.let { THREE_LETTER[it] }?.let { return it }
+        val raw = parts.first().takeIf { it.isNotEmpty() }?.let { LEGACY[it] ?: it } ?: return null
         return when (raw.length) {
             2 -> raw.takeIf { it in byCode }
             3 -> THREE_LETTER[raw]
