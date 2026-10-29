@@ -20,5 +20,9 @@ class PlayerMemoryTest {
         assertEquals(PlayerMemory.Choice(), PlayerMemory.decode(null))
         assertEquals(PlayerMemory.Choice(audio = "en"), PlayerMemory.decode("en"))
         assertEquals(PlayerMemory.Choice(text = "de"), PlayerMemory.decode("|de|UNKNOWN"))
+        // Ältere Einträge ohne vierte Spalte, neue mit geladenen Untertiteln
+        assertEquals(PlayerMemory.Choice(audio = "de", aspect = AspectMode.STRETCH), PlayerMemory.decode("de||STRETCH"))
+        val loaded = PlayerMemory.Choice(audio = "en", load = "de")
+        assertEquals(loaded, PlayerMemory.decode(PlayerMemory.encode(loaded)))
     }
 }

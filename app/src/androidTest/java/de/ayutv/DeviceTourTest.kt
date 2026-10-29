@@ -201,22 +201,22 @@ class DeviceTourTest {
         section("ui") { ActivityScenario.launch(MainActivity::class.java).use {
             Thread.sleep(4_000)
             shot("01_home")
+            // OK auf einem Bereich der Leiste geht gleich hinein; ◀ führt zurück in die Leiste.
+            fun next(name: String) {
+                key(KeyEvent.KEYCODE_DPAD_LEFT, 4)
+                key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
+                shot(name)
+            }
             key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
             shot("02_live")
-            key(KeyEvent.KEYCODE_DPAD_RIGHT, 2); Thread.sleep(800)
+            key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(800)
             shot("03_live_focus")
-            key(KeyEvent.KEYCODE_DPAD_LEFT, 3)
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("04_guide")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("04b_sport")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("05_movies")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_000)
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("06_search")
-            key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
-            shot("07_settings")
+            next("04_guide")
+            next("04b_sport")
+            next("05_movies")
+            next("05b_series")
+            next("06_search")
+            next("07_settings")
         } }
 
         // 3. Live: Start, Zappen, Senderliste, Menü
@@ -406,6 +406,23 @@ class DeviceTourTest {
             }
         } }
 
+        // Anbieter hängt (schickt 12 s nichts, Verbindung bleibt offen): selbst merken und neu verbinden,
+        // ohne dass der Player mit einem Fehler neu startet („Verbindung wird wiederhergestellt“).
+        channels.firstOrNull { it.name == "Hängende Leitung" }?.let { stall -> section("stall") {
+            launchPlayer(PlayerActivity.liveIntent(app, stall.key, null)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                var playing = 0
+                repeat(60) {
+                    Thread.sleep(1_000)
+                    if (scenario.read { it.player?.isPlaying } == true) playing++
+                }
+                val errors = scenario.read { it.playerErrors }
+                log("stall: playing_s=$playing errors=$errors drops=${scenario.read { it.dropInfo }} message=${scenario.read { it.message }}")
+                assertTrue("Player startete $errors× mit Fehler neu statt selbst neu zu verbinden", errors == 0)
+                assertTrue("Bild lief nur $playing von 60 s", playing >= 30)
+            }
+        } }
+
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
         // OpenSubtitles (eingebauter Schlüssel): Zugang gültig, Suche nach einem bekannten Film liefert Treffer.
@@ -497,17 +514,22 @@ class DeviceTourTest {
                 )
                 assertTrue("Untertitel nicht automatisch ausgerichtet", synced)
 
-                // Von Hand: Zeile wählen und „jetzt gesprochen“ drücken. Die Zeile muss sofort zu sehen sein.
+                // Von Hand: Leiste öffnen, mit ▶ eine spätere Zeile wählen, OK „jetzt gesprochen“. Die Zeile muss sofort zu sehen sein.
                 scenario.onActivity { it.openTracks(); it.openSyncPanel() }
                 Thread.sleep(1_500)
                 shot("24b_subtitle_manual")
-                val line = scenario.read { a -> a.syncLines().firstOrNull { it.upcoming && it.start > 30_000 } }
-                checkNotNull(line) { "Keine Zeilen zum Ausrichten" }
-                scenario.onActivity { it.anchorSubtitle(line.start) }
-                val anchored = waitFor(2_000) { scenario.read { it.translatedCue } == line.text }
-                log("subtitle_manual: line=${line.text} anchored=$anchored shift=${scenario.read { it.subtitleShiftLabel }}")
-                scenario.onActivity { it.closeOverlay() }
-                assertTrue("Ausrichten an einer Zeile wirkt nicht (${scenario.read { it.translatedCue }} statt ${line.text})", anchored)
+                var steps = 0
+                while ((scenario.read { it.syncCandidateStart } ?: 0L) <= 30_000 && steps++ < 40) {
+                    key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(150)
+                }
+                val text = scenario.read { it.syncCue(it.syncCandidate) }
+                checkNotNull(text) { "Keine Zeilen zum Ausrichten" }
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                val anchored = waitFor(2_000) { scenario.read { it.translatedCue?.replace('\n', ' ') } == text }
+                shot("24c_subtitle_manual_done")
+                log("subtitle_manual: steps=$steps line=$text anchored=$anchored shift=${scenario.read { it.subtitleShiftLabel }} confirmed=${scenario.read { it.syncConfirmed }}")
+                key(KeyEvent.KEYCODE_BACK)
+                assertTrue("Ausrichten an einer Zeile wirkt nicht (${scenario.read { it.translatedCue }} statt $text)", anchored)
             }
         }
 
@@ -797,6 +819,84 @@ class DeviceTourTest {
             log("playlist_toggle: before=$before off=$off search_off=$searchOff on=$on")
             assertTrue("Ausschalten wirkt nicht", off < before && searchOff == 0 && on == before)
         }
+        // Sender-Check: Auflösung ohne Dekodieren erkennen; eine kaputte Adresse gilt als „läuft nicht“
+        section("channel_check") {
+            val hd = live.firstOrNull { it.name == "HD Test 50fps" } ?: error("HD-Testsender fehlt")
+            val check = de.ayutv.data.repo.ChannelCheck(app, container)
+            val good = runBlocking { check.probe(hd) }
+            val bad = runBlocking { check.probe(hd.copy(key = "kaputt", url = "http://10.0.2.2:8000/gibt-es-nicht.ts")) }
+            log("channel_check: hd=${good.first}p in ${good.second} ms, kaputt=${bad.first}")
+            assertTrue("Auflösung nicht erkannt", good.first >= 720)
+            assertTrue("Kaputte Adresse als laufend erkannt", bad.first == 0)
+        }
+
+        // Fehlerbericht: per Handy-Seite abrufbar, ohne Zugangsdaten
+        section("report") {
+            val server = de.ayutv.data.setup.PhoneSetupServer(container)
+            server.start()
+            try {
+                assertTrue("Keine Adresse", waitFor(5_000) { server.state.value.url != null })
+                val (code, text) = container.http.newCall(okhttp3.Request.Builder().url("${server.state.value.url}/report.txt").build()).execute()
+                    .use { it.code to it.body.string() }
+                val passwords = runBlocking { container.db.playlists().all() }.mapNotNull { it.password }
+                    .mapNotNull { runCatching { de.ayutv.data.security.Credentials.reveal(it) }.getOrDefault(it) }.filter { it.length >= 4 }
+                val leaked = passwords.filter { it in text }
+                log("report: code=$code bytes=${text.length} sections=${Regex("== (.+?) ==").findAll(text).map { it.groupValues[1] }.toList()} leaked=${leaked.size}")
+                assertTrue("Bericht unvollständig", code == 200 && "Fehlerbericht" in text && "== Protokoll ==" in text && "== Playlists ==" in text)
+                assertTrue("Passwort im Bericht", leaked.isEmpty() && !Regex("password=(?!\\*)").containsMatchIn(text))
+            } finally {
+                server.stop()
+            }
+        }
+
+        // Konferenz: zweites, kleines Bild, tauschen, schließen; Anstoß-Hinweis im Bild
+        val pipMain = live.firstOrNull { it.name == "HD Test 50fps" }
+        val pipSecond = live.firstOrNull { it.name == "HLS Test" }
+        if (pipMain != null && pipSecond != null) section("pip") {
+            val main = pipMain
+            val second = pipSecond
+            launchPlayer(PlayerActivity.liveIntent(app, main.key, null)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.startPip(second) }
+                val pipReady = waitFor(20_000) { scenario.read { it.pipPlayer?.playbackState } == Player.STATE_READY }
+                Thread.sleep(3_000)
+                shot("40_pip")
+                val pipFrames = scenario.read { it.pipPlayer?.videoFormat?.let { f -> "${f.width}x${f.height}" } }
+                key(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD)
+                val swapped = waitFor(15_000) { scenario.read { it.current?.key == second.key && it.pipChannel?.key == main.key } }
+                container.dueReminder.value = de.ayutv.data.reminders.Reminder(main.key, main.name, "Testspiel A – B", System.currentTimeMillis() + 60_000)
+                val shown = waitFor(3_000) { scenario.read { it.dueReminder != null } }
+                shot("41_reminder_overlay")
+                key(KeyEvent.KEYCODE_DPAD_CENTER)
+                val switched = waitFor(10_000) { scenario.read { it.current?.key == main.key } }
+                scenario.onActivity { it.closePip() }
+                log("pip: ready=$pipReady format=$pipFrames swapped=$swapped reminder_shown=$shown switched=$switched message=${scenario.read { it.message }}")
+                assertTrue("Kleines Bild läuft nicht", pipReady && swapped)
+                assertTrue("Anstoß-Hinweis fehlt", shown && switched)
+            }
+        }
+
+        // Handy übersetzt: Schnittstelle des Helfers (hier im selben Gerät) beantwortet die Übersetzung
+        section("phone_helper") {
+            val helper = de.ayutv.data.remote.TranslationHelperServer()
+            val address = helper.start() ?: error("Helfer ohne Adresse")
+            try {
+                de.ayutv.data.translate.PhoneHelper.register(address, "CI")
+                val before = de.ayutv.data.translate.PhoneHelper.served
+                val result = runBlocking { de.ayutv.data.repo.Translators.withPhone.translate(listOf("Hello, how are you?", "Thank you."), "de", "en") }
+                val served = de.ayutv.data.translate.PhoneHelper.served - before
+                log("phone_helper: address=${address.substringBeforeLast('/')} served=$served helper_lines=${helper.state.value.lines} result=$result")
+                assertTrue("Handy hat nicht übersetzt", served == 2 && helper.state.value.lines == 2 && result.first() != "Hello, how are you?")
+                // Kein Schlüssel: abgewiesen
+                val wrong = container.http.newCall(okhttp3.Request.Builder().url(address.substringBeforeLast('/') + "/x/translate")
+                    .post("{}".toRequestBody("application/json".toMediaTypeOrNull())).build()).execute().use { it.code }
+                assertTrue("Ohne Schlüssel angenommen: $wrong", wrong == 404)
+            } finally {
+                de.ayutv.data.translate.PhoneHelper.register(null, null)
+                helper.stop()
+            }
+        }
+
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
     }

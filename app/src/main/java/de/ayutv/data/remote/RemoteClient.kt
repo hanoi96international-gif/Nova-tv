@@ -90,6 +90,19 @@ class RemoteClient(private val context: Context, private val container: AppConta
         return sync.import(theirs)
     }
 
+    /**
+     * Beim Fernseher als Übersetzer melden ([helperAddress] = null: abmelden). Liefert die Sprachen, in die der
+     * Fernseher übersetzt (deren Modelle das Handy vorab lädt).
+     */
+    suspend fun registerHelper(helperAddress: String?): List<String> = withContext(Dispatchers.IO) {
+        val name = java.net.URLEncoder.encode(android.os.Build.MODEL, "UTF-8")
+        val body = call(required(), pin!!, "/helper?name=$name", helperAddress.orEmpty())
+        Regex("\"([a-z]{2,3})\"").findAll(body.substringAfter("languages")).map { it.groupValues[1] }.toList()
+    }
+
+    /** Fehlerbericht des Fernsehers (ohne Passwörter), zum Weiterschicken vom Handy. */
+    suspend fun report(): String = withContext(Dispatchers.IO) { call(required(), pin!!, "/report", null) }
+
     private fun required(): String = address ?: throw IOException("Kein Fernseher gekoppelt")
 
     private fun call(address: String, pin: String, path: String, body: String?): String {

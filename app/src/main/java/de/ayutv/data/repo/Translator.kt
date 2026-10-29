@@ -24,9 +24,12 @@ object Translators {
      */
     lateinit var remote: de.ayutv.data.translate.RemoteTranslator
 
+    /** [remote], aber über das Handy, solange eines mitrechnet ([de.ayutv.data.translate.PhoneHelper]). */
+    lateinit var withPhone: Translator
+
     /** Übersetzer gemäß Einstellung, oder null, wenn die Übersetzung ausgeschaltet ist. */
     fun from(settings: AppSettings): Translator? = when (settings.translationProvider) {
-        TranslationProvider.ON_DEVICE -> remote
+        TranslationProvider.ON_DEVICE -> if (::withPhone.isInitialized) withPhone else remote
         TranslationProvider.NONE -> null
     }
 }

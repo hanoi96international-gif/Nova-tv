@@ -2,6 +2,7 @@ package de.ayutv.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -123,7 +124,9 @@ fun AyuRoot() {
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
     val sectionState = rememberSaveableStateHolder()
 
-    Box(Modifier.fillMaxSize().background(AyuColors.Background)) {
+    LaunchedEffect(appSettings?.uiTheme) { appSettings?.uiTheme?.let { AyuColors.use(it) } }
+
+    de.ayutv.ui.theme.AppBackground {
         val list = playlists
         when {
             list == null -> Unit
@@ -146,7 +149,16 @@ fun AyuRoot() {
                 val portrait = isPortrait
                 Box(Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxSize().padding(start = if (portrait) 0.dp else NAV_COLLAPSED, bottom = if (portrait) NAV_BOTTOM else 0.dp)) {
-                        sectionState.SaveableStateProvider(section.name) { when (section) {
+                        // Weicher Wechsel zwischen den Bereichen statt hartem Umschalten.
+                        androidx.compose.animation.AnimatedContent(
+                            targetState = section,
+                            transitionSpec = {
+                                (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)) +
+                                    androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 24 }) togetherWith
+                                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                            },
+                            label = "section",
+                        ) { shown -> sectionState.SaveableStateProvider(shown.name) { when (shown) {
                             Section.HOME -> HomeScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.LIVE -> LiveScreen()
                             Section.GUIDE -> GuideScreen()
@@ -159,7 +171,7 @@ fun AyuRoot() {
                                 onManageGroups = { managingGroups = it },
                                 onChooseCountries = { choosingCountries = true },
                             )
-                        } }
+                        } } }
                     }
                     if (portrait) {
                         BottomNav(sections, section, Modifier.align(Alignment.BottomCenter)) { section = it }
@@ -220,23 +232,36 @@ private fun BottomNav(sections: List<Section>, selected: Section, modifier: Modi
 @Composable
 private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int, onSelect: (Section) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val width by animateDpAsState(if (expanded) NAV_EXPANDED else NAV_COLLAPSED, label = "nav")
+    val width by animateDpAsState(
+        if (expanded) NAV_EXPANDED else NAV_COLLAPSED,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 700f),
+        label = "nav",
+    )
+    val dim by androidx.compose.animation.core.animateFloatAsState(if (expanded) 0.45f else 0f, androidx.compose.animation.core.tween(220), label = "dim")
+    var enterTick by remember { mutableIntStateOf(0) }
     val initialFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val touch = isTouchDevice
 
-    if (expanded) {
-        // Abdunkeln des Inhalts hinter der aufgeklappten Navigation; Tippen daneben klappt sie zu.
+    if (dim > 0f) {
+        // Sanftes Abdunkeln des Inhalts hinter der aufgeklappten Navigation; Tippen daneben klappt sie zu.
         Box(
-            Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f))
-                .then(if (touch) Modifier.pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } } else Modifier)
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    listOf(Color.Black.copy(alpha = dim), Color.Black.copy(alpha = dim * 0.4f), Color.Transparent),
+                )
+            ).then(if (touch) Modifier.pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } } else Modifier)
         )
     }
     Column(
         Modifier
             .fillMaxHeight()
             .width(width)
-            .background(AyuColors.Surface)
+            .background(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    listOf(AyuColors.Surface, AyuColors.Surface.copy(alpha = if (expanded) 0.97f else 0.88f)),
+                )
+            )
             .onFocusChanged { expanded = it.hasFocus }
             .focusRestorer()
             .padding(vertical = 24.dp, horizontal = 10.dp),
@@ -255,8 +280,9 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
             Surface(
                 onClick = {
                     onSelect(item)
-                    // Per Touch: nach der Wahl zuklappen (mit der Fernbedienung geht es mit ▶ in den Inhalt).
-                    if (touch) focusManager.clearFocus()
+                    // Per Touch: nach der Wahl zuklappen. Mit der Fernbedienung: OK geht gleich in den Bereich
+                    // (die Leiste klappt dabei zu), statt erst noch ▶ drücken zu müssen.
+                    if (touch) focusManager.clearFocus() else enterTick++
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -275,9 +301,15 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
                         tint = if (isSelected) AyuColors.Accent else AyuColors.TextSecondary,
                         modifier = Modifier.size(22.dp),
                     )
-                    if (expanded) {
-                        Spacer(Modifier.width(14.dp))
-                        Text(item.label, color = AyuColors.TextPrimary, fontSize = 15.sp, maxLines = 1)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = expanded,
+                        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180, delayMillis = 60)),
+                        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)),
+                    ) {
+                        Row {
+                            Spacer(Modifier.width(14.dp))
+                            Text(item.label, color = AyuColors.TextPrimary, fontSize = 15.sp, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -289,6 +321,16 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
         repeat(5) {
             if (runCatching { initialFocus.requestFocus() }.isSuccess) return@LaunchedEffect
             delay(16)
+        }
+    }
+    // OK auf einem Bereich: sobald er da ist, den Fokus hineinsetzen (wie ▶).
+    LaunchedEffect(enterTick) {
+        if (enterTick == 0) return@LaunchedEffect
+        // Erst wenn der alte Bereich ausgeblendet ist, sonst landet der Fokus noch in ihm.
+        delay(140)
+        repeat(12) {
+            delay(40)
+            if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@LaunchedEffect
         }
     }
 }

@@ -2,8 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
-    id("androidx.room")
 }
 
 android {
@@ -15,8 +13,8 @@ android {
         // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
         minSdk = 24
         targetSdk = 35
-        versionCode = 33
-        versionName = "0.28.0"
+        versionCode = 35
+        versionName = "0.30.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
@@ -72,12 +70,6 @@ android {
     }
 }
 
-// Das Room-Plugin verwaltet die Schema-Dateien je Build-Variante. Mit dem alten ksp-Argument
-// schrieben Debug- und Release-Build parallel in dieselbe Datei und zerstörten sie gegenseitig.
-room {
-    schemaDirectory("$projectDir/schemas")
-}
-
 dependencies {
     val compose = "1.12.1"
     implementation("androidx.compose.foundation:foundation:$compose")
@@ -112,10 +104,8 @@ dependencies {
     val ffmpegAar = file("libs/lib-decoder-ffmpeg-release.aar")
     if (ffmpegAar.exists()) implementation(files(ffmpegAar))
 
-    val room = "2.8.5"
-    implementation("androidx.room:room-runtime:$room")
-    implementation("androidx.room:room-ktx:$room")
-    ksp("androidx.room:room-compiler:$room")
+    // Datenbank (Room) im eigenen Modul, siehe db/build.gradle.kts
+    implementation(project(":db"))
 
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")

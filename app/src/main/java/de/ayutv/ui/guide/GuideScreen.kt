@@ -110,7 +110,8 @@ fun GuideScreen() {
         if (activeGroup == FAVORITES_GROUP) content.favoriteChannels else content.channelsIn(activeGroup)
     }.collectAsStateWithLifecycle(emptyList())
     // Jeder Sender eine Zeile, auch wenn der Anbieter ihn in SD, HD und 4K führt.
-    val channels by produceState(emptyList<ChannelEntity>(), rawChannels, appSettings?.mergeVariants, activeGroup) {
+    val channels by produceState(emptyList<ChannelEntity>(), rawChannels, appSettings?.mergeVariants, activeGroup, appSettings?.minQuality, appSettings?.preferUhd) {
+        appSettings?.let { de.ayutv.data.parse.ChannelQuality.configure(it.minQuality.height, it.preferUhd, it.hideBrokenChannels) }
         value = if (appSettings?.mergeVariants != false && activeGroup != FAVORITES_GROUP) content.mergeVariants(rawChannels) else rawChannels
     }
     val minute by rememberMinuteTicker()

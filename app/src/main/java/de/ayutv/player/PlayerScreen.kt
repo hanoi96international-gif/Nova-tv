@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -138,6 +140,32 @@ fun PlayerScreen(activity: PlayerActivity) {
             Box(Modifier.fillMaxSize().background(Color.Black))
         }
 
+        activity.pipPlayer?.let { pip ->
+            PipWindow(pip, activity.pipChannel?.name.orEmpty(), Modifier.align(Alignment.BottomEnd))
+        }
+
+        if (activity.syncPanel && activity.overlay == Overlay.NONE) {
+            SyncBar(activity, Modifier.align(Alignment.BottomCenter))
+        }
+
+        activity.dueReminder?.let { reminder ->
+            Column(
+                Modifier.align(Alignment.TopEnd).padding(top = 32.dp, end = 32.dp).width(460.dp)
+                    .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                    .border(2.dp, AyuColors.Accent, RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+            ) {
+                Text("⏰ Gleich auf ${reminder.channelName}", color = AyuColors.Accent, fontSize = 15.sp)
+                Text(reminder.title, color = Color.White, fontSize = 18.sp, maxLines = 2, modifier = Modifier.padding(top = 4.dp))
+                Text(
+                    "OK umschalten" + (if (activity.isLive) "  ·  ⏩ als kleines Bild" else "") + "  ·  Zurück ausblenden",
+                    color = AyuColors.TextSecondary,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+
         // Bild-in-Bild: nur das Bild, keine Leisten und Hinweise.
         if (!activity.inPip) {
 
@@ -238,7 +266,7 @@ fun PlayerScreen(activity: PlayerActivity) {
         if (activity.ownSubtitles) {
             activity.translatedCue?.let { cue ->
                 // Über die Steuerleiste anheben, solange sie sichtbar ist (wie beim Player).
-                val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
+                val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO || activity.syncPanel
                 val look = activity.subtitleLook
                 val bottom = when (look.position) {
                     SubtitlePosition.LOW -> 20.dp
@@ -313,7 +341,7 @@ fun PlayerScreen(activity: PlayerActivity) {
             // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
             Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             // Beim Zuordnen des TV-Guides (Suchen, Blättern in langen Listen) nicht von selbst schließen.
-            Overlay.TRACKS -> if (activity.epgPicker || activity.syncPanel) Long.MAX_VALUE else 15_000L
+            Overlay.TRACKS -> if (activity.epgPicker || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
             Overlay.CHANNELS -> 15_000L
         }
         delay(timeout)
@@ -372,6 +400,10 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         if (activity.showTech) {
             Spacer(Modifier.height(12.dp))
             TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
+        }
+        activity.syncBadge?.let { badge ->
+            Spacer(Modifier.height(8.dp))
+            Text(badge, color = Color(0xFF7FD69B), fontSize = 14.sp, maxLines = 1)
         }
         Spacer(Modifier.height(10.dp))
         Text(
@@ -554,6 +586,10 @@ private fun VodControls(activity: PlayerActivity) {
             Spacer(Modifier.height(12.dp))
             TechLine(activity.stats, activity.bufferedMs, activity.cushionActive, activity.dropInfo)
         }
+        activity.syncBadge?.let { badge ->
+            Spacer(Modifier.height(8.dp))
+            Text(badge, color = if (badge.startsWith("✓")) Color(0xFF7FD69B) else Color(0xFFFFC870), fontSize = 14.sp, maxLines = 2)
+        }
         Spacer(Modifier.height(10.dp))
         Text(
             (if (activity.player?.playWhenReady == false) "Pausiert  ·  " else "") + "OK Pause   ◀ −10 s   ▶ +30 s (halten = schneller)   ▲ Stream-Info   ☰ Ton/Untertitel",
@@ -647,8 +683,8 @@ private fun TracksOverlay(activity: PlayerActivity) {
         EpgPicker(activity)
         return
     }
-    if (activity.syncPanel) {
-        SyncPanel(activity)
+    activity.pipChoices?.let { choices ->
+        PipPicker(activity, choices)
         return
     }
     val tracks = activity.tracks
@@ -678,6 +714,13 @@ private fun TracksOverlay(activity: PlayerActivity) {
             }
             item {
                 OptionRow("📺 Programm falsch? TV-Guide zuordnen …", selected = false) { activity.openEpgPicker() }
+            }
+            if (activity.pipPlayer == null) item {
+                OptionRow("⧉ Zweites Spiel als kleines Bild (Konferenz) …", selected = false) { activity.openPipPicker() }
+            } else {
+                item { OptionRow("⇄ Bilder tauschen (auch mit ⏩)", selected = false) { activity.swapPip() } }
+                item { OptionRow("⧉ Anderes kleines Bild …", selected = false) { activity.openPipPicker() } }
+                item { OptionRow("✕ Kleines Bild schließen", selected = false) { activity.closePip() } }
             }
         }
         if (activity.vlcAvailable) item {
@@ -858,64 +901,99 @@ private fun EpgPicker(activity: PlayerActivity) {
     }
 }
 
-/**
- * Untertitel-Zeit von Hand: Zeile wählen und OK drücken, sobald sie gesprochen wird (ein Druck, egal wie weit
- * daneben). Oder in Schritten verschieben, ohne das Menü jedes Mal neu zu öffnen.
- */
+/** Zweites Bild: laufende Spiele, voriger Sender, Favoriten. */
 @Composable
-private fun SyncPanel(activity: PlayerActivity) {
-    val lines = remember { activity.syncLines() }
-    val firstUpcoming = remember(lines) { lines.indexOfFirst { it.upcoming }.coerceAtLeast(0) }
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (firstUpcoming + 3).coerceAtLeast(0))
-    val focusLine = remember { FocusRequester() }
-    val focusStep = remember { FocusRequester() }
+private fun PipPicker(activity: PlayerActivity, choices: List<Pair<de.ayutv.data.db.ChannelEntity, String>>) {
+    val firstItem = remember { FocusRequester() }
     LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxHeight().width(500.dp).background(Color.Black.copy(alpha = 0.94f)),
+        modifier = Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.94f)),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        item { MenuHeader("Untertitel-Zeit: ${activity.subtitleShiftLabel}") }
-        item {
-            MenuHint(
-                "Am schnellsten: unten eine Zeile wählen, die gleich kommt, und OK drücken, sobald sie gesprochen wird. " +
-                    "Ein zweites Mal ein paar Minuten später korrigiert auch auseinanderlaufende Untertitel."
-            )
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(vertical = 6.dp)) {
-                listOf(-10_000L to "−10 s", -1_000L to "−1 s", -250L to "−¼ s", 250L to "+¼ s", 1_000L to "+1 s", 10_000L to "+10 s")
-                    .forEachIndexed { index, (delta, label) ->
-                        Surface(
-                            onClick = { activity.shiftSubtitles(delta) },
-                            modifier = if (index == 2) Modifier.focusRequester(focusStep) else Modifier,
-                            shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
-                            colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.Accent),
-                            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
-                        ) { Text(label, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) }
-                    }
+        item { MenuHeader("Kleines Bild dazu") }
+        item { MenuHint("Läuft ohne Ton unten rechts. ⏩ tauscht die Bilder, ☰ schließt. Braucht eine zweite Verbindung beim Anbieter.") }
+        if (choices.isEmpty()) item { MenuHint("Gerade kein Spiel, kein voriger Sender und keine Favoriten.") }
+        choices.forEachIndexed { index, (channel, label) ->
+            item(key = channel.key) {
+                OptionRow(label, selected = false, modifier = if (index == 0) Modifier.focusRequester(firstItem) else Modifier) {
+                    activity.startPip(channel)
+                }
             }
         }
-        item { MenuHint("− früher einblenden, + später einblenden") }
-        item { MenuHeader("Zeile wählen, OK beim Sprechen") }
-        if (lines.isEmpty()) item { MenuHint("Hier gibt es gerade keine Zeilen.") }
-        lines.forEachIndexed { index, line ->
-            item {
-                OptionRow(
-                    line.text,
-                    selected = false,
-                    modifier = if (index == firstUpcoming) Modifier.focusRequester(focusLine) else Modifier,
-                ) { activity.anchorSubtitle(line.start) }
-            }
-        }
-        item { OptionRow("Fertig", selected = false) { activity.closeSyncPanel() } }
     }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(choices.isNotEmpty()) {
         repeat(5) {
-            val target = if (lines.isEmpty()) focusStep else focusLine
-            if (runCatching { target.requestFocus() }.isSuccess) return@LaunchedEffect
+            if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
             delay(16)
         }
+    }
+}
+
+/** Das kleine Bild: eigene Fläche über dem Hauptbild (SurfaceView als Medien-Overlay). */
+@Composable
+private fun PipWindow(player: androidx.media3.exoplayer.ExoPlayer, label: String, modifier: Modifier) {
+    Column(modifier.padding(end = 36.dp, bottom = 36.dp).width(420.dp)) {
+        androidx.compose.runtime.key(player) {
+            AndroidView(
+                factory = { context ->
+                    android.view.SurfaceView(context).apply {
+                        setZOrderMediaOverlay(true)
+                        player.setVideoSurfaceView(this)
+                    }
+                },
+                onRelease = { view -> player.clearVideoSurfaceView(view) },
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                    .border(2.dp, Color.White.copy(alpha = 0.8f)),
+            )
+        }
+        Text(
+            "$label  ·  ⏩ tauschen",
+            color = Color.White,
+            fontSize = 13.sp,
+            maxLines = 1,
+            modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 8.dp, vertical = 3.dp),
+        )
+    }
+}
+
+/** Ausrichten mit einem Druck: die nächste Zeile groß, OK sobald sie gesprochen wird. */
+@Composable
+private fun SyncBar(activity: PlayerActivity, modifier: Modifier) {
+    val index = activity.syncCandidate
+    Column(
+        modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 28.dp)
+            .background(Color.Black.copy(alpha = 0.88f), RoundedCornerShape(14.dp))
+            .border(2.dp, AyuColors.Accent, RoundedCornerShape(14.dp))
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Untertitel ausrichten", color = AyuColors.Accent, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text("jetzt ${activity.subtitleShiftLabel}", color = AyuColors.TextSecondary, fontSize = 14.sp)
+        }
+        activity.syncCue(index - 1)?.let { Text(it, color = AyuColors.TextSecondary, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp)) }
+        Text(
+            activity.syncCue(index)?.let { "„$it“" } ?: "Keine Zeilen geladen",
+            color = Color.White,
+            fontSize = 26.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 3,
+            modifier = Modifier.padding(vertical = 6.dp),
+        )
+        activity.syncCue(index + 1)?.let { Text(it, color = AyuColors.TextSecondary, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Text(
+            activity.syncConfirmed ?: "OK drücken, sobald diese Zeile gesprochen wird",
+            color = if (activity.syncConfirmed != null) Color(0xFF7FD69B) else Color.White,
+            fontSize = 17.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Text(
+            "◀ ▶ andere Zeile   ·   ▲ früher  ▼ später (½ s)   ·   ⏯ Pause   ·   Zurück: fertig",
+            color = AyuColors.TextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }
 

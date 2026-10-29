@@ -42,7 +42,7 @@ class TimeshiftBuffer(
     private val marks = ArrayList<Mark>()
     private var out: FileOutputStream? = null
     private var end = 0L
-    private var released = false
+    @Volatile private var released = false
 
     // Uhr des Streams
     private var contentMs = 0L
@@ -69,6 +69,51 @@ class TimeshiftBuffer(
     val oldestMs: Long get() = synchronized(lock) { marks.firstOrNull()?.ms ?: contentMs }
     val hasData: Boolean get() = synchronized(lock) { marks.isNotEmpty() }
     val bytesStored: Long get() = synchronized(lock) { end - (chunks.firstOrNull()?.start ?: end) }
+
+    private val pending = java.util.concurrent.LinkedBlockingQueue<ByteArray>()
+    private val pendingBytes = java.util.concurrent.atomic.AtomicLong()
+    @Volatile private var writer: Thread? = null
+
+    /**
+     * Für die Lese-Threads (Player, Aufnahme): Daten kopieren und im Hintergrund schreiben. Ein langsamer oder
+     * kurz hängender Speicher bremst so nie das Lesen vom Anbieter (der sonst die Verbindung trennt). Kommt der
+     * Speicher gar nicht mehr hinterher, endet nur der Zeitversatz für diesen Sender, das Bild läuft weiter.
+     */
+    fun writeLater(data: ByteArray, off: Int, len: Int) {
+        if (len <= 0 || released) return
+        if (pendingBytes.addAndGet(len.toLong()) > MAX_PENDING_BYTES) {
+            android.util.Log.w("Timeshift", "Speicher kommt nicht hinterher: Zeitversatz für diesen Sender aus")
+            release()
+            return
+        }
+        pending.offer(data.copyOfRange(off, off + len))
+        if (writer == null) startWriter()
+    }
+
+    @Synchronized
+    private fun startWriter() {
+        if (writer != null || released) return
+        writer = Thread({
+            while (!released) {
+                val next = try {
+                    pending.poll(500, java.util.concurrent.TimeUnit.MILLISECONDS)
+                } catch (e: InterruptedException) {
+                    break
+                } ?: continue
+                pendingBytes.addAndGet(-next.size.toLong())
+                write(next, 0, next.size)
+            }
+        }, "timeshift-writer").apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    /** Warten, bis alles im Hintergrund Geschriebene auf dem Speicher ist (Tests, Wechsel in den Zeitversatz). */
+    fun awaitWritten(timeoutMs: Long = 2_000) {
+        val until = System.nanoTime() / 1_000_000 + timeoutMs
+        while ((pending.isNotEmpty() || pendingBytes.get() > 0) && !released && System.nanoTime() / 1_000_000 < until) Thread.sleep(5)
+    }
 
     fun write(data: ByteArray, off: Int, len: Int) {
         if (len <= 0) return
@@ -235,6 +280,9 @@ class TimeshiftBuffer(
     private fun releaseLocked() {
         if (released) return
         released = true
+        pending.clear()
+        writer?.interrupt()
+        writer = null
         out?.runCatching { close() }
         out = null
         chunks.forEach { it.file.delete() }
@@ -246,6 +294,8 @@ class TimeshiftBuffer(
     val isReleased: Boolean get() = synchronized(lock) { released }
 
     companion object {
+        /** Höchstens so viel wartet auf den Speicher (gut 10 s bei 4K), sonst endet der Zeitversatz. */
+        private const val MAX_PENDING_BYTES = 24L * 1024 * 1024
         private const val TS_PACKET = 188
         private const val SYNC = 0x47.toByte()
         const val CHUNK_BYTES = 4L * 1024 * 1024

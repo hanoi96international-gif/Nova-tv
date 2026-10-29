@@ -7,6 +7,8 @@ import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.AyuRoot
 import de.ayutv.ui.components.FitToScreen
@@ -19,17 +21,31 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val container = (application as AyuApp).container
         if (hasTouchscreen()) hideSystemBars()
+        // Kurzes Intro nur beim echten Start (nicht nach Drehen o. Ä.), passend zum Design (Standard: keins).
+        var intro by androidx.compose.runtime.mutableStateOf(savedInstanceState == null)
         setContent {
             CompositionLocalProvider(LocalContainer provides container) {
-                AyuTheme { FitToScreen { AyuRoot() } }
+                AyuTheme {
+                    FitToScreen {
+                        androidx.compose.foundation.layout.Box {
+                            AyuRoot()
+                            if (intro) when (de.ayutv.ui.theme.AyuColors.theme) {
+                                de.ayutv.ui.theme.UiTheme.NORDLICHT -> de.ayutv.ui.theme.AuroraIntro { intro = false }
+                                de.ayutv.ui.theme.UiTheme.HANNOVER -> de.ayutv.ui.theme.StadiumIntro { intro = false }
+                                de.ayutv.ui.theme.UiTheme.CLASSIC -> Unit
+                            }
+                        }
+                    }
+                }
             }
         }
         handleSearchIntent(intent)
         // Ist beim letzten Mal etwas abgestürzt, den Grund zeigen (zum Fotografieren und Melden).
         if (savedInstanceState == null) CrashReport.takePending(this)?.let { report ->
+            de.ayutv.data.Diagnostics.saveCrash(this, report)
             android.app.AlertDialog.Builder(this)
                 .setTitle("Beim letzten Mal ist etwas schiefgegangen")
-                .setMessage("$report\n\nBitte ein Foto davon an den Entwickler schicken.")
+                .setMessage("$report\n\nAlles Weitere steht im Fehlerbericht: Einstellungen → Daten & Info → Fehlerbericht.")
                 .setPositiveButton("OK", null)
                 .show()
         }

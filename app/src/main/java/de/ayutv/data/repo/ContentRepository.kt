@@ -13,7 +13,9 @@ import de.ayutv.data.db.PlaylistType
 import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
+import de.ayutv.data.db.sportBetween
 import de.ayutv.data.parse.ChannelVariants
+import de.ayutv.data.parse.ChannelQuality
 import de.ayutv.data.db.ProgrammeFlags
 import de.ayutv.data.parse.Countries
 import kotlinx.coroutines.flow.first
@@ -22,6 +24,8 @@ import de.ayutv.data.parse.Teams
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.data.parse.XtreamMovieInfo
 import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.pairing
+import de.ayutv.data.parse.sportHeadline
 import de.ayutv.data.parse.isSportEvent
 import de.ayutv.data.reminders.Reminder
 import kotlinx.coroutines.Dispatchers
@@ -76,24 +80,49 @@ class ContentRepository(
 
     /** Jeder Sender einmal, in seiner besten Fassung (SD/HD/4K/RAW/Backup zusammengefasst). */
     suspend fun mergeVariants(channels: List<ChannelEntity>): List<ChannelEntity> = withContext(Dispatchers.Default) {
-        ChannelVariants.merge(channels, { it.name }, { it.playlistId })
+        // Erst die Mindestqualität (und ausgefallene, falls gewünscht), dann je Sender die beste Fassung.
+        ChannelVariants.merge(channels.filter { ChannelQuality.passes(it.key, it.name) }, { it.name }, { it.playlistId }, { ChannelQuality.score(it.key, it.name) })
+    }
+
+    /**
+     * „Best of“: die stabilsten Sender (je Sender die beste Fassung), getrennt nach Sport ([sport] = true) und
+     * normalem Fernsehen. Zählt nur, was schon geschaut oder im Sender-Check gemessen wurde; die wenigsten
+     * Abbrüche je Stunde zuerst.
+     */
+    suspend fun bestOf(sport: Boolean, limit: Int = 60): List<ChannelEntity> = withContext(Dispatchers.Default) {
+        mergeVariants(db.channels().all())
+            .filter { (ProgrammeText.isSportChannel(it.name) || it.groupTitle.contains("sport", ignoreCase = true)) == sport }
+            .mapNotNull { channel -> ChannelQuality.stability(channel.key)?.let { channel to it } }
+            .sortedBy { it.second }
+            .take(limit)
+            .map { it.first }
     }
 
     /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
     suspend fun variantsOf(channel: ChannelEntity): List<ChannelEntity> = withContext(Dispatchers.Default) {
         if (ChannelVariants.key(channel.name) == null) return@withContext emptyList()
-        ChannelVariants.alternatives(channel, db.channels().visibleInPlaylist(channel.playlistId), { it.name }, { it.playlistId }) { a, b -> a.key == b.key }
+        ChannelVariants.alternatives(
+            channel, db.channels().visibleInPlaylist(channel.playlistId), { it.name }, { it.playlistId },
+            same = { a, b -> a.key == b.key }, score = { ChannelQuality.score(it.key, it.name) },
+        )
     }
 
     /** Ein Spiel oder eine Live-Übertragung mit dem Sender, auf dem es läuft. */
-    data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val otherChannels: Int)
+    /** Ein Spiel auf dem besten Sender [channel]; [alsoOn]: dieselbe Übertragung auf anderen Sendern (je die beste Fassung). */
+    data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val alsoOn: List<ChannelEntity> = emptyList()) {
+        val otherChannels: Int get() = alsoOn.size
+    }
 
     /**
      * Sport von jetzt bis [hours] Stunden: nur Spiele und Live-Übertragungen (keine Magazine, Wiederholungen).
      * Läuft dasselbe Spiel auf mehreren Sendern, erscheint es einmal (bevorzugt auf einem Favoriten).
      */
     suspend fun sportEvents(hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> {
-        val programmes = db.programmes().sportBetween(now, now + hours * HOUR, 4_000).filter { it.isSportEvent() }
+        // Was jetzt läuft, vollständig (höchstens eine Sendung je Sender); danach die kommenden bis zur Grenze.
+        // Vorher war eine gemeinsame Grenze von 4000 bei großen Senderlisten schnell erreicht.
+        val airing = db.programmes().sportBetween(now, now + 1, 50_000)
+        val upcoming = db.programmes().sportBetween(now, now + hours * HOUR, 15_000)
+        val programmes = (airing + upcoming).distinctBy { it.id }
         if (programmes.isEmpty()) return emptyList()
         // Alle Fassungen je EPG-Kennung (HD, 4K, SD teilen sich oft eine): daraus die beste wählen.
         val channels = programmes.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
@@ -101,11 +130,17 @@ class ContentRepository(
         val favorites = db.favorites().keys().toHashSet()
         return withContext(Dispatchers.Default) {
             programmes.flatMap { p -> channels[p.channelEpgId].orEmpty().map { p to it } }
-                .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to p.headline().lowercase() }
+                .filter { (p, c) -> p.isSportEvent(ProgrammeText.isSportChannel(c.name)) }
+                .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to ProgrammeText.sportKey(p.title, p.subtitle, p.description, p.channelEpgId) }
                 .values.map { same ->
-                    val (p, c) = same.minWith(compareBy({ if (it.second.key in favorites) 0 else 1 }, { ChannelVariants.rank(it.second.name) }))
-                    // Weitere Sender, nicht weitere Fassungen desselben Senders.
-                    val others = same.map { ChannelVariants.key(it.second.name) ?: it.second.key }.distinct().size - 1
+                    val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelQuality.score(it.second.key, it.second.name) })
+                    val (p, c) = same.minWith(best)
+                    // Weitere Sender, nicht weitere Fassungen desselben Senders: je Sender die beste Fassung.
+                    fun variant(channel: ChannelEntity) = ChannelVariants.key(channel.name) ?: channel.key
+                    val others = same.filter { variant(it.second) != variant(c) }
+                        .groupBy { variant(it.second) }.values
+                        .map { it.minWith(best).second }
+                        .sortedWith(compareBy({ if (it.key in favorites) 0 else 1 }, { it.name }))
                     SportEvent(p, c, others)
                 }
                 .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
@@ -117,9 +152,9 @@ class ContentRepository(
         if (teams.isEmpty()) return emptyList()
         return sportEvents(hours = days * 24).filter { e ->
             val p = e.programme
-            val pairing = ProgrammeText.pairing(p.title, p.subtitle) ?: return@filter false
+            val pairing = p.pairing() ?: return@filter false
             p.start > System.currentTimeMillis() && teams.any { Teams.plays(it, pairing, p.title + " " + p.subtitle.orEmpty()) }
-        }.map { Reminder(it.channel.key, it.channel.name, it.programme.headline(), it.programme.start) }
+        }.map { Reminder(it.channel.key, it.channel.name, it.programme.sportHeadline(), it.programme.start) }
     }
 
     /**
@@ -140,7 +175,7 @@ class ContentRepository(
             val channels = found.map { it.channelEpgId }.distinct().chunked(SQL_CHUNK)
                 .flatMap { db.channels().allByEpgIds(it) }.groupBy { it.epgId }
             for (p in found) {
-                val channel = channels[p.channelEpgId]?.minByOrNull { ChannelVariants.rank(it.name) } ?: continue
+                val channel = channels[p.channelEpgId]?.minByOrNull { ChannelQuality.score(it.key, it.name) } ?: continue
                 out += Reminder(channel.key, channel.name, p.headline(), p.start)
             }
         }

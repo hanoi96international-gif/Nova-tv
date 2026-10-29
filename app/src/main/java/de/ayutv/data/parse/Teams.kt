@@ -9,7 +9,7 @@ import java.text.Normalizer
  * nur, wenn man genau ihnen folgt.
  */
 object Teams {
-    private val SPLIT = Regex("""\s+[–—-]\s+""")
+    private val SPLIT = Regex("""\s+(?:[–—-]|vs\.?|v\.?|gegen)\s+""")
     private val MARKS = Regex("""\p{M}+""")
     private val NON_WORD = Regex("""[^a-z0-9]+""")
     /** Vereinskürzel und Allerweltswörter: Allein sagen sie nichts über den Verein. */

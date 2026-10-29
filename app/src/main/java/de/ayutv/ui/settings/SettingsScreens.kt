@@ -390,6 +390,23 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
                     }
                     item {
+                        val pretranslation = remember { de.ayutv.data.repo.Pretranslation(context, container) }
+                        var last by remember { mutableStateOf(pretranslation.lastResult) }
+                        SettingRow(
+                            "Vorübersetzen in der Ruhezeit",
+                            onOff(settings.pretranslate),
+                            "Wenn der Fire TV nicht benutzt wird: Untertitel für „Weiter schauen“ und die nächste Folge vorab holen " +
+                                "und bei Bedarf übersetzen (Sprache wie zuletzt bei der Serie gewählt). Beim Schauen sind sie sofort da." +
+                                (last?.let { "\nZuletzt $it" } ?: ""),
+                        ) { update { it.copy(pretranslate = !it.pretranslate) } }
+                        if (settings.pretranslate) {
+                            SettingRow("Jetzt vorbereiten", "", "Startet sofort statt in der Ruhezeit (läuft im Hintergrund, einige Minuten).") {
+                                de.ayutv.data.repo.PretranslateWorker.runNow(context)
+                                last = "läuft …"
+                            }
+                        }
+                    }
+                    item {
                         var testResult by remember { mutableStateOf("Prüft Texterkennung und Übersetzung auf diesem Gerät") }
                         SettingRow(
                             "Übersetzer testen",
@@ -399,6 +416,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             testResult = "Läuft … (beim ersten Mal werden die Modelle geladen)"
                             scope.launch {
                                 testResult = de.ayutv.data.translate.TranslatorSelfTest.run(settings.subtitleLanguage)
+                                de.ayutv.data.Diagnostics.saveSelfTest(context, testResult)
                                 // Übersetzer-Prozess wieder beenden: Speicher frei für die Wiedergabe.
                                 Translators.remote.release()
                             }
@@ -426,6 +444,18 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
 
                 }
                 SettingsPage.DISPLAY -> {
+                    item {
+                        SettingRow(
+                            "Design",
+                            settings.uiTheme.label,
+                            "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett. Hannover 96: Stadionabend mit Flutlicht, " +
+                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Standard: schlichtes Dunkelblau. OK wechselt.",
+                        ) {
+                            val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
+                            de.ayutv.ui.theme.AyuColors.use(next)
+                            update { it.copy(uiTheme = next) }
+                        }
+                    }
                     item {
                         var words by remember(settings.alertKeywords) { mutableStateOf(settings.alertKeywords.sorted().joinToString(", ")) }
                         TvTextField(
@@ -495,6 +525,45 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Gleiche Sender in SD, HD, 4K, RAW oder als Backup erscheinen einmal, in der besten Fassung. " +
                                 "Fällt sie aus, schaltet der Player automatisch auf die nächste.",
                         ) { update { it.copy(mergeVariants = !it.mergeVariants) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Mindestqualität",
+                            settings.minQuality.label,
+                            "Sender, deren Auflösung bekanntermaßen darunter liegt (gemessen oder laut Name wie „SD“), werden ausgeblendet. " +
+                                "Gibt es den Sender auch besser, bleibt die bessere Fassung. Unbekannte bleiben sichtbar.",
+                        ) { update { it.copy(minQuality = it.minQuality.next()) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Beste Fassung bei doppelten Sendern",
+                            if (settings.preferUhd) "4K, wenn vorhanden" else "Full HD (stabiler)",
+                            "Welche Fassung ein doppelt geführter Sender zeigt. Gemessenes zählt vor dem Namen; ausgefallene Fassungen kommen nach hinten.",
+                        ) { update { it.copy(preferUhd = !it.preferUhd) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Nicht laufende Fassungen ausblenden",
+                            onOff(settings.hideBrokenChannels),
+                            "Fassungen, die im Sender-Check oder beim Schauen zweimal nicht liefen, verschwinden aus den Listen.",
+                        ) { update { it.copy(hideBrokenChannels = !it.hideBrokenChannels) } }
+                    }
+                    item {
+                        val check = remember { de.ayutv.data.repo.ChannelCheck(context, container) }
+                        var last by remember { mutableStateOf(check.lastResult) }
+                        SettingRow(
+                            "Sender-Check in der Ruhezeit",
+                            onOff(settings.channelCheck),
+                            "Wenn der Fire TV nicht benutzt wird: jede Fassung doppelter Sender und deine Favoriten kurz anspielen " +
+                                "(ohne Bild und Ton) und Auflösung, Startzeit und Ausfälle merken. Gemessen: ${de.ayutv.data.parse.ChannelQuality.size} Fassungen." +
+                                (last?.let { "\nZuletzt $it" } ?: ""),
+                        ) { update { it.copy(channelCheck = !it.channelCheck) } }
+                        if (settings.channelCheck) {
+                            SettingRow("Jetzt prüfen", "", "Startet den Check sofort im Hintergrund (einige Minuten, nur solange nichts läuft).") {
+                                de.ayutv.data.repo.ChannelCheckWorker.runNow(context)
+                                last = "läuft …"
+                            }
+                        }
                     }
                     item {
                         SettingRow(
@@ -594,6 +663,40 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                     else -> container.updates.check(force = true)
                                 }
                                 if (release != null) container.updates.downloadAndInstall(release) { context.startActivity(it) }
+                            }
+                        }
+                    }
+                    item {
+                        var showReport by remember { mutableStateOf(false) }
+                        SettingRow(
+                            "Fehlerbericht",
+                            "",
+                            if (touch) "Gerät, Übersetzer, letzte Wiedergabe und Protokoll als Text teilen (ohne Passwörter)."
+                            else "Gerät, Übersetzer, letzte Wiedergabe und Protokoll (ohne Passwörter) aufs Handy holen und an den Entwickler schicken.",
+                        ) {
+                            if (touch) scope.launch {
+                                val text = de.ayutv.data.Diagnostics.build(context, container)
+                                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                    .putExtra(android.content.Intent.EXTRA_SUBJECT, "DnA-TV Fehlerbericht")
+                                    .putExtra(android.content.Intent.EXTRA_TEXT, text)
+                                runCatching { context.startActivity(android.content.Intent.createChooser(send, "Fehlerbericht senden")) }
+                            } else showReport = !showReport
+                        }
+                        if (showReport && !touch) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+                                val url = phone.url?.let { "$it/report" }
+                                if (url != null) {
+                                    QrCode(url, size = 150.dp)
+                                    Spacer(Modifier.width(16.dp))
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        if (url != null) "Code mit dem Handy scannen (gleiches WLAN): Dort steht der Bericht zum Kopieren und als Datei."
+                                        else phone.error ?: "Kein Heimnetz gefunden.",
+                                        fontSize = 14.sp,
+                                    )
+                                    url?.let { Text(it, color = AyuColors.Accent, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp)) }
+                                }
                             }
                         }
                     }

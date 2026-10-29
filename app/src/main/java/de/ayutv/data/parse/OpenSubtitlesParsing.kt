@@ -168,6 +168,33 @@ object OpenSubtitlesParsing {
         return lastCueMs <= durationMs * 1.06 + 60_000 && lastCueMs >= durationMs * 0.55
     }
 
+    /** Wie eine Untertitel-Datei zur Filmlänge passt: Zeitfaktor (Bildrate) und Abstand der letzten Zeile zum Filmende. */
+    data class LengthFit(val ratio: Double, val creditsMs: Long)
+
+    /**
+     * Passt eine Datei, deren letzte Zeile bei [lastCueMs] endet, zu einem Film von [durationMs]? Die letzte
+     * Zeile liegt kurz vor dem Abspann: höchstens eine Minute nach dem Filmende und nicht mehr als den Abspann
+     * davor (je nach Länge 3–15 Minuten). Probiert wird ohne Umrechnung und mit der üblichen PAL-Umrechnung
+     * (23,976 ↔ 25 Bilder/s, der Film ist dann 4 % kürzer oder länger). Nennt OpenSubtitles eine Bildrate
+     * ([subtitleFps]) und kennt der Player die des Films ([videoFps]), kommt deren Verhältnis vor der PAL-Umrechnung.
+     * null: passt zu keiner Umrechnung (andere Fassung, anderer Film).
+     */
+    fun lengthFit(lastCueMs: Long, durationMs: Long, subtitleFps: Double? = null, videoFps: Float? = null): LengthFit? {
+        if (durationMs < 10 * 60_000L || lastCueMs <= 0) return LengthFit(1.0, 0)
+        val maxCredits = (durationMs * 0.15).toLong().coerceIn(3 * 60_000L, 15 * 60_000L)
+        fun fit(ratio: Double): LengthFit? {
+            val credits = durationMs - (lastCueMs * ratio).toLong()
+            return if (credits in -60_000L..maxCredits) LengthFit(ratio, credits) else null
+        }
+        // Ohne Umrechnung zuerst (die Bildraten-Angaben bei OpenSubtitles stimmen oft nicht), dann das Verhältnis
+        // der angegebenen Bildraten, dann die übliche PAL-Umrechnung.
+        val stated = if (subtitleFps != null && videoFps != null && videoFps > 1 && kotlin.math.abs(subtitleFps - videoFps) > 0.5) {
+            subtitleFps / videoFps
+        } else null
+        val ratios = listOfNotNull(1.0, stated, 23.976 / 25.0, 25.0 / 23.976).distinct()
+        return ratios.firstNotNullOfOrNull(::fit)
+    }
+
     fun downloadLink(body: String): String? =
         (json.parseToJsonElement(body) as? JsonObject)?.primitive("link")?.contentOrNull
 

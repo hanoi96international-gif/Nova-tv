@@ -1,5 +1,9 @@
 package de.ayutv.ui.sport
 
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +47,8 @@ import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import de.ayutv.data.parse.ProgrammeText
 import de.ayutv.data.parse.Teams
-import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.pairing
+import de.ayutv.data.parse.sportHeadline
 import de.ayutv.data.repo.ContentRepository.SportEvent
 import de.ayutv.player.PlayerActivity
 import de.ayutv.ui.LocalContainer
@@ -106,7 +111,7 @@ fun SportScreen() {
         when (filter) {
             SportFilter.ALL -> true
             SportFilter.FOOTBALL -> Regex("(?i)fu(ß|ss)ball|bundesliga|liga|league|pokal|\\bBL\\b").containsMatchIn(p.title + " " + p.category.orEmpty())
-            SportFilter.TEAMS -> ProgrammeText.pairing(p.title, p.subtitle)?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
+            SportFilter.TEAMS -> p.pairing()?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
         }
     }
     val live = shown.filter { it.programme.start <= now && it.programme.stop > now }
@@ -122,7 +127,7 @@ fun SportScreen() {
         if (choosing == null) Column(Modifier.fillMaxSize().padding(start = 32.dp, top = 24.dp, end = 32.dp)) {
             Text("Sport", style = MaterialTheme.typography.headlineMedium)
             Text(
-                "Spiele und Live-Übertragungen aller Sender · OK: einschalten · OK halten: Verein folgen",
+                "Spiele und Live-Übertragungen aller Sender · OK: einschalten · OK halten: anderer Sender oder Verein folgen",
                 color = AyuColors.TextSecondary, fontSize = 14.sp,
             )
             Spacer(Modifier.height(12.dp))
@@ -164,15 +169,20 @@ fun SportScreen() {
             }
         }
         choosing?.let { e ->
-            val pairing = ProgrammeText.pairing(e.programme.title, e.programme.subtitle)
+            val pairing = e.programme.pairing()
             val sides = pairing?.let { Teams.ofPairing(it) }.orEmpty()
             FollowDialog(
-                title = e.programme.headline(),
+                title = e.programme.sportHeadline(),
                 teams = sides,
                 followed = teams,
+                channels = listOf(e.channel) + e.alsoOn,
                 onPick = { team ->
                     choosing = null
                     if (team in teams) unfollow(team) else follow(team)
+                },
+                onWatch = { channel ->
+                    choosing = null
+                    PlayerActivity.startLive(context, channel.key, channel.groupTitle)
                 },
                 onDismiss = { choosing = null },
             )
@@ -183,14 +193,19 @@ fun SportScreen() {
 
 private const val DAY = 24 * 3_600_000L
 
+/**
+ * Eine Zeile pro Spiel. Markiert (Fokus) klappt sie auf: ganzer Titel, Beschreibung und alle Sender,
+ * auf denen es läuft. Laufende Spiele zeigen, wie weit sie sind.
+ */
 @Composable
 private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick: () -> Unit) {
     val p = e.programme
     val running = p.start <= now && p.stop > now
+    var focused by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
         shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.AccentSoft),
         border = AyuFocus.border,
@@ -206,11 +221,28 @@ private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick:
                 Text("bis ${formatTime(p.stop)}", color = AyuColors.TextSecondary, fontSize = 12.sp)
             }
             Column(Modifier.weight(1f)) {
-                Text(p.headline(), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    e.channel.name + if (e.otherChannels > 0) "  ·  auch auf ${e.otherChannels} weiteren" else "",
-                    color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1,
-                )
+                Text(p.sportHeadline(), fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
+                if (running) {
+                    val done = ((now - p.start).toFloat() / (p.stop - p.start).coerceAtLeast(1)).coerceIn(0f, 1f)
+                    Box(Modifier.padding(vertical = 4.dp).fillMaxWidth(0.5f).height(3.dp).background(AyuColors.TextSecondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp))) {
+                        Box(Modifier.fillMaxWidth(done).height(3.dp).background(AyuColors.Live, RoundedCornerShape(2.dp)))
+                    }
+                }
+                if (focused) {
+                    ProgrammeText.description(p.description)?.let {
+                        Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text(
+                        e.channel.name + if (e.alsoOn.isNotEmpty()) "  ·  auch auf: " + e.alsoOn.joinToString(", ") { it.name } else "",
+                        color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
+                    if (e.alsoOn.isNotEmpty()) Text("OK halten: anderen Sender wählen oder Verein folgen", color = AyuColors.Accent, fontSize = 12.sp)
+                } else {
+                    Text(
+                        e.channel.name + if (e.otherChannels > 0) "  ·  auch auf ${e.otherChannels} weiteren" else "",
+                        color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             Spacer(Modifier.width(12.dp))
             ChannelLogo(e.channel.logo, e.channel.name, Modifier.size(width = 64.dp, height = 40.dp))
@@ -234,9 +266,17 @@ private fun Pill(label: String, selected: Boolean, modifier: Modifier = Modifier
     }
 }
 
-/** Welchem der beiden Vereine folgen? (Oder nicht mehr folgen, wenn schon gefolgt.) */
+/** Auf welchem Sender schauen, welchem der beiden Vereine folgen? (Oder nicht mehr folgen, wenn schon gefolgt.) */
 @Composable
-private fun FollowDialog(title: String, teams: List<String>, followed: Set<String>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+private fun FollowDialog(
+    title: String,
+    teams: List<String>,
+    followed: Set<String>,
+    channels: List<de.ayutv.data.db.ChannelEntity>,
+    onPick: (String) -> Unit,
+    onWatch: (de.ayutv.data.db.ChannelEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
     androidx.activity.compose.BackHandler(onBack = onDismiss)
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) {
@@ -251,9 +291,15 @@ private fun FollowDialog(title: String, teams: List<String>, followed: Set<Strin
             shape = RoundedCornerShape(14.dp),
             colors = SurfaceDefaults.colors(containerColor = AyuColors.SurfaceRaised),
         ) {
-            Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Verein folgen", style = MaterialTheme.typography.titleLarge)
-                Text(title, color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Column(Modifier.padding(24.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (channels.size > 1) {
+                    Text("Schauen auf", color = AyuColors.TextSecondary, fontSize = 13.sp)
+                    channels.forEach { channel ->
+                        Pill("▶ ${channel.name}", selected = false, onClick = { onWatch(channel) })
+                    }
+                }
+                Text("Verein folgen", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 6.dp))
                 Text(
                     "Vor jedem Spiel des Vereins kommt eine Erinnerung, auf welchem Sender es läuft.",
                     color = AyuColors.TextSecondary, fontSize = 13.sp,

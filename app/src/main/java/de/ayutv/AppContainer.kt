@@ -18,7 +18,7 @@ import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
-class AppContainer(context: Context) {
+class AppContainer(val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val settings = SettingsStore(context)
     val db = AyuDatabase.build(context)
@@ -45,11 +45,15 @@ class AppContainer(context: Context) {
     val searchRequests = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 
     val reminders = Reminders(context)
+    /** Erinnerung, die gerade fällig ist (Anstoß eines gefolgten Vereins …): der Player blendet sie ein. */
+    val dueReminder = kotlinx.coroutines.flow.MutableStateFlow<de.ayutv.data.reminders.Reminder?>(null)
     val intros = de.ayutv.data.IntroStore(context)
     val playerMemory = de.ayutv.data.PlayerMemory(context)
     /** Fenster der App im Vordergrund (für Tasten vom Handy). */
     @Volatile var foreground: java.lang.ref.WeakReference<android.app.Activity>? = null
     val remote = de.ayutv.data.remote.RemoteServer(context, this)
+    /** Gemessene Qualität der Senderfassungen ([de.ayutv.data.parse.ChannelQuality]). */
+    val qualityFile = java.io.File(context.filesDir, "channel_quality.tsv")
     val recordings = de.ayutv.data.record.Recordings(context)
     val profiles = de.ayutv.data.profile.Profiles(context, this)
     val updates = de.ayutv.data.update.Updater(context, http)
@@ -67,6 +71,14 @@ class AppContainer(context: Context) {
     init {
         Translators.onDevice = OnDeviceTranslator(context.filesDir, http)
         Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)
+        Translators.withPhone = de.ayutv.data.translate.HelperAwareTranslator(Translators.remote, http)
+        // Aussehen gleich anwenden (Menüs und Player lesen die Farben aus de.ayutv.ui.theme.AyuColors).
+        scope.launch { runCatching { de.ayutv.ui.theme.AyuColors.use(settings.current().uiTheme) } }
+        // Senderqualität: Gemessenes laden, Filter und Vorlieben aus den Einstellungen übernehmen.
+        scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.load(qualityFile) }
+        scope.launch {
+            settings.settings.collect { s -> de.ayutv.data.parse.ChannelQuality.configure(s.minQuality.height, s.preferUhd, s.hideBrokenChannels) }
+        }
         // Passwörter älterer Versionen verschlüsseln (einmalig, danach ohne Wirkung).
         scope.launch {
             runCatching { playlists.protectStoredPasswords() }

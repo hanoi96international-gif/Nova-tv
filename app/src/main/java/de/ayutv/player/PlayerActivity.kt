@@ -3,6 +3,7 @@
 package de.ayutv.player
 
 import de.ayutv.data.parse.headline
+import de.ayutv.data.parse.sportHeadline
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -143,6 +144,8 @@ class PlayerActivity : ComponentActivity() {
                 Log.i(SUBTITLE_TAG, value)
             }
         }
+    /** Wiedergabefehler dieser Sitzung (Neustarts des Players), für Diagnose und Tests. */
+    var playerErrors = 0; private set
     /** Alle Statusmeldungen dieser Sitzung (für Diagnose und Tests). */
     val statusHistory = mutableListOf<String>()
     val onlineSubtitlesAvailable: Boolean get() = !isLive && ::settings.isInitialized && settings.onlineSubtitlesEnabled
@@ -294,6 +297,16 @@ class PlayerActivity : ComponentActivity() {
 
         if (hasTouchscreen()) hideSystemBars()
         setContent { AyuTheme { FitToScreen { PlayerScreen(this) } } }
+
+        // Anstoß eines gefolgten Vereins (oder andere Erinnerung), während hier etwas läuft: einblenden.
+        lifecycleScope.launch {
+            container.dueReminder.collect { reminder ->
+                if (reminder == null) return@collect
+                container.dueReminder.value = null
+                if (reminder.channelKey == playing?.key) return@collect
+                showReminder(reminder)
+            }
+        }
 
         lifecycleScope.launch {
             settings = container.settings.current()
@@ -683,6 +696,8 @@ class PlayerActivity : ComponentActivity() {
      * nur einen Fehler zu zeigen. Liefert false, wenn es keine gibt (dann zeigt der Aufrufer [reason]).
      */
     private fun tryNextVariant(reason: String): Boolean {
+        // Diese Fassung ist ausgefallen: beim nächsten Mal weiter hinten einsortieren.
+        if (isLive) playing?.let { de.ayutv.data.parse.ChannelQuality.recordFailure(it.key) }
         if (vod != null || !settings.mergeVariants) return false
         val channel = playing ?: return false
         failedVariants += channel.key
@@ -703,8 +718,25 @@ class PlayerActivity : ComponentActivity() {
         return true
     }
 
+    /** Seit wann der jetzige Sender läuft und wie viele Wiedergabefehler es da schon gab (für die Stabilitätswertung). */
+    private var watchStartedAt = 0L
+    private var watchErrorsAtStart = 0
+
+    /** Für „Best of“: wie lange der Sender lief und wie oft dabei die Verbindung abbrach. Erst ab einer Minute. */
+    private fun recordWatch() {
+        val channel = playing ?: return
+        if (!isLive || watchStartedAt == 0L) return
+        val watched = SystemClock.elapsedRealtime() - watchStartedAt
+        watchStartedAt = 0L
+        if (watched < 60_000) return
+        de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
+    }
+
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
+        recordWatch()
+        watchStartedAt = SystemClock.elapsedRealtime()
+        watchErrorsAtStart = playerErrors
         if (!switchingVariant) failedVariants.clear()
         playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         playing = channel
@@ -954,6 +986,7 @@ class PlayerActivity : ComponentActivity() {
         syncPanel = false
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
+        pipChoices = null
     }
 
     private fun onDigit(digit: Int) {
@@ -1154,9 +1187,16 @@ class PlayerActivity : ComponentActivity() {
      * bevorzugten Sprache, wird sie geladen (OpenSubtitles, sonst Übersetzung).
      */
     private fun maybeAutoSubtitles() {
-        if (vod == null || autoSubtitleTried || !settings.subtitlesAutoOn) return
+        if (vod == null || autoSubtitleTried) return
+        // Serie: Untertitel, die man bei einer Folge geladen hat, kommen bei der nächsten von selbst.
+        val remembered = memoryKey()?.let { container.playerMemory.get(it) }?.takeUnless { it.textOff }?.load
+        if (!settings.subtitlesAutoOn && remembered == null) return
         autoSubtitleTried = true
-        val language = settings.subtitleLanguage
+        val language = remembered ?: settings.subtitleLanguage
+        if (remembered != null) {
+            loadSubtitles(language)
+            return
+        }
         if (hasTextTrack(language)) return
         if (language in subtitleFiles || settings.onlineSubtitlesEnabled || settings.translationEnabled) loadSubtitles(language)
     }
@@ -1170,6 +1210,7 @@ class PlayerActivity : ComponentActivity() {
      */
     fun loadSubtitles(language: String) {
         val request = vod
+        if (request != null) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = null, load = language) } }
         languagePicker = false
         closeOverlay()
         stopLiveTranslation()
@@ -1375,6 +1416,8 @@ class PlayerActivity : ComponentActivity() {
         val target = settings.lastTranslationTarget.ifEmpty { return }
         val source = bestTranslationSource()?.let { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) } ?: return
         if (source == target || Translators.remote.isWarm(source, target)) return
+        // Rechnet das Handy mit, braucht der Fernseher das Modell nicht.
+        if (de.ayutv.data.translate.PhoneHelper.usable) return
         warmUpJob = lifecycleScope.launch {
             runCatching { Translators.remote.translate(listOf("Hello."), target, source) }
                 .onFailure { Log.i(SUBTITLE_TAG, "Übersetzer vorab laden: ${it.message}") }
@@ -1484,7 +1527,23 @@ class PlayerActivity : ComponentActivity() {
                 try {
                     val started = SystemClock.elapsedRealtime()
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
-                    aheadTranslations[next.startMs] = if (text.isBlank()) "" else translator.translate(listOf(text), target, sourceFor(text)).first()
+                    // Geht der Satz in den nächsten Einblendungen weiter, alle zusammen übersetzen und wieder aufteilen.
+                    val chain = if (text.isBlank() || bitmap) emptyList() else sentenceAfter(store, format, next, text)
+                    if (text.isBlank()) {
+                        aheadTranslations[next.startMs] = ""
+                    } else if (chain.isEmpty()) {
+                        aheadTranslations[next.startMs] = translator.translate(listOf(text), target, sourceFor(text)).first()
+                    } else {
+                        val all = listOf(next) + chain
+                        val texts = all.map { it.text.orEmpty() }
+                        val sentence = translator.translate(listOf(texts.joinToString(" ") { de.ayutv.data.translate.SubtitleSentences.plain(it) }), target, sourceFor(text)).first()
+                        val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, texts.map { it.length })
+                        all.forEachIndexed { k, entry ->
+                            val part = de.ayutv.data.translate.SubtitleSentences.wrap(parts[k])
+                            aheadTranslations[entry.startMs] = part
+                            if (k > 0) aheadDone[entry.startMs] = part
+                        }
+                    }
                     val took = SystemClock.elapsedRealtime() - started
                     if (text.isNotBlank()) {
                         aheadDone[next.startMs] = aheadTranslations.getValue(next.startMs)
@@ -1522,6 +1581,23 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /** Folgende Text-Einblendungen, in denen der Satz von [first] weitergeht (höchstens zwei, noch nicht übersetzt). */
+    private fun sentenceAfter(store: EmbeddedSubtitles, format: Format, first: EmbeddedSubtitles.Entry, text: String): List<EmbeddedSubtitles.Entry> {
+        val chain = ArrayList<EmbeddedSubtitles.Entry>()
+        var previous = first
+        var previousText = text
+        for (entry in store.upcoming(format, first.startMs + 1, 2) { true }) {
+            val next = entry.text ?: break
+            if (entry.startMs in aheadTranslations) break
+            val gap = if (previous.endMs >= 0) entry.startMs - previous.endMs else entry.startMs - previous.startMs - ASSUMED_LINE_MS
+            if (gap > 1_500 || !de.ayutv.data.translate.SubtitleSentences.continues(previousText, next)) break
+            chain += entry
+            previous = entry
+            previousText = next
+        }
+        return chain
     }
 
     /**
@@ -1635,6 +1711,7 @@ class PlayerActivity : ComponentActivity() {
         externalLanguage = language
         manualAnchor = null
         manualSync = false
+        alternativeTried = false
         externalCues = cues
         externalTexts = texts
         referenceStarts.clear()
@@ -1642,7 +1719,8 @@ class PlayerActivity : ComponentActivity() {
         val saved = vod?.let { container.subtitles.timing(it.key, language) }
         subtitleTiming = saved?.let { SubtitleTiming(it.ratio, it.offsetMs) } ?: SubtitleTiming()
         subtitleDelayMs = saved?.manualMs ?: 0L
-        subtitleAutoSynced = saved != null && (saved.offsetMs != 0L || saved.ratio != 1.0)
+        // Nur die Bildrate aus der Filmlänge voreingestellt (Versatz 0): der Versatz muss noch gesucht werden.
+        subtitleAutoSynced = saved != null && (saved.offsetMs != 0L || saved.manualMs != 0L)
         syncedBySpeech = false
         syncedByReference = false
         externalExact = false
@@ -1650,6 +1728,7 @@ class PlayerActivity : ComponentActivity() {
         textDisabled = false
         selectSyncReference()
         startSpeechSync()
+        if (!subtitleAutoSynced) adoptTimingFromOtherLanguage(language, cues)
         externalJob?.cancel()
         externalJob = lifecycleScope.launch {
             while (true) {
@@ -1660,6 +1739,31 @@ class PlayerActivity : ComponentActivity() {
                     ?.joinToString("\n") { shown?.get(it) ?: cues[it].text }
                 delay(100)
             }
+        }
+    }
+
+    /**
+     * Ist für diesen Film schon eine andere Sprache ausgerichtet (am Ton, an einer Zeile, per Datei-Hash), deren
+     * Zeiten als Taktgeber nehmen: Gesprochen wird in jeder Sprache zur selben Zeit. So passt eine Übersetzung oder
+     * eine zweite Sprache sofort, ohne erneut zuzuhören. Aus derselben Vorlage übersetzte Dateien passen exakt.
+     */
+    private fun adoptTimingFromOtherLanguage(language: String, cues: List<TimedCue>) {
+        val request = vod ?: return
+        if (cues.size < SubtitleSync.MIN_REFERENCES) return
+        lifecycleScope.launch {
+            val fit = withContext(Dispatchers.Default) {
+                container.subtitles.cachedAll(request.key).filterKeys { it != language }.firstNotNullOfOrNull { (other, file) ->
+                    val timing = container.subtitles.timing(request.key, other)?.takeIf { it.offsetMs != 0L || it.manualMs != 0L } ?: return@firstNotNullOfOrNull null
+                    val reference = SubtitleTiming(timing.ratio, timing.offsetMs)
+                    val starts = parseCues(file).map { reference.toVideo(it.start) + timing.manualMs }
+                    SubtitleSync.estimate(starts, cues.map { it.start })?.let { other to it }
+                }
+            } ?: return@launch
+            if (externalLanguage != language || subtitleAutoSynced) return@launch
+            val (other, found) = fit
+            Log.i(SUBTITLE_TAG, "Ausrichtung von ${Languages.label(other)} übernommen: ${found.timing}")
+            applyFit(found.timing, bySpeech = false, toleranceMs = 0)
+            speechSyncInfo = "Von den schon ausgerichteten Untertiteln (${Languages.label(other)}) übernommen, wird am Ton nachgeprüft"
         }
     }
 
@@ -1680,17 +1784,96 @@ class PlayerActivity : ComponentActivity() {
     val subtitleShiftLabel: String get() = formatShift(subtitleTiming.offsetMs + subtitleDelayMs) +
         if (subtitleTiming.ratio != 1.0) ", Bildrate korrigiert" else ""
 
+    /**
+     * Wie sicher die Untertitel gerade zum Bild passen, als kurze Zeile für die Info-Leiste (null: keine
+     * Untertitel von außen und keine Übersetzung).
+     */
+    val syncBadge: String? get() {
+        if (externalLanguage == null) return if (liveTranslateTarget != null) "✓ Untertitel zeitgenau (Spur des Films übersetzt)" else null
+        val info = speechSyncInfo
+        return when {
+            manualSync -> "✓ Untertitel von Hand ausgerichtet ($subtitleShiftLabel)"
+            syncedByReference -> "✓ Untertitel an der Spur des Films ausgerichtet"
+            externalExact -> "✓ Untertitel passen genau zu dieser Datei"
+            subtitleAutoSynced && syncedBySpeech -> "✓ Untertitel am Ton ausgerichtet ($subtitleShiftLabel)"
+            subtitleAutoSynced -> "✓ Untertitel: gespeicherte Ausrichtung ($subtitleShiftLabel)"
+            else -> "◌ Untertitel noch nicht geprüft" + (info?.let { " – $it" } ?: "") + ". Passt es nicht: ☰ → Untertitel-Zeit einstellen"
+        }
+    }
+
     /** Untertitel-Zeit von Hand einstellen (Feld im Menü, schließt nicht von selbst). */
     var syncPanel by mutableStateOf(false); private set
 
+    /**
+     * Ausrichten mit einem Druck: unten steht groß die Zeile, die als Nächstes kommt. Sobald man sie hört, OK.
+     * ◀ ▶ nimmt die vorige/nächste Zeile, ▲ ▼ schiebt um eine halbe Sekunde. Kein Suchen in einer Liste.
+     */
+    var syncCandidate by mutableStateOf(-1); private set
+    /** Rückmeldung nach dem Druck („✓ ausgerichtet …“), sonst null. */
+    var syncConfirmed by mutableStateOf<String?>(null); private set
+    private var syncCloseJob: Job? = null
+
     fun openSyncPanel() {
+        closeOverlay()
+        syncCandidate = nextCueIndex()
+        syncConfirmed = null
         syncPanel = true
-        overlayToken++
     }
 
     fun closeSyncPanel() {
+        syncCloseJob?.cancel()
         syncPanel = false
+        syncConfirmed = null
         overlayToken++
+    }
+
+    /** Die Zeile, die nach der jetzigen Ausrichtung als Nächstes beginnt. */
+    private fun nextCueIndex(): Int {
+        val at = subtitleTimeAt(player?.currentPosition ?: 0L)
+        val index = externalCues.indexOfFirst { it.start >= at - 500 }
+        return if (index < 0) externalCues.lastIndex else index
+    }
+
+    /** Beginn der angezeigten Zeile in der Datei (für Tests). */
+    val syncCandidateStart: Long? get() = externalCues.getOrNull(syncCandidate)?.start
+
+    fun syncCue(index: Int): String? = externalCues.getOrNull(index)?.let { cue ->
+        (externalTexts?.get(index) ?: cue.text).replace('\n', ' ')
+    }
+
+    fun syncStep(delta: Int) {
+        if (externalCues.isEmpty()) return
+        syncCloseJob?.cancel()
+        syncConfirmed = null
+        syncCandidate = (syncCandidate + delta).coerceIn(0, externalCues.lastIndex)
+    }
+
+    /** Die angezeigte Zeile wird gerade gesprochen. */
+    fun syncConfirm() {
+        val cue = externalCues.getOrNull(syncCandidate) ?: return
+        anchorSubtitle(cue.start)
+        syncConfirmed = "✓ Ausgerichtet ($subtitleShiftLabel). Passt es noch nicht ganz: in ein paar Minuten einfach noch eine Zeile bestätigen."
+        syncCandidate = nextCueIndex()
+        syncCloseJob?.cancel()
+        syncCloseJob = lifecycleScope.launch {
+            delay(5_000)
+            closeSyncPanel()
+        }
+    }
+
+    /** Tasten, solange die Ausrichtungsleiste offen ist. OK wirkt schon beim Drücken (genauer). */
+    private fun handleSyncKey(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> if (event.repeatCount == 0) syncConfirm()
+            KeyEvent.KEYCODE_DPAD_LEFT -> syncStep(-1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> syncStep(+1)
+            KeyEvent.KEYCODE_DPAD_UP -> { syncCloseJob?.cancel(); shiftSubtitles(-500) }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { syncCloseJob?.cancel(); shiftSubtitles(500) }
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> player?.let { it.playWhenReady = !it.playWhenReady }
+            else -> return false
+        }
+        return true
     }
 
     class SyncLine(val start: Long, val text: String, val upcoming: Boolean)
@@ -1872,6 +2055,11 @@ class PlayerActivity : ComponentActivity() {
                         "${window / 60} min Ton geprüft, noch kein eindeutiger Takt – prüft weiter"
                     }
                 }
+                if (fit == null && window >= SPEECH_COMPARE_SECONDS && !subtitleAutoSynced && externalTexts == null && !alternativeTried) {
+                    // Drei Minuten Gespräch und kein Takt: mit dem nächsten Treffer der Suche vergleichen (ein Download).
+                    alternativeTried = true
+                    if (tryAlternative(position)) return@launch
+                }
                 if (fit == null && window >= SPEECH_WRONG_FILE_SECONDS && !subtitleAutoSynced && externalTexts == null) {
                     // Eine Viertelstunde Gespräch und kein gemeinsamer Takt: Die Datei gehört zu einem anderen Film.
                     replaceWrongSubtitles()
@@ -1905,6 +2093,37 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private var replacedSubtitles = 0
+    /** Für die geladene Datei wurde schon ein weiterer Treffer am Ton verglichen. */
+    private var alternativeTried = false
+
+    /**
+     * Die geladene Datei findet am Ton keinen Takt: den nächsten Treffer derselben Suche laden und mit demselben
+     * Ton prüfen. Findet er einen Takt, wird er übernommen (true); sonst bleibt alles, wie es ist.
+     */
+    private suspend fun tryAlternative(position: Long): Boolean {
+        val request = vod ?: return false
+        val language = externalLanguage ?: return false
+        if (!container.subtitles.hasAlternatives(request.key, language)) return false
+        speechSyncInfo = "Kein Takt gefunden, vergleiche mit einer anderen Untertitel-Datei …"
+        val alternative = runCatching { container.subtitles.downloadAlternative(request.key, language, settings, filmInfo()) }
+            .onFailure { describeOnlineProblem(it) }.getOrNull() ?: return false
+        val cues = withContext(Dispatchers.IO) { parseCues(alternative.file) }
+        val fit = withContext(Dispatchers.Default) {
+            SpeechSync.estimate(heardSpeech.signal(position - SPEECH_WINDOW_MS, position + 5_000), cues.map { it.start to it.end })
+        }
+        if (fit == null || externalLanguage != language || subtitleAutoSynced) {
+            Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt auch nicht besser")
+            container.subtitles.dropAlternative(alternative)
+            return false
+        }
+        Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt zum Ton: ${fit.timing} (Güte ${fit.votes / 10.0})")
+        val file = container.subtitles.adoptAlternative(request.key, language, alternative)
+        subtitleFiles[language] = file
+        beginExternal(language, parseCues(file), null)
+        applyFit(fit.timing, bySpeech = true, toleranceMs = 0)
+        subtitleStatus = "Eine andere Untertitel-Datei passt zum Ton: übernommen und ausgerichtet ($subtitleShiftLabel)"
+        return true
+    }
 
     /** Von Hand aus dem Menü: Die eingeblendeten Untertitel gehören nicht zu diesem Film. */
     fun reportWrongSubtitles() {
@@ -2005,6 +2224,9 @@ class PlayerActivity : ComponentActivity() {
         }
         val translator = Translators.from(settings) ?: return
         val translations = java.util.concurrent.atomic.AtomicReferenceArray<String>(cues.size)
+        // In der Ruhezeit oder beim letzten Schauen schon übersetzte Zeilen gleich übernehmen.
+        val partial = container.subtitles.lineTranslations(request.key, de.ayutv.data.repo.Pretranslation.PARTIAL_TRACK, target)
+        cues.forEachIndexed { i, cue -> partial[cue.start]?.let { translations.set(i, it) } }
         // Wie geladene Untertitel einblenden (verschiebbar, automatisch ausgerichtet); fertig
         // übersetzte Zeilen ersetzen nach und nach das Original.
         beginExternal(target, cues, translations)
@@ -2014,6 +2236,10 @@ class PlayerActivity : ComponentActivity() {
             val i = cues.indexOfFirst { it.end > at }
             return if (i < 0) cues.size else i
         }
+        // Sätze über mehrere Einblendungen als Ganzes übersetzen, dann wieder aufteilen.
+        val sentenceCues = cues.map { de.ayutv.data.translate.SubtitleSentences.Cue(it.start, it.end, it.text) }
+        val groups = de.ayutv.data.translate.SubtitleSentences.groups(sentenceCues)
+        val groupOf = IntArray(cues.size).also { index -> groups.forEachIndexed { g, range -> range.forEach { index[it] = g } } }
         fileTranslationJob = lifecycleScope.launch {
             var done = 0
             fileTranslationInfo = "Übersetzung startet …"
@@ -2024,10 +2250,19 @@ class PlayerActivity : ComponentActivity() {
                     val next = (from until cues.size).firstOrNull { translations.get(it) == null }
                         ?: (0 until from).firstOrNull { translations.get(it) == null }
                         ?: break
-                    val indices = (next until minOf(cues.size, next + batch)).filter { translations.get(it) == null }
-                    val result = translator.translate(indices.map { cues[it].text }, target, sourceLanguage)
-                    indices.forEachIndexed { k, index -> translations.set(index, result.getOrElse(k) { cues[index].text }) }
-                    done += indices.size
+                    val chosen = (groupOf[next] until minOf(groups.size, groupOf[next] + batch)).map { groups[it] }
+                        .filter { range -> range.any { translations.get(it) == null } }
+                    val result = translator.translate(chosen.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, target, sourceLanguage)
+                    chosen.forEachIndexed { k, range ->
+                        val sentence = result.getOrNull(k)
+                        if (sentence == null) {
+                            range.forEach { translations.set(it, cues[it].text) }
+                            return@forEachIndexed
+                        }
+                        val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, range.map { cues[it].text.length })
+                        range.forEachIndexed { j, index -> translations.set(index, de.ayutv.data.translate.SubtitleSentences.wrap(parts[j])) }
+                    }
+                    done += chosen.sumOf { it.count() }
                     // Wie weit die Übersetzung vor der aktuellen Stelle ist (im Untertitel-Menü zu sehen).
                     val ahead = (indexAt(player?.currentPosition ?: 0L) until cues.size).takeWhile { translations.get(it) != null }.count()
                     fileTranslationInfo = "Übersetzt: $done von ${cues.size} Zeilen · ab hier $ahead Zeilen fertig"
@@ -2039,6 +2274,9 @@ class PlayerActivity : ComponentActivity() {
                 loadedLanguages = subtitleFiles.keys.toList()
                 Log.i(SUBTITLE_TAG, "Übersetzung von ${cues.size} Zeilen fertig und gespeichert")
             } catch (e: kotlinx.coroutines.CancellationException) {
+                // Abgebrochen (Film beendet, andere Untertitel): Bisheriges für das nächste Mal aufheben.
+                val lines = cues.indices.mapNotNull { i -> translations.get(i)?.let { cues[i].start to it } }.toMap()
+                container.subtitles.saveLineTranslations(request.key, de.ayutv.data.repo.Pretranslation.PARTIAL_TRACK, target, lines)
                 throw e
             } catch (e: Exception) {
                 Log.w(SUBTITLE_TAG, "Übersetzung der Datei fehlgeschlagen", e)
@@ -2077,13 +2315,13 @@ class PlayerActivity : ComponentActivity() {
         // Für diesen Sender / diese Serie merken.
         val language = group.getTrackFormat(index).language?.takeIf { it != "und" }
         if (language != null) memoryKey()?.let { key ->
-            container.playerMemory.update(key) { if (group.type == C.TRACK_TYPE_AUDIO) it.copy(audio = language) else it.copy(text = language) }
+            container.playerMemory.update(key) { if (group.type == C.TRACK_TYPE_AUDIO) it.copy(audio = language) else it.copy(text = language, load = null) }
         }
     }
 
     fun setTextEnabled(enabled: Boolean) {
         val p = player ?: return
-        if (!enabled) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = PlayerMemory.OFF) } }
+        if (!enabled) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = PlayerMemory.OFF, load = null) } }
         p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
             .apply { if (!enabled) clearOverridesOfType(C.TRACK_TYPE_TEXT) }
@@ -2147,6 +2385,132 @@ class PlayerActivity : ComponentActivity() {
             player?.seekTo(pendingSeekMs)
             pendingSeekMs = C.TIME_UNSET
         }
+    }
+
+    // ---------------------------------------------------------------- Anstoß-Hinweis
+
+    /** Fällige Erinnerung im Bild (OK schaltet um, ⏩ als kleines Bild, Zurück blendet aus). */
+    var dueReminder by mutableStateOf<de.ayutv.data.reminders.Reminder?>(null); private set
+    private var reminderJob: Job? = null
+
+    private fun showReminder(reminder: de.ayutv.data.reminders.Reminder) {
+        dueReminder = reminder
+        reminderJob?.cancel()
+        reminderJob = lifecycleScope.launch {
+            delay(REMINDER_VISIBLE_MS)
+            dueReminder = null
+        }
+    }
+
+    /** Taste, während der Hinweis zu sehen ist. true: verbraucht. */
+    private fun handleReminderKey(code: Int): Boolean {
+        val reminder = dueReminder ?: return false
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                dueReminder = null
+                lifecycleScope.launch {
+                    val channel = container.content.channel(reminder.channelKey) ?: return@launch
+                    if (isLive) playChannel(channel) else {
+                        startActivity(liveIntent(this@PlayerActivity, channel.key, null))
+                        finish()
+                    }
+                }
+            }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                if (!isLive) return false
+                dueReminder = null
+                lifecycleScope.launch { container.content.channel(reminder.channelKey)?.let(::startPip) }
+            }
+            KeyEvent.KEYCODE_BACK -> dueReminder = null
+            else -> return false
+        }
+        return true
+    }
+
+    // ---------------------------------------------------------------- Konferenz (zweites, kleines Bild)
+
+    /** Zweiter Sender als kleines Bild unten rechts (ohne Ton). ⏩ tauscht die Bilder. */
+    var pipPlayer by mutableStateOf<ExoPlayer?>(null); private set
+    var pipChannel by mutableStateOf<ChannelEntity?>(null); private set
+    /** Auswahl für das kleine Bild: laufende Spiele und der vorige Sender (Sender, Beschriftung). */
+    var pipChoices by mutableStateOf<List<Pair<ChannelEntity, String>>?>(null); private set
+    private var pipRetries = 0
+
+    fun openPipPicker() {
+        lifecycleScope.launch {
+            val now = System.currentTimeMillis()
+            val games = runCatching { container.content.sportEvents(hours = 1) }.getOrDefault(emptyList())
+                .filter { it.programme.start <= now && it.programme.stop > now && it.channel.key != playing?.key }
+                .map { it.channel to "⚽ ${it.programme.sportHeadline()} · ${it.channel.name}" }
+            val previous = previousChannel?.takeIf { p -> p.key != playing?.key && games.none { it.first.key == p.key } }
+                ?.let { listOf(it to "↩ Voriger Sender: ${it.name}") }.orEmpty()
+            val favorites = runCatching { container.content.zapList(null, favoritesOnly = true, merge = settings.mergeVariants) }.getOrDefault(emptyList())
+                .filter { f -> f.key != playing?.key && games.none { it.first.key == f.key } && previous.none { it.first.key == f.key } }
+                .take(12).map { it to "★ ${it.name}" }
+            pipChoices = games + previous + favorites
+            overlayToken++
+        }
+    }
+
+    fun closePipPicker() {
+        pipChoices = null
+        overlayToken++
+    }
+
+    fun startPip(channel: ChannelEntity) {
+        pipChoices = null
+        closeOverlay()
+        val main = playing
+        // Konto mit nur einer Verbindung: Zwei Sender desselben Anbieters gleichzeitig gehen nicht.
+        if (main != null && main.playlistId == channel.playlistId && container.accountLimits.maxConnections(channel.playlistId) == 1) {
+            message = "Dein Konto erlaubt nur 1 Verbindung: zwei Sender gleichzeitig gehen bei diesem Anbieter nicht."
+            handler.postDelayed({ message = null }, 8_000)
+            return
+        }
+        val preview = pipPlayer ?: PlayerFactory.createPreview(this, container.http, channel.userAgent ?: settings.userAgent).also { created ->
+            created.addListener(object : Player.Listener {
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.w(TAG, "Kleines Bild: ${error.errorCodeName}", error)
+                    if (pipRetries++ < 3) {
+                        handler.postDelayed({ pipPlayer?.let { it.prepare(); it.play() } }, 1_500)
+                        return
+                    }
+                    val limit = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+                    closePip()
+                    message = if (limit != null && limit in 400..499) {
+                        "Zweiter Sender abgelehnt (HTTP $limit) – vermutlich erlaubt das Konto nur eine Verbindung."
+                    } else "Zweites Bild nicht möglich: ${error.errorCodeName}"
+                    handler.postDelayed({ message = null }, 8_000)
+                }
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) pipRetries = 0
+                }
+            })
+        }
+        pipRetries = 0
+        val url = adaptLiveUrl(channel.url)
+        preview.setMediaItem(mediaItem(url, guessMime(url)))
+        preview.repeatMode = Player.REPEAT_MODE_ONE
+        preview.prepare()
+        preview.play()
+        pipPlayer = preview
+        pipChannel = channel
+        message = "Kleines Bild: ${channel.name} · ⏩ tauschen · ☰ schließen"
+        handler.postDelayed({ if (message?.startsWith("Kleines Bild") == true) message = null }, 5_000)
+    }
+
+    /** Hauptbild und kleines Bild tauschen (der Ton folgt dem Hauptbild). */
+    fun swapPip() {
+        val small = pipChannel ?: return
+        val main = playing ?: return
+        playChannel(small)
+        startPip(main)
+    }
+
+    fun closePip() {
+        pipPlayer?.release()
+        pipPlayer = null
+        pipChannel = null
     }
 
     // ---------------------------------------------------------------- Gemeinsam
@@ -2527,11 +2891,18 @@ class PlayerActivity : ComponentActivity() {
             }
         }
 
-        override fun onVideoSizeChanged(videoSize: VideoSize) = updateFormats()
+        override fun onVideoSizeChanged(videoSize: VideoSize) {
+            updateFormats()
+            // Gemessene Auflösung merken: bestimmt, welche Fassung doppelter Sender die beste ist, und den Qualitätsfilter.
+            if (isLive && videoSize.height > 0) playing?.let { de.ayutv.data.parse.ChannelQuality.recordPlayback(it.key, videoSize.height, stats.startupMs) }
+        }
 
         override fun onPlayerError(error: PlaybackException) {
             val p = player ?: return
             Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
+            playerErrors++
+            // Für den Fehlerbericht: welcher Fehler, mit der eigentlichen Ursache.
+            statusHistory += "Fehler ${error.errorCodeName}: ${(error.cause?.message ?: error.message).orEmpty().take(140)}"
             if (timeshifted) {
                 if (++timeshiftErrors <= 2) {
                     handler.postDelayed({ if (timeshifted) player?.let { enterTimeshift(currentTimeshiftMs(it), play = true) } }, 500)
@@ -2639,7 +3010,14 @@ class PlayerActivity : ComponentActivity() {
                 }
                 retries < MAX_RETRIES -> {
                     retries++
-                    message = "Verbindung wird wiederhergestellt … ($retries/$MAX_RETRIES)"
+                    // Erst Bescheid sagen, wenn nach 3 s noch kein Bild da ist: Meist läuft es nach dem Neustart gleich weiter.
+                    val generation = streamGeneration
+                    val attempt = retries
+                    handler.postDelayed({
+                        if (generation == streamGeneration && player?.playbackState != Player.STATE_READY) {
+                            message = "Verbindung wird wiederhergestellt … ($attempt/$MAX_RETRIES)"
+                        }
+                    }, 3_000)
                     retryLater()
                 }
                 else -> {
@@ -2736,11 +3114,20 @@ class PlayerActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val code = event.keyCode
+        if (dueReminder != null && overlay != Overlay.CHANNELS && overlay != Overlay.TRACKS &&
+            (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER || code == KeyEvent.KEYCODE_BACK ||
+                (code == KeyEvent.KEYCODE_MEDIA_FAST_FORWARD && isLive))
+        ) {
+            if (event.action == KeyEvent.ACTION_UP) handleReminderKey(code)
+            return true
+        }
         if (code == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
                 when {
+                    syncPanel && overlay == Overlay.NONE -> closeSyncPanel()
                     languagePicker -> closeLanguagePicker()
                     epgPicker -> closeEpgPicker()
+                    pipChoices != null -> closePipPicker()
                     overlay != Overlay.NONE -> closeOverlay()
                     else -> finish()
                 }
@@ -2749,6 +3136,7 @@ class PlayerActivity : ComponentActivity() {
         }
         // Noch nicht bereit (Einstellungen/Player werden geladen).
         if (player == null) return super.dispatchKeyEvent(event)
+        if (syncPanel && overlay == Overlay.NONE && handleSyncKey(event)) return true
         // In Senderliste und Spurmenü übernimmt Compose die Navigation.
         if (overlay == Overlay.CHANNELS || overlay == Overlay.TRACKS) {
             if (event.action == KeyEvent.ACTION_DOWN) overlayToken++
@@ -2802,7 +3190,7 @@ class PlayerActivity : ComponentActivity() {
             }
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> toggleLivePause(code)
             KeyEvent.KEYCODE_MEDIA_REWIND -> shiftLive(-(if (step > 0) step else 10_000L))
-            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> shiftLive(if (step > 0) step else 30_000L)
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> if (pipPlayer != null && !timeshifted && repeat == 0) swapPip() else shiftLive(if (step > 0) step else 30_000L)
             in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> onDigit(code - KeyEvent.KEYCODE_0)
             else -> return false
         }
@@ -2869,6 +3257,14 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
         vod?.let(::learnOpening)
         saveAheadTranslations()
+        recordWatch()
+        container.scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.saveIfChanged(container.qualityFile) }
+        // Für den Fehlerbericht: was zuletzt lief und was der Player gemeldet hat.
+        de.ayutv.data.Diagnostics.savePlayerSession(
+            this,
+            if (isLive) playing?.name.orEmpty() else vodTitle,
+            statusHistory + listOf("Technik: $stats", "Abbrüche: ${dropInfo.ifEmpty { "keine" }}"),
+        )
         // Bild-in-Bild-Fenster geschlossen: Player beenden statt unsichtbar im Hintergrund zu bleiben.
         if (inPip) {
             inPip = false
@@ -2890,6 +3286,7 @@ class PlayerActivity : ComponentActivity() {
         }
         // Live-Streams im Hintergrund nicht weiterladen: spart Bandbreite und eine Verbindung beim Anbieter.
         player?.let { p -> if (isLive) p.stop() else p.pause() }
+        closePip()
     }
 
     override fun onDestroy() {
@@ -2900,6 +3297,7 @@ class PlayerActivity : ComponentActivity() {
         timeshift.buffer?.release()
         timeshift.buffer = null
         frameRateMatcher.reset()
+        closePip()
         player?.release()
         player = null
         // Keinen Verweis auf diese Activity im App-weiten Übersetzer behalten und den Übersetzer-Prozess
@@ -2915,6 +3313,7 @@ class PlayerActivity : ComponentActivity() {
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L
         private const val TAG = "AyuPlayer"
+        private const val REMINDER_VISIBLE_MS = 40_000L
         private val SRT_TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
         private const val DISPLAY_SWITCH_GRACE_MS = 6_000L
         const val SUBTITLE_TAG = "AyuSubtitles"
@@ -2943,6 +3342,8 @@ class PlayerActivity : ComponentActivity() {
         private const val SPEECH_WINDOW_MS = 15 * 60_000L
         /** So viel Ton im Fenster ohne Übereinstimmung: falsche Datei. */
         private const val SPEECH_WRONG_FILE_SECONDS = 14 * 60
+        /** Nach so viel Gespräch ohne Takt wird ein weiterer Treffer der Suche verglichen. */
+        private const val SPEECH_COMPARE_SECONDS = 3 * 60
         private const val VIDEO_FREEZE_SECONDS = 6
         private const val CUSHION_LOW_MS = 2_500L
         private const val CUSHION_HIGH_MS = 5_000L

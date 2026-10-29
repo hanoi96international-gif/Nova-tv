@@ -42,6 +42,16 @@ enum class TranslationProvider(val label: String) {
     NONE("Aus"),
 }
 
+/** Mindestqualität der Senderliste. */
+enum class MinQuality(val label: String, val height: Int) {
+    ALL("Alle", 0),
+    HD("ab HD (720p)", 720),
+    FHD("ab Full HD (1080p)", 1080),
+    UHD("nur 4K", 2160);
+
+    fun next(): MinQuality = entries[(ordinal + 1) % entries.size]
+}
+
 enum class SubtitleSize(val label: String, val scale: Float) {
     NORMAL("Normal", 1.0f),
     LARGE("Groß", 1.3f),
@@ -134,6 +144,18 @@ data class AppSettings(
     val phoneRemote: Boolean = true,
     /** Zuletzt gewählte Sprache der Live-Übersetzung: deren Modell wird vorab geladen ("" = noch keine). */
     val lastTranslationTarget: String = "",
+    /** In der Ruhezeit Untertitel für „Weiter schauen“ und die nächste Folge vorab holen und übersetzen. */
+    val pretranslate: Boolean = true,
+    /** Mindestqualität der Sender (bekannt niedrigere werden ausgeblendet). */
+    val minQuality: MinQuality = MinQuality.ALL,
+    /** Bei doppelt geführten Sendern 4K statt Full HD bevorzugen. */
+    val preferUhd: Boolean = false,
+    /** Sender, die im Hintergrund-Check wiederholt nicht laufen, ausblenden. */
+    val hideBrokenChannels: Boolean = false,
+    /** In der Ruhezeit prüfen, welche Fassung doppelter Sender läuft und wie gut. */
+    val channelCheck: Boolean = true,
+    /** Aussehen der Menüs. */
+    val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.NORDLICHT,
 ) {
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
@@ -189,6 +211,12 @@ class SettingsStore(private val context: Context) {
         val dataSaver = booleanPreferencesKey("data_saver")
         val alertKeywords = stringSetPreferencesKey("alert_keywords")
         val phoneRemote = booleanPreferencesKey("phone_remote")
+        val pretranslate = booleanPreferencesKey("pretranslate")
+        val uiTheme = stringPreferencesKey("ui_theme")
+        val minQuality = stringPreferencesKey("min_quality")
+        val preferUhd = booleanPreferencesKey("prefer_uhd")
+        val hideBroken = booleanPreferencesKey("hide_broken_channels")
+        val channelCheck = booleanPreferencesKey("channel_check")
         val lastTranslationTarget = stringPreferencesKey("last_translation_target")
     }
 
@@ -300,6 +328,12 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.alertKeywords] = next.alertKeywords
             prefs[Keys.phoneRemote] = next.phoneRemote
             prefs[Keys.lastTranslationTarget] = next.lastTranslationTarget
+            prefs[Keys.pretranslate] = next.pretranslate
+            prefs[Keys.uiTheme] = next.uiTheme.name
+            prefs[Keys.minQuality] = next.minQuality.name
+            prefs[Keys.preferUhd] = next.preferUhd
+            prefs[Keys.hideBroken] = next.hideBrokenChannels
+            prefs[Keys.channelCheck] = next.channelCheck
         }
     }
 
@@ -339,6 +373,12 @@ class SettingsStore(private val context: Context) {
         alertKeywords = this[Keys.alertKeywords] ?: emptySet(),
         phoneRemote = this[Keys.phoneRemote] ?: true,
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
+        pretranslate = this[Keys.pretranslate] ?: true,
+        uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.NORDLICHT),
+        minQuality = enumOrDefault(this[Keys.minQuality], MinQuality.ALL),
+        preferUhd = this[Keys.preferUhd] ?: false,
+        hideBrokenChannels = this[Keys.hideBroken] ?: false,
+        channelCheck = this[Keys.channelCheck] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =
