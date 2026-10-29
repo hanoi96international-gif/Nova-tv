@@ -1660,6 +1660,15 @@ class PlayerActivity : ComponentActivity() {
                 val done = lines.count { it.startMs in aheadTranslations }
                 val elapsed = SystemClock.elapsedRealtime() - started
                 if ((loaded && done >= lines.size) || elapsed >= PREROLL_MAX_MS) break
+                // Nur anhalten, wenn wirklich Zeilen fehlen, und nur gleich zu Beginn: Ist alles Bekannte schon
+                // übersetzt (über Nacht vorbereitet), läuft der Film einfach weiter, statt mitten drin zu stoppen.
+                if (!paused && (done >= lines.size || elapsed > PREROLL_DECIDE_MS)) {
+                    if (done >= lines.size && elapsed <= PREROLL_DECIDE_MS) {
+                        delay(250)
+                        continue
+                    }
+                    break
+                }
                 if (!paused) {
                     paused = true
                     player.playWhenReady = false
@@ -3600,6 +3609,8 @@ class PlayerActivity : ComponentActivity() {
         /** Vorlauf der Übersetzung: so viel Film wird vorab übersetzt, höchstens so lange angehalten. */
         private const val PREROLL_WINDOW_MS = 60_000L
         private const val PREROLL_MAX_MS = 40_000L
+        /** Nur in den ersten Sekunden entscheidet sich, ob angehalten wird. */
+        private const val PREROLL_DECIDE_MS = 3_000L
         private const val DROP_WARN_COUNT = 3
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
