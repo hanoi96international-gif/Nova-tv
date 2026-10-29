@@ -89,6 +89,31 @@ class EmbeddedSubtitles(
     /** Gibt es schon mitgelesene Einblendungen dieser Spur? */
     fun hasEntries(format: Format): Boolean = find(format)?.let { synchronized(it) { it.entries.isNotEmpty() } } == true
 
+    /**
+     * Startzeiten der vollständigsten Spur (keine erzwungene), egal welche Sprache und ob Text oder Bild: Taktgeber,
+     * an dem geladene Untertitel Zeile für Zeile ausgerichtet werden ([SubtitleAlign]).
+     */
+    fun referenceStarts(): List<Long> {
+        val track = tracks.values.filter { !it.format.isForcedSubtitle() }
+            .maxByOrNull { synchronized(it) { it.entries.size } } ?: return emptyList()
+        synchronized(track) { return track.entries.keys.toList() }
+    }
+
+    /**
+     * Bild-Untertitel, deren Bilder niemand braucht: nur die Zeit merken (Taktgeber), ohne das Bild zu dekodieren.
+     * Ein Bild-Sample mit Inhalt ist groß, das Ausblenden ist ein winziges Sample ohne Bild ([TIMING_MIN_BYTES]).
+     */
+    internal fun addTiming(format: Format, timeUs: Long, sampleBytes: Int) {
+        val track = tracks.getOrPut(key(format)) { Track(format) }
+        val startMs = timeUs / 1000
+        synchronized(track) {
+            track.entries.lowerEntry(startMs)?.value?.let { if (it.endMs < 0 || it.endMs > startMs) it.endMs = startMs }
+            if (sampleBytes < TIMING_MIN_BYTES || track.entries.containsKey(startMs)) return
+            track.entries[startMs] = Entry(startMs, -1L, null, null)
+            while (track.entries.size > MAX_ENTRIES) track.entries.pollFirstEntry()
+        }
+    }
+
     /** Einblendung, die bei [positionMs] zu sehen ist. */
     fun at(format: Format, positionMs: Long): Entry? {
         val track = find(format) ?: return null
@@ -178,6 +203,8 @@ class EmbeddedSubtitles(
 
         private const val MAX_ENTRIES = 3_000
         private const val OPEN_END_MS = 6_000L
+        /** Kleinere Bild-Samples sind „ausblenden“ (kein Bild). */
+        private const val TIMING_MIN_BYTES = 256
         private const val MAX_HEIGHT_PER_IMAGE = 110
         private const val KEEP_IMAGES_BEHIND_MS = 30_000L
         private val BITMAP_TYPES = setOf(MimeTypes.APPLICATION_PGS, MimeTypes.APPLICATION_DVBSUBS, MimeTypes.APPLICATION_VOBSUB)
@@ -280,8 +307,11 @@ private class TapTrackOutput(private val delegate: TrackOutput, private val stor
         if (offset > 0 && end >= 0) pending.write(bytes, end, offset)
         val start = end - size
         if (start < 0 || size <= 0) return
-        // Bild-Untertitel, die niemand lesen will: nicht dekodieren (PNG pro Einblendung).
-        if (store.isBitmap(current) && !store.wantsImages(current)) return
+        // Bild-Untertitel, die niemand lesen will: nicht dekodieren (PNG pro Einblendung), nur die Zeit als Taktgeber.
+        if (store.isBitmap(current) && !store.wantsImages(current)) {
+            store.addTiming(current, timeUs, size)
+            return
+        }
         runCatching {
             val cues = decoder.decode(timeUs, bytes, start, size)
             store.add(current, timeUs, cues.durationUs, cues.cues)

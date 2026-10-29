@@ -626,6 +626,47 @@ class DeviceTourTest {
             }
         }
 
+        // 4d2. Datei einer anderen Fassung, deren Versatz mitten im Film springt (2,5 s, nach Zeile 110 dann 6 s, wie nach
+        // einer fehlenden Szene): Zeile für Zeile an der eingebetteten Spur ausrichten, auch hinter dem Sprung.
+        if (movie != null) section("subtitle_elastic") {
+            fun ts(ms: Long) = "%02d:%02d:%02d,%03d".format(ms / 3_600_000, ms / 60_000 % 60, ms / 1_000 % 60, ms % 1_000)
+            var t = 1_000L
+            val embedded = ArrayList<Pair<Long, Long>>()
+            val cues = (0 until 220).map { i ->
+                val gap = 2_000L + (i.toLong() * i * 7_919 + i.toLong() * 104_729) % 4_001
+                val end = t + minOf(1_800L, gap - 200)
+                embedded += t to end
+                val shift = if (i < 110) 2_500L else 6_000L
+                de.ayutv.data.parse.SrtCue(ts(t + shift), ts(end + shift), "Hola número $i").also { t += gap }
+            }
+            val key = movie.key + "#elastisch"
+            container.subtitles.saveTranslation(key, "es", cues)
+            val request = VodRequest(key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                // Hinter den Sprung springen (Zeile 150), dort muss die Datei trotzdem passen.
+                val target = embedded[150].first - 3_000
+                scenario.onActivity { it.player?.seekTo(target); it.showLoaded("es") }
+                val aligned = waitFor(90_000) { (scenario.read { it.matchPercent } ?: 0) >= 70 }
+                // Gerade zu sehende eingebettete Zeile = Nummer der Zeile, die aus der Datei angezeigt werden muss.
+                var checked = 0
+                var right = 0
+                repeat(20) {
+                    val (position, cue) = scenario.read { (it.player?.currentPosition ?: 0L) to it.translatedCue }
+                    val index = embedded.indexOfFirst { (start, end) -> position in (start + 200)..(end - 200) }
+                    if (index >= 0 && cue != null) {
+                        checked++
+                        if (cue == "Hola número $index") right++
+                    }
+                    Thread.sleep(700)
+                }
+                shot("24d_subtitle_elastic")
+                log("subtitle_elastic: aligned=$aligned percent=${scenario.read { it.matchPercent }} checked=$checked right=$right badge=${scenario.read { it.syncBadge }}")
+                assertTrue("Zeilen-Abgleich nicht erreicht (${scenario.read { it.matchPercent }} %)", aligned)
+                assertTrue("Hinter dem Sprung falsche Zeilen ($right von $checked)", checked >= 3 && right * 10 >= checked * 9)
+            }
+        }
+
         // 4e. Untertitel eines ganz anderen Films (zufällige Zeiten): als falsch erkennen und verwerfen.
         if (movie != null) section("wrong_subtitles") {
             val random = java.util.Random(11)

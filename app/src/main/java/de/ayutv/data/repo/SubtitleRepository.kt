@@ -180,6 +180,8 @@ class SubtitleRepository(
         }
         // Gleich gute Dateien: die mit der Bildrate des Films zuerst.
         candidates = OpenSubtitlesParsing.preferFrameRate(candidates, film.frameRate)
+        // Gleiche Fassung wie der Film (aus Titel und Dateiname: BluRay/WEB, 1080p, Release-Gruppe) zuerst.
+        candidates = OpenSubtitlesParsing.preferRelease(candidates, OpenSubtitlesParsing.releaseHints(title, videoUrl))
         // Höchstens drei Dateien laden (Tageslimit): Passt die Länge nicht zum Film (andere Fassung, anderer
         // Film), die nächste nehmen. Passt sie nur mit PAL-Umrechnung, wird die gleich voreingestellt.
         val tries = candidates.take(3)
