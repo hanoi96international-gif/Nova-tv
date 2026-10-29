@@ -328,7 +328,12 @@ class PlayerActivity : ComponentActivity() {
             val request = vod
             if (request != null) {
                 vodTitle = request.title
-                val resume = if (intent.getBooleanExtra(EXTRA_FROM_START, false)) 0L else container.content.resumePosition(request.key)
+                val handedOver = intent.getLongExtra(EXTRA_START_AT, 0L)
+                val resume = when {
+                    handedOver > 0 -> handedOver // vom Handy übergeben: an derselben Stelle weiter
+                    intent.getBooleanExtra(EXTRA_FROM_START, false) -> 0L
+                    else -> container.content.resumePosition(request.key)
+                }
                 // Datei-Hash, bevor der Player verbindet (danach nie parallel): Damit findet OpenSubtitles
                 // Untertitel, die zeitgenau zu genau dieser Datei passen.
                 if (settings.onlineSubtitlesEnabled && request.kind != HistoryKind.CATCHUP) {
@@ -345,7 +350,15 @@ class PlayerActivity : ComponentActivity() {
                     else -> "Alle Sender"
                 }
                 // Erst den Sender starten, dann die (evtl. zehntausende Einträge lange) Zapp-Liste laden.
-                val direct = key?.let { container.content.channel(it) }
+                // Vom Handy übergeben und hier nicht in der Playlist: direkt über die Adresse spielen.
+                val handedUrl = intent.getStringExtra(EXTRA_LIVE_URL)
+                val direct = key?.let { container.content.channel(it) } ?: handedUrl?.let { url ->
+                    ChannelEntity(
+                        key = "handy:$url", playlistId = -1, name = intent.getStringExtra(EXTRA_LIVE_NAME) ?: "Vom Handy",
+                        groupTitle = "Vom Handy", logo = intent.getStringExtra(EXTRA_LIVE_LOGO), url = url, epgId = null, number = 0,
+                        userAgent = intent.getStringExtra(EXTRA_LIVE_AGENT),
+                    )
+                }
                 if (direct != null) playChannel(direct)
                 val list = container.content.zapList(group, favoritesOnly, merge = settings.mergeVariants)
                 val start = direct ?: list.firstOrNull()
@@ -2709,16 +2722,56 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Chromecast (Handy)
 
-    /** Chromecast möglich (Handy mit Google-Play-Diensten). */
-    val castAvailable: Boolean by lazy { de.ayutv.player.cast.Cast.available(this) }
-    /** Name des Chromecast, auf dem gerade gespielt wird. */
+    /**
+     * 📺 auf dem Handy: auf einen Fernseher übertragen – einen Fire TV (oder anderen Fernseher) mit DnA-TV im selben
+     * WLAN, oder einen Chromecast / Google-TV (nur mit Google-Play-Diensten). Fire TV kann kein Chromecast.
+     */
+    val castAvailable: Boolean by lazy { hasTouchscreen() }
+    /** Name des Fernsehers, auf dem gerade gespielt wird. */
     var castingTo by mutableStateOf<String?>(null); private set
+    /** Läuft gerade auf einem Fernseher mit DnA-TV (statt Chromecast). */
+    private var castingToDnaTv = false
 
     fun toggleCast() {
         if (castingTo != null) {
-            de.ayutv.player.cast.Cast.stop(this)
+            if (castingToDnaTv) {
+                castingTo = null
+                castingToDnaTv = false
+                message = "Läuft wieder hier (auf dem Fernseher läuft es weiter)"
+                restartStream()
+            } else {
+                de.ayutv.player.cast.Cast.stop(this)
+            }
             return
         }
+        lifecycleScope.launch {
+            message = "Suche Fernseher im WLAN …"
+            val client = de.ayutv.data.remote.RemoteClient(applicationContext, container)
+            var found = emptyList<de.ayutv.data.remote.RemoteClient.Tv>()
+            kotlinx.coroutines.withTimeoutOrNull(2_500) { client.discover().collect { found = it } }
+            // Schon gekoppelter Fernseher, auch wenn ihn die Suche (Router blockt Ankündigungen) nicht findet.
+            val paired = client.address?.takeIf { client.paired && found.none { tv -> tv.address == it } }
+                ?.let { de.ayutv.data.remote.RemoteClient.Tv("Gekoppelter Fernseher", it) }
+            val tvs = found + listOfNotNull(paired)
+            val chromecast = de.ayutv.player.cast.Cast.available(this@PlayerActivity)
+            message = null
+            if (tvs.isEmpty() && !chromecast) {
+                message = "Kein Fernseher gefunden. Auf dem Fire TV DnA-TV öffnen (gleiches WLAN, Einstellungen → Handy als Fernbedienung: an)."
+                handler.postDelayed({ if (message?.startsWith("Kein Fernseher") == true) message = null }, 10_000)
+                return@launch
+            }
+            val labels = tvs.map { "📺 ${it.name}" } + listOfNotNull(if (chromecast) "Chromecast / Google TV" else null)
+            android.app.AlertDialog.Builder(this@PlayerActivity)
+                .setTitle("Auf Fernseher abspielen")
+                .setItems(labels.toTypedArray()) { _, which ->
+                    if (which < tvs.size) sendToTv(client, tvs[which]) else chooseChromecast()
+                }
+                .setNegativeButton("Abbrechen", null)
+                .show()
+        }
+    }
+
+    private fun chooseChromecast() {
         de.ayutv.player.cast.Cast.choose(
             this,
             onConnected = { name -> startCasting(name) },
@@ -2728,6 +2781,60 @@ class PlayerActivity : ComponentActivity() {
                 player?.play()
             },
         )
+    }
+
+    /** An einen Fernseher mit DnA-TV übergeben; beim ersten Mal nach der PIN fragen (steht dort in den Einstellungen). */
+    private fun sendToTv(client: de.ayutv.data.remote.RemoteClient, tv: de.ayutv.data.remote.RemoteClient.Tv) {
+        val p = player ?: return
+        val request = if (isLive) {
+            playing?.let { de.ayutv.data.remote.RemotePlay(live = true, url = it.url, title = it.name, image = it.logo, userAgent = it.userAgent ?: settings.userAgent) }
+        } else {
+            vod?.let { de.ayutv.data.remote.RemotePlay(false, it.url, it.title, it.key, it.kind, it.subtitle, it.image, p.currentPosition, settings.userAgent) }
+        }
+        if (request == null || request.url.startsWith("file:")) {
+            message = "Aufnahmen und Downloads lassen sich nicht übertragen"
+            return
+        }
+        fun send(pin: String) {
+            lifecycleScope.launch {
+                var released = false
+                runCatching {
+                    val name = client.check(tv.address, pin)
+                    client.address = tv.address
+                    client.pin = pin
+                    // Erst hier loslassen: Viele Konten erlauben nur eine Verbindung, der Fernseher braucht sie.
+                    p.stop()
+                    released = true
+                    client.play(request, tv.address, pin)
+                    name
+                }.onSuccess { name ->
+                    castingTo = name
+                    castingToDnaTv = true
+                    message = "📺 Läuft auf $name – das Handy kannst du jetzt sperren oder weglegen. (📺 nochmal: hier weiterschauen)"
+                    handler.postDelayed({ if (message?.startsWith("📺 Läuft") == true) message = null }, 8_000)
+                }.onFailure { e ->
+                    if (released) restartStream()
+                    if (e.message?.contains("PIN") == true) askPin(tv) { send(it) }
+                    else message = "Fernseher: ${e.message ?: "nicht erreichbar"}"
+                }
+            }
+        }
+        val known = client.pin?.takeIf { client.address == tv.address }
+        if (known != null) send(known) else askPin(tv) { send(it) }
+    }
+
+    private fun askPin(tv: de.ayutv.data.remote.RemoteClient.Tv, onPin: (String) -> Unit) {
+        val input = android.widget.EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "PIN"
+        }
+        android.app.AlertDialog.Builder(this)
+            .setTitle(tv.name)
+            .setMessage("PIN vom Fernseher eingeben: dort Einstellungen → Daten & Info → Handy als Fernbedienung.")
+            .setView(input)
+            .setPositiveButton("Verbinden") { _, _ -> input.text.toString().trim().takeIf { it.isNotEmpty() }?.let(onPin) }
+            .setNegativeButton("Abbrechen", null)
+            .show()
     }
 
     private fun startCasting(name: String) {
@@ -3514,6 +3621,20 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_GROUP = "group"
         private const val EXTRA_FAVORITES = "favorites"
         private const val EXTRA_FROM_START = "from_start"
+        /** Startposition in ms (vom Handy übergeben). */
+        const val EXTRA_START_AT = "start_at"
+        private const val EXTRA_LIVE_URL = "live_url"
+        private const val EXTRA_LIVE_NAME = "live_name"
+        private const val EXTRA_LIVE_LOGO = "live_logo"
+        private const val EXTRA_LIVE_AGENT = "live_agent"
+
+        /** Sender, den es hier nicht gibt (vom Handy übergeben), direkt über seine Adresse spielen. */
+        fun liveUrlIntent(context: Context, url: String, name: String, logo: String?, userAgent: String?): Intent =
+            Intent(context, PlayerActivity::class.java)
+                .putExtra(EXTRA_LIVE_URL, url)
+                .putExtra(EXTRA_LIVE_NAME, name)
+                .putExtra(EXTRA_LIVE_LOGO, logo)
+                .putExtra(EXTRA_LIVE_AGENT, userAgent)
         private const val EXTRA_VOD_KEY = "vod_key"
         private const val EXTRA_VOD_KIND = "vod_kind"
         private const val EXTRA_VOD_TITLE = "vod_title"

@@ -65,7 +65,12 @@ class RemoteServer(private val context: Context, private val container: AppConta
         val newScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineExceptionHandler { _, e -> Log.w(TAG, "Fernbedienung", e) })
         scope = newScope
         newScope.launch {
-            val ip = localAddress() ?: return@launch
+            // Nach dem Einschalten ist das WLAN oft noch nicht da: warten statt aufgeben.
+            var ip = localAddress()
+            while (ip == null) {
+                delay(10_000)
+                ip = localAddress()
+            }
             val server = runCatching { ServerSocket(PORT, 8, InetAddress.getByName(ip)) }.getOrElse {
                 Log.w(TAG, "Port $PORT belegt", it)
                 return@launch
@@ -168,6 +173,14 @@ class RemoteServer(private val context: Context, private val container: AppConta
                 val languages = listOf(s.subtitleLanguage, s.lastTranslationTarget).filter { it.isNotEmpty() }.distinct()
                 respond(client, 200, "application/json", """{"languages":[${languages.joinToString(",") { "\"${jsonEscape(it)}\"" }}]}""".toByteArray())
             }
+            "/play" -> {
+                // Vom Handy übergeben: Sender oder Film hier abspielen.
+                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                val result = runCatching { play(RemotePlay.parse(body.toString(Charsets.UTF_8))) }
+                val error = result.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: result.getOrNull()
+                if (error != null) respond(client, 404, "text/plain; charset=utf-8", error.toByteArray())
+                else respond(client, 200, "text/plain", "ok".toByteArray())
+            }
             "/report" -> respond(client, 200, "text/plain; charset=utf-8", de.ayutv.data.Diagnostics.build(context, container).toByteArray())
             "/sync" -> {
                 if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
@@ -178,6 +191,34 @@ class RemoteServer(private val context: Context, private val container: AppConta
             }
             else -> respond(client, 404, "text/plain", ByteArray(0))
         }
+    }
+
+    /**
+     * Sender oder Film vom Handy hier starten. Die Schlüssel unterscheiden sich je Gerät (Playlist-Nummer),
+     * darum über die Adresse beim Anbieter zuordnen. Liefert eine Fehlermeldung oder null.
+     */
+    private suspend fun play(request: RemotePlay): String? {
+        val intent = if (request.live) {
+            // Gibt es den Sender hier nicht (andere Playlist), spielt der Fernseher die Adresse trotzdem direkt.
+            // Nicht die Fassung des Handys übernehmen, sondern hier die beste desselben Senders (das Handy spielt
+            // vielleicht SD oder eine Ersatzfassung; der Fernseher nimmt Full HD/4K, wenn es sie gibt).
+            val channel = container.db.channels().byUrl(request.url)?.let { c ->
+                val score = { ch: de.ayutv.data.db.ChannelEntity -> de.ayutv.data.parse.ChannelQuality.score(ch.key, ch.name) }
+                container.content.variantsOf(c).firstOrNull()?.takeIf { score(it) < score(c) } ?: c
+            }
+            if (channel != null) de.ayutv.player.PlayerActivity.liveIntent(context, channel.key, group = null)
+            else de.ayutv.player.PlayerActivity.liveUrlIntent(context, request.url, request.title, request.image, request.userAgent)
+        } else {
+            val key = container.db.vod().byUrl(request.url)?.key ?: request.key
+            de.ayutv.player.PlayerActivity.vodIntent(
+                context,
+                de.ayutv.player.VodRequest(key, request.kind, request.title, request.subtitle, request.image, request.url),
+            ).putExtra(de.ayutv.player.PlayerActivity.EXTRA_START_AT, request.positionMs)
+        }
+        withContext(Dispatchers.Main) {
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+        }
+        return null
     }
 
     /** Taste im Vordergrund-Fenster der App auslösen, als käme sie von der Fernbedienung. */

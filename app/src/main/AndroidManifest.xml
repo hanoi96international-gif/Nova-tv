@@ -78,6 +78,10 @@
             android:name=".data.record.RecordingService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+        <service
+            android:name=".data.remote.RemoteService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
         <receiver
             android:name=".data.reminders.ReminderReceiver"
             android:exported="false">

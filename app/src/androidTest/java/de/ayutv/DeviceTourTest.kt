@@ -945,6 +945,36 @@ class DeviceTourTest {
             }
         }
 
+        // Vom Handy auf den Fernseher: /play startet den Sender (Zuordnung über die Adresse, nicht den Schlüssel)
+        section("play_on_tv") {
+            container.remote.start()
+            try {
+                assertTrue("Fernbedienung ohne Adresse", waitFor(5_000) { container.remote.address != null })
+                val channel = runBlocking { container.db.channels().all() }.first { it.name == "HLS Test" }
+                val client = de.ayutv.data.remote.RemoteClient(app, container)
+                val name = runBlocking { client.check(container.remote.address!!, container.remote.pin) }
+                runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, channel.url, channel.name), container.remote.address!!, container.remote.pin) }
+                val started = waitFor(10_000) { (container.foreground?.get() as? PlayerActivity)?.current?.key == channel.key }
+                // Sender, den es hier nicht gibt (andere Playlist auf dem Handy): läuft direkt über die Adresse
+                val foreign = channel.url + "?vom=handy"
+                runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, foreign, "Vom Handy"), container.remote.address!!, container.remote.pin) }
+                // Der Player darf nur vom Hauptthread aus gelesen werden.
+                val foreignPlays = waitFor(15_000) {
+                    var ready = false
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                        ready = (container.foreground?.get() as? PlayerActivity)?.let { it.current?.url == foreign && it.player?.playbackState == Player.STATE_READY } == true
+                    }
+                    ready
+                }
+                log("play_on_tv: tv=$name started=$started foreign=$foreignPlays")
+                assertTrue("Sender startet nicht auf dem Fernseher", started)
+                assertTrue("Fremder Sender startet nicht", foreignPlays)
+            } finally {
+                (container.foreground?.get() as? PlayerActivity)?.let { activity -> activity.runOnUiThread { activity.finish() } }
+                container.remote.stop()
+            }
+        }
+
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
     }
