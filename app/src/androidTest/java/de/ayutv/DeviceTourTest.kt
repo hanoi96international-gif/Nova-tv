@@ -644,6 +644,19 @@ class DeviceTourTest {
             log("mt installed=${translator.installedPairs()} bytes=${translator.installedBytes()}")
         }
 
+        // 5b'. Namen, die zugleich Wörter sind, bleiben Namen; kurze Zeilen bekommen den Satz davor als Zusammenhang
+        section("mt_names") {
+            val base = de.ayutv.data.repo.Translators.onDevice
+            val lines = listOf("I told Will about the car.", "Where is Hope tonight?", "Will, come here!", "Have you seen Hope?")
+            val names = de.ayutv.data.translate.TranslationNames.learn(lines)
+            val plain = runBlocking { base.translate(lines, "de", "en") }
+            val smart = runBlocking { de.ayutv.data.translate.SubtitleTranslator(base, names).translate(lines + "Yes, him.", "de", "en") }
+            log("mt_names: names=$names plain=${plain.joinToString(" | ")} smart=${smart.joinToString(" | ") { it.replace('\n', '/') }}")
+            assertTrue("Namen nicht erkannt: $names", names == setOf("Will", "Hope"))
+            assertTrue("Namen übersetzt: $smart", smart[0].contains("Will") && smart[1].contains("Hope") && smart[2].contains("Will") && smart[3].contains("Hope"))
+            assertTrue("Platzhalter sichtbar: $smart", smart.none { line -> listOf("Zorv", "Kelm").any { it in line } })
+        }
+
         // 5c. Film ohne eingebettete Untertitel, aber mit (geladener) englischer Datei: vorausschauend übersetzen
         section("file_translation") {
             val movie = runBlocking { container.db.vod().search("Stummfilm", 5) }.firstOrNull() ?: error("Film ohne Untertitel fehlt")

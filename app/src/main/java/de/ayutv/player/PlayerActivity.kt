@@ -1513,6 +1513,14 @@ class PlayerActivity : ComponentActivity() {
                     delay(100)
                 }
             }
+            // Namen der Serie (aus früheren Folgen gemerkt), laufend aus den gesehenen Zeilen ergänzt.
+            val namesKey = request?.key?.let { de.ayutv.data.parse.Episodes.seriesKeyOf(it) ?: it }
+            val seriesNames = de.ayutv.data.translate.SeriesNames(this@PlayerActivity)
+            var names = namesKey?.let { seriesNames.get(it) }.orEmpty()
+            var smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
+            val seen = ArrayList<String>()
+            // Vorherige Zeile mit Übersetzung und Ende: Zusammenhang für eine kurze nächste Zeile.
+            var lastLine: Triple<String, String, Long>? = null
             var failures = 0
             // Wie lange eine Zeile gerade dauert (gleitender Mittelwert, ohne das erste Laden des Modells).
             var lineMs = 0L
@@ -1540,14 +1548,28 @@ class PlayerActivity : ComponentActivity() {
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
                     // Geht der Satz in den nächsten Einblendungen weiter, alle zusammen übersetzen und wieder aufteilen.
                     val chain = if (text.isBlank() || bitmap) emptyList() else sentenceAfter(store, format, next, text)
+                    if (text.isNotBlank() && !bitmap) {
+                        seen += text
+                        if (seen.size % 25 == 0 && namesKey != null) {
+                            val learned = seriesNames.add(namesKey, de.ayutv.data.translate.TranslationNames.learn(seen))
+                            if (learned != names) {
+                                names = learned
+                                smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
+                            }
+                        }
+                    }
+                    val before = lastLine?.takeIf { (_, _, end) -> next.startMs - end in 0..CONTEXT_GAP_MS }?.let { (src, tr, _) -> src to tr }
                     if (text.isBlank()) {
                         aheadTranslations[next.startMs] = ""
                     } else if (chain.isEmpty()) {
-                        aheadTranslations[next.startMs] = translator.translate(listOf(text), target, sourceFor(text)).first()
+                        aheadTranslations[next.startMs] = smart.translate(listOf(text), target, sourceFor(text), before).first()
+                        lastLine = Triple(text, aheadTranslations.getValue(next.startMs), if (next.endMs >= 0) next.endMs else next.startMs + ASSUMED_LINE_MS)
                     } else {
                         val all = listOf(next) + chain
                         val texts = all.map { it.text.orEmpty() }
-                        val sentence = translator.translate(listOf(texts.joinToString(" ") { de.ayutv.data.translate.SubtitleSentences.plain(it) }), target, sourceFor(text)).first()
+                        val sentence = smart.translate(listOf(texts.joinToString(" ") { de.ayutv.data.translate.SubtitleSentences.plain(it) }), target, sourceFor(text), before).first()
+                        val lastEntry = all.last()
+                        lastLine = Triple(texts.joinToString(" "), sentence, if (lastEntry.endMs >= 0) lastEntry.endMs else lastEntry.startMs + ASSUMED_LINE_MS)
                         val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, texts.map { it.length })
                         all.forEachIndexed { k, entry ->
                             val part = de.ayutv.data.translate.SubtitleSentences.wrap(parts[k])
@@ -1722,6 +1744,7 @@ class PlayerActivity : ComponentActivity() {
         externalLanguage = language
         manualAnchor = null
         manualSync = false
+        seekRecheckFrom = -1L
         alternativeTried = false
         externalCues = cues
         externalTexts = texts
@@ -1900,6 +1923,8 @@ class PlayerActivity : ComponentActivity() {
     private var manualAnchor: Pair<Long, Long>? = null
     /** Von Hand an einer Zeile ausgerichtet: Die automatische Ausrichtung überschreibt das nicht mehr. */
     private var manualSync = false
+    /** Position nach einem großen Sprung, ab der einmal neu am Ton geprüft wird (-1 = nichts zu prüfen). */
+    private var seekRecheckFrom = -1L
 
     /**
      * Die Zeile mit Beginn [cueStart] wird gerade gesprochen: so verschieben, dass sie genau jetzt beginnt.
@@ -1978,9 +2003,23 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Automatisch gefundene Lage übernehmen, wenn sie spürbar von der jetzigen abweicht. */
-    private fun applyFit(timing: SubtitleTiming, bySpeech: Boolean, toleranceMs: Long) {
-        // Von Hand an einer Zeile ausgerichtet: Das ist genauer als jede Schätzung, nicht wieder verstellen.
-        if (manualSync) return
+    private fun applyFit(timing: SubtitleTiming, bySpeech: Boolean, toleranceMs: Long, afterSeek: Boolean = false) {
+        // Von Hand an einer Zeile ausgerichtet: Das ist genauer als jede Schätzung, nicht wieder verstellen –
+        // außer nach einem großen Sprung, wenn der Ton dort sicher einen anderen Versatz zeigt (gekürzte Fassung).
+        if (manualSync && !afterSeek) return
+        if (afterSeek) {
+            val here = subtitleTimeAt(player?.currentPosition ?: 0L)
+            val jump = abs(timing.toVideo(here) - subtitleTiming.toVideo(here) - subtitleDelayMs)
+            if (jump < 1_000) return
+            Log.i(SUBTITLE_TAG, "Nach dem Spulen neu ausgerichtet: $timing (Abweichung $jump ms)")
+            subtitleDelayMs = 0L
+            subtitleTiming = timing
+            subtitleAutoSynced = true
+            syncedBySpeech = bySpeech
+            subtitleStatus = "Nach dem Spulen am Ton nachgeprüft und neu ausgerichtet (${formatShift(timing.offsetMs)})"
+            saveTiming()
+            return
+        }
         // Von Hand verschoben, bevor überhaupt automatisch ausgerichtet war: Das war der Versuch, denselben
         // Versatz auszugleichen, den die Ausrichtung jetzt genau kennt.
         if (!subtitleAutoSynced) subtitleDelayMs = 0L
@@ -2045,11 +2084,22 @@ class PlayerActivity : ComponentActivity() {
                 lastHeard = heard
                 val position = p.currentPosition
                 val cues = externalCues.map { it.start to it.end }
+                // Nach einem großen Sprung: einmal nur mit dem Ton ab der neuen Stelle prüfen (gekürzte Fassungen haben
+                // dort oft einen anderen Versatz), sobald davon genug gehört ist.
+                val seekFrom = seekRecheckFrom
+                val afterSeek = seekFrom >= 0 && position - seekFrom >= SEEK_RECHECK_MS
+                if (seekFrom >= 0 && !afterSeek && manualSync) continue
                 val (fit, window) = withContext(Dispatchers.Default) {
-                    val signal = heardSpeech.signal(position - SPEECH_WINDOW_MS, position + 5_000)
+                    val signal = heardSpeech.signal(if (afterSeek) seekFrom else position - SPEECH_WINDOW_MS, position + 5_000)
                     SpeechSync.estimate(signal, cues) to signal.count { !it.isNaN() } / 10
                 }
                 if (externalLanguage == null || syncedByReference) continue
+                if (afterSeek) seekRecheckFrom = -1L
+                if (afterSeek && fit != null && fit.votes >= SEEK_RECHECK_VOTES) {
+                    applyFit(fit.timing, bySpeech = true, toleranceMs = 250, afterSeek = true)
+                    speechSyncInfo = "Nach dem Spulen am Ton nachgeprüft (${clock(position)})"
+                    continue
+                }
                 if (fit != null) {
                     Log.i(SUBTITLE_TAG, "Am Ton ausgerichtet: ${fit.timing} (Güte ${fit.votes / 10.0}, ${window} s Ton)")
                     applyFit(fit.timing, bySpeech = true, toleranceMs = 250)
@@ -2251,6 +2301,11 @@ class PlayerActivity : ComponentActivity() {
         val sentenceCues = cues.map { de.ayutv.data.translate.SubtitleSentences.Cue(it.start, it.end, it.text) }
         val groups = de.ayutv.data.translate.SubtitleSentences.groups(sentenceCues)
         val groupOf = IntArray(cues.size).also { index -> groups.forEachIndexed { g, range -> range.forEach { index[it] = g } } }
+        // Namen, die zugleich Wörter sind („Will“, „Hope“), aus der ganzen Datei lernen und je Serie merken.
+        val seriesKey = de.ayutv.data.parse.Episodes.seriesKeyOf(request.key) ?: request.key
+        val names = de.ayutv.data.translate.SeriesNames(this)
+            .add(seriesKey, de.ayutv.data.translate.TranslationNames.learn(cues.map { it.text }))
+        val smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
         fileTranslationJob = lifecycleScope.launch {
             var done = 0
             fileTranslationInfo = "Übersetzung startet …"
@@ -2263,7 +2318,13 @@ class PlayerActivity : ComponentActivity() {
                         ?: break
                     val chosen = (groupOf[next] until minOf(groups.size, groupOf[next] + batch)).map { groups[it] }
                         .filter { range -> range.any { translations.get(it) == null } }
-                    val result = translator.translate(chosen.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, target, sourceLanguage)
+                    // Der Satz davor (falls schon übersetzt) als Zusammenhang für eine kurze erste Zeile.
+                    val before = groups.getOrNull(groups.indexOf(chosen.first()) - 1)?.let { range ->
+                        val done = range.map { translations.get(it) }
+                        if (done.any { it == null }) null
+                        else de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, range) to done.joinToString(" ") { it!!.replace('\n', ' ') }
+                    }
+                    val result = smart.translate(chosen.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, target, sourceLanguage, before)
                     chosen.forEachIndexed { k, range ->
                         val sentence = result.getOrNull(k)
                         if (sentence == null) {
@@ -2899,6 +2960,10 @@ class PlayerActivity : ComponentActivity() {
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                 ignoreReferenceUntil = SystemClock.elapsedRealtime() + 1_500
                 referenceShowing = false
+                // Großer Sprung mit geladenen Untertiteln: dort einmal still am Ton nachprüfen.
+                if (vod != null && externalLanguage != null && abs(newPosition.positionMs - oldPosition.positionMs) >= SEEK_RECHECK_JUMP_MS) {
+                    seekRecheckFrom = newPosition.positionMs
+                }
             }
         }
 
@@ -3353,6 +3418,14 @@ class PlayerActivity : ComponentActivity() {
             return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
         }
         private const val SPEECH_WINDOW_MS = 15 * 60_000L
+        /** Liegt die vorherige Zeile höchstens so weit zurück, gehört sie zum Gespräch (Zusammenhang). */
+        private const val CONTEXT_GAP_MS = 3_000L
+        /** Ab diesem Sprung wird an der neuen Stelle nachgeprüft … */
+        private const val SEEK_RECHECK_JUMP_MS = 3 * 60_000L
+        /** … sobald so viel ab dort gelaufen ist … */
+        private const val SEEK_RECHECK_MS = 90_000L
+        /** … und nur ein sicherer Takt (wie „sicher“ in der Anzeige) ändert eine Ausrichtung von Hand. */
+        private const val SEEK_RECHECK_VOTES = 80
         /** So viel Ton im Fenster ohne Übereinstimmung: falsche Datei. */
         private const val SPEECH_WRONG_FILE_SECONDS = 14 * 60
         /** Nach so viel Gespräch ohne Takt wird ein weiterer Treffer der Suche verglichen. */

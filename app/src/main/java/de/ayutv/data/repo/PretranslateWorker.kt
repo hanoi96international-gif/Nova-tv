@@ -115,10 +115,20 @@ class Pretranslation(private val context: Context, private val container: AppCon
         val sentenceCues = cues.map { de.ayutv.data.translate.SubtitleSentences.Cue(startOf(it), millis(it.end) ?: startOf(it), it.text) }
         val groups = de.ayutv.data.translate.SubtitleSentences.groups(sentenceCues)
         val translator = Translators.from(container.settings.current()) ?: Translators.remote
+        // Namen der Serie schützen (wie im Player) und kurze Zeilen mit dem Satz davor übersetzen.
+        val seriesKey = de.ayutv.data.parse.Episodes.seriesKeyOf(item.key) ?: item.key
+        val names = de.ayutv.data.translate.SeriesNames(context)
+            .add(seriesKey, de.ayutv.data.translate.TranslationNames.learn(cues.map { it.text }))
+        val smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
         try {
             for (chunk in groups.filter { range -> range.any { startOf(cues[it]) !in partial } }.chunked(BATCH)) {
                 if (timeLeft() < 20_000) return null
-                val result = translator.translate(chunk.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, item.language, source.language)
+                val before = groups.getOrNull(groups.indexOf(chunk.first()) - 1)?.let { range ->
+                    val done = range.map { partial[startOf(cues[it])] }
+                    if (done.any { it == null }) null
+                    else de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, range) to done.joinToString(" ") { it!!.replace('\n', ' ') }
+                }
+                val result = smart.translate(chunk.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, item.language, source.language, before)
                 chunk.forEachIndexed { k, range ->
                     val sentence = result.getOrNull(k) ?: return@forEachIndexed
                     val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, range.map { Srt.plainText(cues[it].text).length })
