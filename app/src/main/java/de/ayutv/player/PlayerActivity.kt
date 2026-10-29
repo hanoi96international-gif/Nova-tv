@@ -229,6 +229,13 @@ class PlayerActivity : ComponentActivity() {
     /** Woran die geladenen Untertitel zuletzt ausgerichtet wurden: am gesprochenen Ton (sonst eingebettete Untertitel). */
     var syncedBySpeech by mutableStateOf(false); private set
     private var syncedByReference = false
+    /** Zeile für Zeile an den eingebetteten Untertiteln ausgerichtet (null = noch nicht oder nicht möglich). */
+    private var elasticTiming: ElasticTiming? = null
+    /** Wie gut die geladene Datei zur Spur des Films passt, in Prozent (null = noch nicht gemessen). */
+    var matchPercent by mutableStateOf<Int?>(null); private set
+    private var elasticJob: Job? = null
+    /** Sprachen, für die schon weitere Dateien verglichen wurden (je Film einmal, das kostet Downloads). */
+    private val comparedLanguages = HashSet<String>()
     private var pcmForSpeechTried = false
     /** Länge und Bildrate des laufenden Films: helfen bei der Wahl der Untertitel-Datei. */
     private fun filmInfo() = SubtitleRepository.FilmInfo(
@@ -1836,6 +1843,10 @@ class PlayerActivity : ComponentActivity() {
         fileTranslationInfo = null
         externalJob?.cancel()
         externalJob = null
+        elasticJob?.cancel()
+        elasticJob = null
+        elasticTiming = null
+        matchPercent = null
         syncJob?.cancel()
         speechJob?.cancel()
         speechJob = null
@@ -1888,6 +1899,8 @@ class PlayerActivity : ComponentActivity() {
         externalTexts = texts
         referenceStarts.clear()
         referenceShowing = false
+        elasticTiming = null
+        matchPercent = null
         val saved = vod?.let { container.subtitles.timing(it.key, language) }
         subtitleTiming = saved?.let { SubtitleTiming(it.ratio, it.offsetMs) } ?: SubtitleTiming()
         subtitleDelayMs = saved?.manualMs ?: 0L
@@ -1900,6 +1913,7 @@ class PlayerActivity : ComponentActivity() {
         textDisabled = false
         selectSyncReference()
         startSpeechSync()
+        startElasticSync(language, cues)
         if (!subtitleAutoSynced) adoptTimingFromOtherLanguage(language, cues)
         externalJob?.cancel()
         externalJob = lifecycleScope.launch {
@@ -1940,7 +1954,89 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Filmposition → Zeit in der geladenen Datei (automatische und manuelle Verschiebung eingerechnet). */
-    private fun subtitleTimeAt(position: Long): Long = subtitleTiming.toSubtitle(position - subtitleDelayMs)
+    private fun subtitleTimeAt(position: Long): Long =
+        elasticTiming?.toSubtitle(position - subtitleDelayMs) ?: subtitleTiming.toSubtitle(position - subtitleDelayMs)
+
+    /**
+     * Zeile für Zeile ausrichten: Die eingebetteten Untertitel des Films (jede Sprache, auch Bild-Untertitel) liest der
+     * Player 30–60 s voraus mit. Jede Zeile der geladenen Datei bekommt den Versatz ihrer Umgebung, so passt eine andere
+     * Fassung auch nach fehlenden Szenen oder Werbepausen. Passt die Datei nur mäßig, werden einmal bis zu zwei weitere
+     * Dateien derselben Suche verglichen und die beste genommen.
+     */
+    private fun startElasticSync(language: String, cues: List<TimedCue>) {
+        elasticJob?.cancel()
+        val starts = cues.map { it.start }
+        elasticJob = lifecycleScope.launch {
+            var lastCount = 0
+            delay(2_000)
+            while (isActive && externalLanguage == language) {
+                val references = embedded?.referenceStarts().orEmpty()
+                if (references.size >= SubtitleAlign.MIN_REFERENCES && references.size != lastCount) {
+                    lastCount = references.size
+                    val (global, result) = withContext(Dispatchers.Default) { alignTo(references, starts) }
+                    if (externalLanguage != language) break
+                    matchPercent = result?.percent
+                    if (result != null && result.percent >= ELASTIC_MIN_PERCENT && !manualSync) {
+                        val first = elasticTiming == null
+                        elasticTiming = result.timing
+                        // Gesamtversatz mitführen (Anzeige, Speichern, Rückfall, wenn der Zeilen-Abgleich später wegfällt).
+                        global?.let { subtitleTiming = it }
+                        syncedByReference = true
+                        syncedBySpeech = false
+                        subtitleAutoSynced = true
+                        if (first) {
+                            Log.i(SUBTITLE_TAG, "Zeile für Zeile ausgerichtet: ${result.matched} von ${result.references} Einblendungen, ${result.percent} %")
+                            subtitleStatus = "Untertitel Zeile für Zeile an der Spur des Films ausgerichtet – passt ${result.percent} %"
+                        }
+                    }
+                    // Passt mäßig (oder gar nicht): einmal weitere Dateien vergleichen und die beste nehmen.
+                    if (language !in comparedLanguages && references.size >= COMPARE_REFERENCES && (result?.percent ?: 0) < GOOD_PERCENT) {
+                        comparedLanguages += language
+                        if (compareCandidates(language, references, result?.percent ?: 0)) return@launch
+                    }
+                }
+                delay(if (elasticTiming == null) 5_000 else 30_000)
+            }
+        }
+    }
+
+    /** Erst grob (Versatz und Bildrate), dann Zeile für Zeile. */
+    private fun alignTo(references: List<Long>, starts: List<Long>): Pair<SubtitleTiming?, SubtitleAlign.Result?> {
+        val estimated = SubtitleSync.estimate(references, starts)?.timing
+        val global = estimated ?: subtitleTiming.takeIf { subtitleAutoSynced }
+        return estimated to SubtitleAlign.align(references, starts, global?.ratio ?: 1.0, global?.offsetMs ?: 0L)
+    }
+
+    /** Bis zu zwei weitere Dateien derselben Suche laden und an der Spur messen; true, wenn eine übernommen wurde. */
+    private suspend fun compareCandidates(language: String, references: List<Long>, current: Int): Boolean {
+        val request = vod ?: return false
+        var best = current
+        repeat(MAX_CANDIDATES - 1) {
+            if (externalLanguage != language || !container.subtitles.hasAlternatives(request.key, language)) return false
+            speechSyncInfo = "Vergleiche weitere Untertitel-Dateien mit der Spur des Films …"
+            val alternative = runCatching { container.subtitles.downloadAlternative(request.key, language, settings, filmInfo()) }
+                .onFailure { Log.i(SUBTITLE_TAG, "Weitere Datei nicht ladbar: ${it.message}") }.getOrNull() ?: return false
+            val cues = withContext(Dispatchers.IO) { parseCues(alternative.file) }
+            val (global, result) = withContext(Dispatchers.Default) { alignTo(references, cues.map { it.start }) }
+            val percent = result?.percent ?: 0
+            Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt zu $percent % (bisher $best %)")
+            if (result != null && percent >= ELASTIC_MIN_PERCENT && percent >= best + 10 && externalLanguage == language) {
+                val file = container.subtitles.adoptAlternative(request.key, language, alternative)
+                subtitleFiles[language] = file
+                beginExternal(language, cues, null)
+                elasticTiming = result.timing
+                global?.let { subtitleTiming = it }
+                matchPercent = percent
+                syncedByReference = true
+                subtitleAutoSynced = true
+                subtitleStatus = "Andere Untertitel-Datei passt besser ($percent % statt $best %) – übernommen und Zeile für Zeile ausgerichtet"
+                return true
+            }
+            container.subtitles.dropAlternative(alternative)
+            best = maxOf(best, percent)
+        }
+        return false
+    }
 
     /** Untertitel früher (negativ) oder später (positiv) einblenden; wird pro Film gemerkt. */
     fun shiftSubtitles(deltaMs: Long) {
@@ -1965,6 +2061,7 @@ class PlayerActivity : ComponentActivity() {
         val info = speechSyncInfo
         return when {
             manualSync -> "✓ Untertitel von Hand ausgerichtet ($subtitleShiftLabel)"
+            elasticTiming != null -> "✓ Untertitel Zeile für Zeile an der Spur des Films ausgerichtet" + (matchPercent?.let { " · passt $it %" } ?: "")
             syncedByReference -> "✓ Untertitel an der Spur des Films ausgerichtet"
             externalExact -> "✓ Untertitel passen genau zu dieser Datei"
             subtitleAutoSynced && syncedBySpeech -> "✓ Untertitel am Ton ausgerichtet ($subtitleShiftLabel)"
@@ -2076,7 +2173,11 @@ class PlayerActivity : ComponentActivity() {
             val raw = (position - video).toDouble() / (cueStart - subtitle)
             SYNC_RATIOS.minByOrNull { abs(it - raw) }?.takeIf { abs(it - raw) / it < 0.003 }
         }
-        if (ratio != null && ratio != subtitleTiming.ratio) {
+        val elastic = elasticTiming
+        if (elastic != null) {
+            // Zeile für Zeile ausgerichtet: nur den Rest von Hand ausgleichen, die Ausrichtung bleibt.
+            subtitleDelayMs = position - elastic.toVideo(cueStart)
+        } else if (ratio != null && ratio != subtitleTiming.ratio) {
             subtitleTiming = SubtitleTiming(ratio, position - (cueStart * ratio).toLong())
             subtitleDelayMs = 0
         } else {
@@ -2124,6 +2225,8 @@ class PlayerActivity : ComponentActivity() {
         referenceStarts += time
         if (referenceStarts.size > 400) referenceStarts.removeAt(0)
         if (referenceStarts.size < SubtitleSync.MIN_REFERENCES || syncJob?.isActive == true) return
+        // Schon Zeile für Zeile ausgerichtet: genauer als der eine Gesamtversatz hier.
+        if (elasticTiming != null) return
         val references = referenceStarts.toList()
         val starts = externalCues.map { it.start }
         syncJob = lifecycleScope.launch {
@@ -2132,7 +2235,8 @@ class PlayerActivity : ComponentActivity() {
             if (fit == null) {
                 // Nach vielen Einblendungen immer noch kein gemeinsamer Takt: Die Datei gehört zu einem
                 // anderen Film (oder einer ganz anderen Fassung). Verwerfen und den nächsten Treffer laden.
-                if (references.size >= WRONG_FILE_REFERENCES && !subtitleAutoSynced && externalTexts == null) replaceWrongSubtitles()
+                // Der Zeilen-Abgleich hat noch nicht entschieden oder findet einen Teil wieder: nicht verwerfen.
+                if (references.size >= WRONG_FILE_REFERENCES && !subtitleAutoSynced && externalTexts == null && (matchPercent ?: 0) < 30) replaceWrongSubtitles()
                 return@launch
             }
             syncedByReference = true
@@ -3688,6 +3792,12 @@ class PlayerActivity : ComponentActivity() {
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
         private const val WRONG_FILE_REFERENCES = 60
+        /** Zeilen-Abgleich: ab so viel Prozent übernehmen, darunter vergleichen. */
+        private const val ELASTIC_MIN_PERCENT = 50
+        private const val GOOD_PERCENT = 85
+        /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
+        private const val COMPARE_REFERENCES = 40
+        private const val MAX_CANDIDATES = 3
         private const val SPEECH_CHECK_MS = 20_000L
 
         private fun clock(ms: Long): String {

@@ -2,6 +2,7 @@ package de.ayutv.data.parse
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OpenSubtitlesParsingTest {
@@ -145,5 +146,19 @@ class OpenSubtitlesParsingTest {
         // Serienfolge 45 min: Abspann höchstens 6–7 min.
         assertEquals(1.0, OpenSubtitlesParsing.lengthFit(42 * min, 45 * min)!!.ratio, 0.0)
         assertEquals(null, OpenSubtitlesParsing.lengthFit(30 * min, 45 * min))
+    }
+
+    @Test
+    fun releaseHintsAndPreference() {
+        val hints = OpenSubtitlesParsing.releaseHints("Dune: Part Two (2024)", "http://x/movie/u/p/Dune.Part.Two.2024.1080p.BluRay.x264-SPARKS.mkv")
+        assertEquals(OpenSubtitlesParsing.ReleaseHints("bluray", "1080p", "SPARKS"), hints)
+        assertEquals(OpenSubtitlesParsing.ReleaseHints("web", "2160p", "FLUX"), OpenSubtitlesParsing.releaseHints("Show.S01E02.2160p.WEB-DL.DDP5.1.H.265-FLUX"))
+        // IPTV-Adressen ohne Fassung: nichts bekannt, Reihenfolge bleibt.
+        assertTrue(OpenSubtitlesParsing.releaseHints("Dune", "http://x/movie/u/p/123.mkv").empty)
+        val popular = SubtitleCandidate(1, "id", "Dune.Part.Two.2024.WEBRip.x264-RARBG", hashMatch = false, downloads = 900, hearingImpaired = false)
+        val same = SubtitleCandidate(2, "id", "Dune.Part.Two.2024.1080p.BluRay.x264-SPARKS", hashMatch = false, downloads = 50, hearingImpaired = false)
+        val other = SubtitleCandidate(3, "id", "Dune.Part.Two.2024.720p.BluRay", hashMatch = false, downloads = 400, hearingImpaired = false)
+        assertEquals(listOf(2L, 3L, 1L), OpenSubtitlesParsing.preferRelease(listOf(popular, same, other), hints).map { it.fileId })
+        assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferRelease(listOf(popular, same), OpenSubtitlesParsing.ReleaseHints(null, null, null)).map { it.fileId })
     }
 }

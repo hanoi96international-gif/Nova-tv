@@ -141,6 +141,48 @@ object OpenSubtitlesParsing {
         return listOf(alternative) + (candidates - alternative)
     }
 
+    /**
+     * Fassung aus Titel oder Adresse („…1080p.BluRay.x264-GRUPPE.mkv“): Quelle, Auflösung, Release-Gruppe. Untertitel
+     * genau dieser Fassung haben die gleichen Zeiten; gleich gute Treffer dieser Fassung kommen deshalb nach vorn.
+     */
+    data class ReleaseHints(val source: String?, val resolution: String?, val group: String?) {
+        val empty: Boolean get() = source == null && resolution == null && group == null
+    }
+
+    private val SOURCES = listOf(
+        "remux" to Regex("""(?i)\bremux\b"""),
+        "bluray" to Regex("""(?i)\b(blu-?ray|bdrip|brrip|bd25|bd50)\b"""),
+        "web" to Regex("""(?i)\b(web-?dl|web-?rip|web|amzn|nf|dsnp|hmax|atvp)\b"""),
+        "hdtv" to Regex("""(?i)\b(hdtv|pdtv)\b"""),
+        "dvd" to Regex("""(?i)\b(dvdrip|dvd)\b"""),
+    )
+    private val RESOLUTION = Regex("""(?i)\b(2160p|1080p|720p|576p|480p)\b""")
+    private val GROUP = Regex("""-([A-Za-z0-9]{2,15})(?:\.[A-Za-z0-9]{2,4})?$""")
+    private val NOT_GROUPS = setOf("dl", "rip", "web", "x264", "x265", "h264", "h265", "hevc", "aac", "ac3", "dts", "hdr")
+
+    fun releaseHints(vararg texts: String?): ReleaseHints {
+        val names = texts.filterNotNull().map { it.substringBefore('?').substringAfterLast('/').trim() }
+        val text = names.joinToString(" ") { it.replace('_', '.') }
+        val source = SOURCES.firstOrNull { (_, regex) -> regex.containsMatchIn(text) }?.first
+        val resolution = RESOLUTION.find(text)?.value?.lowercase()
+        val group = names.firstNotNullOfOrNull { GROUP.find(it)?.groupValues?.get(1) }?.takeUnless { it.lowercase() in NOT_GROUPS }
+        return ReleaseHints(source, resolution, group)
+    }
+
+    /** Treffer derselben Fassung nach vorn (stabil: sonst bleibt die Güte-Reihenfolge). */
+    fun preferRelease(candidates: List<SubtitleCandidate>, hints: ReleaseHints): List<SubtitleCandidate> {
+        if (hints.empty || candidates.size < 2 || candidates.first().hashMatch) return candidates
+        fun score(c: SubtitleCandidate): Int {
+            val other = releaseHints(c.release)
+            var s = 0
+            if (hints.group != null && other.group.equals(hints.group, ignoreCase = true)) s += 4
+            if (hints.source != null && other.source == hints.source) s += 2
+            if (hints.resolution != null && other.resolution == hints.resolution) s += 1
+            return s
+        }
+        return candidates.sortedByDescending(::score)
+    }
+
     /** „Serie – S1 E2“, „Serie S01E02“, „Serie 1x02“: Name, Staffel, Folge. Sonst null. */
     fun episodeOf(title: String): Triple<String, Int, Int>? {
         val m = EPISODE.find(title) ?: return null

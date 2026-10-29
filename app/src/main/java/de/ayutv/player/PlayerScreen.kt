@@ -781,7 +781,10 @@ private fun TracksOverlay(activity: PlayerActivity) {
         if (external != null) {
             item { MenuHeader("Untertitel-Zeit") }
             item { OptionRow("Untertitel-Zeit einstellen … (${activity.subtitleShiftLabel})", selected = false) { activity.openSyncPanel() } }
-            item { OptionRow("Falsche Untertitel – andere laden", selected = false) { activity.reportWrongSubtitles() } }
+            item {
+                val fit = activity.matchPercent?.let { " (diese passt $it %)" }.orEmpty()
+                OptionRow("Andere Untertitel-Datei laden$fit", selected = false) { activity.reportWrongSubtitles() }
+            }
             item { MenuHint(syncHint(activity)) }
             activity.speechSyncInfo?.let { info -> item { MenuHint("Ausrichtung: $info") } }
             activity.fileTranslationInfo?.let { info -> item { MenuHint(info) } }
