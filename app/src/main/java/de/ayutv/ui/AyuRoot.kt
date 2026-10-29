@@ -360,10 +360,16 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
         kotlinx.coroutines.withTimeoutOrNull(1_500) {
             androidx.compose.runtime.snapshotFlow { currentSettled == currentSelected }.first { it }
         }
-        delay(40)
-        repeat(12) {
-            delay(40)
-            if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@LaunchedEffect
+        // Ein Bereich kann direkt nach dem Öffnen noch nachladen (Gruppen, Sender) und dabei die Zeile mit dem
+        // Fokus ersetzen; dann fällt der Fokus auf den ersten Eintrag der Leiste („Start“) zurück. Darum nachsehen,
+        // ob er im Bereich geblieben ist, und sonst erneut hineingehen.
+        for (attempt in 0 until 4) {
+            for (step in 0 until 12) {
+                delay(40)
+                if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) break
+            }
+            delay(450)
+            if (!expanded) return@LaunchedEffect
         }
     }
 }
