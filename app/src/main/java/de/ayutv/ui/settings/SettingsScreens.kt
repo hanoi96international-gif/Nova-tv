@@ -245,6 +245,32 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         ) { update { it.copy(bufferProfile = it.bufferProfile.next()) } }
                     }
                     item {
+                        // Leitungs-Check: zuletzt geschauter Sender (sonst ein Favorit) einige Sekunden laden und messen.
+                        var running by remember { mutableStateOf(false) }
+                        var result by remember { mutableStateOf<de.ayutv.data.repo.LineCheck.Result?>(null) }
+                        SettingRow(
+                            "Leitungs-Check",
+                            if (running) "misst …" else "Jetzt messen",
+                            result?.let { r -> r.summary + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
+                                ?: "Lädt den zuletzt geschauten Sender 10 Sekunden (ohne Bild) und misst Antwortzeit und Aussetzer beim Anbieter.",
+                        ) {
+                            if (running) return@SettingRow
+                            running = true
+                            scope.launch {
+                                val channel = container.db.history().recentLiveKeys(1).firstOrNull()?.let { container.db.channels().byKey(it) }
+                                    ?: container.db.favorites().keys().firstOrNull()?.let { container.db.channels().byKey(it) }
+                                    ?: container.db.channels().all().firstOrNull()
+                                result = channel?.let { de.ayutv.data.repo.LineCheck(container.http).run(it, it.userAgent ?: settings.userAgent) }
+                                running = false
+                            }
+                        }
+                        result?.takeIf { it.recommendation != settings.bufferProfile }?.let { r ->
+                            SettingRow("Empfehlung übernehmen", r.recommendation.label, "Stellt den Puffer auf „${r.recommendation.label}“.") {
+                                update { it.copy(bufferProfile = r.recommendation) }
+                            }
+                        }
+                    }
+                    item {
                         SettingRow(
                             "Tunneling-Modus",
                             onOff(settings.tunneling),
@@ -292,6 +318,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             settings.audioMode.label,
                             "Nachtmodus: laute Stellen leiser, leise lauter. Dialoge verstärken: Sprache lauter als Musik und Effekte. Auch im Film über ☰.",
                         ) { update { it.copy(audioMode = it.audioMode.cycle()) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Lautstärke angleichen",
+                            onOff(settings.loudnessLevel),
+                            "Laute Werbung und leise Sender kommen auf ähnliche Lautstärke (wirkt, wenn der Ton im Gerät dekodiert wird). Auch im Film über ☰.",
+                        ) { update { it.copy(loudnessLevel = !it.loudnessLevel) } }
                     }
                     item {
                         SettingRow(
@@ -455,6 +488,20 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             de.ayutv.ui.theme.AyuColors.use(next)
                             update { it.copy(uiTheme = next) }
                         }
+                    }
+                    item {
+                        SettingRow(
+                            "Spielstände in der Sport-Übersicht",
+                            onOff(settings.liveScores),
+                            "Bundesliga, 2. und 3. Liga: Stand und Spielminute laufender Spiele, Endstand danach (OpenLigaDB, ohne Konto).",
+                        ) { update { it.copy(liveScores = !it.liveScores) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Tor-Hinweis im Bild",
+                            onOff(settings.goalAlerts),
+                            "Trifft ein Verein, dem du folgst, erscheint beim Schauen kurz der neue Stand (nicht für das Spiel, das gerade läuft).",
+                        ) { update { it.copy(goalAlerts = !it.goalAlerts) } }
                     }
                     item {
                         var words by remember(settings.alertKeywords) { mutableStateOf(settings.alertKeywords.sorted().joinToString(", ")) }

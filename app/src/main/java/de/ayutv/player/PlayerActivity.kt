@@ -78,6 +78,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.isActive
+import de.ayutv.data.parse.pairing
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -317,9 +318,12 @@ class PlayerActivity : ComponentActivity() {
             subtitleLook = SubtitleLook(settings.subtitleColor, settings.subtitleBackground, settings.subtitlePosition)
             audioMode = settings.audioMode
             enhance.mode = settings.audioMode
+            enhance.leveling = settings.loudnessLevel
+            loudnessLevel = settings.loudnessLevel
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
+            startGoalWatch()
 
             val request = vod
             if (request != null) {
@@ -2791,6 +2795,51 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    var loudnessLevel by mutableStateOf(false); private set
+
+    /**
+     * Tor-Hinweis: Trifft ein gefolgter Verein in einem anderen Spiel als dem, das gerade läuft, kurz den neuen
+     * Stand einblenden. Fragt jede Minute (OpenLigaDB); das erste Abfragen merkt nur die Stände.
+     */
+    private fun startGoalWatch() {
+        if (!settings.goalAlerts || !settings.liveScores || settings.followedTeams.isEmpty()) return
+        lifecycleScope.launch {
+            val known = HashMap<Long, Pair<Int, Int>>()
+            while (isActive) {
+                val now = System.currentTimeMillis()
+                val matches = runCatching { container.liveScores.current(now) }.getOrDefault(emptyList())
+                val teams = settings.followedTeams
+                val watching = playing?.let { nowPlayingMap[it.key] }?.pairing()
+                for (m in matches) {
+                    if (!m.live(now) && !m.finished) continue
+                    val team = teams.firstOrNull { de.ayutv.data.parse.Teams.plays(it, m.pairing) } ?: continue
+                    val before = known.put(m.id, m.goals1 to m.goals2) ?: continue
+                    if (before == (m.goals1 to m.goals2) || m.goals1 + m.goals2 <= before.first + before.second) continue
+                    if (watching != null && m.matches(watching)) continue
+                    val scorer = if (m.goals1 > before.first) m.short1.ifEmpty { m.team1 } else m.short2.ifEmpty { m.team2 }
+                    val text = "⚽ Tor für $scorer!  ${m.short1.ifEmpty { m.team1 }} ${m.score} ${m.short2.ifEmpty { m.team2 }}" +
+                        (m.lastGoal?.let { " · $it" } ?: "")
+                    Log.i(TAG, "Tor-Hinweis ($team): $text")
+                    goalNotice = text
+                    delay(GOAL_NOTICE_MS)
+                    if (goalNotice == text) goalNotice = null
+                }
+                delay(60_000)
+            }
+        }
+    }
+
+    /** Eingeblendeter Tor-Hinweis (oben im Bild), sonst null. */
+    var goalNotice by mutableStateOf<String?>(null); private set
+
+    /** Lautstärke angleichen an/aus (gilt für alle Sender und Filme). */
+    fun toggleLoudness() {
+        val on = !enhance.leveling
+        enhance.leveling = on
+        loudnessLevel = on
+        container.scope.launch { container.settings.update { it.copy(loudnessLevel = on) } }
+    }
+
     fun chooseAudioMode(mode: AudioMode) {
         audioMode = mode
         enhance.mode = mode
@@ -3418,6 +3467,7 @@ class PlayerActivity : ComponentActivity() {
             return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
         }
         private const val SPEECH_WINDOW_MS = 15 * 60_000L
+        private const val GOAL_NOTICE_MS = 8_000L
         /** Liegt die vorherige Zeile höchstens so weit zurück, gehört sie zum Gespräch (Zusammenhang). */
         private const val CONTEXT_GAP_MS = 3_000L
         /** Ab diesem Sprung wird an der neuen Stelle nachgeprüft … */

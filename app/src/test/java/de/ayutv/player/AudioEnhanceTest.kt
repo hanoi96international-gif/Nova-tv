@@ -74,4 +74,23 @@ class AudioEnhanceTest {
         }
         assertEquals(0.5f, AudioEnhance.limit(0.5f), 0f)
     }
+
+    @Test
+    fun levelingBringsLoudAndQuietChannelsCloser() {
+        val e = AudioEnhance().apply { leveling = true }
+        // 10 s laute Werbung: wird deutlich leiser
+        val loud = tone(10 * rate, 2, 0.9f)
+        e.process(loud, 10 * rate, 2, rate)
+        val loudEnd = peak(loud, 18 * rate)
+        assertTrue("laut nicht leiser: $loudEnd", loudEnd < 0.4f)
+        // danach 20 s leiser Sender: wird lauter (langsamer)
+        val quiet = tone(20 * rate, 2, 0.03f)
+        e.process(quiet, 20 * rate, 2, rate)
+        val quietEnd = peak(quiet, 38 * rate)
+        assertTrue("leise nicht lauter: $quietEnd", quietEnd > 0.06f)
+        // Stille wird nicht angehoben
+        val silence = FloatArray(2 * rate)
+        e.process(silence, rate, 2, rate)
+        assertTrue(silence.all { it == 0f })
+    }
 }

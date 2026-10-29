@@ -39,6 +39,8 @@ class AppContainer(val context: Context) {
         repo.onImported = { runCatching { de.ayutv.data.repo.ChannelCheckWorker.runQuick(context) } }
     }
     val content = ContentRepository(db, http)
+    /** Spielstände für Sport-Übersicht und Tor-Hinweise. */
+    val liveScores = de.ayutv.data.sport.LiveScores(http)
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
     val subtitles = SubtitleRepository(http, context.filesDir).also { repo ->
         scope.launch(Dispatchers.IO) { repo.purgeLegacyCache() }

@@ -14,6 +14,13 @@ import kotlin.math.pow
  */
 class AudioEnhance {
     @Volatile var mode: AudioMode = AudioMode.NORMAL
+    /** Lautstärke angleichen: laute Werbung leiser, leise Sender lauter (langsam, ohne Pumpen). */
+    @Volatile var leveling = false
+    private var levelGain = 1f
+    private var meanSquare = 0f
+    private var detect = 0f
+    private var down = 0f
+    private var up = 0f
     private var gain = 1f
     private var envelope = 0f
     private var rate = 0
@@ -23,17 +30,22 @@ class AudioEnhance {
     fun reset() {
         gain = 1f
         envelope = 0f
+        // Die Angleichung behält ihre Verstärkung über Senderwechsel: Der neue Sender startet gleich passend.
     }
 
     fun process(samples: FloatArray, frames: Int, channels: Int, sampleRate: Int) {
         val m = mode
-        if (m == AudioMode.NORMAL || channels <= 0) return
+        if ((m == AudioMode.NORMAL && !leveling) || channels <= 0) return
         if (sampleRate != rate) {
             rate = sampleRate
             // Hüllkurve: schnell bei lauten Stellen (5 ms), langsam zurück (300 ms), sonst „pumpt“ es.
             attack = coefficient(0.005f, sampleRate)
             release = coefficient(0.3f, sampleRate)
+            detect = coefficient(LEVEL_DETECT_S, sampleRate)
+            down = coefficient(LEVEL_DOWN_S, sampleRate)
+            up = coefficient(LEVEL_UP_S, sampleRate)
         }
+        if (leveling) level(samples, frames, channels)
         when (m) {
             AudioMode.DIALOG -> dialog(samples, frames, channels)
             AudioMode.NIGHT -> compress(samples, frames, channels)
@@ -56,6 +68,25 @@ class AudioEnhance {
                 s[base] *= MONO_GAIN
             }
             for (c in 0 until channels) s[base + c] = limit(s[base + c])
+        }
+    }
+
+    /**
+     * Langsame Lautheits-Regelung auf etwa −20 dBFS (Mittelwert über ~0,4 s): Wird es lauter (Werbung, anderer
+     * Sender), geht die Verstärkung in ~1 s herunter, wird es leiser, in ~6 s wieder hoch. Stille wird nicht
+     * angehoben (kein Rauschen), höchstens +11 dB, höchstens −12 dB.
+     */
+    private fun level(s: FloatArray, frames: Int, channels: Int) {
+        for (f in 0 until frames) {
+            val base = f * channels
+            var sum = 0f
+            for (c in 0 until channels) sum += s[base + c] * s[base + c]
+            meanSquare = detect * meanSquare + (1 - detect) * (sum / channels)
+            if (meanSquare > SILENCE_MS) {
+                val target = levelTarget(meanSquare)
+                levelGain += (target - levelGain) * if (target < levelGain) 1 - down else 1 - up
+            }
+            for (c in 0 until channels) s[base + c] = limit(s[base + c] * levelGain)
         }
     }
 
@@ -99,6 +130,18 @@ class AudioEnhance {
             val y = 0.8f + 0.2f * (over / (1 + over))
             return if (x < 0) -y else y
         }
+
+        private const val LEVEL_TARGET_RMS = 0.1f   // −20 dBFS
+        private const val LEVEL_MIN = 0.25f         // −12 dB
+        private const val LEVEL_MAX = 3.5f          // +11 dB
+        private const val SILENCE_MS = 1e-5f        // −50 dBFS
+        private const val LEVEL_DETECT_S = 0.4f
+        private const val LEVEL_DOWN_S = 1f
+        private const val LEVEL_UP_S = 6f
+
+        /** Verstärkung, die einen Mittelwert [meanSquare] auf die Ziel-Lautheit bringt (begrenzt). */
+        fun levelTarget(meanSquare: Float): Float =
+            (LEVEL_TARGET_RMS / kotlin.math.sqrt(meanSquare)).coerceIn(LEVEL_MIN, LEVEL_MAX)
 
         private fun coefficient(seconds: Float, sampleRate: Int) = exp(-1.0 / (seconds * sampleRate)).toFloat()
     }

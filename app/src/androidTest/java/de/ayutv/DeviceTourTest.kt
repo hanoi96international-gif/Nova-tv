@@ -854,6 +854,19 @@ class DeviceTourTest {
             assertTrue("Kaputte Adresse als laufend erkannt", bad.first == 0)
         }
 
+        // Leitungs-Check: Testsender 10 s laden, Antwortzeit/Datenrate/Aussetzer und Puffer-Empfehlung
+        section("line_check") {
+            val hd = live.firstOrNull { it.name == "HD Test 50fps" } ?: error("HD-Testsender fehlt")
+            val result = runBlocking { de.ayutv.data.repo.LineCheck(container.http).run(hd, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, seconds = 6) }
+            log("line_check: ${result.summary} empfehlung=${result.recommendation}")
+            assertTrue("Leitungs-Check ohne Daten: ${result.summary}", result.failed == null && result.kbps > 0)
+        }
+        // Spielstände (OpenLigaDB, echtes Netz): nur protokollieren, das Ergebnis hängt vom Spieltag ab
+        section("live_scores") {
+            val matches = runBlocking { container.liveScores.current() }
+            log("live_scores: matches=${matches.size} first=${matches.firstOrNull()?.let { "${it.pairing} ${it.score} finished=${it.finished}" }}")
+        }
+
         // Fehlerbericht: per Handy-Seite abrufbar, ohne Zugangsdaten
         section("report") {
             val server = de.ayutv.data.setup.PhoneSetupServer(container)
