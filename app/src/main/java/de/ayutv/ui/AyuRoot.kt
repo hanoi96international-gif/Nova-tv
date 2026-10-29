@@ -256,6 +256,9 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
     val initialFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val touch = isTouchDevice
+    // Nicht das Gerät entscheidet, sondern die Eingabe: Manche TV-Boxen (und der Emulator) melden einen Touchscreen,
+    // werden aber mit der Fernbedienung bedient.
+    val inputMode = androidx.compose.ui.platform.LocalInputModeManager.current
 
     if (dim > 0f) {
         // Sanftes Abdunkeln des Inhalts hinter der aufgeklappten Navigation; Tippen daneben klappt sie zu.
@@ -296,7 +299,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
                     onSelect(item)
                     // Per Touch: nach der Wahl zuklappen. Mit der Fernbedienung: OK geht gleich in den Bereich
                     // (die Leiste klappt dabei zu), statt erst noch ▶ drücken zu müssen.
-                    if (touch) focusManager.clearFocus() else enterTick++
+                    if (inputMode.inputMode == androidx.compose.ui.input.InputMode.Touch) focusManager.clearFocus() else enterTick++
                 },
                 modifier = Modifier
                     .fillMaxWidth()
