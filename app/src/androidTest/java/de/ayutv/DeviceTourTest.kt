@@ -854,6 +854,17 @@ class DeviceTourTest {
             assertTrue("Kaputte Adresse als laufend erkannt", bad.first == 0)
         }
 
+        // Merkliste: Film merken, steht auf der Startseite, wieder entfernen
+        section("watchlist") {
+            val movie = runBlocking { container.db.vod().search("Film", 5) }.firstOrNull() ?: error("Film fehlt")
+            val added = runBlocking { container.content.toggleFavorite(movie.key) }
+            val listed = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { container.content.watchlistMovies.first { list -> list.any { it.key == movie.key } } } } != null
+            runBlocking { container.content.toggleFavorite(movie.key) }
+            val removed = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { container.content.watchlistMovies.first { list -> list.none { it.key == movie.key } } } } != null
+            log("watchlist: added=$added listed=$listed removed=$removed")
+            assertTrue("Merkliste: added=$added listed=$listed removed=$removed", added && listed && removed)
+        }
+
         // Leitungs-Check: Testsender 10 s laden, Antwortzeit/Datenrate/Aussetzer und Puffer-Empfehlung
         section("line_check") {
             val hd = live.firstOrNull { it.name == "HD Test 50fps" } ?: error("HD-Testsender fehlt")

@@ -66,6 +66,10 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         runCatching { SyncWorker.schedule(this) }
         runCatching { de.ayutv.data.repo.PretranslateWorker.schedule(this) }
         runCatching { de.ayutv.data.repo.ChannelCheckWorker.schedule(this) }
+        container.scope.launch {
+            kotlinx.coroutines.delay(15_000)
+            runCatching { de.ayutv.data.FireTvHome.update(this@AyuApp, container) }
+        }
         // Erinnerungen nach einem Update oder Prozessneustart sicher wieder einplanen.
         container.scope.launch {
             container.reminders.rescheduleAll()

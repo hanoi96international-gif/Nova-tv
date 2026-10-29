@@ -3382,6 +3382,11 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        // Fire-TV-Startseite: Weiterschauen mit dem neuen Stand.
+        container.scope.launch {
+            delay(1_000)
+            runCatching { de.ayutv.data.FireTvHome.update(applicationContext, container) }
+        }
         vod?.let(::learnOpening)
         saveAheadTranslations()
         recordWatch()

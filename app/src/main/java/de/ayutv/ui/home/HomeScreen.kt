@@ -58,6 +58,8 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val favorites by content.favoriteChannels.collectAsStateWithLifecycle(emptyList())
     val recentMovies by content.recentMovies.collectAsStateWithLifecycle(emptyList())
     val recentSeries by content.recentSeries.collectAsStateWithLifecycle(emptyList())
+    val watchMovies by content.watchlistMovies.collectAsStateWithLifecycle(emptyList())
+    val watchSeries by content.watchlistSeries.collectAsStateWithLifecycle(emptyList())
     val sync by container.playlists.state.collectAsStateWithLifecycle()
     val minute by rememberMinuteTicker()
     val recordings by container.recordings.all.collectAsStateWithLifecycle()
@@ -81,7 +83,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     }
 
     val nothingYet = continueWatching.isEmpty() && recentChannels.isEmpty() && favorites.isEmpty() &&
-        recentMovies.isEmpty() && recentSeries.isEmpty()
+        recentMovies.isEmpty() && recentSeries.isEmpty() && watchMovies.isEmpty() && watchSeries.isEmpty()
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -125,6 +127,34 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                                     VodRequest(entry.key, entry.kind, entry.title, entry.subtitle, entry.image, entry.url),
                                 )
                             },
+                        )
+                    }
+                }
+            }
+        }
+
+        if (watchMovies.isNotEmpty() || watchSeries.isNotEmpty()) {
+            item(key = "watchlist", contentType = "posterRow") {
+                // Merkliste: gemerkte Filme und Serien (☆ Merken auf der Detailseite; lange OK entfernt).
+                PosterRow("☆ Meine Liste") {
+                    items(watchMovies, key = { "m-" + it.key }) { movie ->
+                        PosterCard(
+                            title = movie.name,
+                            image = movie.poster,
+                            subtitle = "Film" + (movie.rating?.let { " · ★ $it" } ?: ""),
+                            onClick = {
+                                PlayerActivity.startVod(context, VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url))
+                            },
+                            onLongClick = { scope.launch { content.toggleFavorite(movie.key) } },
+                        )
+                    }
+                    items(watchSeries, key = { "s-" + it.key }) { series ->
+                        PosterCard(
+                            title = series.name,
+                            image = series.cover,
+                            subtitle = "Serie",
+                            onClick = { onOpenSeries(series) },
+                            onLongClick = { scope.launch { content.toggleFavorite(series.key) } },
                         )
                     }
                 }

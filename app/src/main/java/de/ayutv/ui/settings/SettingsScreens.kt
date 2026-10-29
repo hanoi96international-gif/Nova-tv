@@ -489,6 +489,19 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             update { it.copy(uiTheme = next) }
                         }
                     }
+                    if (de.ayutv.data.FireTvHome.supported(context)) item {
+                        SettingRow(
+                            "Auf der Fire-TV-Startseite",
+                            onOff(settings.fireTvHome),
+                            "Weiterschauen und Lieblingssender in der Reihe „Empfohlen von deinen Apps“ – startet direkt, ohne DnA-TV erst zu öffnen.",
+                        ) {
+                            update { it.copy(fireTvHome = !it.fireTvHome) }
+                            container.scope.launch {
+                                delay(300)
+                                de.ayutv.data.FireTvHome.update(context.applicationContext, container)
+                            }
+                        }
+                    }
                     item {
                         SettingRow(
                             "Spielstände in der Sport-Übersicht",
