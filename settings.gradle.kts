@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AyuTV"
 include(":app")
+include(":db")

@@ -2,8 +2,6 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
-    id("androidx.room")
 }
 
 android {
@@ -72,12 +70,6 @@ android {
     }
 }
 
-// Das Room-Plugin verwaltet die Schema-Dateien je Build-Variante. Mit dem alten ksp-Argument
-// schrieben Debug- und Release-Build parallel in dieselbe Datei und zerstörten sie gegenseitig.
-room {
-    schemaDirectory("$projectDir/schemas")
-}
-
 dependencies {
     val compose = "1.12.1"
     implementation("androidx.compose.foundation:foundation:$compose")
@@ -112,10 +104,8 @@ dependencies {
     val ffmpegAar = file("libs/lib-decoder-ffmpeg-release.aar")
     if (ffmpegAar.exists()) implementation(files(ffmpegAar))
 
-    val room = "2.8.5"
-    implementation("androidx.room:room-runtime:$room")
-    implementation("androidx.room:room-ktx:$room")
-    ksp("androidx.room:room-compiler:$room")
+    // Datenbank (Room) im eigenen Modul, siehe db/build.gradle.kts
+    implementation(project(":db"))
 
     implementation("androidx.datastore:datastore-preferences:1.2.1")
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
