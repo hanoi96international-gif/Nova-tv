@@ -78,16 +78,11 @@ class AppContainer(val context: Context) {
     val updates = de.ayutv.data.update.Updater(context, http)
     val parental = ParentalControl(context, db)
 
-    /** Proxy-Einstellungen anwenden: die Server der Playlists ermitteln, die über den Proxy laufen (alle bzw. die gewählten). */
+    /** Proxy-Einstellungen anwenden; bei „Nur ausgewählte Playlists“ deren Server ermitteln. */
     suspend fun applyProxy(config: ProxyConfig? = null) {
         val next = config ?: runCatching { settings.current().proxyConfig }.getOrElse { ProxyConfig() }
-        val hosts = if (next.active) {
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    val ids = if (next.mode == ProxyMode.ALL) db.playlists().all().map { it.id }.toSet() else next.playlists
-                    proxyHosts(ids)
-                }.getOrDefault(emptySet())
-            }
+        val hosts = if (next.active && next.mode == ProxyMode.SELECTED) {
+            withContext(Dispatchers.IO) { runCatching { proxyHosts(next.playlists) }.getOrDefault(emptySet()) }
         } else emptySet()
         AppProxy.configure(next, hosts)
         // Offene Verbindungen nicht weiterverwenden: Sie liefen über den bisherigen Weg.

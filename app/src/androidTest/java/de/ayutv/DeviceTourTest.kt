@@ -1054,8 +1054,6 @@ class DeviceTourTest {
                         }
                     }
                     waitFor(5_000) { de.ayutv.data.net.AppProxy.current.let { it.type == type && it.password == password } }
-                    // Testserver als Server einer Playlist (über den Proxy laufen nur Playlists).
-                    de.ayutv.data.net.AppProxy.configure(de.ayutv.data.net.AppProxy.current, setOf("anbieter.example"))
                 }
                 fun fetch(): String = runCatching {
                     container.http.newCall(okhttp3.Request.Builder().url("http://anbieter.example/ping").build()).execute()

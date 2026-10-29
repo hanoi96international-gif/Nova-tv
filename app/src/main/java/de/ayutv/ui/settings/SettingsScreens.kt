@@ -734,9 +734,8 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Proxy",
                             settings.proxyMode.label,
-                            "Nur die Verbindungen zu deinen Playlists (Sender, Filme, Serien, Anmeldung beim Anbieter) laufen über den " +
-                                "Proxy. Logos, Poster, DeepL und Updates gehen direkt und bleiben schnell; andere Apps sind nicht betroffen. " +
-                                "Fällt der Proxy aus, spielt die App nicht heimlich ohne ihn weiter, sondern meldet es.",
+                            "Nur DnA-TV läuft über den Proxy, andere Apps und die Handy-Fernbedienung nicht. Fällt der Proxy aus, " +
+                                "spielt die App nicht heimlich ohne ihn weiter, sondern meldet es.",
                         ) { update { it.copy(proxyMode = it.proxyMode.cycle()) } }
                     }
                     item {
