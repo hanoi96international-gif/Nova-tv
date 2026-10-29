@@ -296,6 +296,10 @@ class PlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Proxy an: einmal nachsehen, mit welcher IP und welchem Land die Streams laufen (für die Stream-Info).
+        if (de.ayutv.data.net.AppProxy.current.active && de.ayutv.data.net.ProxyCheck.last?.proxied == null) {
+            lifecycleScope.launch { runCatching { de.ayutv.data.net.ProxyCheck.run(container.http, de.ayutv.data.net.AppProxy.current) } }
+        }
         frameRateMatcher = FrameRateMatcher(this)
         frameRateMatcher.onSwitch = ::onDisplaySwitch
         vod = intent.getVodRequest()
@@ -693,6 +697,14 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun originalUrl(): String? = vod?.url ?: playing?.let { adaptLiveUrl(it.url) }
+
+    /** Für die Stream-Info: läuft dieser Stream über den Proxy (mit Land, sobald einmal geprüft) oder direkt? */
+    fun routeLabel(): String {
+        val host = de.ayutv.data.net.AppProxy.hostOf(originalUrl())
+        if (!de.ayutv.data.net.AppProxy.proxies(host)) return "Weg: direkt"
+        val seen = de.ayutv.data.net.ProxyCheck.last?.proxied
+        return "Weg: über Proxy" + (seen?.let { " (${it.country} · ${it.ip})" } ?: "")
+    }
 
     private fun retryLater() {
         val generation = streamGeneration

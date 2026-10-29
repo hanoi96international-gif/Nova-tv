@@ -820,6 +820,25 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 }
                 SettingsPage.DATA -> {
                     item {
+                        // „Wie ist meine IP?“: direkt und, wenn eingeschaltet, über den Proxy.
+                        var running by remember { mutableStateOf(false) }
+                        var result by remember { mutableStateOf<String?>(null) }
+                        SettingRow(
+                            "Meine IP-Adresse",
+                            if (running) "prüft …" else if (result == null) "Jetzt prüfen" else "",
+                            result ?: "Zeigt, mit welcher IP und aus welchem Land der Fire TV im Internet zu sehen ist – direkt und über den Proxy.",
+                        ) {
+                            if (running) return@SettingRow
+                            running = true
+                            scope.launch {
+                                val check = de.ayutv.data.net.ProxyCheck.run(container.http, settings.proxyConfig)
+                                result = if (settings.proxyConfig.active) check.summary()
+                                else "Direkt: " + (check.direct?.let { "${it.country} · ${it.ip}" } ?: "nicht ermittelt") + "\nProxy: aus"
+                                running = false
+                            }
+                        }
+                    }
+                    item {
                         val update by container.updates.state.collectAsStateWithLifecycle()
                         val context = LocalContext.current
                         SettingRow(
