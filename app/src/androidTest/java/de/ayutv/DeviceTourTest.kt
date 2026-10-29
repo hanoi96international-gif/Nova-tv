@@ -529,6 +529,31 @@ class DeviceTourTest {
         }
         if (movie == null) log("vod: kein Film gefunden")
 
+        // DeepL (hier ein Test-Server): Die gelesenen Zeilen gehen gebündelt in wenigen Anfragen raus, der Vorlauf ist kurz.
+        if (movie != null) section("deepl_batch") {
+            val server = FakeDeepL()
+            de.ayutv.data.repo.Translators.deeplBase = server.url
+            runBlocking { container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.DEEPL, deeplKey = "test:fx") } }
+            try {
+                val request = VodRequest(movie.key + "#deepl", HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
+                launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                    waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                    val started = System.currentTimeMillis()
+                    scenario.onActivity { it.loadSubtitles("tr") }
+                    val shown = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("TR:") == true }
+                    val ms = System.currentTimeMillis() - started
+                    val lines = server.texts.toList()
+                    log("deepl_batch: shown=$shown ms=$ms requests=${server.requests} lines=${lines.size} cue=${scenario.read { it.translatedCue }?.replace('\n', '/')}")
+                    assertTrue("DeepL-Übersetzung nicht angezeigt", shown)
+                    assertTrue("Zeilen nicht gebündelt (${server.requests} Anfragen für ${lines.size} Texte)", lines.size > server.requests)
+                }
+            } finally {
+                de.ayutv.data.repo.Translators.deeplBase = null
+                runBlocking { container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.ON_DEVICE, deeplKey = "") } }
+                server.close()
+            }
+        }
+
         // 4c. Nachts vorbereiten: eingebettete Untertitel aus der ganzen Datei lesen und übersetzen. Beim Schauen
         // sind die Zeilen dann sofort da (gleiche Spur und Zeiten wie im Player), ohne Vorlauf.
         if (movie != null) section("embedded_prep") {
@@ -1029,6 +1054,8 @@ class DeviceTourTest {
                         }
                     }
                     waitFor(5_000) { de.ayutv.data.net.AppProxy.current.let { it.type == type && it.password == password } }
+                    // Testserver als Server einer Playlist (über den Proxy laufen nur Playlists).
+                    de.ayutv.data.net.AppProxy.configure(de.ayutv.data.net.AppProxy.current, setOf("anbieter.example"))
                 }
                 fun fetch(): String = runCatching {
                     container.http.newCall(okhttp3.Request.Builder().url("http://anbieter.example/ping").build()).execute()
@@ -1175,4 +1202,53 @@ private class TestProxy(private val user: String, private val password: String) 
         http.close()
         socks.close()
     }
+}
+
+/** Antwortet wie DeepL: jede Zeile wird zu „TR:<Zeile>“. Zählt Anfragen und Texte. */
+private class FakeDeepL : AutoCloseable {
+    private val socket = java.net.ServerSocket(0)
+    val url get() = "http://127.0.0.1:${socket.localPort}"
+    @Volatile var requests = 0
+    val texts: MutableList<String> = java.util.Collections.synchronizedList(ArrayList())
+
+    init {
+        kotlin.concurrent.thread(isDaemon = true) {
+            while (!socket.isClosed) {
+                val client = runCatching { socket.accept() }.getOrNull() ?: break
+                kotlin.concurrent.thread(isDaemon = true) {
+                    client.use { c ->
+                        runCatching {
+                            val input = java.io.DataInputStream(c.getInputStream())
+                            val head = ArrayList<String>()
+                            val line = StringBuilder()
+                            while (true) {
+                                val b = input.read()
+                                if (b < 0) break
+                                if (b == '\n'.code) {
+                                    val text = line.toString().trimEnd('\r')
+                                    if (text.isEmpty()) break
+                                    head += text
+                                    line.clear()
+                                } else line.append(b.toChar())
+                            }
+                            val length = head.firstOrNull { it.startsWith("Content-Length:", true) }?.substringAfter(':')?.trim()?.toInt() ?: 0
+                            val body = ByteArray(length).also { input.readFully(it) }.toString(Charsets.UTF_8)
+                            val json = org.json.JSONObject(body)
+                            val list = json.getJSONArray("text")
+                            requests++
+                            val out = org.json.JSONArray()
+                            for (i in 0 until list.length()) {
+                                texts += list.getString(i)
+                                out.put(org.json.JSONObject().put("text", "TR:" + list.getString(i)))
+                            }
+                            val payload = org.json.JSONObject().put("translations", out).toString().toByteArray()
+                            c.getOutputStream().write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${payload.size}\r\nConnection: close\r\n\r\n".toByteArray() + payload)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun close() = socket.close()
 }

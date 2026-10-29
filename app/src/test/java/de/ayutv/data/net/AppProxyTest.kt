@@ -33,9 +33,12 @@ class AppProxyTest {
         listOf("192.168.1.20", "10.0.0.5", "172.20.1.1", "127.0.0.1", "localhost", "firetv.local", "nas.fritz.box", "::1")
             .forEach { assertTrue(it, AppProxy.isLocal(it)) }
         listOf("8.8.8.8", "172.32.0.1", "example.com", "1.2.3.4").forEach { assertFalse(it, AppProxy.isLocal(it)) }
-        AppProxy.configure(ProxyConfig(ProxyMode.ALL, host = "proxy.example", port = 8080), emptySet())
+        AppProxy.configure(ProxyConfig(ProxyMode.ALL, host = "proxy.example", port = 8080), setOf("provider.example", "192.168.178.30"))
         assertFalse(AppProxy.proxies("192.168.178.30"))
         assertTrue(AppProxy.proxies("provider.example"))
+        // Nur Anbieter laufen über den Proxy: Logos, DeepL, Updates gehen direkt (schnell).
+        assertFalse(AppProxy.proxies("api-free.deepl.com"))
+        assertFalse(AppProxy.proxies("image.tmdb.org"))
         // Der Proxy selbst wird direkt angesprochen.
         assertFalse(AppProxy.proxies("proxy.example"))
     }
@@ -54,7 +57,7 @@ class AppProxyTest {
 
     @Test
     fun proxyIsTheOnlyRoute() {
-        AppProxy.configure(ProxyConfig(ProxyMode.ALL, ProxyType.SOCKS5, host = "proxy.example", port = 1080), emptySet())
+        AppProxy.configure(ProxyConfig(ProxyMode.ALL, ProxyType.SOCKS5, host = "proxy.example", port = 1080), setOf("provider.example"))
         val routes = AppProxy.selector.select(URI("http://provider.example/live/1.ts"))
         // Kein Proxy.NO_PROXY dahinter: Fällt der Proxy aus, geht nichts direkt raus.
         assertEquals(1, routes.size)
@@ -95,7 +98,7 @@ class AppProxyTest {
     fun wrongPasswordIsReported() {
         val server = FakeProxy(user = "dna", password = "richtig")
         try {
-            AppProxy.configure(ProxyConfig(ProxyMode.ALL, ProxyType.HTTP, "127.0.0.1", server.port, "dna", "falsch"), emptySet())
+            AppProxy.configure(ProxyConfig(ProxyMode.ALL, ProxyType.HTTP, "127.0.0.1", server.port, "dna", "falsch"), setOf("provider.example"))
             val client = OkHttpClient.Builder()
                 .proxySelector(AppProxy.selector)
                 .proxyAuthenticator(AppProxy.authenticator)

@@ -1546,6 +1546,26 @@ class PlayerActivity : ComponentActivity() {
                     continue
                 }
                 store.upcoming(format, earliest, 20) { wanted(it) && it.startMs < next.startMs && lateFor(it) }.forEach { skipped += it.startMs }
+                // Übersetzer im Internet (DeepL): alle schon gelesenen Zeilen auf einmal schicken statt jede einzeln,
+                // so ist die nächste Minute mit einer Anfrage (unter einer Sekunde) übersetzt.
+                if (translator is de.ayutv.data.translate.DeepLTranslator && de.ayutv.data.translate.DeepLTranslator.problem == null &&
+                    de.ayutv.data.translate.DeepLTranslator.targetCode(target) != null
+                ) {
+                    val batch = store.upcoming(format, earliest, ONLINE_BATCH) { wanted(it) && !it.text.isNullOrBlank() }
+                    if (batch.size > 1) {
+                        val done = runCatching { translateBatch(batch, smart, target, lastLine?.let { (src, tr, _) -> src to tr }) }
+                            .onFailure { Log.w(SUBTITLE_TAG, "Übersetzung im Block fehlgeschlagen", it) }.getOrNull()
+                        if (done != null) {
+                            lastLine = done
+                            if (++unsaved >= 10) {
+                                unsaved = 0
+                                saveAheadTranslations()
+                            }
+                            de.ayutv.data.translate.DeepLTranslator.problem?.let { subtitleStatus = "$it – übersetze auf dem Gerät (langsamer)" }
+                            continue
+                        }
+                    }
+                }
                 try {
                     val started = SystemClock.elapsedRealtime()
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
@@ -1624,6 +1644,33 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Mehrere Zeilen in einem Aufruf übersetzen (Übersetzer im Internet): satzweise zusammengefasst und wieder auf die
+     * Einblendungen verteilt, wie beim nächtlichen Vorbereiten. Liefert die letzte Zeile als Zusammenhang für die nächste.
+     */
+    private suspend fun translateBatch(
+        batch: List<EmbeddedSubtitles.Entry>,
+        smart: de.ayutv.data.translate.SubtitleTranslator,
+        target: String,
+        before: Pair<String, String>?,
+    ): Triple<String, String, Long> {
+        val cues = batch.map { de.ayutv.data.translate.SubtitleSentences.Cue(it.startMs, if (it.endMs >= 0) it.endMs else it.startMs + ASSUMED_LINE_MS, it.text.orEmpty()) }
+        val groups = de.ayutv.data.translate.SubtitleSentences.groups(cues)
+        val texts = groups.map { de.ayutv.data.translate.SubtitleSentences.joined(cues, it) }
+        val result = smart.translate(texts, target, sourceFor(cues.first().text), before)
+        groups.forEachIndexed { k, range ->
+            val sentence = result.getOrNull(k) ?: return@forEachIndexed
+            val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, range.map { de.ayutv.data.translate.SubtitleSentences.plain(cues[it].text).length })
+            range.forEachIndexed { j, index ->
+                val part = de.ayutv.data.translate.SubtitleSentences.wrap(parts[j])
+                aheadTranslations[cues[index].startMs] = part
+                aheadDone[cues[index].startMs] = part
+            }
+        }
+        Log.i(SUBTITLE_TAG, "Block: ${batch.size} Zeilen in einem Aufruf übersetzt")
+        return Triple(texts.last(), result.lastOrNull().orEmpty(), cues.last().endMs)
     }
 
     /** Folgende Text-Einblendungen, in denen der Satz von [first] weitergeht (höchstens zwei, noch nicht übersetzt). */
@@ -3621,6 +3668,8 @@ class PlayerActivity : ComponentActivity() {
         private const val PREROLL_MAX_MS = 40_000L
         /** So oft wird ein hängender Übersetzer neu gestartet, bevor die Spur im Original bleibt. */
         private const val MAX_TRANSLATOR_RESTARTS = 2
+        /** So viele Zeilen gehen höchstens in eine Anfrage an einen Übersetzer im Internet (DeepL erlaubt 50). */
+        private const val ONLINE_BATCH = 40
         /** Nur in den ersten Sekunden entscheidet sich, ob angehalten wird. */
         private const val PREROLL_DECIDE_MS = 3_000L
         private const val DROP_WARN_COUNT = 3

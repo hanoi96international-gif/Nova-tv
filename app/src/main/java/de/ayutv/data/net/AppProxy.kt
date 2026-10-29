@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
 
 enum class ProxyMode(val label: String) {
     OFF("Aus"),
-    ALL("Alle Verbindungen"),
+    ALL("Alle Playlists"),
     SELECTED("Nur ausgewählte Playlists"),
 }
 
@@ -45,9 +45,11 @@ data class ProxyConfig(
 
 /**
  * Proxy nur für DnA-TV (keine VPN-App nötig): Alle Verbindungen laufen über den gemeinsamen OkHttp-Client,
- * dort entscheidet [selector] je Server, ob es über den Proxy geht. Bei „Nur ausgewählte Playlists“ sind das
- * die Server dieser Playlists und die, auf die sie weiterleiten (Lastverteiler der Anbieter). Geräte im
- * Heimnetz (Handy-Fernbedienung) laufen nie über den Proxy.
+ * dort entscheidet [selector] je Server, ob es über den Proxy geht. Das sind nur die Server der Playlists (alle oder
+ * die ausgewählten) und die, auf die sie weiterleiten (Lastverteiler der Anbieter). Alles andere geht direkt:
+ * Senderlogos und Poster, DeepL, Untertitel, Updates. Über einen Proxy am anderen Ende der Welt wäre jedes Bild
+ * und jede Übersetzung um ein Vielfaches langsamer, und nur der Anbieter muss das Land sehen. Geräte im Heimnetz
+ * (Handy-Fernbedienung) laufen nie über den Proxy.
  *
  * Fällt der Proxy aus, geht nichts heimlich direkt raus: OkHttp bekommt nur den Proxy als Weg, die Verbindung
  * scheitert, und [lastFailure] sagt dem Player, warum.
@@ -66,7 +68,7 @@ object AppProxy {
 
     val current: ProxyConfig get() = config ?: ProxyConfig()
 
-    /** Neue Einstellungen; [playlistHosts] = Server der gewählten Playlists (nur bei [ProxyMode.SELECTED]). */
+    /** Neue Einstellungen; [playlistHosts] = Server der Playlists, die über den Proxy laufen (alle bzw. die gewählten). */
     fun configure(next: ProxyConfig, playlistHosts: Set<String>) {
         val changed = next != config
         hosts = playlistHosts.map { it.lowercase() }.toSet()
@@ -84,11 +86,7 @@ object AppProxy {
         if (!c.active || host.isNullOrBlank() || isLocal(host)) return false
         val h = host.lowercase()
         if (h == c.host.trim().lowercase()) return false
-        return when (c.mode) {
-            ProxyMode.OFF -> false
-            ProxyMode.ALL -> true
-            ProxyMode.SELECTED -> h in hosts || h in learned
-        }
+        return h in hosts || h in learned
     }
 
     /** Für OkHttp: der Proxy als einziger Weg (kein Ausweichen auf direkt) oder direkt. */
@@ -135,7 +133,7 @@ object AppProxy {
             request = request.newBuilder().header("Proxy-Authorization", basic(c)).build()
         }
         val response = chain.proceed(request)
-        if (c?.mode == ProxyMode.SELECTED && response.isRedirect && proxies(request.url.host)) {
+        if (c?.active == true && response.isRedirect && proxies(request.url.host)) {
             response.header("Location")?.let { request.url.resolve(it)?.host }?.let { target ->
                 if (!isLocal(target)) learned += target.lowercase()
             }
