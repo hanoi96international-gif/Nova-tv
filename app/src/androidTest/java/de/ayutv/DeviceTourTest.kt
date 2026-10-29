@@ -773,6 +773,16 @@ class DeviceTourTest {
                 log("translator_killed: film_alive=$alive status=${scenario.read { it.subtitleStatus }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(2)}")
                 assertTrue("Film lief nach Ende des Übersetzers nicht weiter", alive)
                 assertTrue("Übersetzer lief nicht im eigenen Prozess", mt != null)
+                // Danach übersetzt er von selbst weiter (Neustart mit Zeit zum Modell-Laden), statt aufzugeben.
+                val beforeKill = scenario.read { it.translatedCue }
+                val resumed = waitFor(240_000) {
+                    scenario.read {
+                        it.liveTranslateTarget == "de" &&
+                            it.translatedCue?.let { cue -> cue.isNotBlank() && cue != beforeKill && cue !in english && cue.any(Char::isLetter) } == true
+                    }
+                }
+                log("translator_resumed: ok=$resumed status=${scenario.read { it.subtitleStatus }}")
+                assertTrue("Übersetzung nach Neustart des Übersetzers nicht weitergelaufen", resumed)
             }
         }
 

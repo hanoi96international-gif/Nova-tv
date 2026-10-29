@@ -168,7 +168,8 @@ class Pretranslation(private val context: Context, private val container: AppCon
         val smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
         try {
             for (chunk in groups.filter { range -> range.any { startOf(cues[it]) !in partial } }.chunked(BATCH)) {
-                if (timeLeft() < 20_000) return null
+                // Läuft ein Film, gehört der Übersetzer ihm: sofort aufhören (der Stand bleibt gespeichert).
+                if (timeLeft() < 20_000 || container.foreground?.get() is de.ayutv.player.PlayerActivity) return null
                 val before = groups.getOrNull(groups.indexOf(chunk.first()) - 1)?.let { range ->
                     val done = range.map { partial[startOf(cues[it])] }
                     if (done.any { it == null }) null
@@ -244,7 +245,8 @@ class Pretranslation(private val context: Context, private val container: AppCon
     companion object {
         /** Name der Zwischenablage für halb übersetzte Dateien (auch der Player liest sie). */
         const val PARTIAL_TRACK = "file"
-        private const val BATCH = 8
+        /** Klein, damit ein gerade gestarteter Film nie lange auf den Übersetzer warten muss. */
+        private const val BATCH = 2
         private const val MAX_ITEMS = 6
         private val TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
     }
