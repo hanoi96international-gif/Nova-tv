@@ -47,6 +47,7 @@ object KeyCheck {
                         200 -> {
                             val allowed = (json.parseToJsonElement(text) as? JsonObject)?.get("user")
                                 ?.let { it as? JsonObject }?.get("allowed_downloads")?.let { (it as? JsonPrimitive)?.longOrNull }
+                            allowed?.let { de.ayutv.data.repo.OpenSubtitlesQuota.daily = it.toInt() }
                             Line(true, "OpenSubtitles: angemeldet als $user" + (allowed?.let { " ($it Downloads pro Tag)" } ?: ""))
                         }
                         401 -> Line(false, "OpenSubtitles: Benutzername oder Passwort falsch")

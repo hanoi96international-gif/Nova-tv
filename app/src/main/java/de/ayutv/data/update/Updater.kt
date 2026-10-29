@@ -68,8 +68,11 @@ class Updater(private val context: Context, private val http: OkHttpClient) {
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
-        return parseRelease(body)
+        return parseRelease(body, if (browserOnly) PHONE_APK else TV_APK) ?: parseRelease(body, TV_APK)
     }
+
+    /** Handy-Fassung ohne Installationsrecht: Updates öffnen den Download im Browser. */
+    val browserOnly: Boolean get() = BuildConfig.BUILD_TYPE == "phone"
 
     /** Lädt die APK und meldet den Fortschritt; danach [install]. */
     suspend fun download(release: Release): File? = withContext(Dispatchers.IO) {
@@ -130,6 +133,11 @@ class Updater(private val context: Context, private val http: OkHttpClient) {
 
     /** Ablauf beim Klick auf „Installieren“: Erlaubnis holen, laden, Installer öffnen. */
     suspend fun downloadAndInstall(release: Release, start: (Intent) -> Unit) {
+        if (browserOnly) {
+            runCatching { start(Intent(Intent.ACTION_VIEW, Uri.parse(release.apkUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                .onFailure { _state.value = State.Failed("Browser nicht verfügbar: ${it.message}") }
+            return
+        }
         if (!canInstall()) {
             // Nach dem Erlauben einfach noch einmal auf „Installieren“.
             permissionIntent()?.let { runCatching { start(it) } }
@@ -147,11 +155,14 @@ class Updater(private val context: Context, private val http: OkHttpClient) {
         private val json = Json { ignoreUnknownKeys = true }
 
         /** Release aus der Antwort von GitHub: Version aus dem Tag (v0.26.0), Download der DnA-TV.apk. */
-        fun parseRelease(body: String): Release? {
+        const val TV_APK = "DnA-TV.apk"
+        const val PHONE_APK = "DnA-TV-Handy.apk"
+
+        fun parseRelease(body: String, assetName: String = TV_APK): Release? {
             val root = json.parseToJsonElement(body).jsonObject
             val tag = root["tag_name"]?.jsonPrimitive?.contentOrNull ?: return null
             val asset = root["assets"]?.jsonArray?.map { it.jsonObject }
-                ?.firstOrNull { it["name"]?.jsonPrimitive?.contentOrNull == "DnA-TV.apk" } ?: return null
+                ?.firstOrNull { it["name"]?.jsonPrimitive?.contentOrNull == assetName } ?: return null
             val url = asset["browser_download_url"]?.jsonPrimitive?.contentOrNull ?: return null
             val size = asset["size"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0L
             val notes = (root["body"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull.orEmpty()

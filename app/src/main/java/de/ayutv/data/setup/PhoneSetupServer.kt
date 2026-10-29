@@ -279,7 +279,8 @@ class PhoneSetupServer(private val container: AppContainer) {
             <h2>Sicherung</h2>
             <p>Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, gefolgte Vereine und alle Einstellungen
             in einer Datei. Damit ist ein neuer Fire TV in einer Minute eingerichtet. Mit Passwort wird die Datei
-            verschlüsselt (empfohlen, sie enthält die Zugangsdaten). Die Kindersicherung wird nicht mitgesichert.</p>
+            verschlüsselt und enthält dann alle Zugangsdaten; ohne Passwort fehlen Passwörter und Schlüssel (Playlist-Passwörter,
+            Proxy, DeepL, OpenSubtitles). Die Kindersicherung wird nicht mitgesichert.</p>
             <form method=post action="/$pin/backup">
             <label>Passwort für die Sicherung (empfohlen)<input name=backup_password type=password autocomplete=new-password></label>
             <button>⬇ Sicherung herunterladen</button>

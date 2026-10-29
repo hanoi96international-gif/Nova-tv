@@ -210,7 +210,7 @@ class SubtitleRepository(
             saveTiming(key, actualLanguage, SavedTiming(ratio, 0L, 0L))
             // Nach Titel gefunden: die nächsten Treffer merken. Findet der Player am Ton keinen Takt, vergleicht
             // er mit ihnen, statt eine Viertelstunde auf die falsche Datei zu warten.
-            val rest = if (source == Source.HASH) emptyList() else candidates.drop(attempt + 1).take(MAX_ALTERNATIVES)
+            val rest = if (source == Source.HASH) emptyList() else candidates.drop(attempt + 1).take(maxOf(MAX_ALTERNATIVES, OpenSubtitlesQuota.candidatesPerFilm - 1))
             runCatching {
                 altFile(key, actualLanguage).writeText(rest.joinToString("") { "${it.fileId}\t${it.fps ?: ""}\t${it.release.replace('\t', ' ').replace('\n', ' ')}\n" })
             }
@@ -556,6 +556,7 @@ class SubtitleRepository(
                 if (!response.isSuccessful) Log.w(TAG, "Anmeldung bei OpenSubtitles fehlgeschlagen: HTTP ${response.code} ${OpenSubtitlesParsing.message(body)}")
                 // VIP-Konten: Das Token gilt nur am eigenen Server (sonst „invalid token“).
                 OpenSubtitlesParsing.loginApi(body)?.let { api = it }
+                OpenSubtitlesParsing.allowedDownloads(body)?.let { OpenSubtitlesQuota.daily = it }
                 OpenSubtitlesParsing.loginToken(body).takeIf { response.isSuccessful }
             }
         }.getOrNull().also {

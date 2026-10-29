@@ -140,7 +140,12 @@ jobs:
         if: steps.reuse.outcome != 'success'
         env:
           OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
-        run: ci/gradle-watchdog.sh 50 --no-daemon --console=plain -Pkotlin.compiler.execution.strategy=in-process assembleRelease
+        run: ci/gradle-watchdog.sh 50 --no-daemon --console=plain -Pkotlin.compiler.execution.strategy=in-process assembleRelease assemblePhone
+
+      # Handy-Fassung (ohne Installationsrecht) neben die Release-APK legen: ein Artefakt für beide.
+      - name: Handy-APK dazulegen
+        if: steps.reuse.outcome != 'success'
+        run: cp app/build/outputs/apk/phone/app-phone.apk app/build/outputs/apk/release/app-phone.apk
 
       - uses: actions/upload-artifact@v5
         with:
@@ -152,6 +157,7 @@ jobs:
         run: |
           mkdir -p out
           cp app/build/outputs/apk/release/app-release.apk out/DnA-TV.apk
+          if [ -f app/build/outputs/apk/release/app-phone.apk ]; then cp app/build/outputs/apk/release/app-phone.apk out/DnA-TV-Handy.apk; fi
 
       - uses: actions/upload-artifact@v5
         with:
@@ -180,6 +186,7 @@ jobs:
         run: |
           mkdir -p out
           cp apk/release/app-release.apk out/DnA-TV.apk
+          if [ -f apk/release/app-phone.apk ]; then cp apk/release/app-phone.apk out/DnA-TV-Handy.apk; fi
           cp apk/debug/app-debug.apk out/DnA-TV-debug.apk
 
       - name: Versionsnummer lesen

@@ -35,7 +35,9 @@ class Backup(private val container: AppContainer) {
 
     /** Sicherung als Text; mit [password] verschlüsselt (sonst stehen die Zugangsdaten lesbar darin). */
     suspend fun create(password: String? = null): String {
-        val plain = createPlain()
+        // Ohne Passwort stünde alles lesbar in der Datei: Passwörter und Schlüssel dann weglassen (Playlist-Adressen
+        // und Benutzernamen bleiben, die Passwörter trägt man nach dem Einspielen neu ein).
+        val plain = createPlain(includeSecrets = !password.isNullOrEmpty())
         if (password.isNullOrEmpty()) return plain
         val sealed = withContext(Dispatchers.Default) { BackupCrypto.seal(plain, password) }
         return PRETTY.encodeToString(JsonObject.serializer(), buildJsonObject {
@@ -55,7 +57,7 @@ class Backup(private val container: AppContainer) {
     fun needsPassword(text: String): Boolean =
         runCatching { Json.parseToJsonElement(text).jsonObject["encrypted"] is JsonObject }.getOrDefault(false)
 
-    private suspend fun createPlain(): String {
+    private suspend fun createPlain(includeSecrets: Boolean): String {
         val db = container.db
         val json = buildJsonObject {
             put("format", FORMAT)
@@ -65,7 +67,7 @@ class Backup(private val container: AppContainer) {
             put("settings", buildJsonObject {
                 for ((type, values) in container.settings.export()) {
                     put(type, buildJsonObject {
-                        for ((key, value) in values) put(key, value.toJson())
+                        for ((key, value) in values) if (includeSecrets || key !in SECRET_SETTINGS) put(key, value.toJson())
                     })
                 }
             })
@@ -77,7 +79,7 @@ class Backup(private val container: AppContainer) {
                     put("url", p.url)
                     p.epgUrl?.let { put("epgUrl", it) }
                     p.username?.let { put("username", it) }
-                    Credentials.reveal(p.password)?.let { put("password", it) }
+                    if (includeSecrets) Credentials.reveal(p.password)?.let { put("password", it) }
                     put("enabled", p.enabled)
                     p.timezone?.let { put("timezone", it) }
                 })
@@ -180,6 +182,8 @@ class Backup(private val container: AppContainer) {
 
     companion object {
         const val FORMAT = "dna-tv-backup"
+        /** Einstellungen mit Passwörtern und Schlüsseln (nur in Sicherungen mit Passwort). */
+        private val SECRET_SETTINGS = setOf("opensubtitles_password", "proxy_password", "deepl_key")
         private val PRETTY = Json { prettyPrint = true }
 
         /** Favoriten-Schlüssel beginnen mit der Playlist-Nummer („3:c:1234“): auf die neue Nummer umschreiben. */

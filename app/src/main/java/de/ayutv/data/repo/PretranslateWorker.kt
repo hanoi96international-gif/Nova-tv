@@ -117,6 +117,8 @@ class Pretranslation(private val context: Context, private val container: AppCon
     val lastResult: String? get() = prefs.getString("last", null)
 
     suspend fun run(budgetMs: Long): String {
+        // Erst aufräumen (lange unbenutzte Modelle und Untertitel), dann vorbereiten.
+        runCatching { de.ayutv.data.StorageCleaner.clean(context) }.onSuccess { Log.i(PretranslateWorker.TAG, "Speicher: $it") }
         val settings = container.settings.current()
         if (!settings.pretranslate) return "aus"
         val started = SystemClock.elapsedRealtime()
@@ -223,8 +225,10 @@ class Pretranslation(private val context: Context, private val container: AppCon
             if (memory.textOff) return null
             return memory.load ?: defaultLanguage.takeIf { autoOn }
         }
+        // Mit großem Kontingent (VIP) mehr Filme vorbereiten.
+        val maxItems = if (OpenSubtitlesQuota.generous) MAX_ITEMS_GENEROUS else MAX_ITEMS
         for (entry in container.db.history().recent(40)) {
-            if (entry.kind == HistoryKind.LIVE || out.size >= MAX_ITEMS) continue
+            if (entry.kind == HistoryKind.LIVE || out.size >= maxItems) continue
             val unfinished = entry.durationMs <= 0 || entry.positionMs < entry.durationMs * 0.95
             if (unfinished && entry.positionMs > 60_000) {
                 language(entry.key)?.let { out.putIfAbsent(entry.key, Item(entry.key, entry.url, entry.title, entry.durationMs, it)) }
@@ -238,20 +242,20 @@ class Pretranslation(private val context: Context, private val container: AppCon
         if (lastTarget.isNotEmpty()) {
             val watchlist = runCatching { container.db.vod().observeFavorites().first() }.getOrDefault(emptyList())
             for (film in watchlist) {
-                if (out.size >= MAX_ITEMS) break
+                if (out.size >= maxItems) break
                 val memory = container.playerMemory.get(film.key)
                 if (memory.textOff) continue
                 out.putIfAbsent(film.key, Item(film.key, film.url, film.name, 0L, memory.load ?: lastTarget))
             }
         }
-        return out.values.take(MAX_ITEMS)
+        return out.values.take(maxItems)
     }
 
     /** OpenSubtitles erlaubt ohne Konto 5 Downloads am Tag: höchstens 2 davon nachts, mit Konto 8 von 20. */
     private fun takeDownload(account: Boolean): Boolean {
         val day = System.currentTimeMillis() / 86_400_000L
         val used = if (prefs.getLong("day", -1) == day) prefs.getInt("downloads", 0) else 0
-        if (used >= if (account) 8 else 2) return false
+        if (used >= OpenSubtitlesQuota.nightlyBudget(account)) return false
         prefs.edit().putLong("day", day).putInt("downloads", used + 1).apply()
         return true
     }
@@ -268,6 +272,7 @@ class Pretranslation(private val context: Context, private val container: AppCon
         /** Klein, damit ein gerade gestarteter Film nie lange auf den Übersetzer warten muss. */
         private const val BATCH = 2
         private const val MAX_ITEMS = 6
+        private const val MAX_ITEMS_GENEROUS = 20
         private val TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
     }
 }
