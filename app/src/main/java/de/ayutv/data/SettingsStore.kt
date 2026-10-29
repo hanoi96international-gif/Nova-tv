@@ -1,6 +1,9 @@
 package de.ayutv.data
 
 import de.ayutv.data.security.Credentials
+import de.ayutv.data.net.ProxyConfig
+import de.ayutv.data.net.ProxyMode
+import de.ayutv.data.net.ProxyType
 import android.content.Context
 import de.ayutv.BuildConfig
 import androidx.datastore.preferences.core.Preferences
@@ -164,7 +167,22 @@ data class AppSettings(
     val fireTvHome: Boolean = true,
     /** Aussehen der Menüs. */
     val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.NORDLICHT,
+    /** Proxy nur für DnA-TV: aus, für alles oder nur für ausgewählte Playlists. */
+    val proxyMode: ProxyMode = ProxyMode.OFF,
+    val proxyType: ProxyType = ProxyType.HTTP,
+    val proxyHost: String = "",
+    val proxyPort: Int = 0,
+    val proxyUser: String = "",
+    val proxyPassword: String = "",
+    /** IDs der Playlists, die über den Proxy laufen (bei [ProxyMode.SELECTED]). */
+    val proxyPlaylists: Set<String> = emptySet(),
 ) {
+    val proxyConfig: ProxyConfig
+        get() = ProxyConfig(
+            proxyMode, proxyType, proxyHost.trim(), proxyPort, proxyUser.trim(), proxyPassword,
+            proxyPlaylists.mapNotNull { it.toLongOrNull() }.toSet(),
+        )
+
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
     val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
     val onlineSubtitlesEnabled: Boolean get() = onlineSubtitles && openSubtitlesApiKey.isNotBlank()
@@ -230,6 +248,16 @@ class SettingsStore(private val context: Context) {
         val loudnessLevel = booleanPreferencesKey("loudness_level")
         val fireTvHome = booleanPreferencesKey("fire_tv_home")
         val lastTranslationTarget = stringPreferencesKey("last_translation_target")
+        val proxyMode = stringPreferencesKey("proxy_mode")
+        val proxyType = stringPreferencesKey("proxy_type")
+        val proxyHost = stringPreferencesKey("proxy_host")
+        val proxyPort = intPreferencesKey("proxy_port")
+        val proxyUser = stringPreferencesKey("proxy_user")
+        val proxyPassword = stringPreferencesKey("proxy_password")
+        val proxyPlaylists = stringSetPreferencesKey("proxy_playlists")
+
+        /** Verschlüsselt gespeicherte Werte (in Sicherungen im Klartext, der Schlüssel gilt nur auf diesem Gerät). */
+        val secrets = setOf(osPassword, proxyPassword)
     }
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { it.toSettings() }
@@ -272,7 +300,7 @@ class SettingsStore(private val context: Context) {
                 else -> continue
             }
             // Passwörter im Klartext: Der Schlüssel des Keystores gilt nur auf diesem Gerät.
-            val portable = if (key == Keys.osPassword) Credentials.reveal(value as? String).orEmpty() else value
+            val portable = if (Keys.secrets.any { it.name == key.name }) Credentials.reveal(value as? String).orEmpty() else value
             out.getOrPut(type) { linkedMapOf() }[key.name] = portable
         }
         return out
@@ -286,7 +314,7 @@ class SettingsStore(private val context: Context) {
             values["ints"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[intPreferencesKey(k)] = it.toInt() } }
             values["longs"]?.allowed()?.forEach { (k, v) -> (v as? Number)?.let { prefs[longPreferencesKey(k)] = it.toLong() } }
             values["strings"]?.allowed()?.forEach { (k, v) ->
-                (v as? String)?.let { prefs[stringPreferencesKey(k)] = if (k == Keys.osPassword.name) Credentials.protect(it).orEmpty() else it }
+                (v as? String)?.let { prefs[stringPreferencesKey(k)] = if (Keys.secrets.any { s -> s.name == k }) Credentials.protect(it).orEmpty() else it }
             }
             values["stringSets"]?.allowed()?.forEach { (k, v) ->
                 (v as? Collection<*>)?.let { prefs[stringSetPreferencesKey(k)] = it.filterIsInstance<String>().toSet() }
@@ -297,8 +325,10 @@ class SettingsStore(private val context: Context) {
     /** Einmalig: ein unverschlüsselt gespeichertes Passwort (ältere Versionen) verschlüsseln. */
     suspend fun protectStoredSecrets() {
         context.settingsDataStore.edit { prefs ->
-            val stored = prefs[Keys.osPassword]
-            if (!stored.isNullOrEmpty() && !Credentials.isProtected(stored)) prefs[Keys.osPassword] = Credentials.protect(stored).orEmpty()
+            for (key in Keys.secrets) {
+                val stored = prefs[key]
+                if (!stored.isNullOrEmpty() && !Credentials.isProtected(stored)) prefs[key] = Credentials.protect(stored).orEmpty()
+            }
         }
     }
 
@@ -350,6 +380,13 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.goalAlerts] = next.goalAlerts
             prefs[Keys.loudnessLevel] = next.loudnessLevel
             prefs[Keys.fireTvHome] = next.fireTvHome
+            prefs[Keys.proxyMode] = next.proxyMode.name
+            prefs[Keys.proxyType] = next.proxyType.name
+            prefs[Keys.proxyHost] = next.proxyHost.trim()
+            prefs[Keys.proxyPort] = next.proxyPort
+            prefs[Keys.proxyUser] = next.proxyUser.trim()
+            prefs[Keys.proxyPassword] = Credentials.protect(next.proxyPassword).orEmpty()
+            prefs[Keys.proxyPlaylists] = next.proxyPlaylists
         }
     }
 
@@ -399,6 +436,13 @@ class SettingsStore(private val context: Context) {
         goalAlerts = this[Keys.goalAlerts] ?: true,
         loudnessLevel = this[Keys.loudnessLevel] ?: false,
         fireTvHome = this[Keys.fireTvHome] ?: true,
+        proxyMode = enumOrDefault(this[Keys.proxyMode], ProxyMode.OFF),
+        proxyType = enumOrDefault(this[Keys.proxyType], ProxyType.HTTP),
+        proxyHost = this[Keys.proxyHost].orEmpty(),
+        proxyPort = this[Keys.proxyPort] ?: 0,
+        proxyUser = this[Keys.proxyUser].orEmpty(),
+        proxyPassword = Credentials.reveal(this[Keys.proxyPassword]).orEmpty(),
+        proxyPlaylists = this[Keys.proxyPlaylists] ?: emptySet(),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

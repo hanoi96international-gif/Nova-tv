@@ -272,6 +272,22 @@ fun PlayerScreen(activity: PlayerActivity) {
             }
         }
 
+        // Vorlauf der Übersetzung: kurz angehalten, bis die nächste Minute übersetzt ist.
+        activity.prerollProgress?.let { progress ->
+            val press = Modifier.pointerInput(Unit) { detectTapGestures { activity.endPreroll() } }
+            Column(
+                Modifier.align(Alignment.Center).widthIn(max = 560.dp).then(press)
+                    .clip(RoundedCornerShape(12.dp)).background(Color.Black.copy(alpha = 0.85f))
+                    .padding(horizontal = 24.dp, vertical = 18.dp)
+            ) {
+                Text("Untertitel werden übersetzt … ${(progress * 100).toInt()} %", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(10.dp))
+                ProgressLine(progress)
+                Spacer(Modifier.height(8.dp))
+                Text(if (touch) "Tippen: sofort weiterschauen" else "OK: sofort weiterschauen", color = AyuColors.Accent, fontSize = 14.sp)
+            }
+        }
+
         // Knöpfe statt Fernbedienung, solange die Leiste zu sehen ist.
         if (touch && (activity.overlay == Overlay.INFO && activity.isLive || activity.overlay == Overlay.CONTROLS && !activity.isLive)) {
             TouchButtons(activity, Modifier.align(Alignment.TopEnd))

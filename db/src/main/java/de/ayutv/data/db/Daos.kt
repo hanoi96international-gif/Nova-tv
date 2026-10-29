@@ -43,6 +43,10 @@ interface PlaylistDao {
 
 @Dao
 interface ChannelDao {
+    /** Je Server (Schema + Host + Port) eine Adresse der Playlist: für den Proxy je Playlist. */
+    @Query("SELECT url FROM channels WHERE playlistId = :playlistId GROUP BY substr(url, 1, instr(substr(url, 9), '/') + 8)")
+    suspend fun originsOf(playlistId: Long): List<String>
+
     // Blockierende Varianten für den Import, der komplett in runInTransaction läuft.
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertAll(channels: List<ChannelEntity>)
@@ -173,6 +177,9 @@ interface ProgrammeDao {
 
 @Dao
 interface VodDao {
+    @Query("SELECT url FROM vod WHERE playlistId = :playlistId GROUP BY substr(url, 1, instr(substr(url, 9), '/') + 8)")
+    suspend fun originsOf(playlistId: Long): List<String>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insertAll(items: List<VodEntity>)
 

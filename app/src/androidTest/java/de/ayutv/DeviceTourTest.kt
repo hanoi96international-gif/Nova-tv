@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -478,7 +480,12 @@ class DeviceTourTest {
                     "We have to leave before it gets dark.", "Thank you for everything.", "- Where is he?\n- I don't know.")
                 fun translatedNow() = scenario.read { it.translatedCue }?.takeIf { it.isNotBlank() && it !in englishLines }
                 scenario.onActivity { it.loadSubtitles("id") }
-                val translated = waitFor(240_000) { translatedNow() != null }
+                var prerollMax = 0f
+                val translated = waitFor(240_000) {
+                    scenario.read { it.prerollProgress }?.let { prerollMax = maxOf(prerollMax, it) }
+                    translatedNow() != null
+                }
+                log("translate_id preroll_max=$prerollMax playing=${scenario.read { it.player?.playWhenReady }}")
                 log(
                     "translate_id: ok=$translated target=${scenario.read { it.liveTranslateTarget }} " +
                         "cue=${scenario.read { it.translatedCue }?.replace('\n', ' ')} statuses=${scenario.read { it.statusHistory.toList() }}"
@@ -497,6 +504,32 @@ class DeviceTourTest {
             }
         }
         if (movie == null) log("vod: kein Film gefunden")
+
+        // 4c. Nachts vorbereiten: eingebettete Untertitel aus der ganzen Datei lesen und übersetzen. Beim Schauen
+        // sind die Zeilen dann sofort da (gleiche Spur und Zeiten wie im Player), ohne Vorlauf.
+        if (movie != null) section("embedded_prep") {
+            val key = movie.key + "#nacht"
+            val prep = de.ayutv.data.repo.EmbeddedPrep(app, container)
+            val started = System.currentTimeMillis()
+            val outcome = runBlocking { prep.prepare(key, movie.url, "de", { 3_600_000L }, { true }) }
+            val lines = prep.translations(key, "de")
+            log("embedded_prep: outcome=$outcome lines=${lines.size} ms=${System.currentTimeMillis() - started} sample=${lines.values.take(3).map { it.replace('\n', '/') }}")
+            assertEquals(de.ayutv.data.repo.EmbeddedPrep.Outcome.DONE, outcome)
+            assertTrue("Keine vorbereiteten Zeilen", lines.size >= 5)
+            val request = VodRequest(key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.loadSubtitles("de") }
+                var paused = false
+                val shown = waitFor(60_000) {
+                    if (scenario.read { it.prerollProgress } != null) paused = true
+                    scenario.read { it.translatedCue }?.let { cue -> cue in lines.values } == true
+                }
+                log("embedded_prep player: shown=$shown preroll=$paused cue=${scenario.read { it.translatedCue }?.replace('\n', '/')}")
+                assertTrue("Vorbereitete Übersetzung wird beim Schauen nicht genutzt", shown)
+                assertFalse("Vorlauf trotz fertiger Übersetzung", paused)
+            }
+        }
 
         // 4d. Geladene Untertitel einer anderen Fassung (2,5 s zu spät): automatisch an der eingebetteten
         // Spur ausrichten. Zeiten wie in ci/make-test-media.sh.
@@ -945,6 +978,42 @@ class DeviceTourTest {
             }
         }
 
+        // Proxy nur für DnA-TV: HTTP und SOCKS5 mit Anmeldung, falsches Passwort wird gemeldet, nie direkt ausweichen.
+        section("proxy") {
+            val proxy = TestProxy("dna", "geheim")
+            try {
+                fun apply(type: de.ayutv.data.net.ProxyType, password: String) {
+                    runBlocking {
+                        container.settings.update {
+                            it.copy(proxyMode = de.ayutv.data.net.ProxyMode.ALL, proxyType = type, proxyHost = "127.0.0.1",
+                                proxyPort = if (type == de.ayutv.data.net.ProxyType.HTTP) proxy.httpPort else proxy.socksPort,
+                                proxyUser = "dna", proxyPassword = password)
+                        }
+                    }
+                    waitFor(5_000) { de.ayutv.data.net.AppProxy.current.let { it.type == type && it.password == password } }
+                }
+                fun fetch(): String = runCatching {
+                    container.http.newCall(okhttp3.Request.Builder().url("http://anbieter.example/ping").build()).execute()
+                        .use { "${it.code} ${it.body.string()}" }
+                }.getOrElse { "Fehler ${it.message}" }
+                apply(de.ayutv.data.net.ProxyType.HTTP, "geheim")
+                val http = fetch()
+                apply(de.ayutv.data.net.ProxyType.SOCKS5, "geheim")
+                val socks = fetch()
+                apply(de.ayutv.data.net.ProxyType.HTTP, "falsch")
+                val wrong = fetch()
+                val reported = de.ayutv.data.net.AppProxy.recentFailure()
+                log("proxy: http=$http socks=$socks wrong=$wrong reported=$reported seen=${proxy.seen}")
+                assertEquals("200 http-proxy anbieter.example", http)
+                assertEquals("200 socks-proxy anbieter.example", socks)
+                assertTrue("Falsches Passwort nicht erkannt: $wrong", wrong.startsWith("407"))
+                assertTrue("Falsches Passwort nicht gemeldet", reported.orEmpty().contains("Anmeldung"))
+            } finally {
+                runBlocking { container.settings.update { it.copy(proxyMode = de.ayutv.data.net.ProxyMode.OFF, proxyPassword = "") } }
+                proxy.close()
+            }
+        }
+
         // Vom Handy auf den Fernseher: /play startet den Sender (Zuordnung über die Adresse, nicht den Schlüssel)
         section("play_on_tv") {
             container.remote.start()
@@ -977,5 +1046,95 @@ class DeviceTourTest {
 
         log("done failures=$failures")
         assertTrue("$failures Abschnitte fehlgeschlagen", failures == 0)
+    }
+}
+
+/**
+ * Kleiner Proxy für den Gerätetest: HTTP (Basic-Anmeldung) und SOCKS5 (Benutzer/Passwort). Statt weiterzuleiten
+ * antwortet er selbst mit Art und Ziel, so ist sicher, dass die Anfrage über ihn lief.
+ */
+private class TestProxy(private val user: String, private val password: String) : AutoCloseable {
+    private val http = java.net.ServerSocket(0)
+    private val socks = java.net.ServerSocket(0)
+    val httpPort get() = http.localPort
+    val socksPort get() = socks.localPort
+    val seen: MutableList<String> = java.util.Collections.synchronizedList(ArrayList())
+
+    init {
+        kotlin.concurrent.thread(isDaemon = true) { serve(http, ::handleHttp) }
+        kotlin.concurrent.thread(isDaemon = true) { serve(socks, ::handleSocks) }
+    }
+
+    private fun serve(server: java.net.ServerSocket, handle: (java.net.Socket) -> Unit) {
+        while (!server.isClosed) {
+            val client = runCatching { server.accept() }.getOrNull() ?: break
+            kotlin.concurrent.thread(isDaemon = true) { client.use { runCatching { handle(it) }.onFailure { e -> seen += "Fehler ${e.message}" } } }
+        }
+    }
+
+    private fun readHead(input: java.io.InputStream): List<String> {
+        val lines = ArrayList<String>()
+        val line = StringBuilder()
+        while (true) {
+            val b = input.read()
+            if (b < 0) break
+            if (b == '\n'.code) {
+                val text = line.toString().trimEnd('\r')
+                if (text.isEmpty()) break
+                lines += text
+                line.clear()
+            } else line.append(b.toChar())
+        }
+        return lines
+    }
+
+    private fun reply(out: java.io.OutputStream, code: String, body: String, extra: String = "") {
+        out.write("HTTP/1.1 $code\r\n${extra}Content-Length: ${body.length}\r\nConnection: close\r\n\r\n$body".toByteArray())
+        out.flush()
+    }
+
+    private fun handleHttp(socket: java.net.Socket) {
+        val head = readHead(socket.getInputStream())
+        val target = head.firstOrNull()?.split(' ')?.getOrNull(1).orEmpty()
+        val auth = head.firstOrNull { it.startsWith("Proxy-Authorization:", ignoreCase = true) }?.substringAfter(':')?.trim()
+        val expected = "Basic " + android.util.Base64.encodeToString("$user:$password".toByteArray(), android.util.Base64.NO_WRAP)
+        seen += "http $target auth=${auth != null}"
+        if (auth != expected) reply(socket.getOutputStream(), "407 Proxy Authentication Required", "", "Proxy-Authenticate: Basic realm=\"t\"\r\n")
+        else reply(socket.getOutputStream(), "200 OK", "http-proxy " + android.net.Uri.parse(target).host)
+    }
+
+    private fun handleSocks(socket: java.net.Socket) {
+        val input = java.io.DataInputStream(socket.getInputStream())
+        val out = socket.getOutputStream()
+        check(input.readUnsignedByte() == 5) { "kein SOCKS5" }
+        val methods = ByteArray(input.readUnsignedByte()).also { input.readFully(it) }
+        if (2.toByte() !in methods) {
+            seen += "socks ohne Anmeldung angeboten: ${methods.toList()}"
+            out.write(byteArrayOf(5, 0xFF.toByte())); return
+        }
+        out.write(byteArrayOf(5, 2))
+        check(input.readUnsignedByte() == 1)
+        val name = String(ByteArray(input.readUnsignedByte()).also { input.readFully(it) })
+        val pass = String(ByteArray(input.readUnsignedByte()).also { input.readFully(it) })
+        val ok = name == user && pass == password
+        out.write(byteArrayOf(1, if (ok) 0 else 1))
+        if (!ok) return
+        check(input.readUnsignedByte() == 5)
+        input.readUnsignedByte(); input.readUnsignedByte()
+        val host = when (input.readUnsignedByte()) {
+            1 -> ByteArray(4).also { input.readFully(it) }.joinToString(".") { (it.toInt() and 0xFF).toString() }
+            3 -> String(ByteArray(input.readUnsignedByte()).also { input.readFully(it) })
+            else -> ByteArray(16).also { input.readFully(it) }.toString()
+        }
+        input.readUnsignedShort()
+        seen += "socks $host"
+        out.write(byteArrayOf(5, 0, 0, 1, 0, 0, 0, 0, 0, 0))
+        readHead(input)
+        reply(out, "200 OK", "socks-proxy $host")
+    }
+
+    override fun close() {
+        http.close()
+        socks.close()
     }
 }

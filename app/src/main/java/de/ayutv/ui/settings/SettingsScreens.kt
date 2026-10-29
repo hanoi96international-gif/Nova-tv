@@ -428,12 +428,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Vorübersetzen in der Ruhezeit",
                             onOff(settings.pretranslate),
-                            "Wenn der Fire TV nicht benutzt wird: Untertitel für „Weiter schauen“ und die nächste Folge vorab holen " +
-                                "und bei Bedarf übersetzen (Sprache wie zuletzt bei der Serie gewählt). Beim Schauen sind sie sofort da." +
+                            "Wenn der Fire TV nicht benutzt wird: Untertitel für „Weiter schauen“, die nächste Folge und „Meine Liste“ " +
+                                "vorbereiten. Eingebettete Untertitel (Englisch bevorzugt) werden dafür aus der Filmdatei gelesen – der Stick lädt " +
+                                "den Film einmal (je Film einige GB, höchstens ${de.ayutv.data.repo.EmbeddedPrep.MAX_READS_PER_DAY} pro Nacht) – und " +
+                                "übersetzt. Beim Schauen sind sie dann sofort da und passen exakt." +
                                 (last?.let { "\nZuletzt $it" } ?: ""),
                         ) { update { it.copy(pretranslate = !it.pretranslate) } }
                         if (settings.pretranslate) {
-                            SettingRow("Jetzt vorbereiten", "", "Startet sofort statt in der Ruhezeit (läuft im Hintergrund, einige Minuten).") {
+                            SettingRow("Jetzt vorbereiten", "", "Startet sofort statt in der Ruhezeit (läuft im Hintergrund; hört auf, sobald ein Film läuft).") {
                                 de.ayutv.data.repo.PretranslateWorker.runNow(context)
                                 last = "läuft …"
                             }
@@ -699,6 +701,91 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
 
                 }
+                SettingsPage.PROXY -> {
+                    item {
+                        SettingRow(
+                            "Proxy",
+                            settings.proxyMode.label,
+                            "Nur DnA-TV läuft über den Proxy, andere Apps und die Handy-Fernbedienung nicht. Fällt der Proxy aus, " +
+                                "spielt die App nicht heimlich ohne ihn weiter, sondern meldet es.",
+                        ) { update { it.copy(proxyMode = it.proxyMode.cycle()) } }
+                    }
+                    item {
+                        SettingRow("Art", settings.proxyType.label, "Steht beim Anbieter in den Zugangsdaten (HTTP/HTTPS-Proxy oder SOCKS5).") {
+                            update { it.copy(proxyType = it.proxyType.cycle()) }
+                        }
+                    }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CredentialField(settings.proxyHost, "Adresse (IP oder Name)", Modifier.weight(2f)) { host ->
+                                update { it.copy(proxyHost = host) }
+                            }
+                            CredentialField(settings.proxyPort.takeIf { it > 0 }?.toString().orEmpty(), "Port", Modifier.weight(1f), keyboardType = KeyboardType.Number) { port ->
+                                update { it.copy(proxyPort = port.trim().toIntOrNull() ?: 0) }
+                            }
+                        }
+                    }
+                    item {
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CredentialField(settings.proxyUser, "Benutzer (falls verlangt)", Modifier.weight(1f)) { user ->
+                                update { it.copy(proxyUser = user) }
+                            }
+                            CredentialField(settings.proxyPassword, "Passwort", Modifier.weight(1f), password = true) { pw ->
+                                update { it.copy(proxyPassword = pw) }
+                            }
+                        }
+                    }
+                    item {
+                        var running by remember { mutableStateOf(false) }
+                        var result by remember { mutableStateOf<de.ayutv.data.net.ProxyCheck.Result?>(null) }
+                        SettingRow(
+                            "Proxy testen",
+                            when {
+                                running -> "prüft …"
+                                result?.ok == true -> "✓"
+                                result != null -> "✗"
+                                else -> "Jetzt prüfen"
+                            },
+                            result?.summary() ?: "Zeigt, mit welcher IP und aus welchem Land der Stick direkt und über den Proxy zu sehen ist.",
+                        ) {
+                            if (running) return@SettingRow
+                            running = true
+                            scope.launch {
+                                result = de.ayutv.data.net.ProxyCheck.run(container.http, settings.proxyConfig)
+                                running = false
+                            }
+                        }
+                    }
+                    if (settings.proxyMode == de.ayutv.data.net.ProxyMode.SELECTED) {
+                        item {
+                            Text(
+                                "Über den Proxy laufen (OK schaltet um):",
+                                color = AyuColors.TextSecondary,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                            )
+                        }
+                        items(playlists, key = { "proxy-${it.id}" }) { playlist ->
+                            val on = playlist.id.toString() in settings.proxyPlaylists
+                            SettingRow(playlist.name, if (on) "über Proxy" else "direkt", "") {
+                                update {
+                                    val id = playlist.id.toString()
+                                    it.copy(proxyPlaylists = if (id in it.proxyPlaylists) it.proxyPlaylists - id else it.proxyPlaylists + id)
+                                }
+                            }
+                        }
+                        if (playlists.isNotEmpty() && settings.proxyPlaylists.none { id -> playlists.any { it.id.toString() == id } }) {
+                            item {
+                                Text("Noch keine Playlist gewählt: Bis dahin geht alles direkt.", color = AyuColors.Live, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                    if (settings.proxyMode != de.ayutv.data.net.ProxyMode.OFF && !settings.proxyConfig.complete) {
+                        item {
+                            Text("Adresse und Port fehlen noch: Bis dahin geht alles direkt.", color = AyuColors.Live, fontSize = 14.sp)
+                        }
+                    }
+                }
                 SettingsPage.PARENTAL -> {
                     item { ParentalSettings() }
                 }
@@ -894,6 +981,7 @@ private fun CredentialField(
     label: String,
     modifier: Modifier = Modifier.fillMaxWidth(0.8f),
     password: Boolean = false,
+    keyboardType: KeyboardType = KeyboardType.Text,
     onSave: (String) -> Unit,
 ) {
     // Bis zur ersten Eingabe den gespeicherten Wert zeigen, danach nur noch die eigene Eingabe.
@@ -907,6 +995,7 @@ private fun CredentialField(
         },
         label = label,
         password = password,
+        keyboardType = keyboardType,
         imeAction = ImeAction.Done,
         modifier = modifier.padding(vertical = 6.dp),
     )
@@ -1216,6 +1305,7 @@ private fun PhoneSetupCard(state: PhoneSetupServer.State, report: String?) {
 private enum class SettingsPage(val title: String, val description: String, val icon: String) {
     PLAYLISTS("Playlists", "Anbieter hinzufügen, ein- und ausschalten, Gruppen wählen", "☰"),
     PLAYBACK("Wiedergabe", "Puffer, Bild, Ton und Stabilität", "▶"),
+    PROXY("Proxy", "Eigene IP nur für DnA-TV, z. B. aus einem anderen Land", "🌐"),
     SUBTITLES("Untertitel", "Sprachen, Größe, Übersetzung auf dem Gerät", "💬"),
     DISPLAY("Bedienung & TV-Guide", "Umschalten, Programmführer, Zeitverschiebung", "📺"),
     PARENTAL("Kindersicherung", "Gruppen mit PIN sperren", "🔒"),

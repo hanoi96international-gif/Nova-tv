@@ -66,6 +66,8 @@ object Diagnostics {
             out.append("Übersetzung ${s.translationProvider}, zuletzt ${s.lastTranslationTarget.ifEmpty { "-" }}\n")
             out.append("Zeitversatz ${s.liveTimeshift} (${s.timeshiftMinutes} min), TV-Guide eigener ${s.ownGuideOnly}, frei ${s.internetGuide}, Verschiebung ${s.epgShiftHours} h\n")
             out.append("Vereine ${s.followedTeams.size}, Stichwörter ${s.alertKeywords.size}, Handy-Fernbedienung ${s.phoneRemote}\n")
+            out.append("Proxy ${s.proxyMode}" + (if (s.proxyMode != de.ayutv.data.net.ProxyMode.OFF) " ${s.proxyType}, Anmeldung ${s.proxyUser.isNotBlank()}, Playlists ${s.proxyPlaylists.size}" else "") +
+                (de.ayutv.data.net.AppProxy.lastFailure?.let { ", zuletzt: ${it.message}" } ?: "") + "\n")
         }
 
         section("Playlists")
@@ -109,7 +111,7 @@ object Diagnostics {
         }
         runCatching {
             val s = container.settings.current()
-            out += listOf(s.openSubtitlesUser, s.openSubtitlesPassword, s.openSubtitlesApiKey)
+            out += listOf(s.openSubtitlesUser, s.openSubtitlesPassword, s.openSubtitlesApiKey, s.proxyUser, s.proxyPassword)
         }
         return out
     }

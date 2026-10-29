@@ -18,28 +18,53 @@ import de.ayutv.data.db.HistoryKind
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.parse.Srt
 import de.ayutv.data.parse.SrtCue
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 /**
- * Vorübersetzen in der Ruhezeit: Für „Weiter schauen“ und die nächste Folge angefangener Serien werden
- * Untertitel in der gewünschten Sprache vorab geholt, und fehlen sie bei OpenSubtitles, auf dem Gerät aus
- * einer anderen Sprache übersetzt. Beim Schauen sind sie dann sofort da. Läuft nur, wenn das Gerät nicht
- * benutzt wird, in Etappen von wenigen Minuten (der Stand jeder Etappe bleibt erhalten).
+ * Vorübersetzen in der Ruhezeit: Für „Weiter schauen“, die nächste Folge angefangener Serien und die Merkliste
+ * werden Untertitel in der gewünschten Sprache vorbereitet. Zuerst aus den eingebetteten Untertiteln der Datei
+ * (passen immer exakt, [EmbeddedPrep]), nur ohne solche von OpenSubtitles. Beim Schauen sind sie dann sofort da.
+ * Läuft nur, wenn das Gerät nicht benutzt wird; der Stand bleibt erhalten und geht beim nächsten Mal weiter.
  */
 class PretranslateWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as AyuApp).container
-        return runCatching { Pretranslation(applicationContext, container).run(BUDGET_MS) }
+        // Als Vordergrund-Arbeit darf sie länger als 10 Minuten laufen: Einen Film einmal zu lesen dauert länger.
+        val long = runCatching { setForeground(foregroundInfo()) }.onFailure { Log.i(TAG, "Nur kurze Etappe: ${it.message}") }.isSuccess
+        return runCatching { Pretranslation(applicationContext, container).run(if (long) LONG_BUDGET_MS else BUDGET_MS) }
             .onFailure { Log.w(TAG, "Vorübersetzen", it) }
             .fold({ Result.success() }, { Result.success() })
             // Übersetzer-Prozess beenden (Speicher), außer ein Film läuft inzwischen und braucht ihn.
             .also { if (container.foreground?.get() !is de.ayutv.player.PlayerActivity) runCatching { Translators.remote.release() } }
     }
 
+    private fun foregroundInfo(): androidx.work.ForegroundInfo {
+        val manager = applicationContext.getSystemService(android.app.NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            manager?.createNotificationChannel(android.app.NotificationChannel(CHANNEL_ID, "Untertitel vorbereiten", android.app.NotificationManager.IMPORTANCE_MIN))
+        }
+        @Suppress("DEPRECATION")
+        val builder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) android.app.Notification.Builder(applicationContext, CHANNEL_ID)
+        else android.app.Notification.Builder(applicationContext)
+        val notification = builder
+            .setSmallIcon(de.ayutv.R.drawable.ic_notification)
+            .setContentTitle("DnA-TV bereitet Untertitel vor")
+            .setOngoing(true)
+            .build()
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            androidx.work.ForegroundInfo(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else androidx.work.ForegroundInfo(NOTIFICATION_ID, notification)
+    }
+
     companion object {
         const val TAG = "DnAPretranslate"
-        /** WorkManager bricht nach 10 Minuten ab: rechtzeitig aufhören und den Stand sichern. */
+        /** Ohne Vordergrund bricht WorkManager nach 10 Minuten ab: rechtzeitig aufhören und den Stand sichern. */
         private const val BUDGET_MS = 8 * 60_000L
+        /** Mit Vordergrund: Zeit, um bis zu drei Filme zu lesen und zu übersetzen. */
+        private const val LONG_BUDGET_MS = 3 * 60 * 60_000L
+        private const val CHANNEL_ID = "prepare"
+        private const val NOTIFICATION_ID = 4713
 
         private fun constraints(idle: Boolean) = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -77,8 +102,29 @@ class Pretranslation(private val context: Context, private val container: AppCon
         val started = SystemClock.elapsedRealtime()
         fun timeLeft() = budgetMs - (SystemClock.elapsedRealtime() - started)
         val done = mutableListOf<String>()
-        for (item in items(settings.subtitleLanguage, settings.subtitlesAutoOn)) {
-            if (timeLeft() < 30_000) break
+        val embedded = EmbeddedPrep(context, container)
+        // Wird geschaut, hört das Lesen auf: Das Konto beim Anbieter erlaubt oft nur eine Verbindung.
+        fun idle() = container.foreground?.get() !is de.ayutv.player.PlayerActivity
+        for (item in items(settings.subtitleLanguage, settings.subtitlesAutoOn, settings.lastTranslationTarget)) {
+            if (timeLeft() < 30_000 || !idle()) break
+            // 0. Eingebettete Untertitel gehen vor: aus der Datei selbst, passen immer exakt.
+            if (settings.translationEnabled && embedded.readable(item.url)) {
+                val before = embedded.isDone(item.key, item.language)
+                when (embedded.prepare(item.key, item.url, item.language, ::timeLeft, ::idle)) {
+                    EmbeddedPrep.Outcome.DONE -> {
+                        if (!before) done += "${item.title}: aus den eingebetteten Untertiteln übersetzt"
+                        continue
+                    }
+                    EmbeddedPrep.Outcome.HAS_TARGET -> continue
+                    EmbeddedPrep.Outcome.PAUSED -> {
+                        done += "${item.title}: angefangen, geht beim nächsten Mal weiter"
+                        break
+                    }
+                    // Heute keine weiteren Filme lesen; ob sie eingebettete Untertitel haben, ist noch offen.
+                    EmbeddedPrep.Outcome.LIMIT -> continue
+                    EmbeddedPrep.Outcome.NONE, EmbeddedPrep.Outcome.FAILED -> Unit
+                }
+            }
             if (container.subtitles.cached(item.key, item.language) != null) continue
             val film = SubtitleRepository.FilmInfo(durationMs = item.durationMs)
             // 1. Fertige Untertitel in der Sprache (ein Download, höchstens das Tagesbudget)
@@ -145,8 +191,11 @@ class Pretranslation(private val context: Context, private val container: AppCon
         return cues.size
     }
 
-    /** Angefangene Filme und Folgen, dazu die nächste Folge jeder angefangenen Serie (zuletzt geschaut zuerst). */
-    private suspend fun items(defaultLanguage: String, autoOn: Boolean): List<Item> {
+    /**
+     * Angefangene Filme und Folgen, dazu die nächste Folge jeder angefangenen Serie (zuletzt geschaut zuerst),
+     * danach die Merkliste (in der zuletzt gewählten Übersetzungssprache).
+     */
+    private suspend fun items(defaultLanguage: String, autoOn: Boolean, lastTarget: String): List<Item> {
         val out = LinkedHashMap<String, Item>()
         fun language(key: String): String? {
             val memory = container.playerMemory.get(Episodes.seriesKeyOf(key) ?: key)
@@ -163,6 +212,15 @@ class Pretranslation(private val context: Context, private val container: AppCon
                 val next = runCatching { container.content.nextEpisode(entry.key) }.getOrNull() ?: continue
                 val key = Episodes.key(next.series.key, next.episode.id)
                 language(key)?.let { out.putIfAbsent(key, Item(key, next.url, Episodes.title(next.series.name, next.episode), 0L, it)) }
+            }
+        }
+        if (lastTarget.isNotEmpty()) {
+            val watchlist = runCatching { container.db.vod().observeFavorites().first() }.getOrDefault(emptyList())
+            for (film in watchlist) {
+                if (out.size >= MAX_ITEMS) break
+                val memory = container.playerMemory.get(film.key)
+                if (memory.textOff) continue
+                out.putIfAbsent(film.key, Item(film.key, film.url, film.name, 0L, memory.load ?: lastTarget))
             }
         }
         return out.values.take(MAX_ITEMS)
