@@ -77,6 +77,26 @@ class PretranslateWorker(context: Context, params: WorkerParameters) : Coroutine
                 .setConstraints(constraints(idle = true))
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork("pretranslate", ExistingPeriodicWorkPolicy.KEEP, request)
+            scheduleNight(context)
+        }
+
+        /**
+         * Zusätzlich jede Nacht um 2:30 Uhr, ohne auf „Gerät ungenutzt“ zu warten: Ob und wann der Fire TV das meldet,
+         * ist nicht sicher. Läuft gerade ein Film, hört die Vorbereitung von selbst sofort auf.
+         */
+        private fun scheduleNight(context: Context) {
+            val now = java.util.Calendar.getInstance()
+            val next = (now.clone() as java.util.Calendar).apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 2)
+                set(java.util.Calendar.MINUTE, 30)
+                set(java.util.Calendar.SECOND, 0)
+                if (!after(now)) add(java.util.Calendar.DAY_OF_YEAR, 1)
+            }
+            val request = PeriodicWorkRequestBuilder<PretranslateWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(next.timeInMillis - now.timeInMillis, TimeUnit.MILLISECONDS)
+                .setConstraints(constraints(idle = false))
+                .build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork("pretranslate-night", ExistingPeriodicWorkPolicy.KEEP, request)
         }
 
         /** Gleich eine Etappe (Einstellungen „Jetzt vorbereiten“), ohne auf Ruhe zu warten. */
@@ -168,7 +188,8 @@ class Pretranslation(private val context: Context, private val container: AppCon
         val smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
         try {
             for (chunk in groups.filter { range -> range.any { startOf(cues[it]) !in partial } }.chunked(BATCH)) {
-                if (timeLeft() < 20_000) return null
+                // Läuft ein Film, gehört der Übersetzer ihm: sofort aufhören (der Stand bleibt gespeichert).
+                if (timeLeft() < 20_000 || container.foreground?.get() is de.ayutv.player.PlayerActivity) return null
                 val before = groups.getOrNull(groups.indexOf(chunk.first()) - 1)?.let { range ->
                     val done = range.map { partial[startOf(cues[it])] }
                     if (done.any { it == null }) null
@@ -244,7 +265,8 @@ class Pretranslation(private val context: Context, private val container: AppCon
     companion object {
         /** Name der Zwischenablage für halb übersetzte Dateien (auch der Player liest sie). */
         const val PARTIAL_TRACK = "file"
-        private const val BATCH = 8
+        /** Klein, damit ein gerade gestarteter Film nie lange auf den Übersetzer warten muss. */
+        private const val BATCH = 2
         private const val MAX_ITEMS = 6
         private val TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
     }

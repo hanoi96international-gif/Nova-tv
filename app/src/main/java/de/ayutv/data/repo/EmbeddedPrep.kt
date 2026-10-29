@@ -191,6 +191,7 @@ class EmbeddedPrep(private val context: Context, private val container: AppConta
         const val MAX_READS_PER_DAY = 3
         /** Größere Dateien (4K-Remuxe) nicht nachts herunterladen. */
         private const val MAX_BYTES = 15_000_000_000L
-        private const val BATCH = 8
+        /** Klein, damit ein gerade gestarteter Film nie lange auf den Übersetzer warten muss. */
+        private const val BATCH = 2
     }
 }

@@ -66,7 +66,9 @@ object Diagnostics {
             out.append("Puffer ${s.bufferProfile}, Live ${s.liveFormat}, Tunneling ${s.tunneling}, asynchron ${s.asyncDecoding}, Bildrate ${s.matchFrameRate}, Ton ${s.audioOutput}\n")
             out.append("Untertitel ${s.subtitleLanguage}, automatisch ${s.subtitlesAutoOn}, OpenSubtitles ${s.onlineSubtitles}" +
                 " (eigener Schlüssel ${s.openSubtitlesKey.isNotBlank()}, Konto ${s.openSubtitlesUser.isNotBlank()})\n")
-            out.append("Übersetzung ${s.translationProvider}, zuletzt ${s.lastTranslationTarget.ifEmpty { "-" }}\n")
+            out.append("Übersetzung ${s.translationProvider}, zuletzt ${s.lastTranslationTarget.ifEmpty { "-" }}" +
+                (if (s.translationProvider == de.ayutv.data.TranslationProvider.DEEPL) ", DeepL-Schlüssel ${s.deeplKey.isNotBlank()}" +
+                    (de.ayutv.data.translate.DeepLTranslator.problem?.let { ", zuletzt: $it" } ?: "") else "") + "\n")
             out.append("Zeitversatz ${s.liveTimeshift} (${s.timeshiftMinutes} min), TV-Guide eigener ${s.ownGuideOnly}, frei ${s.internetGuide}, Verschiebung ${s.epgShiftHours} h\n")
             out.append("Vereine ${s.followedTeams.size}, Stichwörter ${s.alertKeywords.size}, Handy-Fernbedienung ${s.phoneRemote}\n")
             out.append("Proxy ${s.proxyMode}" + (if (s.proxyMode != de.ayutv.data.net.ProxyMode.OFF) " ${s.proxyType}, Anmeldung ${s.proxyUser.isNotBlank()}, Playlists ${s.proxyPlaylists.size}" else "") +
@@ -114,7 +116,7 @@ object Diagnostics {
         }
         runCatching {
             val s = container.settings.current()
-            out += listOf(s.openSubtitlesUser, s.openSubtitlesPassword, s.openSubtitlesApiKey, s.proxyUser, s.proxyPassword)
+            out += listOf(s.openSubtitlesUser, s.openSubtitlesPassword, s.openSubtitlesApiKey, s.proxyUser, s.proxyPassword, s.deeplKey)
         }
         return out
     }

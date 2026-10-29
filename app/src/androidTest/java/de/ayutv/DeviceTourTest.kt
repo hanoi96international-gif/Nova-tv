@@ -221,6 +221,30 @@ class DeviceTourTest {
             next("07_settings")
         } }
 
+        // Wie auf dem Fire TV Stick 4K (weniger Bewegung): Bereiche ohne Überblendung, Seitenleiste ohne Feder,
+        // Hintergrund kleiner gezeichnet. Bedienung und Fokus müssen genauso funktionieren.
+        section("ui_reduced") {
+            de.ayutv.ui.UiPerformance.force(true)
+            try {
+                ActivityScenario.launch(MainActivity::class.java).use {
+                    Thread.sleep(3_000)
+                    shot("01r_home_reduced")
+                    key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_000)
+                    key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(600)
+                    // TV-Guide: ◀ auf der ersten Sendung führt in die Seitenleiste (nicht in die Vergangenheit).
+                    key(KeyEvent.KEYCODE_DPAD_LEFT, 4)
+                    key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_000)
+                    shot("04r_guide_reduced")
+                    key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(400)
+                    key(KeyEvent.KEYCODE_DPAD_LEFT); Thread.sleep(600)
+                    shot("04r_guide_left")
+                    log("ui_reduced: reduced=${de.ayutv.ui.UiPerformance.reduced} ${de.ayutv.ui.UiPerformance.summary()}")
+                }
+            } finally {
+                de.ayutv.ui.UiPerformance.force(false)
+            }
+        }
+
         // 3. Live: Start, Zappen, Senderliste, Menü
         val live = channels.filter { "/movie/" !in it.url }
         live.forEachIndexed { index, channel -> section("live[$index]") {
@@ -773,6 +797,16 @@ class DeviceTourTest {
                 log("translator_killed: film_alive=$alive status=${scenario.read { it.subtitleStatus }} statuses=${scenario.read { it.statusHistory.toList() }.takeLast(2)}")
                 assertTrue("Film lief nach Ende des Übersetzers nicht weiter", alive)
                 assertTrue("Übersetzer lief nicht im eigenen Prozess", mt != null)
+                // Danach übersetzt er von selbst weiter (Neustart mit Zeit zum Modell-Laden), statt aufzugeben.
+                val beforeKill = scenario.read { it.translatedCue }
+                val resumed = waitFor(240_000) {
+                    scenario.read {
+                        it.liveTranslateTarget == "de" &&
+                            it.translatedCue?.let { cue -> cue.isNotBlank() && cue != beforeKill && cue !in english && cue.any(Char::isLetter) } == true
+                    }
+                }
+                log("translator_resumed: ok=$resumed status=${scenario.read { it.subtitleStatus }}")
+                assertTrue("Übersetzung nach Neustart des Übersetzers nicht weitergelaufen", resumed)
             }
         }
 

@@ -1,15 +1,14 @@
 package de.ayutv.data.translate
 
-import android.os.Build
-import android.os.Process
 import java.io.File
 
 /**
  * Womit Übersetzer und Texterkennung rechnen:
- * - ONNX Runtime (nativ, schnell), auf 64-Bit-Geräten;
- * - DnA-Rechenkern (reines Kotlin, kann nicht nativ abstürzen, braucht kaum Arbeitsspeicher), auf
- *   32-Bit-ARM (Fire TV Stick 4K: dort stürzt ONNX Runtime ab) und dort, wo ONNX Runtime in dieser
- *   Version schon einmal abgestürzt ist (mit der nächsten Version wird es wieder versucht).
+ * - ONNX Runtime (nativ, schnell), auf allen Geräten zuerst. Auf 32-Bit-ARM (Fire TV Stick 4K) war der
+ *   DnA-Rechenkern bisher fest eingestellt, weil neuere ONNX-Runtime-Versionen dort abstürzten; 1.22 läuft im
+ *   32-Bit-Test, und der Rechenkern ist dort für Übersetzung beim Schauen zu langsam.
+ * - DnA-Rechenkern (reines Kotlin, kann nicht nativ abstürzen, braucht kaum Arbeitsspeicher) dort, wo ONNX Runtime
+ *   in dieser Version schon einmal abgestürzt ist (automatisch, mit der nächsten Version wird es wieder versucht).
  */
 object Engine {
     enum class Kind(val label: String) {
@@ -33,8 +32,7 @@ object Engine {
             if (version == de.ayutv.BuildConfig.VERSION_NAME || version.isNullOrEmpty()) return Kind.KERN
             crashed.delete()
         }
-        val is64 = if (Build.VERSION.SDK_INT >= 23) Process.is64Bit() else Build.SUPPORTED_64_BIT_ABIS.isNotEmpty()
-        return if (is64) Kind.ORT else Kind.KERN
+        return Kind.ORT
     }
 
     /** ONNX Runtime ist hier nativ abgestürzt: ab jetzt immer mit dem Rechenkern. */

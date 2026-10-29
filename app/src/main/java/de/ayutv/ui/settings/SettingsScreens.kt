@@ -418,9 +418,37 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Automatische Übersetzung",
                             settings.translationProvider.label,
-                            "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene direkt auf dem Fire TV übersetzt: " +
-                                "ohne Konto und ohne Grenze. Pro Sprache wird einmalig ein Modell (ca. 110 MB) geladen.",
+                            "Hat ein Film keine Untertitel in der Wunschsprache, werden vorhandene übersetzt. Auf dem Gerät: ohne Konto und " +
+                                "ohne Grenze, pro Sprache einmalig ein Modell (ca. 110 MB), auf schwachen Sticks aber langsam. DeepL: über das " +
+                                "Internet, schnell und besser, eigener Schlüssel nötig (DeepL API Free: 500.000 Zeichen im Monat kostenlos, " +
+                                "etwa 8–12 Filme). Geht DeepL nicht, übersetzt das Gerät.",
                         ) { update { it.copy(translationProvider = it.translationProvider.next()) } }
+                    }
+                    if (settings.translationProvider == de.ayutv.data.TranslationProvider.DEEPL) {
+                        item {
+                            CredentialField(
+                                settings.deeplKey,
+                                "DeepL-API-Schlüssel (deepl.com → API-Konto → Schlüssel; bequemer per Handy-Einrichtung)",
+                                password = true,
+                            ) { key -> update { it.copy(deeplKey = key) } }
+                        }
+                        item {
+                            var result by remember { mutableStateOf<String?>(null) }
+                            SettingRow(
+                                "DeepL prüfen",
+                                if (result == null) "Jetzt prüfen" else "",
+                                result ?: "Prüft den Schlüssel und zeigt, wie viel vom Monatskontingent schon verbraucht ist.",
+                            ) {
+                                result = "prüft …"
+                                scope.launch {
+                                    result = runCatching {
+                                        val usage = de.ayutv.data.translate.DeepLTranslator(container.http, settings.deeplKey, null).usage()
+                                        val format = java.text.NumberFormat.getIntegerInstance(java.util.Locale.GERMANY)
+                                        "✓ Schlüssel gültig · ${format.format(usage.used)} von ${format.format(usage.limit)} Zeichen in diesem Monat verbraucht"
+                                    }.getOrElse { "✗ ${it.message}" }
+                                }
+                            }
+                        }
                     }
                     item {
                         val pretranslation = remember { de.ayutv.data.repo.Pretranslation(context, container) }

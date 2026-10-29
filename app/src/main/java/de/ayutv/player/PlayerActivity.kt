@@ -1425,8 +1425,11 @@ class PlayerActivity : ComponentActivity() {
         val target = settings.lastTranslationTarget.ifEmpty { return }
         val source = bestTranslationSource()?.let { (g, i) -> Languages.normalize(g.getTrackFormat(i).language) } ?: return
         if (source == target || Translators.remote.isWarm(source, target)) return
-        // Rechnet das Handy mit, braucht der Fernseher das Modell nicht.
+        // Rechnet das Handy mit oder übersetzt DeepL, braucht der Fernseher das Modell nicht.
         if (de.ayutv.data.translate.PhoneHelper.usable) return
+        if (settings.translationProvider == de.ayutv.data.TranslationProvider.DEEPL && settings.deeplKey.isNotBlank() &&
+            de.ayutv.data.translate.DeepLTranslator.targetCode(target) != null
+        ) return
         warmUpJob = lifecycleScope.launch {
             runCatching { Translators.remote.translate(listOf("Hello."), target, source) }
                 .onFailure { Log.i(SUBTITLE_TAG, "Übersetzer vorab laden: ${it.message}") }
@@ -1521,6 +1524,7 @@ class PlayerActivity : ComponentActivity() {
             // Vorherige Zeile mit Übersetzung und Ende: Zusammenhang für eine kurze nächste Zeile.
             var lastLine: Triple<String, String, Long>? = null
             var failures = 0
+            var hangs = 0
             // Wie lange eine Zeile gerade dauert (gleitender Mittelwert, ohne das erste Laden des Modells).
             var lineMs = 0L
             var done = 0
@@ -1595,11 +1599,17 @@ class PlayerActivity : ComponentActivity() {
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: de.ayutv.data.translate.RemoteTranslator.NoAnswer) {
-                    // Übersetzer hängt (Modell lädt auf diesem Gerät zu lange): beenden statt endlos warten.
+                    // Übersetzer hängt (vom System beendet und lädt neu, oder belegt): neu starten und weiter übersetzen,
+                    // diese Zeile im Original. Erst wenn er auch nach zwei Neustarts nicht antwortet, das Original zeigen.
                     Log.w(SUBTITLE_TAG, "Übersetzer antwortet nicht", e)
                     Translators.remote.abort(e.message ?: "keine Antwort")
-                    showOriginalInstead(format, "${e.message}. Test: Einstellungen → Untertitel → Übersetzer testen")
-                    break
+                    aheadTranslations[next.startMs] = next.text.orEmpty()
+                    if (++hangs > MAX_TRANSLATOR_RESTARTS) {
+                        showOriginalInstead(format, "${e.message}. Test: Einstellungen → Untertitel → Übersetzer testen")
+                        break
+                    }
+                    subtitleStatus = "Übersetzer hing, startet neu ($hangs/$MAX_TRANSLATOR_RESTARTS) – solange Original"
+                    lineMs = 0L
                 } catch (e: Exception) {
                     Log.w(SUBTITLE_TAG, "Übersetzung mit Vorlauf fehlgeschlagen", e)
                     // Diese Zeile im Original zeigen. Hakt es öfter, kurz durchatmen (Speicher, Modell lädt neu) und weiter;
@@ -3609,6 +3619,8 @@ class PlayerActivity : ComponentActivity() {
         /** Vorlauf der Übersetzung: so viel Film wird vorab übersetzt, höchstens so lange angehalten. */
         private const val PREROLL_WINDOW_MS = 60_000L
         private const val PREROLL_MAX_MS = 40_000L
+        /** So oft wird ein hängender Übersetzer neu gestartet, bevor die Spur im Original bleibt. */
+        private const val MAX_TRANSLATOR_RESTARTS = 2
         /** Nur in den ersten Sekunden entscheidet sich, ob angehalten wird. */
         private const val PREROLL_DECIDE_MS = 3_000L
         private const val DROP_WARN_COUNT = 3

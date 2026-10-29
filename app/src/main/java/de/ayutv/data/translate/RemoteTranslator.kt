@@ -168,11 +168,14 @@ class RemoteTranslator(private val context: Context) : Translator {
             // Prozess beendet (Speicher oder Absturz): offene Anfragen mit dem Grund beenden.
             override fun onServiceDisconnected(name: ComponentName) {
                 service = null
+                // Neu gestarteter Prozess muss die Modelle wieder laden: nächste Anfrage mit der langen Wartezeit.
+                warm.clear()
                 failAll(exitReason())
             }
 
             override fun onBindingDied(name: ComponentName) {
                 service = null
+                warm.clear()
                 failAll(exitReason())
             }
         }
