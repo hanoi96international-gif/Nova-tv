@@ -166,6 +166,20 @@ fun PlayerScreen(activity: PlayerActivity) {
             }
         }
 
+        activity.goalNotice?.let { notice ->
+            Text(
+                notice,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp)
+                    .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                    .border(2.dp, AyuColors.Live, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 22.dp, vertical = 12.dp),
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+
         // Bild-in-Bild: nur das Bild, keine Leisten und Hinweise.
         if (!activity.inPip) {
 
@@ -408,7 +422,8 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         Spacer(Modifier.height(10.dp))
         Text(
             if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
-            else "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
+            else "▲▼ Umschalten   OK Senderliste   " + (activity.previousChannel?.let { "◀ zurück zu ${it.name}   " } ?: "") +
+                "▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 13.sp,
         )
@@ -788,6 +803,7 @@ private fun TracksOverlay(activity: PlayerActivity) {
         AudioMode.entries.forEach { mode ->
             item { OptionRow(mode.label, activity.audioMode == mode) { activity.chooseAudioMode(mode) } }
         }
+        item { OptionRow("Lautstärke angleichen (alle Sender)", activity.loudnessLevel) { activity.toggleLoudness() } }
         item { MenuHint("Wirkt, wenn der Ton im Gerät dekodiert wird – nicht bei Dolby/DTS, das an Soundbar oder Receiver geht (Einstellungen → Tonausgabe: „Immer im Gerät dekodieren“).") }
         item { MenuHeader("Bild") }
         AspectMode.entries.forEach { mode ->

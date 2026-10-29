@@ -184,6 +184,10 @@ interface VodDao {
     @Query("SELECT * FROM visible_vod ORDER BY added DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<VodEntity>>
 
+    /** Merkliste: gemerkte Filme, zuletzt gemerkte zuerst. */
+    @Query("SELECT v.* FROM visible_vod v INNER JOIN favorites f ON f.`key` = v.`key` ORDER BY f.addedAt DESC")
+    fun observeFavorites(): Flow<List<VodEntity>>
+
     @Query(
         """SELECT * FROM visible_vod WHERE name LIKE '%' || :query || '%'
            ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, added DESC LIMIT :limit"""
@@ -207,6 +211,10 @@ interface SeriesDao {
 
     @Query("SELECT * FROM visible_series ORDER BY added DESC, id DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<SeriesEntity>>
+
+    /** Merkliste: gemerkte Serien, zuletzt gemerkte zuerst. */
+    @Query("SELECT s.* FROM visible_series s INNER JOIN favorites f ON f.`key` = s.`key` ORDER BY f.addedAt DESC")
+    fun observeFavorites(): Flow<List<SeriesEntity>>
 
     @Query("SELECT * FROM series WHERE `key` = :key")
     suspend fun byKey(key: String): SeriesEntity?

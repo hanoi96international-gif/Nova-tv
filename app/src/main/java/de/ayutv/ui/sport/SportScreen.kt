@@ -84,6 +84,12 @@ fun SportScreen() {
     val teams = settings?.followedTeams.orEmpty()
 
     LaunchedEffect(minute) { events = container.content.sportEvents(hours = 48) }
+    // Spielstände (OpenLigaDB): jede Minute, nur wenn eingeschaltet.
+    var scores by remember { mutableStateOf<List<de.ayutv.data.sport.LiveScores.Match>>(emptyList()) }
+    LaunchedEffect(minute, settings?.liveScores) {
+        scores = if (settings?.liveScores == true) runCatching { container.liveScores.current() }.getOrDefault(emptyList()) else emptyList()
+    }
+    fun scoreOf(e: SportEvent) = container.liveScores.find(scores, e.programme.pairing(), e.programme.start, e.programme.title)
     LaunchedEffect(notice) {
         if (notice != null) {
             delay(5_000)
@@ -155,7 +161,7 @@ fun SportScreen() {
                         }
                         items(list, key = { "${it.programme.id}-${it.channel.key}" }) { e ->
                             EventRow(
-                                e, now,
+                                e, now, scoreOf(e),
                                 onClick = { PlayerActivity.startLive(context, e.channel.key, e.channel.groupTitle) },
                                 onLongClick = { choosing = e },
                             )
@@ -198,7 +204,7 @@ private const val DAY = 24 * 3_600_000L
  * auf denen es läuft. Laufende Spiele zeigen, wie weit sie sind.
  */
 @Composable
-private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveScores.Match?, onClick: () -> Unit, onLongClick: () -> Unit) {
     val p = e.programme
     val running = p.start <= now && p.stop > now
     var focused by remember { mutableStateOf(false) }
@@ -213,12 +219,23 @@ private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick:
     ) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.width(110.dp)) {
+                val live = score?.live(now) == true
+                val final = score?.finished == true
                 Text(
-                    if (running) "● LIVE" else formatTime(p.start),
-                    color = if (running) AyuColors.Live else AyuColors.TextPrimary,
-                    fontSize = 16.sp,
+                    when {
+                        live -> "● ${score!!.score}"
+                        final -> "Ende ${score!!.score}"
+                        running -> "● LIVE"
+                        else -> formatTime(p.start)
+                    },
+                    color = if (running || live) AyuColors.Live else AyuColors.TextPrimary,
+                    fontSize = if (live || final) 18.sp else 16.sp,
+                    fontWeight = if (live || final) androidx.compose.ui.text.font.FontWeight.Bold else null,
                 )
-                Text("bis ${formatTime(p.stop)}", color = AyuColors.TextSecondary, fontSize = 12.sp)
+                Text(
+                    if (live) score!!.minute(now) ?: "" else "bis ${formatTime(p.stop)}",
+                    color = AyuColors.TextSecondary, fontSize = 12.sp,
+                )
             }
             Column(Modifier.weight(1f)) {
                 Text(p.sportHeadline(), fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
@@ -229,6 +246,9 @@ private fun EventRow(e: SportEvent, now: Long, onClick: () -> Unit, onLongClick:
                     }
                 }
                 if (focused) {
+                    score?.takeIf { it.goalCount > 0 }?.lastGoal?.let {
+                        Text("⚽ zuletzt: $it", color = AyuColors.Accent, fontSize = 13.sp, maxLines = 1)
+                    }
                     ProgrammeText.description(p.description)?.let {
                         Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }

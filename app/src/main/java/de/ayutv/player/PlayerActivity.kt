@@ -78,6 +78,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.isActive
+import de.ayutv.data.parse.pairing
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
@@ -151,7 +152,8 @@ class PlayerActivity : ComponentActivity() {
     val onlineSubtitlesAvailable: Boolean get() = !isLive && ::settings.isInitialized && settings.onlineSubtitlesEnabled
 
     private var vod: VodRequest? = null
-    private var previousChannel: ChannelEntity? = null
+    /** Zuletzt gesehener anderer Sender: ◀ springt dorthin zurück (wie die Zurück-Taste am Fernseher). */
+    var previousChannel by mutableStateOf<ChannelEntity?>(null); private set
     /** Sender, den der Player gerade wirklich spielt ([current] zeigt beim schnellen Zappen schon das Ziel). */
     private var playing: ChannelEntity? = null
     private var retries = 0
@@ -316,9 +318,12 @@ class PlayerActivity : ComponentActivity() {
             subtitleLook = SubtitleLook(settings.subtitleColor, settings.subtitleBackground, settings.subtitlePosition)
             audioMode = settings.audioMode
             enhance.mode = settings.audioMode
+            enhance.leveling = settings.loudnessLevel
+            loudnessLevel = settings.loudnessLevel
             textDisabled = vod != null && !settings.subtitlesAutoOn
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
+            startGoalWatch()
 
             val request = vod
             if (request != null) {
@@ -732,13 +737,23 @@ class PlayerActivity : ComponentActivity() {
         de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
     }
 
+    /** Zum vorherigen Sender; null, wenn es keinen gibt. */
+    fun backZap(): Unit? {
+        val previous = previousChannel?.takeIf { it.key != playing?.key } ?: return null
+        playChannel(previous)
+        message = "◀ Zurück: ${previous.name}"
+        handler.postDelayed({ if (message?.startsWith("◀ Zurück") == true) message = null }, 2_500)
+        return Unit
+    }
+
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
         recordWatch()
         watchStartedAt = SystemClock.elapsedRealtime()
         watchErrorsAtStart = playerErrors
         if (!switchingVariant) failedVariants.clear()
-        playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
+        // Beim Ausweichen auf eine andere Fassung bleibt der Sender derselbe: kein „vorheriger Sender“.
+        if (!switchingVariant) playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         playing = channel
         current = channel
         // Verzögerte Wiederholungen und Rückrufe vom vorigen Sender dürfen den neuen nicht treffen.
@@ -1502,6 +1517,14 @@ class PlayerActivity : ComponentActivity() {
                     delay(100)
                 }
             }
+            // Namen der Serie (aus früheren Folgen gemerkt), laufend aus den gesehenen Zeilen ergänzt.
+            val namesKey = request?.key?.let { de.ayutv.data.parse.Episodes.seriesKeyOf(it) ?: it }
+            val seriesNames = de.ayutv.data.translate.SeriesNames(this@PlayerActivity)
+            var names = namesKey?.let { seriesNames.get(it) }.orEmpty()
+            var smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
+            val seen = ArrayList<String>()
+            // Vorherige Zeile mit Übersetzung und Ende: Zusammenhang für eine kurze nächste Zeile.
+            var lastLine: Triple<String, String, Long>? = null
             var failures = 0
             // Wie lange eine Zeile gerade dauert (gleitender Mittelwert, ohne das erste Laden des Modells).
             var lineMs = 0L
@@ -1529,14 +1552,28 @@ class PlayerActivity : ComponentActivity() {
                     val text = next.text ?: next.image?.let { image -> Translators.remote.recognize(image).also { next.text = it; next.image = null } }.orEmpty()
                     // Geht der Satz in den nächsten Einblendungen weiter, alle zusammen übersetzen und wieder aufteilen.
                     val chain = if (text.isBlank() || bitmap) emptyList() else sentenceAfter(store, format, next, text)
+                    if (text.isNotBlank() && !bitmap) {
+                        seen += text
+                        if (seen.size % 25 == 0 && namesKey != null) {
+                            val learned = seriesNames.add(namesKey, de.ayutv.data.translate.TranslationNames.learn(seen))
+                            if (learned != names) {
+                                names = learned
+                                smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
+                            }
+                        }
+                    }
+                    val before = lastLine?.takeIf { (_, _, end) -> next.startMs - end in 0..CONTEXT_GAP_MS }?.let { (src, tr, _) -> src to tr }
                     if (text.isBlank()) {
                         aheadTranslations[next.startMs] = ""
                     } else if (chain.isEmpty()) {
-                        aheadTranslations[next.startMs] = translator.translate(listOf(text), target, sourceFor(text)).first()
+                        aheadTranslations[next.startMs] = smart.translate(listOf(text), target, sourceFor(text), before).first()
+                        lastLine = Triple(text, aheadTranslations.getValue(next.startMs), if (next.endMs >= 0) next.endMs else next.startMs + ASSUMED_LINE_MS)
                     } else {
                         val all = listOf(next) + chain
                         val texts = all.map { it.text.orEmpty() }
-                        val sentence = translator.translate(listOf(texts.joinToString(" ") { de.ayutv.data.translate.SubtitleSentences.plain(it) }), target, sourceFor(text)).first()
+                        val sentence = smart.translate(listOf(texts.joinToString(" ") { de.ayutv.data.translate.SubtitleSentences.plain(it) }), target, sourceFor(text), before).first()
+                        val lastEntry = all.last()
+                        lastLine = Triple(texts.joinToString(" "), sentence, if (lastEntry.endMs >= 0) lastEntry.endMs else lastEntry.startMs + ASSUMED_LINE_MS)
                         val parts = de.ayutv.data.translate.SubtitleSentences.split(sentence, texts.map { it.length })
                         all.forEachIndexed { k, entry ->
                             val part = de.ayutv.data.translate.SubtitleSentences.wrap(parts[k])
@@ -1711,6 +1748,7 @@ class PlayerActivity : ComponentActivity() {
         externalLanguage = language
         manualAnchor = null
         manualSync = false
+        seekRecheckFrom = -1L
         alternativeTried = false
         externalCues = cues
         externalTexts = texts
@@ -1889,6 +1927,8 @@ class PlayerActivity : ComponentActivity() {
     private var manualAnchor: Pair<Long, Long>? = null
     /** Von Hand an einer Zeile ausgerichtet: Die automatische Ausrichtung überschreibt das nicht mehr. */
     private var manualSync = false
+    /** Position nach einem großen Sprung, ab der einmal neu am Ton geprüft wird (-1 = nichts zu prüfen). */
+    private var seekRecheckFrom = -1L
 
     /**
      * Die Zeile mit Beginn [cueStart] wird gerade gesprochen: so verschieben, dass sie genau jetzt beginnt.
@@ -1967,9 +2007,23 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Automatisch gefundene Lage übernehmen, wenn sie spürbar von der jetzigen abweicht. */
-    private fun applyFit(timing: SubtitleTiming, bySpeech: Boolean, toleranceMs: Long) {
-        // Von Hand an einer Zeile ausgerichtet: Das ist genauer als jede Schätzung, nicht wieder verstellen.
-        if (manualSync) return
+    private fun applyFit(timing: SubtitleTiming, bySpeech: Boolean, toleranceMs: Long, afterSeek: Boolean = false) {
+        // Von Hand an einer Zeile ausgerichtet: Das ist genauer als jede Schätzung, nicht wieder verstellen –
+        // außer nach einem großen Sprung, wenn der Ton dort sicher einen anderen Versatz zeigt (gekürzte Fassung).
+        if (manualSync && !afterSeek) return
+        if (afterSeek) {
+            val here = subtitleTimeAt(player?.currentPosition ?: 0L)
+            val jump = abs(timing.toVideo(here) - subtitleTiming.toVideo(here) - subtitleDelayMs)
+            if (jump < 1_000) return
+            Log.i(SUBTITLE_TAG, "Nach dem Spulen neu ausgerichtet: $timing (Abweichung $jump ms)")
+            subtitleDelayMs = 0L
+            subtitleTiming = timing
+            subtitleAutoSynced = true
+            syncedBySpeech = bySpeech
+            subtitleStatus = "Nach dem Spulen am Ton nachgeprüft und neu ausgerichtet (${formatShift(timing.offsetMs)})"
+            saveTiming()
+            return
+        }
         // Von Hand verschoben, bevor überhaupt automatisch ausgerichtet war: Das war der Versuch, denselben
         // Versatz auszugleichen, den die Ausrichtung jetzt genau kennt.
         if (!subtitleAutoSynced) subtitleDelayMs = 0L
@@ -2034,11 +2088,22 @@ class PlayerActivity : ComponentActivity() {
                 lastHeard = heard
                 val position = p.currentPosition
                 val cues = externalCues.map { it.start to it.end }
+                // Nach einem großen Sprung: einmal nur mit dem Ton ab der neuen Stelle prüfen (gekürzte Fassungen haben
+                // dort oft einen anderen Versatz), sobald davon genug gehört ist.
+                val seekFrom = seekRecheckFrom
+                val afterSeek = seekFrom >= 0 && position - seekFrom >= SEEK_RECHECK_MS
+                if (seekFrom >= 0 && !afterSeek && manualSync) continue
                 val (fit, window) = withContext(Dispatchers.Default) {
-                    val signal = heardSpeech.signal(position - SPEECH_WINDOW_MS, position + 5_000)
+                    val signal = heardSpeech.signal(if (afterSeek) seekFrom else position - SPEECH_WINDOW_MS, position + 5_000)
                     SpeechSync.estimate(signal, cues) to signal.count { !it.isNaN() } / 10
                 }
                 if (externalLanguage == null || syncedByReference) continue
+                if (afterSeek) seekRecheckFrom = -1L
+                if (afterSeek && fit != null && fit.votes >= SEEK_RECHECK_VOTES) {
+                    applyFit(fit.timing, bySpeech = true, toleranceMs = 250, afterSeek = true)
+                    speechSyncInfo = "Nach dem Spulen am Ton nachgeprüft (${clock(position)})"
+                    continue
+                }
                 if (fit != null) {
                     Log.i(SUBTITLE_TAG, "Am Ton ausgerichtet: ${fit.timing} (Güte ${fit.votes / 10.0}, ${window} s Ton)")
                     applyFit(fit.timing, bySpeech = true, toleranceMs = 250)
@@ -2240,6 +2305,11 @@ class PlayerActivity : ComponentActivity() {
         val sentenceCues = cues.map { de.ayutv.data.translate.SubtitleSentences.Cue(it.start, it.end, it.text) }
         val groups = de.ayutv.data.translate.SubtitleSentences.groups(sentenceCues)
         val groupOf = IntArray(cues.size).also { index -> groups.forEachIndexed { g, range -> range.forEach { index[it] = g } } }
+        // Namen, die zugleich Wörter sind („Will“, „Hope“), aus der ganzen Datei lernen und je Serie merken.
+        val seriesKey = de.ayutv.data.parse.Episodes.seriesKeyOf(request.key) ?: request.key
+        val names = de.ayutv.data.translate.SeriesNames(this)
+            .add(seriesKey, de.ayutv.data.translate.TranslationNames.learn(cues.map { it.text }))
+        val smart = de.ayutv.data.translate.SubtitleTranslator(translator, names)
         fileTranslationJob = lifecycleScope.launch {
             var done = 0
             fileTranslationInfo = "Übersetzung startet …"
@@ -2252,7 +2322,13 @@ class PlayerActivity : ComponentActivity() {
                         ?: break
                     val chosen = (groupOf[next] until minOf(groups.size, groupOf[next] + batch)).map { groups[it] }
                         .filter { range -> range.any { translations.get(it) == null } }
-                    val result = translator.translate(chosen.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, target, sourceLanguage)
+                    // Der Satz davor (falls schon übersetzt) als Zusammenhang für eine kurze erste Zeile.
+                    val before = groups.getOrNull(groups.indexOf(chosen.first()) - 1)?.let { range ->
+                        val done = range.map { translations.get(it) }
+                        if (done.any { it == null }) null
+                        else de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, range) to done.joinToString(" ") { it!!.replace('\n', ' ') }
+                    }
+                    val result = smart.translate(chosen.map { de.ayutv.data.translate.SubtitleSentences.joined(sentenceCues, it) }, target, sourceLanguage, before)
                     chosen.forEachIndexed { k, range ->
                         val sentence = result.getOrNull(k)
                         if (sentence == null) {
@@ -2719,6 +2795,51 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    var loudnessLevel by mutableStateOf(false); private set
+
+    /**
+     * Tor-Hinweis: Trifft ein gefolgter Verein in einem anderen Spiel als dem, das gerade läuft, kurz den neuen
+     * Stand einblenden. Fragt jede Minute (OpenLigaDB); das erste Abfragen merkt nur die Stände.
+     */
+    private fun startGoalWatch() {
+        if (!settings.goalAlerts || !settings.liveScores || settings.followedTeams.isEmpty()) return
+        lifecycleScope.launch {
+            val known = HashMap<Long, Pair<Int, Int>>()
+            while (isActive) {
+                val now = System.currentTimeMillis()
+                val matches = runCatching { container.liveScores.current(now) }.getOrDefault(emptyList())
+                val teams = settings.followedTeams
+                val watching = playing?.let { nowPlayingMap[it.key] }?.pairing()
+                for (m in matches) {
+                    if (!m.live(now) && !m.finished) continue
+                    val team = teams.firstOrNull { de.ayutv.data.parse.Teams.plays(it, m.pairing) } ?: continue
+                    val before = known.put(m.id, m.goals1 to m.goals2) ?: continue
+                    if (before == (m.goals1 to m.goals2) || m.goals1 + m.goals2 <= before.first + before.second) continue
+                    if (watching != null && m.matches(watching)) continue
+                    val scorer = if (m.goals1 > before.first) m.short1.ifEmpty { m.team1 } else m.short2.ifEmpty { m.team2 }
+                    val text = "⚽ Tor für $scorer!  ${m.short1.ifEmpty { m.team1 }} ${m.score} ${m.short2.ifEmpty { m.team2 }}" +
+                        (m.lastGoal?.let { " · $it" } ?: "")
+                    Log.i(TAG, "Tor-Hinweis ($team): $text")
+                    goalNotice = text
+                    delay(GOAL_NOTICE_MS)
+                    if (goalNotice == text) goalNotice = null
+                }
+                delay(60_000)
+            }
+        }
+    }
+
+    /** Eingeblendeter Tor-Hinweis (oben im Bild), sonst null. */
+    var goalNotice by mutableStateOf<String?>(null); private set
+
+    /** Lautstärke angleichen an/aus (gilt für alle Sender und Filme). */
+    fun toggleLoudness() {
+        val on = !enhance.leveling
+        enhance.leveling = on
+        loudnessLevel = on
+        container.scope.launch { container.settings.update { it.copy(loudnessLevel = on) } }
+    }
+
     fun chooseAudioMode(mode: AudioMode) {
         audioMode = mode
         enhance.mode = mode
@@ -2888,6 +3009,10 @@ class PlayerActivity : ComponentActivity() {
             if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                 ignoreReferenceUntil = SystemClock.elapsedRealtime() + 1_500
                 referenceShowing = false
+                // Großer Sprung mit geladenen Untertiteln: dort einmal still am Ton nachprüfen.
+                if (vod != null && externalLanguage != null && abs(newPosition.positionMs - oldPosition.positionMs) >= SEEK_RECHECK_JUMP_MS) {
+                    seekRecheckFrom = newPosition.positionMs
+                }
             }
         }
 
@@ -3176,13 +3301,15 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> zap(+1)
             KeyEvent.KEYCODE_DPAD_DOWN -> if (settings.zapWithUpDown) zap(-1) else openChannelList()
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> zap(-1)
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_LEFT -> openChannelList()
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> openChannelList()
+            // ◀ springt zum vorherigen Sender (und von dort wieder zurück); ohne vorherigen öffnet es die Liste.
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (repeat == 0) backZap() ?: openChannelList()
             KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_INFO -> {
                 if (overlay == Overlay.INFO) showTech = !showTech
                 showOverlay(Overlay.INFO)
             }
             // "Zurück zum letzten Sender", wie beim Fernseher.
-            KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> previousChannel?.let(::playChannel)
+            KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> backZap()
             KeyEvent.KEYCODE_MENU -> openTracks()
             KeyEvent.KEYCODE_PROG_RED -> {
                 toggleFavorite()
@@ -3255,6 +3382,11 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        // Fire-TV-Startseite: Weiterschauen mit dem neuen Stand.
+        container.scope.launch {
+            delay(1_000)
+            runCatching { de.ayutv.data.FireTvHome.update(applicationContext, container) }
+        }
         vod?.let(::learnOpening)
         saveAheadTranslations()
         recordWatch()
@@ -3340,6 +3472,15 @@ class PlayerActivity : ComponentActivity() {
             return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
         }
         private const val SPEECH_WINDOW_MS = 15 * 60_000L
+        private const val GOAL_NOTICE_MS = 8_000L
+        /** Liegt die vorherige Zeile höchstens so weit zurück, gehört sie zum Gespräch (Zusammenhang). */
+        private const val CONTEXT_GAP_MS = 3_000L
+        /** Ab diesem Sprung wird an der neuen Stelle nachgeprüft … */
+        private const val SEEK_RECHECK_JUMP_MS = 3 * 60_000L
+        /** … sobald so viel ab dort gelaufen ist … */
+        private const val SEEK_RECHECK_MS = 90_000L
+        /** … und nur ein sicherer Takt (wie „sicher“ in der Anzeige) ändert eine Ausrichtung von Hand. */
+        private const val SEEK_RECHECK_VOTES = 80
         /** So viel Ton im Fenster ohne Übereinstimmung: falsche Datei. */
         private const val SPEECH_WRONG_FILE_SECONDS = 14 * 60
         /** Nach so viel Gespräch ohne Takt wird ein weiterer Treffer der Suche verglichen. */

@@ -60,6 +60,9 @@ class ContentRepository(
     val recentLive = db.history().observeRecentLive(20)
     val recentMovies = db.vod().observeRecent(30)
     val recentSeries = db.series().observeRecent(30)
+    /** Merkliste auf der Startseite: gemerkte Filme und Serien. */
+    val watchlistMovies = db.vod().observeFavorites()
+    val watchlistSeries = db.series().observeFavorites()
 
     fun channelsIn(group: String?) = if (group == null) db.channels().observeAll() else db.channels().observeInGroup(group)
     fun moviesIn(category: String) = db.vod().observeInCategory(category)

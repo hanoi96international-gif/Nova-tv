@@ -154,6 +154,14 @@ data class AppSettings(
     val hideBrokenChannels: Boolean = false,
     /** In der Ruhezeit prüfen, welche Fassung doppelter Sender läuft und wie gut. */
     val channelCheck: Boolean = true,
+    /** Spielstände (OpenLigaDB) in der Sport-Übersicht. */
+    val liveScores: Boolean = true,
+    /** Tor-Hinweis im Bild, wenn ein gefolgter Verein trifft. */
+    val goalAlerts: Boolean = true,
+    /** Lautstärke zwischen Sendern und Sendungen angleichen. */
+    val loudnessLevel: Boolean = false,
+    /** Weiterschauen und Lieblingssender auf der Fire-TV-Startseite. */
+    val fireTvHome: Boolean = true,
     /** Aussehen der Menüs. */
     val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.NORDLICHT,
 ) {
@@ -217,6 +225,10 @@ class SettingsStore(private val context: Context) {
         val preferUhd = booleanPreferencesKey("prefer_uhd")
         val hideBroken = booleanPreferencesKey("hide_broken_channels")
         val channelCheck = booleanPreferencesKey("channel_check")
+        val liveScores = booleanPreferencesKey("live_scores")
+        val goalAlerts = booleanPreferencesKey("goal_alerts")
+        val loudnessLevel = booleanPreferencesKey("loudness_level")
+        val fireTvHome = booleanPreferencesKey("fire_tv_home")
         val lastTranslationTarget = stringPreferencesKey("last_translation_target")
     }
 
@@ -334,6 +346,10 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.preferUhd] = next.preferUhd
             prefs[Keys.hideBroken] = next.hideBrokenChannels
             prefs[Keys.channelCheck] = next.channelCheck
+            prefs[Keys.liveScores] = next.liveScores
+            prefs[Keys.goalAlerts] = next.goalAlerts
+            prefs[Keys.loudnessLevel] = next.loudnessLevel
+            prefs[Keys.fireTvHome] = next.fireTvHome
         }
     }
 
@@ -379,6 +395,10 @@ class SettingsStore(private val context: Context) {
         preferUhd = this[Keys.preferUhd] ?: false,
         hideBrokenChannels = this[Keys.hideBroken] ?: false,
         channelCheck = this[Keys.channelCheck] ?: true,
+        liveScores = this[Keys.liveScores] ?: true,
+        goalAlerts = this[Keys.goalAlerts] ?: true,
+        loudnessLevel = this[Keys.loudnessLevel] ?: false,
+        fireTvHome = this[Keys.fireTvHome] ?: true,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(name: String?, default: T): T =

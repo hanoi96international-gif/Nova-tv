@@ -249,7 +249,7 @@ private fun MovieDetail(movie: VodEntity) {
                     }
                     i?.trailer?.let { id -> OutlinedButton(onClick = { openTrailer(context, id) }) { Text("🎬 Trailer") } }
                     OutlinedButton(onClick = { scope.launch { content.toggleFavorite(movie.key) } }) {
-                        Text(if (movie.key in favorites) "★ Favorit" else "☆ Merken")
+                        Text(if (movie.key in favorites) "★ Auf meiner Liste" else "☆ Merken")
                     }
                     // Fürs Handy unterwegs: Film aufs Gerät laden (läuft im Hintergrund weiter).
                     if (isTouchDevice) {
@@ -353,6 +353,11 @@ private fun SeriesDetail(series: SeriesEntity) {
             Spacer(Modifier.height(16.dp))
             Text(series.name, style = MaterialTheme.typography.titleLarge, maxLines = 3)
             series.rating?.let { Text("★ $it", color = AyuColors.Accent) }
+            val marked by content.favoriteKeys.collectAsStateWithLifecycle(emptyList())
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { scope.launch { content.toggleFavorite(series.key) } }) {
+                Text(if (series.key in marked) "★ Auf meiner Liste" else "☆ Merken")
+            }
             series.plot?.let {
                 Spacer(Modifier.height(8.dp))
                 Text(it, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 8, overflow = TextOverflow.Ellipsis)

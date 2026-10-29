@@ -41,13 +41,20 @@ class ChannelCheckWorker(context: Context, params: WorkerParameters) : Coroutine
     override suspend fun doWork(): Result {
         val container = (applicationContext as AyuApp).container
         if (!container.settings.current().channelCheck) return Result.success()
-        runCatching { ChannelCheck(applicationContext, container).run(BUDGET_MS) }.onFailure { Log.w(TAG, "Sender-Check", it) }
+        val quick = inputData.getBoolean(KEY_QUICK, false)
+        runCatching {
+            val check = ChannelCheck(applicationContext, container)
+            if (quick) check.run(QUICK_BUDGET_MS, maxChannels = QUICK_CHANNELS, quick = true) else check.run(BUDGET_MS)
+        }.onFailure { Log.w(TAG, "Sender-Check", it) }
         return Result.success()
     }
 
     companion object {
         const val TAG = "DnAChannelCheck"
         private const val BUDGET_MS = 8 * 60_000L
+        private const val QUICK_BUDGET_MS = 5 * 60_000L
+        private const val QUICK_CHANNELS = 40
+        private const val KEY_QUICK = "quick"
 
         private fun constraints(idle: Boolean) = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -63,7 +70,28 @@ class ChannelCheckWorker(context: Context, params: WorkerParameters) : Coroutine
             val request = OneTimeWorkRequestBuilder<ChannelCheckWorker>().setConstraints(constraints(idle = false)).build()
             WorkManager.getInstance(context).enqueueUniqueWork("channel-check-now", ExistingWorkPolicy.KEEP, request)
         }
+
+        /**
+         * Kurzer Check gleich nach dem Laden einer Playlist (nicht erst nachts): Favoriten, Sportsender und zuletzt
+         * geschaute Sender, damit „Best of“ und die beste Fassung je Sender sofort etwas zeigen. Eine Minute
+         * Verzögerung, damit der Import und das erste Umschalten nicht um die Verbindung konkurrieren.
+         */
+        fun runQuick(context: Context) {
+            val request = OneTimeWorkRequestBuilder<ChannelCheckWorker>()
+                .setConstraints(constraints(idle = false))
+                .setInitialDelay(1, TimeUnit.MINUTES)
+                .setInputData(androidx.work.workDataOf(KEY_QUICK to true))
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork("channel-check-quick", ExistingWorkPolicy.REPLACE, request)
+        }
     }
+}
+
+/** Je Sendername nur eine Fassung (die nach Namen beste), damit der kurze Check viele verschiedene Sender schafft. */
+internal object ContentPicks {
+    fun onePerName(channels: List<ChannelEntity>): List<ChannelEntity> =
+        channels.groupBy { ChannelVariants.key(it.name) ?: it.name.lowercase() }.values
+            .map { group -> group.minBy { ChannelQuality.score(it.key, it.name) } }
 }
 
 /** Die eigentliche Prüfung (auch direkt aufrufbar, z. B. im Gerätetest). */
@@ -73,16 +101,21 @@ class ChannelCheck(private val context: Context, private val container: AppConta
     /** Ergebnis des letzten Laufs (für die Einstellungen). */
     val lastResult: String? get() = prefs.getString("last", null)
 
-    suspend fun run(budgetMs: Long, maxChannels: Int = Int.MAX_VALUE): String {
+    /** [quick]: nur Favoriten, Sportsender und zuletzt geschaute Sender (für „Best of“ gleich nach dem Import). */
+    suspend fun run(budgetMs: Long, maxChannels: Int = Int.MAX_VALUE, quick: Boolean = false): String {
         val started = SystemClock.elapsedRealtime()
         val now = System.currentTimeMillis()
         val all = container.db.channels().all()
         val favorites = container.db.favorites().keys().toHashSet()
-        // Zuerst Fassungen doppelter Sender (dort entscheidet der Check), dann Favoriten; je seit drei Tagen ungeprüft.
-        val variants = ChannelVariants.groups(all, { it.name }, { it.playlistId }).flatten()
-        val candidates = (variants + all.filter { it.key in favorites }).distinctBy { it.key }
+        val recent = container.db.history().recentLiveKeys(40).toHashSet()
+        fun sport(c: ChannelEntity) = de.ayutv.data.parse.ProgrammeText.isSportChannel(c.name) || c.groupTitle.contains("sport", ignoreCase = true)
+        // Zuerst Favoriten, dann zuletzt geschaute, dann Sport, dann Fassungen doppelter Sender (dort entscheidet der
+        // Check); je seit drei Tagen ungeprüft.
+        val variants = if (quick) emptyList() else ChannelVariants.groups(all, { it.name }, { it.playlistId }).flatten()
+        val sportChannels = if (quick) all.filter(::sport).let { list -> ContentPicks.onePerName(list) } else emptyList()
+        val candidates = (all.filter { it.key in favorites } + all.filter { it.key in recent } + sportChannels + variants).distinctBy { it.key }
             .filter { ChannelQuality.info(it.key)?.let { info -> now - info.checkedAt > RECHECK_MS } ?: true }
-            .sortedBy { if (it.key in favorites) 0 else 1 }
+            .sortedBy { if (it.key in favorites) 0 else if (it.key in recent) 1 else 2 }
         var checked = 0
         var working = 0
         for (channel in candidates) {

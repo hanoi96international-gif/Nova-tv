@@ -195,6 +195,9 @@ class PlaylistRepository(
         db.programmes().deleteEndedBefore(now - maxOf(6 * HOUR, archiveDays * 24 * HOUR))
     }
 
+    /** Nach einem erfolgreichen Import (z. B. kurzer Sender-Check). */
+    @Volatile var onImported: (() -> Unit)? = null
+
     /** Playlists, die gerade geladen werden: ein zweiter Klick auf „Aktualisieren“ startet keinen zweiten Import. */
     private val syncing = java.util.concurrent.ConcurrentHashMap.newKeySet<Long>()
 
@@ -241,6 +244,7 @@ class PlaylistRepository(
                 importJob = null
             }
         }
+        if (ok) onImported?.invoke()
         if (ok && withEpg) syncEpg(playlistId)
     }
 

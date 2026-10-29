@@ -258,6 +258,17 @@ class DeviceTourTest {
                     val after = scenario.read { act -> act.channels.indexOfFirst { it.key == act.current?.key } }
                     val size = scenario.read { it.channels.size }
                     log("zap_burst: ready=$burstReady moved=${(after - before + size) % size} expected=${3 % size} now=${scenario.read { it.current?.name }}")
+                    // ◀ springt zum vorherigen Sender und wieder zurück
+                    section("back_zap") {
+                    val burstChannel = scenario.read { it.current?.key }
+                    val previous = scenario.read { it.previousChannel?.key }
+                    key(KeyEvent.KEYCODE_DPAD_LEFT)
+                    val backReady = waitFor(15_000) { scenario.read { it.current?.key == previous && it.player?.playbackState == Player.STATE_READY } }
+                    key(KeyEvent.KEYCODE_DPAD_LEFT)
+                    val returned = waitFor(15_000) { scenario.read { it.current?.key == burstChannel } }
+                    log("back_zap: previous=${previous != null} back=$backReady returned=$returned")
+                    assertTrue("Zurück-Zappen: previous=$previous back=$backReady returned=$returned", previous != null && backReady && returned)
+                    }
                     key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_200)
                     shot("1${index}_live_channel_list")
                     key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)
@@ -633,6 +644,19 @@ class DeviceTourTest {
             log("mt installed=${translator.installedPairs()} bytes=${translator.installedBytes()}")
         }
 
+        // 5b'. Namen, die zugleich Wörter sind, bleiben Namen; kurze Zeilen bekommen den Satz davor als Zusammenhang
+        section("mt_names") {
+            val base = de.ayutv.data.repo.Translators.onDevice
+            val lines = listOf("I told Will about the car.", "Where is Hope tonight?", "Will, come here!", "Have you seen Hope?")
+            val names = de.ayutv.data.translate.TranslationNames.learn(lines)
+            val plain = runBlocking { base.translate(lines, "de", "en") }
+            val smart = runBlocking { de.ayutv.data.translate.SubtitleTranslator(base, names).translate(lines + "Yes, him.", "de", "en") }
+            log("mt_names: names=$names plain=${plain.joinToString(" | ")} smart=${smart.joinToString(" | ") { it.replace('\n', '/') }}")
+            assertTrue("Namen nicht erkannt: $names", names == setOf("Will", "Hope"))
+            assertTrue("Namen übersetzt: $smart", smart[0].contains("Will") && smart[1].contains("Hope") && smart[2].contains("Will") && smart[3].contains("Hope"))
+            assertTrue("Platzhalter sichtbar: $smart", smart.none { line -> listOf("Zorv", "Kelm").any { it in line } })
+        }
+
         // 5c. Film ohne eingebettete Untertitel, aber mit (geladener) englischer Datei: vorausschauend übersetzen
         section("file_translation") {
             val movie = runBlocking { container.db.vod().search("Stummfilm", 5) }.firstOrNull() ?: error("Film ohne Untertitel fehlt")
@@ -828,6 +852,30 @@ class DeviceTourTest {
             log("channel_check: hd=${good.first}p in ${good.second} ms, kaputt=${bad.first}")
             assertTrue("Auflösung nicht erkannt", good.first >= 720)
             assertTrue("Kaputte Adresse als laufend erkannt", bad.first == 0)
+        }
+
+        // Merkliste: Film merken, steht auf der Startseite, wieder entfernen
+        section("watchlist") {
+            val movie = runBlocking { container.db.vod().search("Film", 5) }.firstOrNull() ?: error("Film fehlt")
+            val added = runBlocking { container.content.toggleFavorite(movie.key) }
+            val listed = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { container.content.watchlistMovies.first { list -> list.any { it.key == movie.key } } } } != null
+            runBlocking { container.content.toggleFavorite(movie.key) }
+            val removed = runBlocking { kotlinx.coroutines.withTimeoutOrNull(5_000) { container.content.watchlistMovies.first { list -> list.none { it.key == movie.key } } } } != null
+            log("watchlist: added=$added listed=$listed removed=$removed")
+            assertTrue("Merkliste: added=$added listed=$listed removed=$removed", added && listed && removed)
+        }
+
+        // Leitungs-Check: Testsender 10 s laden, Antwortzeit/Datenrate/Aussetzer und Puffer-Empfehlung
+        section("line_check") {
+            val hd = live.firstOrNull { it.name == "HD Test 50fps" } ?: error("HD-Testsender fehlt")
+            val result = runBlocking { de.ayutv.data.repo.LineCheck(container.http).run(hd, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, seconds = 6) }
+            log("line_check: ${result.summary} empfehlung=${result.recommendation}")
+            assertTrue("Leitungs-Check ohne Daten: ${result.summary}", result.failed == null && result.kbps > 0)
+        }
+        // Spielstände (OpenLigaDB, echtes Netz): nur protokollieren, das Ergebnis hängt vom Spieltag ab
+        section("live_scores") {
+            val matches = runBlocking { container.liveScores.current() }
+            log("live_scores: matches=${matches.size} first=${matches.firstOrNull()?.let { "${it.pairing} ${it.score} finished=${it.finished}" }}")
         }
 
         // Fehlerbericht: per Handy-Seite abrufbar, ohne Zugangsdaten
