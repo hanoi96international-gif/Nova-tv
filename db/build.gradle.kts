@@ -32,5 +32,8 @@ dependencies {
     api("androidx.room:room-runtime:$room")
     api("androidx.room:room-ktx:$room")
     "kapt"("androidx.room:room-compiler:$room")
+    // Room liest die Kotlin-Metadaten mit einer Bibliothek, die nur bis Kotlin 2.3 reicht; die Version passend zum
+    // Compiler (2.4) nachziehen.
+    "kapt"("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.21")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 }
