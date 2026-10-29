@@ -942,6 +942,8 @@ class DeviceTourTest {
                 )
                 assertTrue("Sicherung: $report", backup.first == 200 && restored == 200 && report.startsWith("✓") &&
                     playlistsAfter == playlistsBefore && favoritesAfter == favoritesBefore)
+                // Ohne Sicherungs-Passwort keine Passwörter oder Schlüssel in der Datei.
+                assertTrue("Passwort in ungeschützter Sicherung", "\"password\"" !in backup.second && "deepl_key" !in backup.second && "proxy_password" !in backup.second)
                 runBlocking { container.settings.update { it.copy(openSubtitlesUser = "") } }
             } finally {
                 server.stop()
@@ -1080,6 +1082,15 @@ class DeviceTourTest {
                 de.ayutv.data.translate.PhoneHelper.register(null, null)
                 helper.stop()
             }
+        }
+
+        // „Gerät prüfen“ und Speicher: liefert alle Zeilen, Aufräumen läuft durch.
+        section("device_check") {
+            val text = runBlocking { de.ayutv.data.DeviceCheck.run(app, container) }
+            val usage = de.ayutv.data.StorageCleaner.usage(app)
+            val cleaned = de.ayutv.data.StorageCleaner.clean(app)
+            log("device_check: ${text.replace('\n', '|')} usage=${usage.joinToString { "${it.label}=${it.bytes / 1_000_000}MB" }} cleaned=$cleaned")
+            assertTrue("Gerät prüfen unvollständig: $text", listOf("Gerät:", "Speicher frei", "Menüs:", "Übersetzung", "Leitung", "OpenSubtitles").all { it in text })
         }
 
         // Proxy nur für DnA-TV: HTTP und SOCKS5 mit Anmeldung, falsches Passwort wird gemeldet, nie direkt ausweichen.

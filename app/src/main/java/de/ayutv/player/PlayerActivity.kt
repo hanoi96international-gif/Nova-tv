@@ -1990,7 +1990,9 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }
                     // Passt mäßig (oder gar nicht): einmal weitere Dateien vergleichen und die beste nehmen.
-                    if (language !in comparedLanguages && references.size >= COMPARE_REFERENCES && (result?.percent ?: 0) < GOOD_PERCENT) {
+                    if (language !in comparedLanguages && references.size >= COMPARE_REFERENCES &&
+                        (result?.percent ?: 0) < de.ayutv.data.repo.OpenSubtitlesQuota.compareBelowPercent
+                    ) {
                         comparedLanguages += language
                         if (compareCandidates(language, references, result?.percent ?: 0)) return@launch
                     }
@@ -2011,7 +2013,7 @@ class PlayerActivity : ComponentActivity() {
     private suspend fun compareCandidates(language: String, references: List<Long>, current: Int): Boolean {
         val request = vod ?: return false
         var best = current
-        repeat(MAX_CANDIDATES - 1) {
+        repeat(de.ayutv.data.repo.OpenSubtitlesQuota.candidatesPerFilm - 1) {
             if (externalLanguage != language || !container.subtitles.hasAlternatives(request.key, language)) return false
             speechSyncInfo = "Vergleiche weitere Untertitel-Dateien mit der Spur des Films …"
             val alternative = runCatching { container.subtitles.downloadAlternative(request.key, language, settings, filmInfo()) }
@@ -3794,10 +3796,8 @@ class PlayerActivity : ComponentActivity() {
         private const val WRONG_FILE_REFERENCES = 60
         /** Zeilen-Abgleich: ab so viel Prozent übernehmen, darunter vergleichen. */
         private const val ELASTIC_MIN_PERCENT = 50
-        private const val GOOD_PERCENT = 85
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
         private const val COMPARE_REFERENCES = 40
-        private const val MAX_CANDIDATES = 3
         private const val SPEECH_CHECK_MS = 20_000L
 
         private fun clock(ms: Long): String {

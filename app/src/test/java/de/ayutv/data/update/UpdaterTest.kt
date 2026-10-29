@@ -28,4 +28,13 @@ class UpdaterTest {
         assertEquals(25674652L, release.sizeBytes)
         assertNull(Updater.parseRelease("""{"tag_name":"v1","assets":[]}"""))
     }
+
+    @Test
+    fun phoneApkIsSeparate() {
+        val body = """{"tag_name":"v0.35.0","assets":[
+            {"name":"DnA-TV.apk","size":1,"browser_download_url":"https://x/DnA-TV.apk"},
+            {"name":"DnA-TV-Handy.apk","size":2,"browser_download_url":"https://x/DnA-TV-Handy.apk"}]}"""
+        assertEquals("https://x/DnA-TV-Handy.apk", Updater.parseRelease(body, Updater.PHONE_APK)!!.apkUrl)
+        assertEquals("https://x/DnA-TV.apk", Updater.parseRelease(body)!!.apkUrl)
+    }
 }

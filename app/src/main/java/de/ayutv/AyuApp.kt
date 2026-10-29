@@ -30,6 +30,11 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         // Der Übersetzer-Prozess braucht nichts davon (keine Datenbank, keine Synchronisierung).
         if (process.endsWith(":mt")) return
         de.ayutv.ui.UiPerformance.init(this)
+        de.ayutv.data.repo.OpenSubtitlesQuota.init(this)
+        // Speicher fast voll: gleich aufräumen, nicht erst nachts (sonst wird der ganze Fire TV träge).
+        Thread {
+            runCatching { if (de.ayutv.data.StorageCleaner.isLow(this)) android.util.Log.i("AyuStorage", de.ayutv.data.StorageCleaner.clean(this)) }
+        }.apply { priority = Thread.MIN_PRIORITY }.start()
         container = AppContainer(this)
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.
         // Kindersicherung: Verlässt man die App (Home-Taste, anderes Programm), ist wieder alles gesperrt.

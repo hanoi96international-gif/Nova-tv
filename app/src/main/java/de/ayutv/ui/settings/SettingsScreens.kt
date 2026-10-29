@@ -134,6 +134,8 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
     }
     var keyReport by remember { mutableStateOf<String?>(null) }
     var page by rememberSaveable { mutableStateOf(SettingsPage.PLAYLISTS) }
+    // „Einfach“: nur die wichtigen Einstellungen; „Weitere Einstellungen“ blendet den Rest ein.
+    var showAdvanced by rememberSaveable { mutableStateOf(false) }
     // Bereich erst nach kurzem Verweilen wechseln: Beim schnellen Durchscrollen wird nicht jede Seite aufgebaut.
     var pendingPage by remember { mutableStateOf<SettingsPage?>(null) }
     LaunchedEffect(pendingPage) {
@@ -204,6 +206,16 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     SyncBanner(sync, Modifier.padding(top = 4.dp))
                 }
             }
+            // Einfach / Mehr: Technisches, das man selten braucht, erst auf Wunsch.
+            if (page == SettingsPage.PLAYBACK || page == SettingsPage.SUBTITLES || page == SettingsPage.DISPLAY) {
+                item(key = "advanced-${page.name}") {
+                    SettingRow(
+                        "Weitere Einstellungen",
+                        if (showAdvanced) "angezeigt" else "ausgeblendet",
+                        "Technisches, das man selten braucht: Decoder, Tonausgabe, User-Agent, Senderfassungen, Zeitkorrektur, Sprachmodelle.",
+                    ) { showAdvanced = !showAdvanced }
+                }
+            }
             when (page) {
                 SettingsPage.PLAYLISTS -> {
                     items(playlists, key = { it.id }) { playlist ->
@@ -270,7 +282,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Tunneling-Modus",
                             onOff(settings.tunneling),
@@ -287,21 +299,21 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 "Einstellungen → Display & Audio → Display „Originalbildrate anpassen“ einschalten.",
                         ) { update { it.copy(matchFrameRate = !it.matchFrameRate) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Live-Format (Xtream)",
                             settings.liveFormat.label,
                             "MPEG-TS startet schneller. HLS ist robuster, falls der Anbieter TS drosselt.",
                         ) { update { it.copy(liveFormat = if (it.liveFormat == LiveFormat.TS) LiveFormat.HLS else LiveFormat.TS) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Schnelles Dekodieren (experimentell)",
                             onOff(settings.asyncDecoding),
                             "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
                         ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Tonausgabe",
                             settings.audioOutput.label,
@@ -326,7 +338,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Laute Werbung und leise Sender kommen auf ähnliche Lautstärke (wirkt, wenn der Ton im Gerät dekodiert wird). Auch im Film über ☰.",
                         ) { update { it.copy(loudnessLevel = !it.loudnessLevel) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Zusätzliche Tondecoder (FFmpeg)",
                             if (AudioDecoders.ffmpegAvailable) "Aktiv" else "Nicht enthalten",
@@ -334,7 +346,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 (AudioDecoders.ffmpegVersion?.let { " FFmpeg $it." } ?: ""),
                         ) {}
                     }
-                    item {
+                    if (showAdvanced) item {
                         UserAgentRow(settings.userAgent) { ua -> update { it.copy(userAgent = ua) } }
                     }
 
@@ -469,7 +481,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
-                    item {
+                    if (showAdvanced) item {
                         var testResult by remember { mutableStateOf("Prüft Texterkennung und Übersetzung auf diesem Gerät") }
                         SettingRow(
                             "Übersetzer testen",
@@ -485,7 +497,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
-                    item {
+                    if (showAdvanced) item {
                         var modelInfo by remember { mutableStateOf("") }
                         LaunchedEffect(Unit) {
                             modelInfo = withContext(Dispatchers.IO) {
@@ -569,7 +581,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Das Programm-Raster. Die Programmdaten (Jetzt läuft, Suche, Empfehlungen) bleiben auch ausgeblendet aktiv.",
                         ) { update { it.copy(showGuide = !it.showGuide) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Hoch/Runter schaltet um",
                             onOff(settings.zapWithUpDown),
@@ -593,7 +605,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Serien: nächste Folge automatisch",
                             onOff(settings.autoNextEpisode),
@@ -616,7 +628,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 "Fällt sie aus, schaltet der Player automatisch auf die nächste.",
                         ) { update { it.copy(mergeVariants = !it.mergeVariants) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Mindestqualität",
                             settings.minQuality.label,
@@ -624,21 +636,21 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 "Gibt es den Sender auch besser, bleibt die bessere Fassung. Unbekannte bleiben sichtbar.",
                         ) { update { it.copy(minQuality = it.minQuality.next()) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Beste Fassung bei doppelten Sendern",
                             if (settings.preferUhd) "4K, wenn vorhanden" else "Full HD (stabiler)",
                             "Welche Fassung ein doppelt geführter Sender zeigt. Gemessenes zählt vor dem Namen; ausgefallene Fassungen kommen nach hinten.",
                         ) { update { it.copy(preferUhd = !it.preferUhd) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         SettingRow(
                             "Nicht laufende Fassungen ausblenden",
                             onOff(settings.hideBrokenChannels),
                             "Fassungen, die im Sender-Check oder beim Schauen zweimal nicht liefen, verschwinden aus den Listen.",
                         ) { update { it.copy(hideBrokenChannels = !it.hideBrokenChannels) } }
                     }
-                    item {
+                    if (showAdvanced) item {
                         val check = remember { de.ayutv.data.repo.ChannelCheck(context, container) }
                         var last by remember { mutableStateOf(check.lastResult) }
                         SettingRow(
@@ -686,7 +698,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
-                    item {
+                    if (showAdvanced) item {
                         val context = androidx.compose.ui.platform.LocalContext.current
                         val zone = java.util.TimeZone.getDefault()
                         val name = zone.getDisplayName(zone.inDaylightTime(Date()), java.util.TimeZone.LONG, java.util.Locale.GERMAN)
@@ -708,7 +720,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
-                    item {
+                    if (showAdvanced) item {
                         val shift = settings.epgShiftHours
                         SettingRow(
                             "TV-Guide-Zeitverschiebung",
@@ -818,6 +830,51 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     item { ParentalSettings() }
                 }
                 SettingsPage.DATA -> {
+                    item {
+                        // Alles Wichtige auf diesem Gerät in einer Minute gemessen.
+                        var running by remember { mutableStateOf(false) }
+                        var result by remember { mutableStateOf<String?>(null) }
+                        SettingRow(
+                            "Gerät prüfen",
+                            if (running) "misst …" else if (result == null) "Jetzt prüfen" else "",
+                            result ?: "Misst in etwa einer Minute Ruckeln der Menüs, Speicher, Übersetzung pro Zeile, Leitung, Proxy, " +
+                                "DeepL und OpenSubtitles – als kurzer Text zum Abfotografieren.",
+                        ) {
+                            if (running) return@SettingRow
+                            running = true
+                            result = "Messe …"
+                            scope.launch {
+                                result = runCatching {
+                                    de.ayutv.data.DeviceCheck.run(context, container) { line -> result = (result?.takeIf { it != "Messe …" }?.plus("\n") ?: "") + line }
+                                }.getOrElse { "Prüfung abgebrochen: ${it.message}" }
+                                running = false
+                            }
+                        }
+                    }
+                    item {
+                        var usage by remember { mutableStateOf<String?>(null) }
+                        LaunchedEffect(Unit) {
+                            usage = withContext(Dispatchers.IO) {
+                                "Frei: " + de.ayutv.data.StorageCleaner.format(de.ayutv.data.StorageCleaner.freeBytes(context)) +
+                                    de.ayutv.data.StorageCleaner.usage(context).joinToString("") { "\n${it.label}: ${de.ayutv.data.StorageCleaner.format(it.bytes)}" }
+                            }
+                        }
+                        var cleaned by remember { mutableStateOf<String?>(null) }
+                        SettingRow(
+                            "Speicher",
+                            "Aufräumen",
+                            (usage ?: "wird ermittelt …") + "\nLange nicht benutzte Übersetzungsmodelle (30 Tage) und alte Untertitel (60 Tage) " +
+                                "löscht die App nachts von selbst." + (cleaned?.let { "\nZuletzt: $it" } ?: ""),
+                        ) {
+                            scope.launch {
+                                cleaned = withContext(Dispatchers.IO) { de.ayutv.data.StorageCleaner.clean(context) }
+                                usage = withContext(Dispatchers.IO) {
+                                    "Frei: " + de.ayutv.data.StorageCleaner.format(de.ayutv.data.StorageCleaner.freeBytes(context)) +
+                                        de.ayutv.data.StorageCleaner.usage(context).joinToString("") { "\n${it.label}: ${de.ayutv.data.StorageCleaner.format(it.bytes)}" }
+                                }
+                            }
+                        }
+                    }
                     item {
                         // „Wie ist meine IP?“: direkt und, wenn eingeschaltet, über den Proxy.
                         var running by remember { mutableStateOf(false) }
@@ -951,8 +1008,9 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             SettingRow(
                                 "Sicherung speichern",
                                 backupInfo.orEmpty(),
-                                "Playlists (mit Zugangsdaten), Favoriten, ausgeblendete Gruppen, Vereine und Einstellungen in eine Datei, " +
-                                    "z. B. für ein neues Handy oder den Fire TV. Mit Passwort verschlüsselt, ohne lesbar. Ohne Kindersicherung.",
+                                "Playlists, Favoriten, ausgeblendete Gruppen, Vereine und Einstellungen in eine Datei, z. B. für ein neues Handy " +
+                                    "oder den Fire TV. Mit Passwort verschlüsselt und mit allen Zugangsdaten; ohne Passwort ohne Passwörter und " +
+                                    "Schlüssel (die trägt man dann neu ein). Ohne Kindersicherung.",
                             ) {
                                 val day = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.GERMANY).format(java.util.Date())
                                 runCatching { saveBackup.launch("dna-tv-sicherung-$day.json") }

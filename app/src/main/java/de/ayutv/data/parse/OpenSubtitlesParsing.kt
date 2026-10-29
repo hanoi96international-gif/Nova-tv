@@ -253,6 +253,12 @@ object OpenSubtitlesParsing {
         host?.takeIf { OPENSUBTITLES_HOST.matches(it) }?.let { "https://$it/api/v1" }
     }.getOrNull()
 
+    /** Downloads pro Tag laut Anmeldung („user.allowed_downloads“), z. B. 20 mit Konto, 1000 mit VIP. */
+    fun allowedDownloads(body: String): Int? = runCatching {
+        val user = (json.parseToJsonElement(body) as? JsonObject)?.get("user") as? JsonObject
+        user?.primitive("allowed_downloads")?.contentOrNull?.toIntOrNull()
+    }.getOrNull()
+
     private val OPENSUBTITLES_HOST = Regex("^[a-z0-9.-]+\\.opensubtitles\\.(com|org)$")
 
     /** Antwort bedeutet: Token abgelaufen oder ungültig (neu anmelden statt aufgeben). */

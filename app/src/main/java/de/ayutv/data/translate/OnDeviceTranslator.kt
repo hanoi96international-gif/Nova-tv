@@ -107,6 +107,8 @@ class OnDeviceTranslator(
         val folder = File(dir, pair)
         val kind = engine
         if (!isInstalled(folder, kind)) download(pair, folder, kind)
+        // Benutzt: Modelle, die lange niemand braucht, räumt StorageCleaner weg.
+        runCatching { File(folder, de.ayutv.data.StorageCleaner.USED_MARK).writeText(System.currentTimeMillis().toString()) }
         while (loaded.size >= 2) {
             val eldest = loaded.keys.first()
             loaded.remove(eldest)?.close()

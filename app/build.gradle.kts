@@ -13,8 +13,8 @@ android {
         // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
         minSdk = 24
         targetSdk = 35
-        versionCode = 43
-        versionName = "0.34.0"
+        versionCode = 44
+        versionName = "0.35.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
@@ -43,6 +43,13 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
+        }
+        // Handy-Fassung (DnA-TV-Handy.apk): wie release, aber ohne das Recht, Apps zu installieren. Selbst
+        // aktualisierende Apps außerhalb des Play Store stuft Google Play Protect oft als Bedrohung ein; auf dem
+        // Handy öffnet ein Update deshalb nur den Download im Browser. Fire TV hat kein Play Protect.
+        create("phone") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
         }
     }
 
