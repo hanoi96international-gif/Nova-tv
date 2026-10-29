@@ -159,14 +159,41 @@ fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit
         modifier.fillMaxSize().background(AyuColors.Background)
             .then(
                 when (theme) {
-                    UiTheme.NORDLICHT -> Modifier.drawWithCache { val sky = NorthernSky(size); onDrawBehind { sky.draw(this) } }
-                    UiTheme.HANNOVER -> Modifier.drawWithCache { val stadium = StadiumNight(size); onDrawBehind { stadium.draw(this) } }
+                    UiTheme.NORDLICHT -> Modifier.drawWithCache {
+                        val image = rasterize { NorthernSky(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
+                    UiTheme.HANNOVER -> Modifier.drawWithCache {
+                        val image = rasterize { StadiumNight(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
                     UiTheme.CLASSIC -> Modifier
                 }
             )
     ) {
         content()
     }
+}
+
+/**
+ * Den Hintergrund einmal in ein Bild zeichnen. Direkt gezeichnet bestand er aus über einem Dutzend halbdurchsichtiger
+ * Verläufe über den ganzen Bildschirm (Hannover: dazu über 100 Linien und eine riesige Schrift), und die Grafik musste
+ * das bei jeder Fokusbewegung neu zusammensetzen: Auf dem Fire TV Stick ruckelte dadurch die ganze Oberfläche.
+ * Ein fertiges Bild kostet pro Bild nur noch einmal Kopieren. Auf schwachen Geräten etwas kleiner (weich genug).
+ */
+private fun androidx.compose.ui.draw.CacheDrawScope.rasterize(
+    paint: androidx.compose.ui.graphics.drawscope.DrawScope.(androidx.compose.ui.geometry.Size) -> Unit,
+): androidx.compose.ui.graphics.ImageBitmap {
+    val scale = if (de.ayutv.ui.UiPerformance.reduced) 0.75f else 1f
+    val target = androidx.compose.ui.geometry.Size(
+        (size.width * scale).coerceAtLeast(1f).toInt().toFloat(),
+        (size.height * scale).coerceAtLeast(1f).toInt().toFloat(),
+    )
+    val image = androidx.compose.ui.graphics.ImageBitmap(target.width.toInt(), target.height.toInt())
+    androidx.compose.ui.graphics.drawscope.CanvasDrawScope().draw(
+        this, layoutDirection, androidx.compose.ui.graphics.Canvas(image), target,
+    ) { paint(target) }
+    return image
 }
 
 /**

@@ -42,6 +42,8 @@ class ChannelCheckWorker(context: Context, params: WorkerParameters) : Coroutine
         val container = (applicationContext as AyuApp).container
         if (!container.settings.current().channelCheck) return Result.success()
         val quick = inputData.getBoolean(KEY_QUICK, false)
+        // Schwaches Gerät und die Menüs sind offen: später noch einmal (in 10 Minuten), damit die Bedienung flüssig bleibt.
+        if (quick && de.ayutv.ui.UiPerformance.reduced && container.foreground?.get() != null) return Result.retry()
         runCatching {
             val check = ChannelCheck(applicationContext, container)
             if (quick) check.run(QUICK_BUDGET_MS, maxChannels = QUICK_CHANNELS, quick = true) else check.run(BUDGET_MS)
@@ -80,6 +82,7 @@ class ChannelCheckWorker(context: Context, params: WorkerParameters) : Coroutine
             val request = OneTimeWorkRequestBuilder<ChannelCheckWorker>()
                 .setConstraints(constraints(idle = false))
                 .setInitialDelay(1, TimeUnit.MINUTES)
+                .setBackoffCriteria(androidx.work.BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
                 .setInputData(androidx.work.workDataOf(KEY_QUICK to true))
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork("channel-check-quick", ExistingWorkPolicy.REPLACE, request)
@@ -118,10 +121,13 @@ class ChannelCheck(private val context: Context, private val container: AppConta
             .sortedBy { if (it.key in favorites) 0 else if (it.key in recent) 1 else 2 }
         var checked = 0
         var working = 0
+        // Schwaches Gerät: nicht prüfen, während jemand die Menüs bedient (Netz und Rechner gehören der Bedienung).
+        val weak = de.ayutv.ui.UiPerformance.reduced
         for (channel in candidates) {
             if (checked >= maxChannels || SystemClock.elapsedRealtime() - started > budgetMs) break
             // Läuft etwas im Player: aufhören, sonst nähme der Check die einzige Verbindung beim Anbieter weg.
-            if (container.foreground?.get() is PlayerActivity) break
+            val shown = container.foreground?.get()
+            if (shown is PlayerActivity || (weak && shown != null)) break
             val result = probe(channel)
             ChannelQuality.recordCheck(channel.key, result.first, result.second)
             checked++

@@ -29,6 +29,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         CrashReport.install(this, process)
         // Der Übersetzer-Prozess braucht nichts davon (keine Datenbank, keine Synchronisierung).
         if (process.endsWith(":mt")) return
+        de.ayutv.ui.UiPerformance.init(this)
         container = AppContainer(this)
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.
         // Kindersicherung: Verlässt man die App (Home-Taste, anderes Programm), ist wieder alles gesperrt.
@@ -48,9 +49,14 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             }
         })
         registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityResumed(activity: Activity) { container.foreground = java.lang.ref.WeakReference(activity) }
+            override fun onActivityResumed(activity: Activity) {
+                container.foreground = java.lang.ref.WeakReference(activity)
+                // Ruckeln der Menüs messen (für den Fehlerbericht); der Player zählt seine Bilder selbst.
+                if (activity is MainActivity) de.ayutv.ui.UiPerformance.watch(activity)
+            }
             override fun onActivityPaused(activity: Activity) {
                 if (container.foreground?.get() === activity) container.foreground = null
+                de.ayutv.ui.UiPerformance.unwatch(activity)
             }
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
             override fun onActivityStarted(activity: Activity) = Unit
@@ -87,6 +93,20 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         else runCatching { java.io.File("/proc/self/cmdline").readText().trimEnd('\u0000') }.getOrDefault(packageName)
 
     /** Logos und Poster: kleiner Speicher-Cache (Fire TV Stick hat wenig RAM), großer Disk-Cache. */
+    /**
+     * Speicher abgeben, sobald die Menüs nicht mehr zu sehen sind oder das System knapp wird: Die App bleibt für das
+     * Handy im Hintergrund erreichbar, soll dem Fire TV dabei aber keinen Platz wegnehmen. Bilder kommen beim
+     * nächsten Öffnen schnell aus dem Speicher auf der Platte zurück.
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        @Suppress("DEPRECATION")
+        val hidden = level >= android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN ||
+            level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+            level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
+        if (hidden) runCatching { SingletonImageLoader.get(this).memoryCache?.clear() }
+    }
+
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
         .components { add(OkHttpNetworkFetcherFactory(callFactory = { container.http })) }
         .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.15).build() }
