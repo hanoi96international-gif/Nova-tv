@@ -258,6 +258,17 @@ class DeviceTourTest {
                     val after = scenario.read { act -> act.channels.indexOfFirst { it.key == act.current?.key } }
                     val size = scenario.read { it.channels.size }
                     log("zap_burst: ready=$burstReady moved=${(after - before + size) % size} expected=${3 % size} now=${scenario.read { it.current?.name }}")
+                    // ◀ springt zum vorherigen Sender und wieder zurück
+                    section("back_zap") {
+                    val burstChannel = scenario.read { it.current?.key }
+                    val previous = scenario.read { it.previousChannel?.key }
+                    key(KeyEvent.KEYCODE_DPAD_LEFT)
+                    val backReady = waitFor(15_000) { scenario.read { it.current?.key == previous && it.player?.playbackState == Player.STATE_READY } }
+                    key(KeyEvent.KEYCODE_DPAD_LEFT)
+                    val returned = waitFor(15_000) { scenario.read { it.current?.key == burstChannel } }
+                    log("back_zap: previous=${previous != null} back=$backReady returned=$returned")
+                    assertTrue("Zurück-Zappen: previous=$previous back=$backReady returned=$returned", previous != null && backReady && returned)
+                    }
                     key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_200)
                     shot("1${index}_live_channel_list")
                     key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)

@@ -58,6 +58,9 @@ import de.ayutv.ui.components.isPortrait
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.draw.drawBehind
+import kotlinx.coroutines.flow.first
 import androidx.tv.material3.Text
 import de.ayutv.AppContainer
 import de.ayutv.data.db.PlaylistEntity
@@ -93,6 +96,7 @@ enum class Section(val label: String, val icon: ImageVector) {
     SETTINGS("Einstellungen", Icons.Filled.Settings),
 }
 
+@OptIn(androidx.compose.animation.ExperimentalAnimationApi::class)
 @Composable
 fun AyuRoot() {
     val container = LocalContainer.current
@@ -121,6 +125,9 @@ fun AyuRoot() {
     LaunchedEffect(searchRequest) {
         if (searchRequest != null) section = Section.SEARCH
     }
+    // Bereich, dessen Überblendung fertig ist: Erst dann darf OK den Fokus hineinsetzen. Vorher liegt rechts
+    // noch der alte, ausblendende Bereich; landet der Fokus dort, verschwindet er mit ihm und springt nach „Start“.
+    var settled by remember { mutableStateOf<Section?>(null) }
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
     val sectionState = rememberSaveableStateHolder()
 
@@ -158,7 +165,14 @@ fun AyuRoot() {
                                     androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
                             },
                             label = "section",
-                        ) { shown -> sectionState.SaveableStateProvider(shown.name) { when (shown) {
+                        ) { shown ->
+                            val visibility = transition
+                            LaunchedEffect(visibility.currentState, visibility.targetState) {
+                                if (visibility.currentState == androidx.compose.animation.EnterExitState.Visible &&
+                                    visibility.targetState == androidx.compose.animation.EnterExitState.Visible
+                                ) settled = shown
+                            }
+                            sectionState.SaveableStateProvider(shown.name) { when (shown) {
                             Section.HOME -> HomeScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
                             Section.LIVE -> LiveScreen()
                             Section.GUIDE -> GuideScreen()
@@ -176,7 +190,7 @@ fun AyuRoot() {
                     if (portrait) {
                         BottomNav(sections, section, Modifier.align(Alignment.BottomCenter)) { section = it }
                     } else {
-                        SideNav(sections = sections, selected = section, refocusTick = navTick, onSelect = { section = it })
+                        SideNav(sections = sections, selected = section, settled = settled, refocusTick = navTick, onSelect = { section = it })
                     }
                 }
             }
@@ -230,7 +244,7 @@ private fun BottomNav(sections: List<Section>, selected: Section, modifier: Modi
 /** Schmale Leiste mit Symbolen, die sich beim Fokussieren mit Beschriftung aufklappt. */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int, onSelect: (Section) -> Unit) {
+private fun SideNav(sections: List<Section>, selected: Section, settled: Section?, refocusTick: Int, onSelect: (Section) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val width by animateDpAsState(
         if (expanded) NAV_EXPANDED else NAV_COLLAPSED,
@@ -289,12 +303,26 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
                     .then(if (isSelected) Modifier.focusRequester(initialFocus) else Modifier),
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
                 colors = ClickableSurfaceDefaults.colors(
-                    containerColor = if (isSelected) AyuColors.SurfaceRaised else Color.Transparent,
+                    containerColor = Color.Transparent,
                     focusedContainerColor = AyuColors.AccentSoft,
                 ),
                 scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
             ) {
-                Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Der gewählte Bereich trägt links einen Akzentstrich; der Fokus ist die deutlich hellere Fläche.
+                val accent = AyuColors.Accent
+                Row(
+                    Modifier
+                        .then(if (isSelected) Modifier.drawBehind {
+                            drawRoundRect(
+                                accent,
+                                topLeft = androidx.compose.ui.geometry.Offset(0f, size.height * 0.25f),
+                                size = androidx.compose.ui.geometry.Size(3.dp.toPx(), size.height * 0.5f),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
+                            )
+                        } else Modifier)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Icon(
                         item.icon,
                         contentDescription = item.label,
@@ -324,10 +352,15 @@ private fun SideNav(sections: List<Section>, selected: Section, refocusTick: Int
         }
     }
     // OK auf einem Bereich: sobald er da ist, den Fokus hineinsetzen (wie ▶).
+    val currentSelected by rememberUpdatedState(selected)
+    val currentSettled by rememberUpdatedState(settled)
     LaunchedEffect(enterTick) {
         if (enterTick == 0) return@LaunchedEffect
-        // Erst wenn der alte Bereich ausgeblendet ist, sonst landet der Fokus noch in ihm.
-        delay(140)
+        // Erst wenn der alte Bereich ganz ausgeblendet ist, sonst landet der Fokus noch in ihm.
+        kotlinx.coroutines.withTimeoutOrNull(1_500) {
+            androidx.compose.runtime.snapshotFlow { currentSettled == currentSelected }.first { it }
+        }
+        delay(40)
         repeat(12) {
             delay(40)
             if (focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Right)) return@LaunchedEffect

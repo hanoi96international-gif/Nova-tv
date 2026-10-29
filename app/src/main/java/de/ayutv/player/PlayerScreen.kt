@@ -408,7 +408,8 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         Spacer(Modifier.height(10.dp))
         Text(
             if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
-            else "▲▼ Umschalten   OK Senderliste   ▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
+            else "▲▼ Umschalten   OK Senderliste   " + (activity.previousChannel?.let { "◀ zurück zu ${it.name}   " } ?: "") +
+                "▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 13.sp,
         )

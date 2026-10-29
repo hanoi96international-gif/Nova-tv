@@ -151,7 +151,8 @@ class PlayerActivity : ComponentActivity() {
     val onlineSubtitlesAvailable: Boolean get() = !isLive && ::settings.isInitialized && settings.onlineSubtitlesEnabled
 
     private var vod: VodRequest? = null
-    private var previousChannel: ChannelEntity? = null
+    /** Zuletzt gesehener anderer Sender: ◀ springt dorthin zurück (wie die Zurück-Taste am Fernseher). */
+    var previousChannel by mutableStateOf<ChannelEntity?>(null); private set
     /** Sender, den der Player gerade wirklich spielt ([current] zeigt beim schnellen Zappen schon das Ziel). */
     private var playing: ChannelEntity? = null
     private var retries = 0
@@ -732,13 +733,23 @@ class PlayerActivity : ComponentActivity() {
         de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
     }
 
+    /** Zum vorherigen Sender; null, wenn es keinen gibt. */
+    fun backZap(): Unit? {
+        val previous = previousChannel?.takeIf { it.key != playing?.key } ?: return null
+        playChannel(previous)
+        message = "◀ Zurück: ${previous.name}"
+        handler.postDelayed({ if (message?.startsWith("◀ Zurück") == true) message = null }, 2_500)
+        return Unit
+    }
+
     fun playChannel(channel: ChannelEntity) {
         val p = player ?: return
         recordWatch()
         watchStartedAt = SystemClock.elapsedRealtime()
         watchErrorsAtStart = playerErrors
         if (!switchingVariant) failedVariants.clear()
-        playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
+        // Beim Ausweichen auf eine andere Fassung bleibt der Sender derselbe: kein „vorheriger Sender“.
+        if (!switchingVariant) playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
         playing = channel
         current = channel
         // Verzögerte Wiederholungen und Rückrufe vom vorigen Sender dürfen den neuen nicht treffen.
@@ -3176,13 +3187,15 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> zap(+1)
             KeyEvent.KEYCODE_DPAD_DOWN -> if (settings.zapWithUpDown) zap(-1) else openChannelList()
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> zap(-1)
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_LEFT -> openChannelList()
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> openChannelList()
+            // ◀ springt zum vorherigen Sender (und von dort wieder zurück); ohne vorherigen öffnet es die Liste.
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (repeat == 0) backZap() ?: openChannelList()
             KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_INFO -> {
                 if (overlay == Overlay.INFO) showTech = !showTech
                 showOverlay(Overlay.INFO)
             }
             // "Zurück zum letzten Sender", wie beim Fernseher.
-            KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> previousChannel?.let(::playChannel)
+            KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> backZap()
             KeyEvent.KEYCODE_MENU -> openTracks()
             KeyEvent.KEYCODE_PROG_RED -> {
                 toggleFavorite()

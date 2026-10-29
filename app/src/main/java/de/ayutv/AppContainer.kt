@@ -34,7 +34,10 @@ class AppContainer(val context: Context) {
 
     val epgOverrides = de.ayutv.data.EpgOverrides(context)
     val accountLimits = de.ayutv.data.AccountLimits(context)
-    val playlists = PlaylistRepository(db, http, settings, context.cacheDir, epgOverrides, accountLimits)
+    val playlists = PlaylistRepository(db, http, settings, context.cacheDir, epgOverrides, accountLimits).also { repo ->
+        // Nach jedem Laden einer Playlist kurz die wichtigsten Sender prüfen: „Best of“ ist so gleich gefüllt.
+        repo.onImported = { runCatching { de.ayutv.data.repo.ChannelCheckWorker.runQuick(context) } }
+    }
     val content = ContentRepository(db, http)
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
     val subtitles = SubtitleRepository(http, context.filesDir).also { repo ->
