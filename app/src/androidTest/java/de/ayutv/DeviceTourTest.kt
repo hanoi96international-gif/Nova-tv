@@ -955,12 +955,15 @@ class DeviceTourTest {
                 val name = runBlocking { client.check(container.remote.address!!, container.remote.pin) }
                 runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, channel.url, channel.name), container.remote.address!!, container.remote.pin) }
                 val started = waitFor(10_000) { (container.foreground?.get() as? PlayerActivity)?.current?.key == channel.key }
-                val unknown = runCatching {
-                    runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, "http://nirgends/live/x.ts", "?"), container.remote.address!!, container.remote.pin) }
-                }.exceptionOrNull()?.message
-                log("play_on_tv: tv=$name started=$started unknown=$unknown")
+                // Sender, den es hier nicht gibt (andere Playlist auf dem Handy): läuft direkt über die Adresse
+                val foreign = channel.url + "?vom=handy"
+                runBlocking { client.play(de.ayutv.data.remote.RemotePlay(true, foreign, "Vom Handy"), container.remote.address!!, container.remote.pin) }
+                val foreignPlays = waitFor(15_000) {
+                    (container.foreground?.get() as? PlayerActivity)?.let { it.current?.url == foreign && it.player?.playbackState == Player.STATE_READY } == true
+                }
+                log("play_on_tv: tv=$name started=$started foreign=$foreignPlays")
                 assertTrue("Sender startet nicht auf dem Fernseher", started)
-                assertTrue("Unbekannter Sender ohne Meldung: $unknown", unknown?.contains("nicht") == true)
+                assertTrue("Fremder Sender startet nicht", foreignPlays)
             } finally {
                 (container.foreground?.get() as? PlayerActivity)?.let { activity -> activity.runOnUiThread { activity.finish() } }
                 container.remote.stop()

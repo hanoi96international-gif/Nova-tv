@@ -194,9 +194,10 @@ class RemoteServer(private val context: Context, private val container: AppConta
      */
     private suspend fun play(request: RemotePlay): String? {
         val intent = if (request.live) {
+            // Gibt es den Sender hier nicht (andere Playlist), spielt der Fernseher die Adresse trotzdem direkt.
             val channel = container.db.channels().byUrl(request.url)
-                ?: return "Diesen Sender gibt es auf dem Fernseher nicht (andere Playlist?)"
-            de.ayutv.player.PlayerActivity.liveIntent(context, channel.key, group = null)
+            if (channel != null) de.ayutv.player.PlayerActivity.liveIntent(context, channel.key, group = null)
+            else de.ayutv.player.PlayerActivity.liveUrlIntent(context, request.url, request.title, request.image, request.userAgent)
         } else {
             val key = container.db.vod().byUrl(request.url)?.key ?: request.key
             de.ayutv.player.PlayerActivity.vodIntent(

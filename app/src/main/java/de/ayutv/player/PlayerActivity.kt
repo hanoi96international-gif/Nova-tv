@@ -350,7 +350,15 @@ class PlayerActivity : ComponentActivity() {
                     else -> "Alle Sender"
                 }
                 // Erst den Sender starten, dann die (evtl. zehntausende Einträge lange) Zapp-Liste laden.
-                val direct = key?.let { container.content.channel(it) }
+                // Vom Handy übergeben und hier nicht in der Playlist: direkt über die Adresse spielen.
+                val handedUrl = intent.getStringExtra(EXTRA_LIVE_URL)
+                val direct = key?.let { container.content.channel(it) } ?: handedUrl?.let { url ->
+                    ChannelEntity(
+                        key = "handy:$url", playlistId = -1, name = intent.getStringExtra(EXTRA_LIVE_NAME) ?: "Vom Handy",
+                        groupTitle = "Vom Handy", logo = intent.getStringExtra(EXTRA_LIVE_LOGO), url = url, epgId = null, number = 0,
+                        userAgent = intent.getStringExtra(EXTRA_LIVE_AGENT),
+                    )
+                }
                 if (direct != null) playChannel(direct)
                 val list = container.content.zapList(group, favoritesOnly, merge = settings.mergeVariants)
                 val start = direct ?: list.firstOrNull()
@@ -2730,7 +2738,7 @@ class PlayerActivity : ComponentActivity() {
                 castingTo = null
                 castingToDnaTv = false
                 message = "Läuft wieder hier (auf dem Fernseher läuft es weiter)"
-                player?.play()
+                restartStream()
             } else {
                 de.ayutv.player.cast.Cast.stop(this)
             }
@@ -2779,9 +2787,9 @@ class PlayerActivity : ComponentActivity() {
     private fun sendToTv(client: de.ayutv.data.remote.RemoteClient, tv: de.ayutv.data.remote.RemoteClient.Tv) {
         val p = player ?: return
         val request = if (isLive) {
-            playing?.let { de.ayutv.data.remote.RemotePlay(live = true, url = it.url, title = it.name) }
+            playing?.let { de.ayutv.data.remote.RemotePlay(live = true, url = it.url, title = it.name, image = it.logo, userAgent = it.userAgent ?: settings.userAgent) }
         } else {
-            vod?.let { de.ayutv.data.remote.RemotePlay(false, it.url, it.title, it.key, it.kind, it.subtitle, it.image, p.currentPosition) }
+            vod?.let { de.ayutv.data.remote.RemotePlay(false, it.url, it.title, it.key, it.kind, it.subtitle, it.image, p.currentPosition, settings.userAgent) }
         }
         if (request == null || request.url.startsWith("file:")) {
             message = "Aufnahmen und Downloads lassen sich nicht übertragen"
@@ -2789,19 +2797,23 @@ class PlayerActivity : ComponentActivity() {
         }
         fun send(pin: String) {
             lifecycleScope.launch {
+                var released = false
                 runCatching {
                     val name = client.check(tv.address, pin)
                     client.address = tv.address
                     client.pin = pin
+                    // Erst hier loslassen: Viele Konten erlauben nur eine Verbindung, der Fernseher braucht sie.
+                    p.stop()
+                    released = true
                     client.play(request, tv.address, pin)
                     name
                 }.onSuccess { name ->
                     castingTo = name
                     castingToDnaTv = true
-                    p.pause()
-                    message = "📺 Läuft auf $name (📺 nochmal: hier weiterschauen)"
-                    handler.postDelayed({ if (message?.startsWith("📺 Läuft") == true) message = null }, 6_000)
+                    message = "📺 Läuft auf $name – das Handy kannst du jetzt sperren oder weglegen. (📺 nochmal: hier weiterschauen)"
+                    handler.postDelayed({ if (message?.startsWith("📺 Läuft") == true) message = null }, 8_000)
                 }.onFailure { e ->
+                    if (released) restartStream()
                     if (e.message?.contains("PIN") == true) askPin(tv) { send(it) }
                     else message = "Fernseher: ${e.message ?: "nicht erreichbar"}"
                 }
@@ -3611,6 +3623,18 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_FROM_START = "from_start"
         /** Startposition in ms (vom Handy übergeben). */
         const val EXTRA_START_AT = "start_at"
+        private const val EXTRA_LIVE_URL = "live_url"
+        private const val EXTRA_LIVE_NAME = "live_name"
+        private const val EXTRA_LIVE_LOGO = "live_logo"
+        private const val EXTRA_LIVE_AGENT = "live_agent"
+
+        /** Sender, den es hier nicht gibt (vom Handy übergeben), direkt über seine Adresse spielen. */
+        fun liveUrlIntent(context: Context, url: String, name: String, logo: String?, userAgent: String?): Intent =
+            Intent(context, PlayerActivity::class.java)
+                .putExtra(EXTRA_LIVE_URL, url)
+                .putExtra(EXTRA_LIVE_NAME, name)
+                .putExtra(EXTRA_LIVE_LOGO, logo)
+                .putExtra(EXTRA_LIVE_AGENT, userAgent)
         private const val EXTRA_VOD_KEY = "vod_key"
         private const val EXTRA_VOD_KIND = "vod_kind"
         private const val EXTRA_VOD_TITLE = "vod_title"

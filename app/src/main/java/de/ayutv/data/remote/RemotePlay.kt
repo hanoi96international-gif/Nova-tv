@@ -19,6 +19,8 @@ data class RemotePlay(
     val subtitle: String? = null,
     val image: String? = null,
     val positionMs: Long = 0,
+    /** User-Agent, mit dem der Anbieter den Stream ausliefert (manche verlangen einen bestimmten). */
+    val userAgent: String? = null,
 ) {
     fun encode(): String = JsonObject(
         buildMap {
@@ -30,6 +32,7 @@ data class RemotePlay(
             subtitle?.let { put("subtitle", JsonPrimitive(it)) }
             image?.let { put("image", JsonPrimitive(it)) }
             put("position", JsonPrimitive(positionMs))
+            userAgent?.let { put("agent", JsonPrimitive(it)) }
         }
     ).toString()
 
@@ -46,6 +49,7 @@ data class RemotePlay(
                 subtitle = str("subtitle"),
                 image = str("image"),
                 positionMs = o["position"]?.jsonPrimitive?.longOrNull ?: 0L,
+                userAgent = str("agent"),
             )
         }
     }
