@@ -95,7 +95,23 @@ object Diagnostics {
 
         section("Protokoll")
         out.append(logcat())
-        Redaction.apply(out.toString())
+        Redaction.apply(out.toString(), secrets(container))
+    }
+
+    /** Alle eigenen Zugangsdaten im Klartext, damit sie im Bericht garantiert nirgends stehen. */
+    private suspend fun secrets(container: AppContainer): List<String> {
+        val out = ArrayList<String>()
+        runCatching {
+            for (p in container.db.playlists().all()) {
+                p.username?.let { out += it }
+                p.password?.let { out += (runCatching { de.ayutv.data.security.Credentials.reveal(it) }.getOrNull() ?: it) }
+            }
+        }
+        runCatching {
+            val s = container.settings.current()
+            out += listOf(s.openSubtitlesUser, s.openSubtitlesPassword, s.openSubtitlesApiKey)
+        }
+        return out
     }
 
     /** Eigenes Systemprotokoll (Android zeigt jeder App nur ihre eigenen Zeilen). */

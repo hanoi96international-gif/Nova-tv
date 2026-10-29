@@ -18,4 +18,12 @@ class RedactionTest {
         val error = "E/AyuPlayer: Source error HttpDataSourceException: Response code: 403 at de.ayutv.player.PlayerActivity.onPlayerError"
         assertEquals(error, Redaction.apply(error))
     }
+
+    @Test
+    fun ownSecretsDisappearEverywhere() {
+        val log = "Archiv /timeshift/ayu/test/30/2026-10-29:07-36/102.ts, Selbsttest ok"
+        assertEquals("Archiv /timeshift/ayu/***/30/2026-10-29:07-36/102.ts, Selbst*** ok", Redaction.apply(log, listOf("test", "ayu")))
+        // Kurze Werte (unter 4 Zeichen) würden zu viel unkenntlich machen
+        assertEquals(log, Redaction.apply(log, listOf("ayu", " ", "")))
+    }
 }
