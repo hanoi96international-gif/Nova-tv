@@ -19,14 +19,13 @@ import okhttp3.Request
 import java.io.IOException
 import java.io.InputStream
 import java.net.URLEncoder
-import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 
 /**
  * Playlists laden (M3U und Xtream) und den TV-Guide (XMLTV) einlesen. Dieselben Leser wie in der Fire-TV-App,
  * deshalb gleiche Sender, Gruppen und Schlüssel.
  */
-class Sync(private val store: Store, val http: OkHttpClient = defaultHttp()) {
+class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
     private val mutex = Mutex()
     private val _status = MutableStateFlow<String?>(null)
     /** Was gerade geladen wird (null = nichts). */
@@ -231,11 +230,5 @@ class Sync(private val store: Store, val http: OkHttpClient = defaultHttp()) {
     companion object {
         const val USER_AGENT = "DnA-TV/Windows"
         private const val DAY = 24 * 3_600_000L
-
-        fun defaultHttp(): OkHttpClient = OkHttpClient.Builder()
-            .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .build()
     }
 }

@@ -55,6 +55,8 @@ sourceSets {
             "de/ayutv/data/parse/Teams.kt",
             "de/ayutv/data/parse/ChannelQuality.kt",
             "de/ayutv/data/sport/LiveScores.kt",
+            "de/ayutv/data/net/AppProxy.kt",
+            "de/ayutv/data/net/ProxyCheck.kt",
             "de/ayutv/data/setup/BackupCrypto.kt",
             "de/ayutv/ui/live/BlockMove.kt",
         )

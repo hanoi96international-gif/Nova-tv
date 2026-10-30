@@ -14,7 +14,12 @@ class BackupImportTest {
     private val plain = """
         {
           "format": "dna-tv-backup", "version": 1,
-          "settings": { "subtitles": { "opensubtitles_key": "os-key", "subtitle_language_code": "de" }, "translate": { "deepl_key": "dl-key" } },
+          "settings": {
+            "strings": { "opensubtitles_key": "os-key", "subtitle_language_code": "de", "deepl_key": "dl-key",
+                         "proxy_mode": "SELECTED", "proxy_type": "SOCKS5", "proxy_host": "proxy.example", "proxy_user": "u", "proxy_password": "p" },
+            "ints": { "proxy_port": 1080 },
+            "stringSets": { "proxy_playlists": ["7", "42"] }
+          },
           "playlists": [
             { "id": 7, "name": "Anbieter", "type": "XTREAM", "url": "http://anbieter.tv:8080", "username": "max", "password": "geheim", "enabled": true },
             { "id": 9, "name": "Liste", "type": "M3U", "url": "http://liste.example/a.m3u", "enabled": false }
@@ -45,6 +50,22 @@ class BackupImportTest {
         assertEquals(setOf("$xtream|Adult"), user.hiddenGroups)
         assertEquals("os-key", user.openSubtitlesKey)
         assertEquals("dl-key", user.deeplKey)
+        assertEquals(ProxySettings("SELECTED", "SOCKS5", "proxy.example", 1080, "u", "p", setOf(xtream)), user.proxy)
+    }
+
+    @Test
+    fun proxyRoutesOnlySelectedPlaylistsAndTellsVlc() {
+        val store = Store(Files.createTempDirectory("dna-import").toFile())
+        BackupImport(store).import(plain, null)
+        val xtream = store.playlists.value.first { it.name == "Anbieter" }
+        store.setContent(xtream.id, Store.Content(listOf(Channel("${xtream.id}:c:1", xtream.id, "A", "G", url = "http://stream.anbieter.tv/live/1.ts"))))
+        Network.apply(store)
+        assertEquals(listOf(":socks=proxy.example:1080", ":socks-user=u", ":socks-pwd=p"), Network.vlcOptions("http://stream.anbieter.tv/live/1.ts"))
+        assertEquals(emptyList<String>(), Network.vlcOptions("http://liste.example/a.m3u"))
+        assertEquals(emptyList<String>(), Network.vlcOptions("http://192.168.178.40:8095/backup"))
+        store.updateUser { it.copy(proxy = it.proxy.copy(mode = "OFF")) }
+        Network.apply(store)
+        assertEquals(emptyList<String>(), Network.vlcOptions("http://stream.anbieter.tv/live/1.ts"))
     }
 
     @Test

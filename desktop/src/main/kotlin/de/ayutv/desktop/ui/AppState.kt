@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.desktop.data.BackupImport
 import de.ayutv.desktop.data.Channel
+import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Series
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
@@ -82,6 +83,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         if (store.user.value.phoneRemote) setPhoneRemote(true)
     }
 
+    /** Proxy geändert (Einstellungen, Sicherung) oder neue Sender geladen: Wege neu festlegen. */
+    fun applyProxy() = Network.apply(store)
+
     fun toast(text: String) {
         message = text
         messageJob?.cancel()
@@ -96,9 +100,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         when (playback) {
             is Playback.Live -> {
                 store.rememberWatched(playback.channel.key)
-                player.play(playback.channel.url, Sync.USER_AGENT)
+                player.play(playback.channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(playback.channel.url).toTypedArray())
             }
-            is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, playback.startMs)
+            is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
         }
     }
 
@@ -143,6 +147,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
 
     fun syncNow() = scope.launch {
         runCatching { sync.syncAll() }.onFailure { toast("Laden fehlgeschlagen: ${it.message}") }
+        applyProxy()
     }
 
     fun close() {

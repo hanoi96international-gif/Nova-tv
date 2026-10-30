@@ -19,7 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.ayutv.data.net.ProxyCheck
+import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Playlist
+import de.ayutv.desktop.data.ProxySettings
+import de.ayutv.desktop.data.config
 import de.ayutv.desktop.data.PlaylistType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -91,6 +95,9 @@ fun SettingsScreen(app: AppState) {
             Spacer(Modifier.height(6.dp))
             TextButton("TV-Guide neu laden", { app.scope.launch { runCatching { app.sync.syncGuide() }.onFailure { app.toast("TV-Guide: ${it.message}") } } })
         }
+
+        item { Section("Proxy") }
+        item { ProxySection(app, playlists) }
 
         item { Section("Untertitel und Übersetzung") }
         item {
@@ -201,6 +208,7 @@ private fun ImportDialog(app: AppState, onDismiss: () -> Unit) {
         result.onSuccess { r ->
             onDismiss()
             app.toast(r.summary)
+            app.applyProxy()
             app.syncNow()
         }.onFailure { app.toast(it.message ?: "Übernehmen fehlgeschlagen") }
     }
@@ -247,4 +255,73 @@ private fun chooseFile(): File? {
     dialog.isVisible = true
     val name = dialog.file ?: return null
     return File(dialog.directory, name)
+}
+
+/** Proxy wie auf dem Fire TV: aus, für alles oder nur für ausgewählte Playlists; HTTP oder SOCKS5. */
+@Composable
+private fun ProxySection(app: AppState, playlists: List<Playlist>) {
+    val saved = app.store.user.collectAsState().value.proxy
+    var mode by remember(saved) { mutableStateOf(saved.mode) }
+    var type by remember(saved) { mutableStateOf(saved.type) }
+    var host by remember(saved) { mutableStateOf(saved.host) }
+    var port by remember(saved) { mutableStateOf(if (saved.port > 0) saved.port.toString() else "") }
+    var user by remember(saved) { mutableStateOf(saved.user) }
+    var password by remember(saved) { mutableStateOf(saved.password) }
+    var selected by remember(saved) { mutableStateOf(saved.playlists) }
+    var testing by remember { mutableStateOf(false) }
+
+    fun current() = ProxySettings(mode, type, host.trim(), port.trim().toIntOrNull() ?: 0, user.trim(), password, selected)
+
+    Column(Modifier.width(560.dp)) {
+        Label("Nur für DnA-TV, keine VPN-App nötig. Geräte im Heimnetz (Fire TV, Handy) laufen nie über den Proxy.", Type.small, maxLines = 2)
+        Spacer(Modifier.height(6.dp))
+        Row {
+            listOf("OFF" to "Aus", "ALL" to "Alle Verbindungen", "SELECTED" to "Nur ausgewählte Playlists").forEach { (value, label) ->
+                Selectable({ mode = value }, selected = mode == value) { Label(label) }
+                Spacer(Modifier.width(6.dp))
+            }
+        }
+        if (mode != "OFF") {
+            Row {
+                listOf("HTTP", "SOCKS5").forEach { value ->
+                    Selectable({ type = value }, selected = type == value) { Label(value) }
+                    Spacer(Modifier.width(6.dp))
+                }
+            }
+            Row {
+                Field("Server", host, { host = it }, Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                Field("Port", port, { port = it.filter(Char::isDigit).take(5) }, Modifier.width(110.dp))
+            }
+            Field("Benutzer (optional)", user, { user = it })
+            Field("Passwort (optional)", password, { password = it }, secret = true)
+            if (mode == "SELECTED") {
+                Label("Über den Proxy:", Type.small, Modifier.padding(top = 6.dp))
+                playlists.forEach { p ->
+                    val on = p.id in selected
+                    ListRow((if (on) "☑ " else "☐ ") + p.name, { selected = if (on) selected - p.id else selected + p.id })
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row {
+            TextButton("Speichern", {
+                val next = current()
+                if (next.mode != "OFF" && (next.host.isEmpty() || next.port !in 1..65535)) return@TextButton app.toast("Bitte Server und Port eintragen")
+                app.store.updateUser { it.copy(proxy = next) }
+                app.applyProxy()
+                app.toast(if (next.mode == "OFF") "Proxy aus" else "Proxy gespeichert. Gilt ab dem nächsten Sender.")
+            }, primary = true)
+            Spacer(Modifier.width(8.dp))
+            TextButton(if (testing) "Teste …" else "Testen", {
+                if (testing) return@TextButton
+                testing = true
+                app.scope.launch {
+                    val result = ProxyCheck.run(Network.http, current().config())
+                    testing = false
+                    app.toast(result.summary())
+                }
+            })
+        }
+    }
 }

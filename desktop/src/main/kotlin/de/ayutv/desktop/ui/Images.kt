@@ -8,12 +8,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Sync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit
 object Images {
     private const val MAX_ENTRIES = 600
     private const val MAX_BYTES = 4_000_000
-    private val http = OkHttpClient.Builder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS).build()
+    private val http = Network.http.newBuilder().connectTimeout(8, TimeUnit.SECONDS).readTimeout(15, TimeUnit.SECONDS).build()
     private val parallel = Semaphore(6)
     private val failed = HashSet<String>()
     private val cache = object : LinkedHashMap<String, ImageBitmap>(64, 0.75f, true) {

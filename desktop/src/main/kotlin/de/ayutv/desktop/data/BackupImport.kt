@@ -4,6 +4,7 @@ import de.ayutv.data.setup.BackupCrypto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -116,8 +117,25 @@ class BackupImport(private val store: Store) {
         val settings = (root["settings"] as? JsonObject)?.values?.mapNotNull { it as? JsonObject }.orEmpty()
         fun setting(key: String) = settings.firstNotNullOfOrNull { it[key]?.jsonPrimitive?.contentOrNull?.takeIf { v -> v.isNotBlank() } }
 
+        // Proxy (Fire TV: Einstellungen → Proxy). Das Passwort steht nur in Sicherungen mit Passwort.
+        val proxyIds = settings.firstNotNullOfOrNull { it["proxy_playlists"] as? JsonArray }.orEmpty()
+            .mapNotNull { it.jsonPrimitive.contentOrNull?.toLongOrNull()?.let(ids::get) }.toSet()
+        val proxy = setting("proxy_host")?.let { host ->
+            val before = store.user.value.proxy
+            ProxySettings(
+                mode = setting("proxy_mode") ?: "OFF",
+                type = setting("proxy_type") ?: "HTTP",
+                host = host,
+                port = setting("proxy_port")?.toIntOrNull() ?: 0,
+                user = setting("proxy_user").orEmpty(),
+                password = setting("proxy_password") ?: before.password.takeIf { before.host == host }.orEmpty(),
+                playlists = proxyIds,
+            )
+        }
+
         store.updateUser { u ->
             u.copy(
+                proxy = proxy ?: u.proxy,
                 groupOrder = u.groupOrder + order,
                 hiddenGroups = u.hiddenGroups + hidden,
                 openSubtitlesKey = setting("opensubtitles_key") ?: u.openSubtitlesKey,

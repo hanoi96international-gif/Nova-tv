@@ -36,6 +36,7 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
 import de.ayutv.desktop.player.VideoPlayer
@@ -57,6 +58,8 @@ fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
     val store = Store(Store.defaultDir())
+    // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
+    Network.apply(store)
     application {
         val window = rememberWindowState(size = DpSize(1280.dp, 780.dp))
         val scope = rememberCoroutineScope()

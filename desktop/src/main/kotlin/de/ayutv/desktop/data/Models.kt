@@ -72,6 +72,18 @@ data class Programme(
     val flags: Int = 0,
 )
 
+/** Proxy: [mode] OFF/ALL/SELECTED, [type] HTTP/SOCKS5, [playlists] = Playlists bei SELECTED. */
+@Serializable
+data class ProxySettings(
+    val mode: String = "OFF",
+    val type: String = "HTTP",
+    val host: String = "",
+    val port: Int = 0,
+    val user: String = "",
+    val password: String = "",
+    val playlists: Set<Long> = emptySet(),
+)
+
 @Serializable
 data class IntroMark(val startMs: Long, val lengthMs: Long)
 
@@ -99,6 +111,8 @@ data class UserData(
     val subtitleLanguage: String = "de",
     /** Handy als Fernbedienung eingeschaltet, und die PIN in der Adresse. */
     val phoneRemote: Boolean = false,
+    /** Proxy wie in der Fire-TV-App (aus der Sicherung übernehmbar). */
+    val proxy: ProxySettings = ProxySettings(),
     /** Gelerntes Intro je Serie (Serienschlüssel → Beginn und Länge in ms). */
     val intros: Map<String, IntroMark> = emptyMap(),
     val remotePin: String = "",
