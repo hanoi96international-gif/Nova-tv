@@ -49,6 +49,7 @@ import de.ayutv.data.parse.ProgrammeText
 import de.ayutv.data.parse.Teams
 import de.ayutv.data.parse.pairing
 import de.ayutv.data.parse.sportHeadline
+import de.ayutv.data.parse.headline
 import de.ayutv.data.repo.ContentRepository.SportEvent
 import de.ayutv.player.PlayerActivity
 import de.ayutv.ui.LocalContainer
@@ -84,12 +85,22 @@ fun SportScreen() {
     val teams = settings?.followedTeams.orEmpty()
 
     LaunchedEffect(minute) { events = container.content.sportEvents(hours = 48) }
-    // Spielstände (OpenLigaDB): jede Minute, nur wenn eingeschaltet.
+    // Spielpläne und Stände (OpenLigaDB), jede Minute: für die Paarung, wenn das EPG nur „Live: 2. BL“ nennt, und
+    // (wenn eingeschaltet) für Stand und Spielminute.
     var scores by remember { mutableStateOf<List<de.ayutv.data.sport.LiveScores.Match>>(emptyList()) }
-    LaunchedEffect(minute, settings?.liveScores) {
-        scores = if (settings?.liveScores == true) runCatching { container.liveScores.current() }.getOrDefault(emptyList()) else emptyList()
+    LaunchedEffect(minute) {
+        scores = runCatching { container.liveScores.current() }.getOrDefault(emptyList())
     }
-    fun scoreOf(e: SportEvent) = container.liveScores.find(scores, e.programme.pairing(), e.programme.start, e.programme.title)
+    /** Das Spiel zur Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung. */
+    fun matchOf(e: SportEvent): de.ayutv.data.sport.LiveScores.Match? {
+        val p = e.programme
+        return container.liveScores.find(scores, p.pairing(), p.start, p.title)
+            ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
+    }
+    /** Stand nur, wenn Live-Ergebnisse eingeschaltet sind. */
+    fun scoreOf(e: SportEvent) = matchOf(e)?.takeIf { settings?.liveScores == true }
+    /** Paarung aus dem EPG, sonst aus dem Spielplan. */
+    fun pairingOf(e: SportEvent): String? = e.programme.pairing() ?: matchOf(e)?.pairing
     LaunchedEffect(notice) {
         if (notice != null) {
             delay(5_000)
@@ -117,7 +128,7 @@ fun SportScreen() {
         when (filter) {
             SportFilter.ALL -> true
             SportFilter.FOOTBALL -> Regex("(?i)fu(ß|ss)ball|bundesliga|liga|league|pokal|\\bBL\\b").containsMatchIn(p.title + " " + p.category.orEmpty())
-            SportFilter.TEAMS -> p.pairing()?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
+            SportFilter.TEAMS -> pairingOf(e)?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
         }
     }
     val live = shown.filter { it.programme.start <= now && it.programme.stop > now }
@@ -161,7 +172,7 @@ fun SportScreen() {
                         }
                         items(list, key = { "${it.programme.id}-${it.channel.key}" }) { e ->
                             EventRow(
-                                e, now, scoreOf(e),
+                                e, now, scoreOf(e), headlineOf(e.programme, pairingOf(e)),
                                 onClick = { PlayerActivity.startLive(context, e.channel.key, e.channel.groupTitle) },
                                 onLongClick = { choosing = e },
                             )
@@ -175,10 +186,10 @@ fun SportScreen() {
             }
         }
         choosing?.let { e ->
-            val pairing = e.programme.pairing()
+            val pairing = pairingOf(e)
             val sides = pairing?.let { Teams.ofPairing(it) }.orEmpty()
             FollowDialog(
-                title = e.programme.sportHeadline(),
+                title = headlineOf(e.programme, pairing),
                 teams = sides,
                 followed = teams,
                 channels = listOf(e.channel) + e.alsoOn,
@@ -199,12 +210,16 @@ fun SportScreen() {
 
 private const val DAY = 24 * 3_600_000L
 
+/** Überschrift einer Sport-Sendung; fehlt die Paarung im EPG, kommt sie aus dem Spielplan nach vorn („A – B (Live: 2. BL)“). */
+private fun headlineOf(p: de.ayutv.data.db.ProgrammeEntity, pairing: String?): String =
+    if (p.pairing() == null && pairing != null) "$pairing (${p.headline()})" else p.sportHeadline()
+
 /**
  * Eine Zeile pro Spiel. Markiert (Fokus) klappt sie auf: ganzer Titel, Beschreibung und alle Sender,
  * auf denen es läuft. Laufende Spiele zeigen, wie weit sie sind.
  */
 @Composable
-private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveScores.Match?, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveScores.Match?, headline: String, onClick: () -> Unit, onLongClick: () -> Unit) {
     val p = e.programme
     val running = p.start <= now && p.stop > now
     var focused by remember { mutableStateOf(false) }
@@ -238,7 +253,7 @@ private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveSc
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(p.sportHeadline(), fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
+                Text(headline, fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
                 if (running) {
                     val done = ((now - p.start).toFloat() / (p.stop - p.start).coerceAtLeast(1)).coerceIn(0f, 1f)
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth(0.5f).height(3.dp).background(AyuColors.TextSecondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp))) {

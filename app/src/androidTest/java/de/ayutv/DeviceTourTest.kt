@@ -1101,6 +1101,58 @@ class DeviceTourTest {
             log("playlist_toggle: before=$before off=$off search_off=$searchOff on=$on")
             assertTrue("Ausschalten wirkt nicht", off < before && searchOff == 0 && on == before)
         }
+        // Eigene Gruppen und Sortieren: Sender aus der ausgeblendeten Gruppe des Anbieters bleiben in Favoriten und eigenen
+        // Gruppen; Reihenfolge in eigener Gruppe, Favoriten und Gruppe des Anbieters lässt sich von Hand festlegen.
+        section("custom_groups") {
+            val content = container.content
+            val all = runBlocking { container.db.channels().all() }
+            val group = all.groupBy { it.groupTitle }.entries.first { it.value.size >= 3 }
+            val (a, b, c) = group.value.take(3)
+            val playlists = group.value.map { it.playlistId }.distinct()
+            suspend fun showAgain() = playlists.forEach { content.setGroupsHidden(it, de.ayutv.data.db.GroupKind.LIVE, listOf(group.key), hidden = false) }
+            val created = runBlocking { content.createGroup("Meine Sender", listOf(a.key)) }
+            // Mehrfachauswahl: mehrere Sender auf einmal in die Gruppe und zu den Favoriten (schon enthaltene zählen nicht).
+            val addedToGroup = runBlocking { content.addToGroup(created, listOf(a.key, b.key, c.key)) }
+            runBlocking { content.addFavorites(listOf(a.key, c.key)) }
+            assertEquals("Mehrfach in Gruppe aufgenommen", 2, addedToGroup)
+            try {
+                // Gruppe beim Anbieter ausblenden: verschwindet aus „Alle“, bleibt in Favoriten und eigener Gruppe.
+                runBlocking { content.hideGroupEverywhere(de.ayutv.data.db.GroupKind.LIVE, group.key) }
+                val inAll = runBlocking { content.zapList(null, false) }.any { it.key == a.key }
+                val inCustom = runBlocking { content.zapList(created, false) }.map { it.key }
+                val inFavorites = runBlocking { content.zapList(null, true) }.map { it.key }
+                runBlocking { showAgain() }
+                // Sortieren: eigene Gruppe umdrehen, Favoriten umdrehen, Gruppe des Anbieters umdrehen.
+                runBlocking { content.saveOrder(created, favorites = false, keys = listOf(c.key, b.key, a.key)) }
+                val customOrder = runBlocking { content.zapList(created, false) }.map { it.key }
+                runBlocking { content.saveOrder(null, favorites = true, keys = listOf(c.key, a.key)) }
+                val favoriteOrder = runBlocking { content.zapList(null, true) }.map { it.key }.filter { it == a.key || it == c.key }
+                val original = runBlocking { container.db.channels().inGroup(group.key) }.map { it.key }
+                runBlocking { content.saveOrder(group.key, favorites = false, keys = original.reversed()) }
+                val providerOrder = runBlocking { container.db.channels().inGroup(group.key) }.map { it.key }
+                val label = runBlocking { content.groupLabel(created) }
+                log(
+                    "custom_groups: hidden_in_all=$inAll custom=${inCustom.size} favorites_has=${a.key in inFavorites && c.key in inFavorites} " +
+                        "custom_order_ok=${customOrder == listOf(c.key, b.key, a.key)} favorite_order_ok=${favoriteOrder == listOf(c.key, a.key)} " +
+                        "provider_order_ok=${providerOrder == original.reversed()} label=$label"
+                )
+                assertFalse("Ausgeblendete Gruppe noch in „Alle“", inAll)
+                assertTrue("Eigene Gruppe verliert Sender der ausgeblendeten Gruppe: $inCustom", inCustom.containsAll(listOf(a.key, b.key, c.key)))
+                assertTrue("Favoriten verlieren Sender der ausgeblendeten Gruppe", a.key in inFavorites && c.key in inFavorites)
+                assertEquals(listOf(c.key, b.key, a.key), customOrder)
+                assertEquals(listOf(c.key, a.key), favoriteOrder)
+                assertEquals(original.reversed(), providerOrder)
+                assertEquals("📁 Meine Sender", label)
+            } finally {
+                runBlocking {
+                    showAgain()
+                    content.deleteGroup(created)
+                    container.db.favorites().remove(a.key)
+                    container.db.favorites().remove(c.key)
+                    container.db.groupOrder().clear(group.key)
+                }
+            }
+        }
         // Sender-Check: Auflösung ohne Dekodieren erkennen; eine kaputte Adresse gilt als „läuft nicht“
         section("channel_check") {
             val hd = live.firstOrNull { it.name == "HD Test 50fps" } ?: error("HD-Testsender fehlt")

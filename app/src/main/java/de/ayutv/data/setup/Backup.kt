@@ -3,6 +3,9 @@ package de.ayutv.data.setup
 import de.ayutv.AppContainer
 import de.ayutv.BuildConfig
 import de.ayutv.data.db.FavoriteEntity
+import de.ayutv.data.db.CustomGroupEntity
+import de.ayutv.data.db.CustomGroupItemEntity
+import de.ayutv.data.db.GroupOrderEntity
 import de.ayutv.data.db.GroupKind
 import de.ayutv.data.db.HiddenGroupEntity
 import de.ayutv.data.db.PlaylistEntity
@@ -88,6 +91,28 @@ class Backup(private val container: AppContainer) {
                 for (f in db.favorites().all()) add(buildJsonObject {
                     put("key", f.key)
                     put("addedAt", f.addedAt)
+                    put("position", f.position)
+                })
+            })
+            // Eigene Gruppen mit ihren Sendern (in Reihenfolge) und die von Hand sortierten Gruppen des Anbieters.
+            val items = db.customGroups().allItems().groupBy { it.groupId }
+            put("customGroups", buildJsonArray {
+                for (g in db.customGroups().groups()) add(buildJsonObject {
+                    put("name", g.name)
+                    put("position", g.position)
+                    put("items", buildJsonArray {
+                        for (i in items[g.id].orEmpty()) add(buildJsonObject {
+                            put("key", i.key)
+                            put("position", i.position)
+                        })
+                    })
+                })
+            })
+            put("groupOrder", buildJsonArray {
+                for (o in db.groupOrder().all()) add(buildJsonObject {
+                    put("scope", o.scope)
+                    put("key", o.key)
+                    put("position", o.position)
                 })
             })
             put("hiddenGroups", buildJsonArray {
@@ -160,9 +185,32 @@ class Backup(private val container: AppContainer) {
         for (item in root["favorites"]?.jsonArray.orEmpty()) {
             val o = item.jsonObject
             val key = remapKey(o.string("key") ?: continue, ids) ?: continue
-            db.favorites().add(FavoriteEntity(key, o.long("addedAt") ?: System.currentTimeMillis()))
+            db.favorites().add(FavoriteEntity(key, o.long("addedAt") ?: System.currentTimeMillis(), o.long("position")?.toInt() ?: 0))
             favorites++
         }
+
+        // Eigene Gruppen: gleichnamige vorhandene ergänzen, sonst neu anlegen.
+        var groups = 0
+        val known = db.customGroups().groups().associateBy { it.name }
+        for (item in root["customGroups"]?.jsonArray.orEmpty()) {
+            val o = item.jsonObject
+            val name = o.string("name")?.takeIf { it.isNotBlank() } ?: continue
+            val id = known[name]?.id ?: db.customGroups().insert(
+                CustomGroupEntity(name = name, position = o.long("position")?.toInt() ?: (db.customGroups().maxGroupPosition() + 1))
+            )
+            for (entry in o["items"]?.jsonArray.orEmpty()) {
+                val e = entry.jsonObject
+                val key = remapKey(e.string("key") ?: continue, ids) ?: continue
+                db.customGroups().addItem(CustomGroupItemEntity(id, key, e.long("position")?.toInt() ?: 0))
+            }
+            groups++
+        }
+        val order = root["groupOrder"]?.jsonArray.orEmpty().mapNotNull { item ->
+            val o = item.jsonObject
+            val key = remapKey(o.string("key") ?: return@mapNotNull null, ids) ?: return@mapNotNull null
+            GroupOrderEntity(o.string("scope") ?: return@mapNotNull null, key, o.long("position")?.toInt() ?: return@mapNotNull null)
+        }
+        if (order.isNotEmpty()) db.groupOrder().upsert(order)
 
         val hidden = root["hiddenGroups"]?.jsonArray.orEmpty().mapNotNull { item ->
             val o = item.jsonObject
@@ -176,7 +224,7 @@ class Backup(private val container: AppContainer) {
             container.intros.restore(intros.mapNotNull { (k, v) -> v.jsonPrimitive.contentOrNull?.let { k to it } }.toMap())
         }
 
-        return "Übernommen: ${ids.size} Playlists ($added neu, werden jetzt geladen), $favorites Favoriten, " +
+        return "Übernommen: ${ids.size} Playlists ($added neu, werden jetzt geladen), $favorites Favoriten, $groups eigene Gruppen, " +
             "${hidden.size} ausgeblendete Gruppen und die Einstellungen."
     }
 

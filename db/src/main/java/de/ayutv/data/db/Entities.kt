@@ -121,7 +121,36 @@ data class SeriesEntity(
 data class FavoriteEntity(
     @PrimaryKey val key: String,
     val addedAt: Long,
+    /** Reihenfolge in den Favoriten (von Hand sortiert); gleich: nach [addedAt]. */
+    @ColumnInfo(defaultValue = "0") val position: Int = 0,
 )
+
+/** Eigene Sendergruppe, Sender aus allen Playlists. */
+@Entity(tableName = "custom_groups")
+data class CustomGroupEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val position: Int,
+)
+
+/** Sender ([key]) in einer eigenen Gruppe, an Stelle [position]. */
+@Entity(tableName = "custom_group_items", primaryKeys = ["groupId", "key"], indices = [Index("key")])
+data class CustomGroupItemEntity(
+    val groupId: Long,
+    val key: String,
+    val position: Int,
+)
+
+/** Eigene Reihenfolge in einer Gruppe des Anbieters ([scope] = Gruppenname); übersteht neues Laden der Playlist. */
+@Entity(tableName = "group_order", primaryKeys = ["scope", "key"])
+data class GroupOrderEntity(
+    val scope: String,
+    val key: String,
+    val position: Int,
+)
+
+/** Eigene Gruppe mit Anzahl der Sender (für die Gruppenspalte). */
+data class CustomGroupCount(val id: Long, val name: String, val count: Int)
 
 enum class HistoryKind { LIVE, VOD, EPISODE, CATCHUP }
 
@@ -192,6 +221,14 @@ const val VISIBLE_SERIES_SQL = """SELECT * FROM series s WHERE s.playlistId IN (
                WHERE h.playlistId = s.playlistId AND h.kind = 'SERIES' AND h.name = s.category)
                AND NOT EXISTS (SELECT 1 FROM locked_groups l
                WHERE l.playlistId = s.playlistId AND l.kind = 'SERIES' AND l.name = s.category)"""
+
+/**
+ * Favoriten und eigene Gruppen: Diese Sender bleiben da, auch wenn ihre Gruppe beim Anbieter ausgeblendet ist. Nur eine
+ * ausgeschaltete Playlist und die Kindersicherung blenden sie aus.
+ */
+const val USABLE_CHANNEL = """c.playlistId IN (SELECT id FROM playlists WHERE enabled = 1)
+               AND NOT EXISTS (SELECT 1 FROM locked_groups l
+               WHERE l.playlistId = c.playlistId AND l.kind = 'LIVE' AND l.name = c.groupTitle)"""
 
 @DatabaseView(viewName = "visible_channels", value = VISIBLE_CHANNELS_SQL)
 data class VisibleChannelView(val id: Long)

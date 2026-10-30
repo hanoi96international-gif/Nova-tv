@@ -3,6 +3,9 @@ package de.ayutv.data.repo
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.FavoriteEntity
+import de.ayutv.data.db.CustomGroupEntity
+import de.ayutv.data.db.CustomGroupItemEntity
+import de.ayutv.data.db.GroupOrderEntity
 import de.ayutv.data.db.GroupKind
 import de.ayutv.data.db.GroupToggle
 import de.ayutv.data.db.HiddenGroupEntity
@@ -64,7 +67,14 @@ class ContentRepository(
     val watchlistMovies = db.vod().observeFavorites()
     val watchlistSeries = db.series().observeFavorites()
 
-    fun channelsIn(group: String?) = if (group == null) db.channels().observeAll() else db.channels().observeInGroup(group)
+    /** Eigene Gruppen mit Anzahl, in ihrer Reihenfolge. */
+    val customGroups = db.customGroups().observeGroups()
+
+    fun channelsIn(group: String?) = when {
+        group == null -> db.channels().observeAll()
+        customGroupId(group) != null -> db.channels().observeInCustom(customGroupId(group)!!)
+        else -> db.channels().observeInGroup(group)
+    }
     fun moviesIn(category: String) = db.vod().observeInCategory(category)
     fun seriesIn(category: String) = db.series().observeInCategory(category)
 
@@ -73,32 +83,21 @@ class ContentRepository(
 
     /** Liste, durch die im Player mit hoch/runter gezappt wird; mit [merge] jeder Sender nur in seiner besten Fassung. */
     suspend fun zapList(group: String?, favoritesOnly: Boolean, merge: Boolean = false): List<ChannelEntity> {
+        val custom = group?.let(::customGroupId)
         val list = when {
             favoritesOnly -> db.channels().favorites()
+            custom != null -> db.channels().inCustom(custom)
             group != null -> db.channels().inGroup(group)
             else -> db.channels().all()
         }
-        return if (merge && !favoritesOnly) mergeVariants(list) else list
+        // Favoriten und eigene Gruppen bleiben, wie zusammengestellt.
+        return if (merge && !favoritesOnly && custom == null) mergeVariants(list) else list
     }
 
     /** Jeder Sender einmal, in seiner besten Fassung (SD/HD/4K/RAW/Backup zusammengefasst). */
     suspend fun mergeVariants(channels: List<ChannelEntity>): List<ChannelEntity> = withContext(Dispatchers.Default) {
         // Erst die Mindestqualität (und ausgefallene, falls gewünscht), dann je Sender die beste Fassung.
         ChannelVariants.merge(channels.filter { ChannelQuality.passes(it.key, it.name) }, { it.name }, { it.playlistId }, { ChannelQuality.score(it.key, it.name) })
-    }
-
-    /**
-     * „Best of“: die stabilsten Sender (je Sender die beste Fassung), getrennt nach Sport ([sport] = true) und
-     * normalem Fernsehen. Zählt nur, was schon geschaut oder im Sender-Check gemessen wurde; die wenigsten
-     * Abbrüche je Stunde zuerst.
-     */
-    suspend fun bestOf(sport: Boolean, limit: Int = 60): List<ChannelEntity> = withContext(Dispatchers.Default) {
-        mergeVariants(db.channels().all())
-            .filter { (ProgrammeText.isSportChannel(it.name) || it.groupTitle.contains("sport", ignoreCase = true)) == sport }
-            .mapNotNull { channel -> ChannelQuality.stability(channel.key)?.let { channel to it } }
-            .sortedBy { it.second }
-            .take(limit)
-            .map { it.first }
     }
 
     /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
@@ -187,8 +186,105 @@ class ContentRepository(
 
     suspend fun toggleFavorite(key: String): Boolean {
         val favorite = db.favorites().isFavorite(key)
-        if (favorite) db.favorites().remove(key) else db.favorites().add(FavoriteEntity(key, System.currentTimeMillis()))
+        if (favorite) db.favorites().remove(key) else db.favorites().add(FavoriteEntity(key, System.currentTimeMillis(), db.favorites().maxPosition() + 1))
         return !favorite
+    }
+
+    // ---------------------------------------------------------------- Eigene Gruppen und Reihenfolge
+
+    /** Name für Anzeigen (Player-Liste): eigene Gruppe → ihr Name, sonst der Gruppenname selbst. */
+    suspend fun groupLabel(group: String): String =
+        customGroupId(group)?.let { id -> db.customGroups().group(id)?.name?.let { "📁 $it" } } ?: group
+
+    /** Neue eigene Gruppe (am Ende), auf Wunsch gleich mit den Sendern [firstKeys]. Liefert die Kennung für die Liste. */
+    suspend fun createGroup(name: String, firstKeys: List<String> = emptyList()): String {
+        val id = db.customGroups().insert(CustomGroupEntity(name = name.trim(), position = db.customGroups().maxGroupPosition() + 1))
+        firstKeys.forEachIndexed { index, key -> db.customGroups().addItem(CustomGroupItemEntity(id, key, index + 1)) }
+        return customGroupKey(id)
+    }
+
+    /** Mehrere Sender in eine eigene Gruppe aufnehmen (ans Ende, schon enthaltene bleiben, wo sie sind). Liefert die Anzahl neuer. */
+    suspend fun addToGroup(group: String, keys: List<String>): Int {
+        val id = customGroupId(group) ?: return 0
+        var position = db.customGroups().maxItemPosition(id)
+        var added = 0
+        for (key in keys) {
+            if (id in db.customGroups().groupsOf(key)) continue
+            db.customGroups().addItem(CustomGroupItemEntity(id, key, ++position))
+            added++
+        }
+        return added
+    }
+
+    suspend fun removeFromGroup(group: String, keys: List<String>) {
+        val id = customGroupId(group) ?: return
+        keys.forEach { db.customGroups().removeItem(id, it) }
+    }
+
+    /** Mehrere Sender zu den Favoriten (ans Ende). Liefert die Anzahl neuer. */
+    suspend fun addFavorites(keys: List<String>): Int {
+        var position = db.favorites().maxPosition()
+        var added = 0
+        val now = System.currentTimeMillis()
+        for (key in keys) {
+            if (db.favorites().isFavorite(key)) continue
+            db.favorites().add(FavoriteEntity(key, now, ++position))
+            added++
+        }
+        return added
+    }
+
+    suspend fun removeFavorites(keys: List<String>) = keys.forEach { db.favorites().remove(it) }
+
+    suspend fun renameGroup(group: String, name: String) {
+        customGroupId(group)?.let { db.customGroups().rename(it, name.trim()) }
+    }
+
+    suspend fun deleteGroup(group: String) {
+        val id = customGroupId(group) ?: return
+        db.customGroups().deleteItems(id)
+        db.customGroups().deleteGroup(id)
+    }
+
+    /** Eigene Gruppe eine Stelle nach oben ([delta] = -1) oder unten (+1) in der Gruppenspalte. */
+    suspend fun moveGroup(group: String, delta: Int) {
+        val id = customGroupId(group) ?: return
+        val ordered = db.customGroups().groups().map { it.id }.toMutableList()
+        val from = ordered.indexOf(id)
+        val to = (from + delta).coerceIn(0, ordered.lastIndex)
+        if (from < 0 || from == to) return
+        ordered.add(to, ordered.removeAt(from))
+        ordered.forEachIndexed { index, groupId -> db.customGroups().setGroupPosition(groupId, index + 1) }
+    }
+
+    /** Eigene Gruppen, in denen der Sender steht (Kennungen wie in der Gruppenspalte). */
+    suspend fun groupsOf(key: String): Set<String> = db.customGroups().groupsOf(key).map(::customGroupKey).toSet()
+
+    /** Sender in eine eigene Gruppe aufnehmen (ans Ende) oder herausnehmen. true = jetzt drin. */
+    suspend fun toggleInGroup(group: String, key: String): Boolean {
+        val id = customGroupId(group) ?: return false
+        if (id in db.customGroups().groupsOf(key)) {
+            db.customGroups().removeItem(id, key)
+            return false
+        }
+        db.customGroups().addItem(CustomGroupItemEntity(id, key, db.customGroups().maxItemPosition(id) + 1))
+        return true
+    }
+
+    /**
+     * Von Hand sortierte Reihenfolge [keys] speichern: Favoriten ([favorites]), eigene Gruppe oder Gruppe des Anbieters
+     * ([group], gilt über neues Laden der Playlist hinweg).
+     */
+    suspend fun saveOrder(group: String?, favorites: Boolean, keys: List<String>) {
+        val custom = group?.let(::customGroupId)
+        when {
+            favorites -> keys.forEachIndexed { index, key -> db.favorites().setPosition(key, index + 1) }
+            custom != null -> keys.forEachIndexed { index, key -> db.customGroups().setItemPosition(custom, key, index + 1) }
+            group != null -> {
+                db.groupOrder().clear(group)
+                db.groupOrder().upsert(keys.mapIndexed { index, key -> GroupOrderEntity(group, key, index + 1) })
+            }
+        }
     }
 
     /** Aktuelle Sendung je EPG-ID. */
@@ -403,3 +499,10 @@ class ContentRepository(
         const val SEARCH_MAX = 20_000
     }
 }
+
+/** Kennung einer eigenen Gruppe in Gruppenlisten (Player, TV-Guide): kann nicht mit einem Gruppennamen kollidieren. */
+const val CUSTOM_GROUP_PREFIX = "\u0000eigene:"
+
+fun customGroupKey(id: Long) = "$CUSTOM_GROUP_PREFIX$id"
+
+fun customGroupId(group: String): Long? = group.takeIf { it.startsWith(CUSTOM_GROUP_PREFIX) }?.removePrefix(CUSTOM_GROUP_PREFIX)?.toLongOrNull()

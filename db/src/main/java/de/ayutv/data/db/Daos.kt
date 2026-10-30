@@ -57,13 +57,20 @@ interface ChannelDao {
     @Query("SELECT groupTitle AS name, COUNT(*) AS count FROM visible_channels GROUP BY groupTitle ORDER BY MIN(id)")
     fun observeGroups(): Flow<List<GroupCount>>
 
-    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY playlistId, number, id")
+    /** Gruppe des Anbieters, in eigener Reihenfolge, wenn von Hand sortiert (sonst wie beim Anbieter). */
+    @Query(
+        """SELECT c.* FROM visible_channels c LEFT JOIN group_order o ON o.scope = c.groupTitle AND o.`key` = c.`key`
+           WHERE c.groupTitle = :group ORDER BY o.position IS NULL, o.position, c.playlistId, c.number, c.id"""
+    )
     fun observeInGroup(group: String): Flow<List<ChannelEntity>>
 
     @Query("SELECT * FROM visible_channels ORDER BY playlistId, number, id")
     fun observeAll(): Flow<List<ChannelEntity>>
 
-    @Query("SELECT * FROM visible_channels WHERE groupTitle = :group ORDER BY playlistId, number, id")
+    @Query(
+        """SELECT c.* FROM visible_channels c LEFT JOIN group_order o ON o.scope = c.groupTitle AND o.`key` = c.`key`
+           WHERE c.groupTitle = :group ORDER BY o.position IS NULL, o.position, c.playlistId, c.number, c.id"""
+    )
     suspend fun inGroup(group: String): List<ChannelEntity>
 
     @Query("SELECT * FROM visible_channels ORDER BY playlistId, number, id")
@@ -83,11 +90,25 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE number = :number ORDER BY id LIMIT 1")
     suspend fun byNumber(number: Int): ChannelEntity?
 
-    @Query("SELECT c.* FROM visible_channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
+    /** Favoriten bleiben, auch wenn ihre Gruppe beim Anbieter ausgeblendet ist ([USABLE_CHANNEL]). */
+    @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` WHERE $USABLE_CHANNEL ORDER BY f.position, f.addedAt")
     fun observeFavorites(): Flow<List<ChannelEntity>>
 
-    @Query("SELECT c.* FROM visible_channels c INNER JOIN favorites f ON f.`key` = c.`key` ORDER BY f.addedAt")
+    @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` WHERE $USABLE_CHANNEL ORDER BY f.position, f.addedAt")
     suspend fun favorites(): List<ChannelEntity>
+
+    /** Sender einer eigenen Gruppe, in ihrer Reihenfolge (auch aus ausgeblendeten Gruppen des Anbieters). */
+    @Query(
+        """SELECT c.* FROM channels c INNER JOIN custom_group_items i ON i.`key` = c.`key`
+           WHERE i.groupId = :groupId AND $USABLE_CHANNEL ORDER BY i.position, c.number, c.id"""
+    )
+    fun observeInCustom(groupId: Long): Flow<List<ChannelEntity>>
+
+    @Query(
+        """SELECT c.* FROM channels c INNER JOIN custom_group_items i ON i.`key` = c.`key`
+           WHERE i.groupId = :groupId AND $USABLE_CHANNEL ORDER BY i.position, c.number, c.id"""
+    )
+    suspend fun inCustom(groupId: Long): List<ChannelEntity>
 
     @Query(
         """SELECT * FROM visible_channels WHERE name LIKE '%' || :query || '%'
@@ -112,8 +133,12 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE playlistId = :playlistId")
     suspend fun visibleInPlaylist(playlistId: Long): List<ChannelEntity>
 
-    /** Sender, die irgendwo erscheinen (ohne ausgeblendete Gruppen). */
-    @Query("SELECT id FROM visible_channels WHERE playlistId = :playlistId")
+    /** Sender, die irgendwo erscheinen: sichtbare Gruppen, dazu Favoriten und eigene Gruppen (für den TV-Guide). */
+    @Query(
+        """SELECT id FROM visible_channels WHERE playlistId = :playlistId
+           UNION SELECT id FROM channels WHERE playlistId = :playlistId
+           AND (`key` IN (SELECT `key` FROM favorites) OR `key` IN (SELECT `key` FROM custom_group_items))"""
+    )
     suspend fun visibleIds(playlistId: Long): List<Long>
 
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
@@ -262,6 +287,82 @@ interface FavoriteDao {
 
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE `key` = :key)")
     suspend fun isFavorite(key: String): Boolean
+
+    @Query("SELECT COALESCE(MAX(position), 0) FROM favorites")
+    suspend fun maxPosition(): Int
+
+    @Query("UPDATE favorites SET position = :position WHERE `key` = :key")
+    suspend fun setPosition(key: String, position: Int)
+}
+
+@Dao
+interface CustomGroupDao {
+    @Query(
+        """SELECT g.id, g.name, (SELECT COUNT(*) FROM custom_group_items i INNER JOIN channels c ON c.`key` = i.`key`
+           WHERE i.groupId = g.id) AS count FROM custom_groups g ORDER BY g.position, g.id"""
+    )
+    fun observeGroups(): Flow<List<CustomGroupCount>>
+
+    @Query("SELECT * FROM custom_groups ORDER BY position, id")
+    suspend fun groups(): List<CustomGroupEntity>
+
+    @Query("SELECT * FROM custom_groups WHERE id = :id")
+    suspend fun group(id: Long): CustomGroupEntity?
+
+    @Insert
+    suspend fun insert(group: CustomGroupEntity): Long
+
+    @Query("UPDATE custom_groups SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    @Query("UPDATE custom_groups SET position = :position WHERE id = :id")
+    suspend fun setGroupPosition(id: Long, position: Int)
+
+    @Query("DELETE FROM custom_groups WHERE id = :id")
+    suspend fun deleteGroup(id: Long)
+
+    @Query("DELETE FROM custom_group_items WHERE groupId = :id")
+    suspend fun deleteItems(id: Long)
+
+    @Query("SELECT COALESCE(MAX(position), 0) FROM custom_groups")
+    suspend fun maxGroupPosition(): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addItem(item: CustomGroupItemEntity)
+
+    @Query("DELETE FROM custom_group_items WHERE groupId = :groupId AND `key` = :key")
+    suspend fun removeItem(groupId: Long, key: String)
+
+    @Query("SELECT COALESCE(MAX(position), 0) FROM custom_group_items WHERE groupId = :groupId")
+    suspend fun maxItemPosition(groupId: Long): Int
+
+    @Query("UPDATE custom_group_items SET position = :position WHERE groupId = :groupId AND `key` = :key")
+    suspend fun setItemPosition(groupId: Long, key: String, position: Int)
+
+    /** Eigene Gruppen, in denen der Sender steht. */
+    @Query("SELECT groupId FROM custom_group_items WHERE `key` = :key")
+    suspend fun groupsOf(key: String): List<Long>
+
+    @Query("SELECT * FROM custom_group_items ORDER BY groupId, position")
+    suspend fun allItems(): List<CustomGroupItemEntity>
+
+    @Query("DELETE FROM custom_groups")
+    suspend fun clearGroups()
+
+    @Query("DELETE FROM custom_group_items")
+    suspend fun clearItems()
+}
+
+@Dao
+interface GroupOrderDao {
+    @Upsert
+    suspend fun upsert(order: List<GroupOrderEntity>)
+
+    @Query("DELETE FROM group_order WHERE scope = :scope")
+    suspend fun clear(scope: String)
+
+    @Query("SELECT * FROM group_order")
+    suspend fun all(): List<GroupOrderEntity>
 }
 
 @Dao

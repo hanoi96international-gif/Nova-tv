@@ -41,6 +41,7 @@ class DeviceSync(private val container: AppContainer) {
                 for (f in db.favorites().all()) add(buildJsonObject {
                     put("key", f.key)
                     put("addedAt", f.addedAt)
+                    put("position", f.position)
                 })
             })
             put("history", buildJsonArray {
@@ -81,7 +82,7 @@ class DeviceSync(private val container: AppContainer) {
             val o = e as? JsonObject ?: continue
             val key = SyncMerge.remapKey(o.string("key") ?: continue, ids) ?: continue
             if (key in known) continue
-            db.favorites().add(FavoriteEntity(key, o.long("addedAt") ?: System.currentTimeMillis()))
+            db.favorites().add(FavoriteEntity(key, o.long("addedAt") ?: System.currentTimeMillis(), o.long("position")?.toInt() ?: 0))
             known += key
             favorites++
         }
