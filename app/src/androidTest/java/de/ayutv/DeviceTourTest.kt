@@ -839,6 +839,15 @@ class DeviceTourTest {
                 assertTrue("Serienextras: intro=$introShown skipped=$skipped next=$next countdown=$countdown stopped=$stopped",
                     introShown && skipped && next && countdown && stopped)
             }
+            // Ton an der Soundbar (hier erzwungen): Die App dekodiert ihn nebenbei selbst und wertet ihn vorausschauend aus.
+            launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                scenario.onActivity { it.forceAudioAhead(); it.player?.seekTo(1_000) }
+                val heard = waitFor(30_000) { scenario.read { it.aheadSeconds } >= 10 }
+                val position = scenario.read { it.player?.currentPosition } ?: 0L
+                log("audio_ahead: heard=$heard seconds=${scenario.read { it.aheadSeconds }} position=${position / 1000}s")
+                assertTrue("Ton nebenbei nicht ausgewertet", heard)
+            }
         } }
         // 5. Tonformate, die Fire TV ohne AV-Receiver nicht selbst dekodiert: FFmpeg muss sie abspielen
         val audioTests = runBlocking { container.db.vod().search("Tontest", 20) }

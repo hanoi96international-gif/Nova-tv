@@ -212,6 +212,9 @@ class PlayerActivity : ComponentActivity() {
     private var syncJob: Job? = null
     /** Mitgehörter Ton (nur Filme): zeigt, wann gesprochen wird, wenn der Film keine eigenen Untertitel hat. */
     private val heardSpeech = SpeechActivity()
+    /** Ton, den die App nebenbei selbst dekodiert (wenn er als Dolby/DTS an die Soundbar geht), 20–30 s voraus. */
+    private val aheadSpeech = SpeechActivity()
+    private val audioAhead = AudioAhead(aheadSpeech)
     /** Nachtmodus / Dialoge verstärken, im Ton des Players. */
     private val enhance = AudioEnhance()
     var audioMode by mutableStateOf(AudioMode.NORMAL); private set
@@ -278,6 +281,11 @@ class PlayerActivity : ComponentActivity() {
     /** Am Ton erkannter Intro-Klang dieser Serie, und wohin das gerade erkannte Intro reicht (ms, -1 = noch nicht). */
     private var introFingerprint: IntroStore.Fingerprint? = null
     private var introAudioEnd = -1L
+    private var introAudioStart = -1L
+    /** Beschriftung des Knopfs: vor dem Intro (Rückblick läuft) oder im Intro. */
+    var introLabel by mutableStateOf("⏭ Intro überspringen"); private set
+    /** Gelernte Länge des Abspanns dieser Serie (ms vor dem Ende), null = noch unbekannt. */
+    private var creditsLearned: Long? = null
     private var introSearchJob: Job? = null
     private var openingLearned = false
     /** Letztes Überspringen: von wo, wohin (inkl. Korrekturen) und wann, zum Lernen der Intro-Länge. */
@@ -409,6 +417,7 @@ class PlayerActivity : ComponentActivity() {
             ts.setParameters(ts.buildUponParameters().setMaxVideoSize(1280, 720).setMaxVideoBitrate(3_500_000))
         }
         embedded = built.subtitles
+        built.subtitles.audio = audioAhead
         asyncDecodingActive = asyncDecoding
         forcePcmActive = forcePcm
         built.player.addListener(playerListener)
@@ -1089,7 +1098,10 @@ class PlayerActivity : ComponentActivity() {
         subtitleFiles.clear()
         subtitleFiles.putAll(container.subtitles.cachedAll(request.key))
         embedded?.clear()
-        if (heardSpeechKey != request.key) heardSpeech.clear()
+        if (heardSpeechKey != request.key) {
+            heardSpeech.clear()
+            audioAhead.reset()
+        }
         heardSpeechKey = request.key
         loadedLanguages = subtitleFiles.keys.toList()
         p.setMediaItem(vodItem(request), resumeMs.coerceAtLeast(0))
@@ -1117,6 +1129,7 @@ class PlayerActivity : ComponentActivity() {
     private fun prepareEpisodeExtras(request: VodRequest) {
         val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
         introLearned = container.intros.get(seriesKey)
+        creditsLearned = container.intros.credits(seriesKey)
         lifecycleScope.launch { nextEpisode = container.content.nextEpisode(request.key) }
         lifecycleScope.launch { introFingerprint = withContext(Dispatchers.IO) { container.intros.fingerprint(seriesKey) } }
     }
@@ -1127,10 +1140,18 @@ class PlayerActivity : ComponentActivity() {
         if (introAudioEnd >= 0 || position > OPENING_MS || introSearchJob?.isActive == true) return
         val from = (position - INTRO_SEARCH_BACK_MS).coerceAtLeast(0)
         introSearchJob = lifecycleScope.launch(Dispatchers.Default) {
-            val heard = heardSpeech.levels(from, position)
+            // Gehörter Ton bis jetzt und (geht er an die Soundbar) der vorausgelesene: So steht das Intro fest, bevor es beginnt.
+            val heard = introLevels(from, position + INTRO_SEARCH_AHEAD_MS)
             val at = IntroMatch.find(heard, fingerprint.pattern, 0, heard.size) ?: return@launch
-            val end = from + (at + fingerprint.lengthBins) * 100L
-            withContext(Dispatchers.Main) { if (end > position + 3_000) introAudioEnd = end }
+            val start = from + at * 100L
+            val end = start + fingerprint.lengthBins * 100L
+            withContext(Dispatchers.Main) {
+                if (end > position + 3_000) {
+                    introAudioStart = start
+                    introAudioEnd = end
+                    Log.i(TAG, "Intro am Ton erkannt: ${start / 1000}–${end / 1000} s")
+                }
+            }
         }
     }
 
@@ -1141,7 +1162,7 @@ class PlayerActivity : ComponentActivity() {
     private fun learnOpening(request: VodRequest) {
         if (openingLearned || request.kind != HistoryKind.EPISODE) return
         val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
-        val opening = heardSpeech.levels(0, OPENING_MS)
+        val opening = introLevels(0, OPENING_MS)
         val heard = opening.count { !it.isNaN() }
         if (heard < opening.size / 3) return
         openingLearned = true
@@ -1170,12 +1191,16 @@ class PlayerActivity : ComponentActivity() {
         // Knopf für einen Moment, und OK blendet stattdessen die Steuerleiste ein.
         val playing = p.playbackState == Player.STATE_READY || p.playbackState == Player.STATE_BUFFERING && everReady
         introVisible = playing && when {
-            // Am Ton erkannt: genau solange das Intro läuft.
-            introAudioEnd > 0 -> position < introAudioEnd - 2_000
+            // Am Ton erkannt: vom Rückblick bis kurz vor Ende des Intros.
+            introAudioEnd > 0 -> {
+                introLabel = if (introAudioStart > 0 && position < introAudioStart - 1_000) "⏭ Rückblick und Intro überspringen" else "⏭ Intro überspringen"
+                position in INTRO_EARLIEST_MS until introAudioEnd - 2_000
+            }
             // Am Ton erkanntes Intro schon übersprungen.
             introAudioEnd == 0L -> false
             // Sonst nach Zeit; nach einem Sprung kurz weg, dann wieder da (erst Rückblick, dann Intro).
-            else -> introSkips < MAX_INTRO_SKIPS && SystemClock.elapsedRealtime() > introHiddenUntil && IntroSkip.visible(position, introLearned)
+            else -> (introSkips < MAX_INTRO_SKIPS && SystemClock.elapsedRealtime() > introHiddenUntil && IntroSkip.visible(position, introLearned))
+                .also { if (it) introLabel = "⏭ Intro überspringen" }
         }
         // Korrekturen nach dem Überspringen gelten als Intro-Länge.
         if (introFrom >= 0 && SystemClock.elapsedRealtime() - introAt > IntroSkip.LEARN_WINDOW_MS) {
@@ -1185,8 +1210,92 @@ class PlayerActivity : ComponentActivity() {
             }
             introFrom = -1
         }
-        val remaining = durationMs - position
-        nextCardVisible = nextEpisode != null && (nextCountdown >= 0 || durationMs > 0 && remaining in 0..NEXT_CARD_MS)
+        // Nie in der ersten Hälfte (kurze Folge, Abspann falsch gelernt): OK soll dort nicht versehentlich weiterschalten.
+        nextCardVisible = nextEpisode != null && (nextCountdown >= 0 || durationMs > 0 && position in maxOf(creditsStart(), durationMs / 2)..durationMs)
+    }
+
+    /**
+     * Ab wann „Nächste Folge“ angeboten wird: wo der Abspann beginnt. Gelernt je Serie (wann man weitergeschaltet oder
+     * aufgehört hat), sonst nach der letzten Zeile geladener Untertitel, sonst [DEFAULT_CREDITS_MS] vor dem Ende.
+     */
+    private fun creditsStart(): Long {
+        val duration = durationMs
+        creditsLearned?.let { return duration - it - CREDITS_MARGIN_MS }
+        externalCues.lastOrNull()?.let { last ->
+            val end = (elasticTiming?.toVideo(last.end) ?: subtitleTiming.toVideo(last.end)) + subtitleDelayMs
+            if (duration - end in CREDITS_MIN_MS..CREDITS_MAX_MS) return end + 2_000
+        }
+        return duration - DEFAULT_CREDITS_MS
+    }
+
+    /**
+     * Abspann lernen: Wer in den letzten Minuten weiterschaltet oder aufhört, ist im Abspann. Gleitender Mittelwert je
+     * Serie, damit ein Ausreißer (früher aufgehört) nicht alles verschiebt.
+     */
+    private fun learnCredits(positionMs: Long) {
+        val request = vod ?: return
+        if (request.kind != HistoryKind.EPISODE || durationMs <= 0) return
+        val remaining = durationMs - positionMs
+        if (remaining !in CREDITS_MIN_MS..CREDITS_MAX_MS || positionMs < durationMs * 7 / 10) return
+        val seriesKey = Episodes.seriesKeyOf(request.key) ?: return
+        val learned = creditsLearned?.let { (it * 2 + remaining) / 3 } ?: remaining
+        creditsLearned = learned
+        container.intros.saveCredits(seriesKey, learned)
+        Log.i(TAG, "Abspann gelernt: ${learned / 1000} s vor dem Ende")
+    }
+
+    /** Gehörte Lautstärke und, wo nichts gehört wurde (Ton an der Soundbar), die selbst dekodierte. */
+    private fun introLevels(fromMs: Long, toMs: Long): FloatArray {
+        val heard = heardSpeech.levels(fromMs, toMs)
+        if (aheadSpeech.seconds() == 0) return heard
+        val ahead = aheadSpeech.levels(fromMs, toMs)
+        return FloatArray(maxOf(heard.size, ahead.size)) { i ->
+            heard.getOrNull(i)?.takeUnless { it.isNaN() } ?: ahead.getOrNull(i) ?: Float.NaN
+        }
+    }
+
+    /**
+     * Folgen, deren Ton an Soundbar oder Receiver geht: ihn nebenbei selbst dekodieren (nur die ersten Minuten, fürs
+     * Intro). Wird er im Gerät dekodiert, hört die App ohnehin mit.
+     */
+    private fun updateAudioAhead() {
+        val format = player?.audioFormat
+        val wanted = forcedAhead || vod?.kind == HistoryKind.EPISODE && format != null && passesThrough(format)
+        audioAhead.untilMs = OPENING_MS + INTRO_SEARCH_AHEAD_MS
+        if (wanted != audioAhead.active) {
+            audioAhead.active = wanted
+            Log.i(TAG, if (wanted) "Ton geht an Soundbar/Receiver: werte ihn nebenbei aus (${format?.sampleMimeType})" else "Ton-Auswertung nebenbei aus")
+        }
+    }
+
+    private var forcedAhead = false
+
+    /** Gerätetest: Ton-Auswertung nebenbei erzwingen (im Emulator geht kein Ton an eine Soundbar). */
+    fun forceAudioAhead() {
+        forcedAhead = true
+        updateAudioAhead()
+    }
+
+    /** So viele Sekunden Ton hat die Auswertung nebenbei schon (für Test und Fehlerbericht). */
+    val aheadSeconds: Int get() = aheadSpeech.seconds()
+
+    private fun passesThrough(format: Format): Boolean {
+        if (settings.audioOutput == AudioOutput.PCM) return false
+        val mime = format.sampleMimeType ?: return false
+        val encoding = MimeTypes.getEncoding(mime, format.codecs)
+        if (encoding == C.ENCODING_INVALID || androidx.media3.common.util.Util.isEncodingLinearPcm(encoding)) return false
+        return runCatching {
+            androidx.media3.exoplayer.audio.AudioCapabilities
+                .getCapabilities(this, androidx.media3.common.AudioAttributes.DEFAULT, null)
+                .isPassthroughPlaybackSupported(format, androidx.media3.common.AudioAttributes.DEFAULT)
+        }.getOrDefault(false)
+    }
+
+    /** Genau an [to] springen (sonst springt der Film zum nächsten Schlüsselbild, bei Serien oft Sekunden daneben). */
+    private fun seekExact(p: ExoPlayer, to: Long) {
+        p.setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
+        p.seekTo(to)
+        p.setSeekParameters(androidx.media3.exoplayer.SeekParameters.CLOSEST_SYNC)
     }
 
     /** OK bei sichtbarem Knopf: Intro überspringen. */
@@ -1195,7 +1304,7 @@ class PlayerActivity : ComponentActivity() {
         val from = p.currentPosition
         if (introAudioEnd > from) {
             // Am Ton erkannt: genau ans Ende, nichts zu lernen.
-            p.seekTo(introAudioEnd)
+            seekExact(p, introAudioEnd)
             positionMs = introAudioEnd
             introAudioEnd = 0
             introVisible = false
@@ -1209,7 +1318,7 @@ class PlayerActivity : ComponentActivity() {
         introFrom = from
         introTo = to
         introAt = SystemClock.elapsedRealtime()
-        p.seekTo(to)
+        seekExact(p, to)
         positionMs = to
         subtitleStatus = "Intro übersprungen · mit ◀ ▶ nachkorrigieren, DnA-TV merkt es sich für diese Serie"
     }
@@ -1239,6 +1348,7 @@ class PlayerActivity : ComponentActivity() {
 
     fun playNextEpisode() {
         val next = nextEpisode ?: return
+        if (nextCountdown < 0) learnCredits(player?.currentPosition ?: positionMs)
         cancelCountdown()
         saveProgress()
         PlayerActivity.startVod(
@@ -3671,6 +3781,7 @@ class PlayerActivity : ComponentActivity() {
 
     private fun updateFormats() {
         val p = player ?: return
+        updateAudioAhead()
         val video = p.videoFormat
         val audio = p.audioFormat
         stats = stats.copy(
@@ -3871,6 +3982,7 @@ class PlayerActivity : ComponentActivity() {
             runCatching { de.ayutv.data.FireTvHome.update(applicationContext, container) }
         }
         vod?.let(::learnOpening)
+        if (isFinishing) player?.let { learnCredits(it.currentPosition) }
         saveAheadTranslations()
         recordWatch()
         container.scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.saveIfChanged(container.qualityFile) }
@@ -3912,6 +4024,7 @@ class PlayerActivity : ComponentActivity() {
         timeshift.buffer?.release()
         timeshift.buffer = null
         frameRateMatcher.reset()
+        audioAhead.release()
         closePip()
         player?.release()
         player = null
@@ -4009,8 +4122,14 @@ class PlayerActivity : ComponentActivity() {
         private const val SWIPE_SEEK_MS = 120_000f
         /** Schlaf-Timer bis zum Ende der Sendung / des Films. */
         const val SLEEP_END = -1
-        /** „Nächste Folge“ erscheint in den letzten Sekunden einer Folge. */
-        private const val NEXT_CARD_MS = 20_000L
+        /** Abspann: ohne Wissen so lange vor dem Ende „Nächste Folge“ anbieten; gelernt zählt nur 10 s bis 10 min. */
+        private const val DEFAULT_CREDITS_MS = 60_000L
+        private const val CREDITS_MIN_MS = 10_000L
+        private const val CREDITS_MAX_MS = 10 * 60_000L
+        private const val CREDITS_MARGIN_MS = 3_000L
+        /** Intro im vorausgelesenen Ton suchen (so weit voraus) und den Knopf frühestens ab hier zeigen. */
+        private const val INTRO_SEARCH_AHEAD_MS = 40_000L
+        private const val INTRO_EARLIEST_MS = 3_000L
         private const val NEXT_COUNTDOWN_SECONDS = 10
         /** Die ersten Minuten einer Folge: darin wird das Intro gesucht und gelernt. */
         private const val OPENING_MS = 8 * 60_000L

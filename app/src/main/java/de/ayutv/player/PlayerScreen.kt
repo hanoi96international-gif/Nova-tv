@@ -268,7 +268,7 @@ fun PlayerScreen(activity: PlayerActivity) {
                         modifier = Modifier.align(Alignment.BottomEnd).then(press),
                     )
                 }
-                activity.introVisible -> EpisodeCard("⏭ Intro überspringen", if (touch) "Tippen" else "OK drücken", Modifier.align(Alignment.BottomEnd).then(press))
+                activity.introVisible -> EpisodeCard(activity.introLabel, if (touch) "Tippen" else "OK drücken", Modifier.align(Alignment.BottomEnd).then(press))
             }
         }
 
@@ -757,6 +757,12 @@ private fun TracksOverlay(activity: PlayerActivity) {
         }
         if (activity.vlcAvailable) item {
             OptionRow("▶ In VLC öffnen (wenn dieser Stream hier hakt)", selected = false) { activity.openInVlc() }
+        }
+        // Serien: jederzeit zur nächsten Folge (wer das im Abspann tut, bringt DnA-TV bei, wo der Abspann beginnt).
+        activity.nextEpisode?.let { next ->
+            item {
+                OptionRow("⏭ Nächste Folge: S${next.episode.season} E${next.episode.episode}", selected = false) { activity.playNextEpisode() }
+            }
         }
         item { MenuHeader("Untertitel") }
         item {

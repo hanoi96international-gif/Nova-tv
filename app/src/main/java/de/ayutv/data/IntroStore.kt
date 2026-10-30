@@ -28,6 +28,13 @@ class IntroStore(context: Context) {
         prefs.edit().putString(seriesKey, "${intro.startMs},${intro.lengthMs}").apply()
     }
 
+    /** Gelernte Länge des Abspanns (ms vor dem Ende), null = unbekannt. */
+    fun credits(seriesKey: String): Long? = prefs.getString(CREDITS + seriesKey, null)?.toLongOrNull()
+
+    fun saveCredits(seriesKey: String, remainingMs: Long) {
+        prefs.edit().putString(CREDITS + seriesKey, remainingMs.toString()).apply()
+    }
+
     fun fingerprint(seriesKey: String): Fingerprint? = runCatching {
         DataInputStream(file(seriesKey, "intro").inputStream().buffered()).use { input ->
             val length = input.readInt()
@@ -70,4 +77,8 @@ class IntroStore(context: Context) {
     }
 
     private fun readFloats(input: DataInputStream): FloatArray = FloatArray(input.readInt().coerceIn(0, 20_000)) { input.readFloat() }
+
+    private companion object {
+        const val CREDITS = "credits:"
+    }
 }
