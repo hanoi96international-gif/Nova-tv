@@ -17,11 +17,27 @@ kotlin {
     jvmToolchain(21)
     compilerOptions {
         optIn.add("kotlin.io.encoding.ExperimentalEncodingApi")
+        optIn.add("androidx.compose.ui.ExperimentalComposeUiApi")
+        optIn.add("androidx.compose.foundation.ExperimentalFoundationApi")
+    }
+}
+
+// OpenSubtitles-Schlüssel der App: aus dem CI-Geheimnis in die Ressourcen, nie in den Quelltext.
+val keyResources = layout.buildDirectory.dir("generated/keys")
+val writeKeys by tasks.registering {
+    val key = providers.environmentVariable("OPENSUBTITLES_API_KEY").orElse("")
+    inputs.property("keyHash", key.map { it.trim().hashCode() })
+    outputs.dir(keyResources)
+    doLast {
+        val file = keyResources.get().file("opensubtitles.key").asFile
+        file.parentFile.mkdirs()
+        file.writeText(key.get().trim())
     }
 }
 
 sourceSets {
     main {
+        resources.srcDir(writeKeys)
         // Leser und Hilfen aus der Fire-TV-App mitbenutzen (reines Kotlin, kein Android).
         kotlin.srcDir("../app/src/main/java")
         kotlin.include(
@@ -33,6 +49,8 @@ sourceSets {
             "de/ayutv/data/parse/EpgMatcher.kt",
             "de/ayutv/data/parse/Episodes.kt",
             "de/ayutv/data/parse/ChannelVariants.kt",
+            "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
+            "de/ayutv/data/parse/Srt.kt",
             "de/ayutv/data/setup/BackupCrypto.kt",
             "de/ayutv/ui/live/BlockMove.kt",
         )

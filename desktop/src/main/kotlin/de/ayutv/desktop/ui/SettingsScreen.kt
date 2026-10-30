@@ -95,7 +95,7 @@ fun SettingsScreen(app: AppState) {
         item { Section("Untertitel und Übersetzung") }
         item {
             Column(Modifier.width(520.dp)) {
-                Field("OpenSubtitles-Schlüssel (API-Key)", user.openSubtitlesKey, { v -> app.store.updateUser { it.copy(openSubtitlesKey = v.trim()) } }, secret = true)
+                Field("Eigener OpenSubtitles-Schlüssel (optional, sonst der der App)", user.openSubtitlesKey, { v -> app.store.updateUser { it.copy(openSubtitlesKey = v.trim()) } }, secret = true)
                 Field("DeepL-Schlüssel", user.deeplKey, { v -> app.store.updateUser { it.copy(deeplKey = v.trim()) } }, secret = true)
                 Field("Untertitel-Sprache (z. B. de)", user.subtitleLanguage, { v -> app.store.updateUser { it.copy(subtitleLanguage = v.trim().lowercase().take(5)) } })
             }
@@ -106,7 +106,7 @@ fun SettingsScreen(app: AppState) {
             Label(
                 "Maus: Klick wählt, Rechtsklick öffnet das Menü, Doppelklick im Bild = Vollbild, Mausrad = Lautstärke.\n" +
                     "Tastatur / Bluetooth-Fernbedienung: Pfeiltasten, Enter = OK (lange drücken = Menü), Esc = zurück, F11 = Vollbild.\n" +
-                    "Im Bild: ↑/↓ Sender, ←/→ spulen, Leertaste Pause, T Tonspur, U Untertitel, M Ton aus.",
+                    "Im Bild: ↑/↓ Sender, ←/→ spulen, Leertaste Pause, T Tonspur, U Untertitel, L Untertitel laden, G/H Untertitel früher/später, M Ton aus.",
                 Type.small, maxLines = 6,
             )
             Spacer(Modifier.height(8.dp))

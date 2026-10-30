@@ -13,6 +13,7 @@ import de.ayutv.desktop.data.Channel
 import de.ayutv.desktop.data.Series
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
+import de.ayutv.desktop.player.Subtitles
 import de.ayutv.desktop.player.VideoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -53,6 +54,7 @@ sealed interface Playback {
 class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     val player = VideoPlayer()
     val backup = BackupImport(store)
+    val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
 
     var screen by mutableStateOf(if (store.playlists.value.isEmpty()) Screen.SETTINGS else Screen.LIVE)
     var playing by mutableStateOf<Playback?>(null); private set
@@ -97,6 +99,19 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         val duration = player.durationMs
         if (position < 10_000) return
         store.savePosition(vod.key, if (duration > 0 && position > duration - 60_000) 0 else position, duration)
+    }
+
+    /** Untertitel in der eingestellten Sprache suchen (OpenSubtitles, sonst DeepL) und einblenden. */
+    fun loadSubtitles(vod: Playback.Vod) = scope.launch {
+        val user = store.user.value
+        runCatching {
+            subtitles.find(vod.key, vod.title, user.subtitleLanguage.ifBlank { "de" }, user.openSubtitlesKey, user.deeplKey) { toast(it) }
+        }.onSuccess { found ->
+            if (playing == vod || (playing as? Playback.Vod)?.key == vod.key) {
+                player.addSubtitleFile(found.file)
+                toast("Untertitel eingeblendet (${found.source}). G/H verschiebt sie.")
+            }
+        }.onFailure { toast(it.message ?: "Keine Untertitel") }
     }
 
     fun back(): Boolean {

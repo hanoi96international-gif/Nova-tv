@@ -95,6 +95,8 @@ jobs:
           Remove-Item "$dst/plugins/plugins.dat" -ErrorAction SilentlyContinue
 
       - name: Installer bauen
+        env:
+          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew -p desktop packageMsi packageExe createDistributable --console=plain
 
       - name: Starttest (VLC laden, Fenster öffnen)

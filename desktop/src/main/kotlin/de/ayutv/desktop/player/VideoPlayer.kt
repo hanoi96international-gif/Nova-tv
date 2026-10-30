@@ -66,7 +66,7 @@ class VideoPlayer {
                 override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { durationMs = newLength }
                 override fun error(mediaPlayer: MediaPlayer) = ui { error = "Der Stream lässt sich nicht abspielen"; playing = false }
                 override fun finished(mediaPlayer: MediaPlayer) = ui { playing = false; onFinished?.invoke() }
-                override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.player.base.TrackType, id: Int) = ui { readTracks() }
+                override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.media.TrackType, id: Int) = ui { readTracks() }
             })
         }
     }

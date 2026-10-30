@@ -108,7 +108,7 @@ fun Selectable(
                         }
                         true
                     }
-                    Key.Menu, Key.ContextMenu -> {
+                    Key.Menu -> {
                         if (e.type == KeyEventType.KeyUp) onMenu?.invoke()
                         onMenu != null
                     }

@@ -49,7 +49,8 @@ import kotlinx.coroutines.delay
 
 /**
  * Vollbild-Wiedergabe. Tastatur/Fernbedienung: ↑/↓ Sender wechseln (Live) bzw. Lautstärke (Film), ←/→ spulen,
- * Enter/Leertaste Info bzw. Pause, Esc zurück, F Vollbild, M Ton aus, T Tonspur, U Untertitel.
+ * Enter/Leertaste Info bzw. Pause, Esc zurück, F Vollbild, M Ton aus, T Tonspur, U Untertitel, L Untertitel laden
+ * (OpenSubtitles/DeepL), G/H Untertitel früher/später, N nächste Folge.
  * Maus: Bewegen zeigt die Leiste, Klick Pause/Info, Doppelklick Vollbild, Mausrad Lautstärke.
  */
 @OptIn(ExperimentalComposeUiApi::class)
@@ -62,6 +63,13 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
     var osd by remember { mutableStateOf(true) }
     var menu by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
     val fullscreen = window.placement == WindowPlacement.Fullscreen
+    var subtitleDelay by remember(playback) { mutableLongStateOf(0L) }
+
+    fun shiftSubtitles(deltaMs: Long) {
+        subtitleDelay += deltaMs
+        player.subtitleDelay(subtitleDelay)
+        app.toast("Untertitel ${if (subtitleDelay >= 0) "+" else ""}${subtitleDelay / 1000.0} s")
+    }
 
     fun poke() {
         lastInput = System.currentTimeMillis()
@@ -146,6 +154,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
                     Key.T -> { trackMenu(audio = true); true }
                     Key.U -> { trackMenu(audio = false); true }
                     Key.N -> { playNext(); true }
+                    Key.L -> { (playback as? Playback.Vod)?.let { app.loadSubtitles(it) }; true }
+                    Key.G -> { shiftSubtitles(-250); true }
+                    Key.H -> { shiftSubtitles(250); true }
                     else -> false
                 }
             }
@@ -190,6 +201,11 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
             Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
                 if (player.audioTracks.size > 1) { TextButton("🔊 Ton", { trackMenu(audio = true) }); Spacer(Modifier.width(8.dp)) }
                 if (player.subtitleTracks.size > 1) { TextButton("💬 Untertitel", { trackMenu(audio = false) }); Spacer(Modifier.width(8.dp)) }
+                if (playback is Playback.Vod) {
+                    val language = app.store.user.value.subtitleLanguage.ifBlank { "de" }.uppercase()
+                    TextButton("💬 $language laden", { app.loadSubtitles(playback) })
+                    Spacer(Modifier.width(8.dp))
+                }
                 TextButton(if (fullscreen) "⤢ Fenster" else "⤢ Vollbild", { toggleFullscreen() })
                 Spacer(Modifier.width(8.dp))
                 TextButton("✕", { app.stopPlayback() })
