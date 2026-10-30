@@ -51,6 +51,10 @@ sourceSets {
             "de/ayutv/data/parse/ChannelVariants.kt",
             "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
             "de/ayutv/data/parse/Srt.kt",
+            "de/ayutv/data/parse/ProgrammeText.kt",
+            "de/ayutv/data/parse/Teams.kt",
+            "de/ayutv/data/parse/ChannelQuality.kt",
+            "de/ayutv/data/sport/LiveScores.kt",
             "de/ayutv/data/setup/BackupCrypto.kt",
             "de/ayutv/ui/live/BlockMove.kt",
         )

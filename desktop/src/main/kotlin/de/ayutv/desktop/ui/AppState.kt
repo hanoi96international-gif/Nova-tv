@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 enum class Screen(val label: String, val icon: String) {
     LIVE("Live TV", "📺"),
     GUIDE("TV-Guide", "🗓"),
+    SPORT("Sport", "⚽"),
     MOVIES("Filme", "🎬"),
     SERIES("Serien", "🎞"),
     SEARCH("Suche", "🔍"),

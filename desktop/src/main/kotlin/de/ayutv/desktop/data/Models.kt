@@ -68,6 +68,8 @@ data class Programme(
     val subtitle: String? = null,
     val description: String? = null,
     val category: String? = null,
+    /** Wiederholung (1), live (2), Erstausstrahlung (4) laut TV-Guide. */
+    val flags: Int = 0,
 )
 
 /** Eigene Sendergruppe (Sender aus allen Playlists, in eigener Reihenfolge). */

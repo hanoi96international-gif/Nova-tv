@@ -9,6 +9,7 @@ on:
       - "app/src/main/java/de/ayutv/data/parse/**"
       - "app/src/main/java/de/ayutv/data/setup/BackupCrypto.kt"
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
+      - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/build.gradle.kts"
       - ".github/workflows/desktop.yml"
   pull_request:
@@ -17,6 +18,7 @@ on:
       - "app/src/main/java/de/ayutv/data/parse/**"
       - "app/src/main/java/de/ayutv/data/setup/BackupCrypto.kt"
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
+      - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/build.gradle.kts"
       - ".github/workflows/desktop.yml"
   workflow_dispatch:

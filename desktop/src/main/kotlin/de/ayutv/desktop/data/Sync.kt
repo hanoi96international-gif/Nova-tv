@@ -188,7 +188,7 @@ class Sync(private val store: Store, val http: OkHttpClient = defaultHttp()) {
                 stop > from && start < until && id in map
             }) { p ->
                 val keys = byGuideId?.get(p.channelId).orEmpty()
-                val programme = Programme(p.start, p.stop, p.title, p.subtitle, p.description, p.category)
+                val programme = Programme(p.start, p.stop, p.title, p.subtitle, p.description, p.category, p.flags)
                 for (key in keys) guide.getOrPut(key) { ArrayList() } += programme
             }
         }

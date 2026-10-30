@@ -48,6 +48,7 @@ import de.ayutv.desktop.ui.PlayerScreen
 import de.ayutv.desktop.ui.Screen
 import de.ayutv.desktop.ui.SearchScreen
 import de.ayutv.desktop.ui.SettingsScreen
+import de.ayutv.desktop.ui.SportScreen
 import de.ayutv.desktop.ui.Type
 
 fun main(args: Array<String>) {
@@ -110,6 +111,7 @@ fun App(app: AppState, window: WindowState) {
                     when (app.screen) {
                         Screen.LIVE -> LiveScreen(app)
                         Screen.GUIDE -> GuideScreen(app)
+                        Screen.SPORT -> SportScreen(app)
                         Screen.MOVIES -> LibraryScreen(app, series = false)
                         Screen.SERIES -> LibraryScreen(app, series = true)
                         Screen.SEARCH -> SearchScreen(app)
