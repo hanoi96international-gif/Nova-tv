@@ -101,6 +101,18 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Handy als Fernbedienung") }
+        item {
+            val address = app.remoteAddress
+            Label(
+                if (address != null) "Auf dem Handy im Browser öffnen (gleiches WLAN): $address"
+                else "Steuert DnA-TV vom Handy aus: Pfeile, OK, Zurück, Lautstärke, Sender suchen. Keine App nötig.",
+                if (address != null) Type.heading else Type.small, maxLines = 3,
+            )
+            Spacer(Modifier.height(6.dp))
+            TextButton(if (address != null) "Ausschalten" else "Einschalten", { app.setPhoneRemote(address == null) })
+        }
+
         item { Section("Bedienung") }
         item {
             Label(

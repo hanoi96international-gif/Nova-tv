@@ -14,6 +14,7 @@ import de.ayutv.desktop.data.Series
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
 import de.ayutv.desktop.player.Subtitles
+import de.ayutv.desktop.remote.PhoneRemote
 import de.ayutv.desktop.player.VideoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -55,6 +56,16 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     val player = VideoPlayer()
     val backup = BackupImport(store)
     val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
+    val remote = PhoneRemote(store) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
+    var remoteAddress by mutableStateOf<String?>(null); private set
+
+    /** Handy-Fernbedienung ein-/ausschalten (Windows fragt beim ersten Mal nach der Firewall-Freigabe). */
+    fun setPhoneRemote(on: Boolean) {
+        runCatching { if (on) remote.start() else remote.stop() }
+            .onFailure { toast("Fernbedienung lässt sich nicht starten: ${it.message}") }
+        store.updateUser { it.copy(phoneRemote = on && remote.running) }
+        remoteAddress = remote.address()
+    }
 
     var screen by mutableStateOf(if (store.playlists.value.isEmpty()) Screen.SETTINGS else Screen.LIVE)
     var playing by mutableStateOf<Playback?>(null); private set
@@ -65,6 +76,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
 
     /** Zurück-Aktionen, die neueste zuerst (Dialog, Unterseite, Player). */
     private val backStack = mutableStateListOf<() -> Boolean>()
+
+    init {
+        if (store.user.value.phoneRemote) setPhoneRemote(true)
+    }
 
     fun toast(text: String) {
         message = text
@@ -131,6 +146,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
 
     fun close() {
         savePosition()
+        remote.stop()
         player.release()
     }
 }

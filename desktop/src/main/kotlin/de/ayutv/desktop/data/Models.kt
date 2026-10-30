@@ -92,4 +92,7 @@ data class UserData(
     val openSubtitlesKey: String = "",
     val deeplKey: String = "",
     val subtitleLanguage: String = "de",
+    /** Handy als Fernbedienung eingeschaltet, und die PIN in der Adresse. */
+    val phoneRemote: Boolean = false,
+    val remotePin: String = "",
 )

@@ -63,6 +63,8 @@ fun main(args: Array<String>) {
             state = window,
             title = "DnA-TV",
         ) {
+            // Tasten vom Handy gehen an dieses Fenster.
+            LaunchedEffect(Unit) { app.remote.window = this@Window.window }
             App(app, window)
         }
     }
