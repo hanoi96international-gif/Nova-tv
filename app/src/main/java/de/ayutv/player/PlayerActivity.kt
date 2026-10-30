@@ -284,6 +284,8 @@ class PlayerActivity : ComponentActivity() {
     /** Übersetzung eingebetteter Untertitel mit Vorlauf: Quellspur, Ergebnisse je Einblendung (Startzeit). */
     private var aheadFormat: Format? = null
     private val aheadTranslations = HashMap<Long, String>()
+    /** Beginn der Zeilen, die schon vor diesem Schauen übersetzt waren (früher geschaut, nachts vorbereitet). */
+    @Volatile private var storedAhead: Set<Long> = emptySet()
     private var aheadJob: Job? = null
     /** Kurzer Vorlauf vor der Übersetzung: Anteil (0–1), solange der Film dafür angehalten ist, sonst null. */
     var prerollProgress by mutableStateOf<Float?>(null); private set
@@ -1501,6 +1503,7 @@ class PlayerActivity : ComponentActivity() {
         saveAheadTranslations()
         aheadTranslations.clear()
         aheadDone.clear()
+        storedAhead = emptySet()
         aheadFormat = format
         val request = vod
         aheadKey = request?.let { Triple(it.key, EmbeddedSubtitles.trackKey(format), target) }
@@ -1517,6 +1520,7 @@ class PlayerActivity : ComponentActivity() {
                 val stored = withContext(Dispatchers.IO) { container.subtitles.lineTranslations(key, track, language) }
                 aheadTranslations.putAll(stored)
                 aheadDone.putAll(stored)
+                storedAhead = stored.keys
                 if (stored.isNotEmpty()) Log.i(SUBTITLE_TAG, "${stored.size} schon übersetzte Zeilen geladen")
             }
             var unsaved = 0
@@ -1740,17 +1744,18 @@ class PlayerActivity : ComponentActivity() {
                 val lines = store?.upcoming(format, maxOf(from, player.currentPosition), 400) { it.startMs < loadedUntil }.orEmpty()
                 val done = lines.count { it.startMs in aheadTranslations }
                 val elapsed = SystemClock.elapsedRealtime() - started
-                if ((loaded && done >= lines.size) || elapsed >= PREROLL_MAX_MS) break
                 if (thorough) {
-                    // Übersetzer im Internet: Anhalten, sobald eine Zeile der nächsten Sekunden noch fehlt, und weiter,
-                    // sobald diese Sekunden geladen und übersetzt sind (DeepL braucht dafür meist nur 1–3 s).
+                    // Übersetzer im Internet: 8–10 s anhalten. In der Zeit lädt der Player weit voraus und DeepL
+                    // übersetzt alles Geladene; danach bleibt die Übersetzung beim Schauen sicher vorn. Nur wenn
+                    // die Stelle schon übersetzt ist (früher geschaut, nachts vorbereitet), geht es ohne Halt weiter.
+                    // (Gespeicherte Übersetzungen kommen kurz nach dem Start aus der Datenbank.)
+                    if (elapsed < 2_000 && prepared(player.currentPosition)) break
                     val soon = player.currentPosition + ONLINE_LEAD_MS
                     val missing = lines.any { it.startMs !in aheadTranslations && it.startMs < soon }
-                    if (paused && !missing && (loaded || player.bufferedPosition >= soon)) break
-                    if (!paused && !missing) {
-                        delay(250)
-                        continue
-                    }
+                    val ahead = loaded || player.bufferedPosition >= soon
+                    if (paused && elapsed >= ONLINE_PAUSE_MIN_MS && !missing && ahead || elapsed >= ONLINE_PAUSE_MAX_MS) break
+                } else if ((loaded && done >= lines.size) || elapsed >= PREROLL_MAX_MS) {
+                    break
                 } else if (!paused && (done >= lines.size || elapsed > PREROLL_DECIDE_MS)) {
                     // Nur anhalten, wenn wirklich Zeilen fehlen, und nur gleich zu Beginn: Ist alles Bekannte schon
                     // übersetzt (über Nacht vorbereitet), läuft der Film einfach weiter, statt mitten drin zu stoppen.
@@ -1766,7 +1771,7 @@ class PlayerActivity : ComponentActivity() {
                 }
                 val coverage = ((loadedUntil - from).toFloat() / PREROLL_WINDOW_MS).coerceIn(0f, 1f)
                 val share = if (lines.isEmpty()) 0f else done.toFloat() / lines.size
-                val byTime = elapsed.toFloat() / PREROLL_MAX_MS
+                val byTime = elapsed.toFloat() / (if (thorough) ONLINE_PAUSE_MIN_MS else PREROLL_MAX_MS)
                 prerollProgress = maxOf(byTime, coverage * 0.3f + share * coverage * 0.7f).coerceIn(0.02f, 0.99f)
                 delay(250)
             }
@@ -1779,6 +1784,10 @@ class PlayerActivity : ComponentActivity() {
             }
         }
     }
+
+    /** Sind die nächsten Minuten ab [positionMs] schon übersetzt (früher geschaut, nachts vorbereitet)? */
+    private fun prepared(positionMs: Long): Boolean =
+        storedAhead.count { it in positionMs..positionMs + PREPARED_WINDOW_MS } >= PREPARED_MIN_LINES
 
     /** Übersetzt gerade ein Dienst im Internet (DeepL, ohne Störung)? Dann lohnt kurzes Warten auf die Übersetzung. */
     private fun onlineTranslation(): Boolean =
@@ -3350,7 +3359,10 @@ class PlayerActivity : ComponentActivity() {
                 if (vod != null && !isLive && format != null && liveTranslateTarget != null && onlineTranslation() && player?.playWhenReady == true &&
                     abs(newPosition.positionMs - oldPosition.positionMs) >= ONLINE_SEEK_JUMP_MS
                 ) {
-                    startPreroll(format, thorough = true)
+                    // Zurück an eine schon übersetzte Stelle: kein Halt nötig.
+                    val at = newPosition.positionMs
+                    val known = embedded?.upcoming(format, at, 50) { it.startMs < at + ONLINE_LEAD_MS }.orEmpty()
+                    if (known.isEmpty() || known.any { it.startMs !in aheadTranslations }) startPreroll(format, thorough = true)
                 }
             }
         }
@@ -3818,8 +3830,14 @@ class PlayerActivity : ComponentActivity() {
         private const val ONLINE_BATCH = 40
         /** Nur in den ersten Sekunden entscheidet sich, ob angehalten wird. */
         private const val PREROLL_DECIDE_MS = 3_000L
-        /** DeepL: Fehlt eine Zeile der nächsten so vielen Millisekunden, hält der Vorlauf an. */
-        private const val ONLINE_LEAD_MS = 10_000L
+        /** DeepL: Vorlauf beim Start und nach dem Spulen, mindestens und höchstens. */
+        private const val ONLINE_PAUSE_MIN_MS = 8_000L
+        private const val ONLINE_PAUSE_MAX_MS = 10_000L
+        /** DeepL: So viel Film muss nach dem Vorlauf geladen und übersetzt sein. */
+        private const val ONLINE_LEAD_MS = 30_000L
+        /** Schon übersetzt gilt eine Stelle mit so vielen Zeilen in den nächsten zwei Minuten. */
+        private const val PREPARED_WINDOW_MS = 120_000L
+        private const val PREPARED_MIN_LINES = 10
         /** DeepL: So lange bleibt eine noch nicht übersetzte Zeile leer, bevor das Original erscheint. */
         private const val ONLINE_HOLD_MS = 1_500L
         /** DeepL: Ab so einem Sprung gibt es an der neuen Stelle einen kurzen Vorlauf. */
