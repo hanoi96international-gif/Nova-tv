@@ -302,9 +302,17 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Bildwiederholrate anpassen",
                             onOff(settings.matchFrameRate),
                             "Empfohlen: An. Deutsches TV läuft mit 50 Hz, Filme mit 23,976 Hz – der Fire TV gibt sonst 60 Hz aus, das ruckelt bei " +
-                                "Schwenks. Beim Umschalten ist das Bild 1–2 s schwarz (nur wenn sich die Rate ändert). Fire TV: zusätzlich unter " +
-                                "Einstellungen → Display & Audio → Display „Originalbildrate anpassen“ einschalten.",
-                        ) { update { it.copy(matchFrameRate = !it.matchFrameRate) } }
+                                "Schwenks. Beim Umschalten ist das Bild 1–2 s schwarz (nur wenn sich die Rate ändert). Die Rate jedes Senders und " +
+                                "Films wird gemerkt: Beim nächsten Mal schaltet der Fernseher schon während des Ladens um, die Menüs bleiben dabei. " +
+                                "Fire TV: zusätzlich unter Einstellungen → Display & Audio → Display „Originalbildrate anpassen“ einschalten.",
+                        ) {
+                            if (settings.matchFrameRate) {
+                                // Ausschalten: Menüs zurück auf den Standard des Fire TV.
+                                de.ayutv.player.FrameRateMatcher.keptModeId = 0
+                                (context as? android.app.Activity)?.let { de.ayutv.player.FrameRateMatcher.applyKept(it, enabled = false) }
+                            }
+                            update { it.copy(matchFrameRate = !it.matchFrameRate) }
+                        }
                     }
                     if (showAdvanced) item {
                         SettingRow(

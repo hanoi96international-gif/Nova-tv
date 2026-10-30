@@ -241,7 +241,7 @@ class SettingsStore(private val context: Context) {
         val dataSaver = booleanPreferencesKey("data_saver")
         val alertKeywords = stringSetPreferencesKey("alert_keywords")
         val phoneRemote = booleanPreferencesKey("phone_remote")
-        // Neuer Schlüssel (0.35.1): Vorbereiten im Hintergrund ist für alle erst einmal aus, auch wer es nie umgestellt hat.
+        // Neuer Schlüssel (0.36): Vorbereiten im Hintergrund ist für alle erst einmal aus, auch wer es nie umgestellt hat.
         val pretranslate = booleanPreferencesKey("pretranslate_on")
         val uiTheme = stringPreferencesKey("ui_theme")
         val minQuality = stringPreferencesKey("min_quality")

@@ -14,7 +14,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 45
-        versionName = "0.35.1"
+        versionName = "0.36.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.

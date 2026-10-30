@@ -79,6 +79,9 @@ class MainActivity : ComponentActivity() {
      */
     override fun onResume() {
         super.onResume()
+        // Menüs in der Bildwiederholrate des zuletzt geschauten Senders lassen: Kein Umschalten (schwarzes Bild)
+        // beim Verlassen des Players und keins beim nächsten Sender mit derselben Rate.
+        de.ayutv.player.FrameRateMatcher.applyKept(this, enabled = true)
         // Neue Version bei GitHub? (höchstens alle 6 Stunden nachfragen)
         (application as AyuApp).container.let { c -> c.scope.launch { c.updates.check() } }
         if (!de.ayutv.data.translate.OnDeviceTranslator.hasPendingPreparation(filesDir)) return

@@ -616,6 +616,7 @@ class PlayerActivity : ComponentActivity() {
         val snapped = STANDARD_FRAME_RATES.minByOrNull { abs(it - measured) }
             ?.takeIf { abs(it - measured) / it < 0.06f } ?: return
         stats = stats.copy(frameRate = snapped, frameRateMeasured = true, displayHz = frameRateMatcher.currentRefreshRate())
+        memoryKey()?.let { container.playerMemory.rememberFrameRate(it, snapped, isLive) }
         suggestFrameRateMatching()
         if (settings.matchFrameRate) frameRateMatcher.match(snapped)
     }
@@ -829,6 +830,7 @@ class PlayerActivity : ComponentActivity() {
         p.repeatMode = Player.REPEAT_MODE_ONE
         p.prepare()
         p.playWhenReady = true
+        matchKnownFrameRate(channel.key, live = true)
         showOverlay(Overlay.INFO)
 
         loadChannelInfo(channel)
@@ -1059,6 +1061,19 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Bildwiederholrate schon beim Start umschalten, solange der Stream noch lädt: mit der gemerkten Bildrate dieses
+     * Senders oder Films (bei einem neuen Sender die des zuletzt geschauten). Sonst schaltet der Fernseher erst um,
+     * wenn das Bild schon läuft (bei Sendern ohne Angabe nach einigen Sekunden Messung), und wird dann schwarz.
+     * Stimmt die Schätzung nicht, korrigiert die Messung wie bisher.
+     */
+    private fun matchKnownFrameRate(key: String, live: Boolean) {
+        if (!settings.matchFrameRate) return
+        val memory = container.playerMemory
+        val fps = memory.frameRate(key).takeIf { it > 0f } ?: if (live) memory.lastLiveFrameRate else 0f
+        if (fps > 0f) frameRateMatcher.match(fps)
+    }
+
     // ---------------------------------------------------------------- VOD
 
     private fun startVod(request: VodRequest, resumeMs: Long) {
@@ -1076,6 +1091,7 @@ class PlayerActivity : ComponentActivity() {
         p.setMediaItem(vodItem(request), resumeMs.coerceAtLeast(0))
         p.prepare()
         p.playWhenReady = true
+        matchKnownFrameRate(Episodes.seriesKeyOf(request.key) ?: request.key, live = false)
         showOverlay(Overlay.CONTROLS)
         if (request.kind == HistoryKind.EPISODE) prepareEpisodeExtras(request)
         checkMobileData()
@@ -3569,6 +3585,7 @@ class PlayerActivity : ComponentActivity() {
                 else -> ""
             },
         )
+        video?.frameRate?.takeIf { it > 1f }?.let { fps -> memoryKey()?.let { container.playerMemory.rememberFrameRate(it, fps, isLive) } }
         if (settings.matchFrameRate) video?.frameRate?.let(frameRateMatcher::match)
         suggestFrameRateMatching()
     }
