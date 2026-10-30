@@ -74,22 +74,20 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.lazy.rememberLazyListState
 
 const val FAVORITES_GROUP = "\u0000favoriten"
-/** „Best of“: die stabilsten Sender, nach Sport und normalem Fernsehen. */
-const val BEST_SPORT_GROUP = "\u0000best-sport"
-const val BEST_TV_GROUP = "\u0000best-tv"
-private fun isBestOf(group: String?) = group == BEST_SPORT_GROUP || group == BEST_TV_GROUP
 private const val NOW_PAGE = 30
 /** Knopf „Neue Gruppe“ in der Gruppenspalte. */
 private const val NEW_GROUP = "\u0000neue-gruppe"
 
-/** Von Hand sortierbar: Favoriten, eigene Gruppen und Gruppen des Anbieters (nicht „Alle“ und „Best of“). */
-private fun sortable(group: String?) = group != null && !isBestOf(group)
+/** Von Hand sortierbar: Favoriten, eigene Gruppen und Gruppen des Anbieters (nicht „Alle Sender“). */
+private fun sortable(group: String?) = group != null
 
 /** Fenster über der Senderliste. */
 private sealed interface LiveDialog {
     data class ChannelMenu(val channel: ChannelEntity) : LiveDialog
+    /** Aktionen für mehrere ausgewählte Sender. */
+    data class SelectionMenu(val keys: List<String>) : LiveDialog
     data class GroupMenu(val group: String, val name: String) : LiveDialog
-    data class NameGroup(val group: String?, val current: String, val firstKey: String?) : LiveDialog
+    data class NameGroup(val group: String?, val current: String, val firstKeys: List<String>) : LiveDialog
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -104,19 +102,25 @@ fun LiveScreen() {
     val groups by content.groups.collectAsStateWithLifecycle(emptyList())
     val customGroups by content.customGroups.collectAsStateWithLifecycle(emptyList())
     var dialog by remember { mutableStateOf<LiveDialog?>(null) }
-    // Verschieben: dieser Sender wandert mit ▲ ▼, die Liste zeigt solange [moving] statt der gespeicherten Reihenfolge.
-    var movingKey by remember { mutableStateOf<String?>(null) }
+    // Verschieben: diese Sender (ein oder mehrere als Block) wandern mit ▲ ▼, die Liste zeigt solange [moving].
+    var movingKeys by remember { mutableStateOf<Set<String>?>(null) }
     var moving by remember { mutableStateOf<List<ChannelEntity>?>(null) }
+    // Mehrfachauswahl: OK hakt Sender an, OK halten öffnet die Aktionen für alle angehakten.
+    var selecting by remember { mutableStateOf(false) }
+    var picked by remember { mutableStateOf<List<String>>(emptyList()) }
     val favoriteKeys by content.favoriteKeys.collectAsStateWithLifecycle(emptyList())
     val total by content.channelCount.collectAsStateWithLifecycle(0)
     var selectedGroup by rememberSaveable { mutableStateOf<String?>(null) }
     val minute by rememberMinuteTicker()
+    // Andere Gruppe: Auswahl und Verschieben enden.
+    LaunchedEffect(selectedGroup) {
+        selecting = false
+        picked = emptyList()
+    }
 
     val channelsFlow = remember(selectedGroup) {
         when (selectedGroup) {
             FAVORITES_GROUP -> content.favoriteChannels
-            // Best of: schon nach Stabilität sortiert und je Sender die beste Fassung
-            BEST_SPORT_GROUP, BEST_TV_GROUP -> kotlinx.coroutines.flow.flow { emit(content.bestOf(sport = selectedGroup == BEST_SPORT_GROUP)) }
             else -> content.channelsIn(selectedGroup)
         }
     }
@@ -126,7 +130,7 @@ fun LiveScreen() {
     val loaded by produceState<List<ChannelEntity>?>(null, raw, merge, selectedGroup, appSettings?.minQuality, appSettings?.preferUhd, appSettings?.hideBrokenChannels) {
         appSettings?.let { de.ayutv.data.parse.ChannelQuality.configure(it.minQuality.height, it.preferUhd, it.hideBrokenChannels) }
         val list = raw
-        val keepAsIs = selectedGroup == FAVORITES_GROUP || isBestOf(selectedGroup) || selectedGroup?.let(::customGroupId) != null
+        val keepAsIs = selectedGroup == FAVORITES_GROUP || selectedGroup?.let(::customGroupId) != null
         value = if (list == null) null else if (merge && !keepAsIs) content.mergeVariants(list) else list
     }
     val channels = moving ?: loaded.orEmpty()
@@ -167,17 +171,11 @@ fun LiveScreen() {
         }
     }
 
-    // Wie viele Sender in „Best of“ stehen (ändert sich, wenn geschaut oder geprüft wurde).
-    val bestCounts by produceState(0 to 0, total, appSettings?.minQuality) {
-        value = content.bestOf(sport = true).size to content.bestOf(sport = false).size
-    }
-    val entries = remember(groups, customGroups, total, favoriteKeys.size, bestCounts) {
+    val entries = remember(groups, customGroups, total, favoriteKeys.size) {
         buildList {
             add(CategoryEntry(FAVORITES_GROUP, "★ Favoriten", favoriteKeys.size, removable = false))
             customGroups.forEach { add(CategoryEntry(customGroupKey(it.id), "📁 ${it.name}", it.count)) }
             add(CategoryEntry(NEW_GROUP, "＋ Neue Gruppe", null, removable = false, action = true))
-            add(CategoryEntry(BEST_SPORT_GROUP, "🏆 Best of Sport", bestCounts.first, removable = false))
-            add(CategoryEntry(BEST_TV_GROUP, "🏆 Best of TV", bestCounts.second, removable = false))
             add(CategoryEntry(null, "Alle Sender", total))
             groups.forEach { add(CategoryEntry(it.name, it.name, it.count)) }
         }
@@ -202,22 +200,17 @@ fun LiveScreen() {
                     }
                 }
             },
-            onAction = { dialog = LiveDialog.NameGroup(null, "", null) },
+            onAction = { dialog = LiveDialog.NameGroup(null, "", emptyList()) },
         )
 
         if (loaded == null) {
             Spacer(Modifier.weight(1f))
         } else if (channels.isEmpty()) {
             EmptyHint(
+                if (selectedGroup == FAVORITES_GROUP) "Noch keine Favoriten" else "Keine Sender",
                 when {
-                    selectedGroup == FAVORITES_GROUP -> "Noch keine Favoriten"
-                    isBestOf(selectedGroup) -> "Noch keine Messungen"
-                    else -> "Keine Sender"
-                },
-                when {
-                    selectedGroup == FAVORITES_GROUP -> "Halte OK auf einem Sender gedrückt, um ihn zu den Favoriten hinzuzufügen."
-                    isBestOf(selectedGroup) -> "Hier stehen die stabilsten Sender, sobald sie geschaut oder im Sender-Check geprüft wurden " +
-                        "(Einstellungen → Bedienung & TV-Guide → Sender-Check → Jetzt prüfen)."
+                    selectedGroup == FAVORITES_GROUP -> "Halte OK auf einem Sender gedrückt und wähle „Zu den Favoriten“."
+                    selectedGroup?.let(::customGroupId) != null -> "Halte OK auf einem Sender gedrückt und wähle diese Gruppe."
                     else -> ""
                 },
                 Modifier.weight(1f),
@@ -227,7 +220,7 @@ fun LiveScreen() {
             fun finishMove() {
                 val order = moving
                 val group = selectedGroup
-                movingKey = null
+                movingKeys = null
                 if (order == null) return
                 scope.launch {
                     content.saveOrder(group, favorites = group == FAVORITES_GROUP, keys = order.map { it.key })
@@ -237,20 +230,25 @@ fun LiveScreen() {
                     notice = "Reihenfolge gespeichert"
                 }
             }
-            androidx.activity.compose.BackHandler(enabled = movingKey != null) { finishMove() }
+            androidx.activity.compose.BackHandler(enabled = movingKeys != null) { finishMove() }
+            androidx.activity.compose.BackHandler(enabled = selecting && movingKeys == null) {
+                selecting = false
+                picked = emptyList()
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxHeight().focusRestorer().onPreviewKeyEvent { event ->
-                    val key = movingKey ?: return@onPreviewKeyEvent false
+                    val keys = movingKeys ?: return@onPreviewKeyEvent false
                     val list = moving ?: return@onPreviewKeyEvent false
                     val code = event.nativeKeyEvent.keyCode
                     when (code) {
                         android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
                             if (event.type == KeyEventType.KeyDown) {
-                                val from = list.indexOfFirst { it.key == key }
-                                val to = from + if (code == android.view.KeyEvent.KEYCODE_DPAD_UP) -1 else 1
-                                if (from >= 0 && to in list.indices) {
-                                    moving = list.toMutableList().apply { add(to, removeAt(from)) }
+                                val up = code == android.view.KeyEvent.KEYCODE_DPAD_UP
+                                val next = moveBlock(list, keys, up) { it.key }
+                                if (next !== list) {
+                                    moving = next
+                                    val to = if (up) next.indexOfFirst { it.key in keys } else next.indexOfLast { it.key in keys }
                                     scope.launch {
                                         val visible = listState.layoutInfo.visibleItemsInfo
                                         if (visible.isNotEmpty() && (to <= visible.first().index || to >= visible.last().index)) {
@@ -278,14 +276,23 @@ fun LiveScreen() {
                         channel = channel,
                         now = channel.epgId?.let { nowMap[it] },
                         favorite = channel.key in favoriteSet,
-                        selected = channel.key == movingKey,
+                        selected = movingKeys?.contains(channel.key) == true || selecting && channel.key in picked,
                         onFocused = { focusedState.value = channel },
                         onClick = {
-                            val favoritesOnly = selectedGroup == FAVORITES_GROUP
-                            // Best of hat keine Gruppe beim Anbieter: im Player durch alle Sender zappen.
-                            PlayerActivity.startLive(context, channel.key, selectedGroup.takeUnless { favoritesOnly || isBestOf(it) }, favoritesOnly)
+                            if (selecting) {
+                                picked = if (channel.key in picked) picked - channel.key else picked + channel.key
+                            } else {
+                                val favoritesOnly = selectedGroup == FAVORITES_GROUP
+                                PlayerActivity.startLive(context, channel.key, selectedGroup.takeUnless { favoritesOnly }, favoritesOnly)
+                            }
                         },
-                        onLongClick = { if (movingKey == null) dialog = LiveDialog.ChannelMenu(channel) },
+                        onLongClick = {
+                            when {
+                                movingKeys != null -> Unit
+                                selecting -> dialog = LiveDialog.SelectionMenu(picked.ifEmpty { listOf(channel.key) })
+                                else -> dialog = LiveDialog.ChannelMenu(channel)
+                            }
+                        },
                     )
                 }
             }
@@ -294,8 +301,13 @@ fun LiveScreen() {
         // Hochformat: kein Platz für die Detailspalte (Sendungsinfo steht in der Senderzeile).
         if (!isPortrait) ChannelDetails(focusedState, Modifier.width(290.dp).fillMaxHeight())
     }
-    if (movingKey != null) NoticeBar("▲ ▼ verschieben  ·  OK oder Zurück: hier ablegen")
-    else notice?.let { NoticeBar(it) }
+    when {
+        movingKeys != null -> NoticeBar(
+            (if ((movingKeys?.size ?: 0) > 1) "${movingKeys?.size} Sender: " else "") + "▲ ▼ verschieben  ·  OK oder Zurück: hier ablegen"
+        )
+        selecting -> NoticeBar("Auswahl: ${picked.size}  ·  OK: an-/abwählen  ·  OK halten: Aktionen  ·  Zurück: beenden")
+        else -> notice?.let { NoticeBar(it) }
+    }
 
     when (val d = dialog) {
         null -> Unit
@@ -319,17 +331,70 @@ fun LiveScreen() {
                     notice = if (now) "${d.channel.name} → 📁 $name" else "${d.channel.name} aus 📁 $name entfernt"
                 }
             },
-            onNewGroup = { dialog = LiveDialog.NameGroup(null, "", d.channel.key) },
+            onNewGroup = { dialog = LiveDialog.NameGroup(null, "", listOf(d.channel.key)) },
             onMove = {
                 dialog = null
                 moving = channels
-                movingKey = d.channel.key
+                movingKeys = setOf(d.channel.key)
+            },
+            onSelectMany = {
+                dialog = null
+                selecting = true
+                picked = listOf(d.channel.key)
+            },
+            onDismiss = { dialog = null },
+        )
+        is LiveDialog.SelectionMenu -> SelectionMenuDialog(
+            count = d.keys.size,
+            customGroups = customGroups.map { customGroupKey(it.id) to it.name },
+            canMove = sortable(selectedGroup),
+            onMove = {
+                dialog = null
+                val keys = d.keys.toSet()
+                moving = gatherBlock(channels, keys) { it.key }
+                movingKeys = keys
+                selecting = false
+                picked = emptyList()
+            },
+            onFavorites = {
+                dialog = null
+                scope.launch {
+                    val added = content.addFavorites(d.keys)
+                    notice = "★ $added Sender zu den Favoriten"
+                }
+                selecting = false
+                picked = emptyList()
+            },
+            onAddToGroup = { group, name ->
+                dialog = null
+                scope.launch {
+                    val added = content.addToGroup(group, d.keys)
+                    notice = "$added Sender → 📁 $name"
+                }
+                selecting = false
+                picked = emptyList()
+            },
+            onNewGroup = { dialog = LiveDialog.NameGroup(null, "", d.keys) },
+            onRemove = if (selectedGroup == FAVORITES_GROUP || selectedGroup?.let(::customGroupId) != null) ({
+                dialog = null
+                val group = selectedGroup
+                scope.launch {
+                    if (group == FAVORITES_GROUP) content.removeFavorites(d.keys) else group?.let { content.removeFromGroup(it, d.keys) }
+                    notice = "${d.keys.size} Sender entfernt"
+                }
+                selecting = false
+                picked = emptyList()
+            }) else null,
+            onCancel = {
+                dialog = null
+                selecting = false
+                picked = emptyList()
             },
             onDismiss = { dialog = null },
         )
         is LiveDialog.GroupMenu -> GroupMenuDialog(
             name = d.name,
-            onRename = { dialog = LiveDialog.NameGroup(d.group, d.name, null) },
+            onRename = { dialog = LiveDialog.NameGroup(d.group, d.name, emptyList()) },
             onMove = { delta -> scope.launch { content.moveGroup(d.group, delta) } },
             onDelete = {
                 dialog = null
@@ -349,10 +414,12 @@ fun LiveScreen() {
                 if (name.isBlank()) return@NameGroupDialog
                 scope.launch {
                     if (d.group == null) {
-                        val created = content.createGroup(name, d.firstKey)
-                        notice = if (d.firstKey != null) "📁 ${name.trim()} angelegt, Sender aufgenommen" else
+                        val created = content.createGroup(name, d.firstKeys)
+                        notice = if (d.firstKeys.isNotEmpty()) "📁 ${name.trim()} angelegt mit ${d.firstKeys.size} Sender(n)" else
                             "📁 ${name.trim()} angelegt. Sender aufnehmen: OK auf einem Sender gedrückt halten"
-                        if (d.firstKey == null) selectedGroup = created
+                        if (d.firstKeys.isEmpty()) selectedGroup = created
+                        selecting = false
+                        picked = emptyList()
                     } else {
                         content.renameGroup(d.group, name)
                     }
@@ -374,6 +441,7 @@ private fun ChannelMenuDialog(
     onToggleGroup: (group: String, name: String) -> Unit,
     onNewGroup: () -> Unit,
     onMove: () -> Unit,
+    onSelectMany: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val content = LocalContainer.current.content
@@ -383,6 +451,7 @@ private fun ChannelMenuDialog(
     MenuDialog(channel.name, onDismiss) { first ->
         MenuRow(if (favorite) "★ Aus den Favoriten entfernen" else "☆ Zu den Favoriten", Modifier.focusRequester(first), onFavorite)
         if (canMove) MenuRow("↕ Verschieben (Reihenfolge ändern)", onClick = onMove)
+        MenuRow("☑ Mehrere auswählen (verschieben, in Gruppe …)", onClick = onSelectMany)
         customGroups.forEach { (group, name) ->
             MenuRow((if (group in memberOf) "✓ " else "    ") + "📁 $name") {
                 onToggleGroup(group, name)
@@ -390,6 +459,30 @@ private fun ChannelMenuDialog(
             }
         }
         MenuRow("＋ Neue Gruppe mit diesem Sender …", onClick = onNewGroup)
+    }
+}
+
+/** Aktionen für mehrere ausgewählte Sender. */
+@Composable
+private fun SelectionMenuDialog(
+    count: Int,
+    customGroups: List<Pair<String, String>>,
+    canMove: Boolean,
+    onMove: () -> Unit,
+    onFavorites: () -> Unit,
+    onAddToGroup: (group: String, name: String) -> Unit,
+    onNewGroup: () -> Unit,
+    onRemove: (() -> Unit)?,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    MenuDialog("$count Sender ausgewählt", onDismiss) { first ->
+        if (canMove) MenuRow("↕ Gemeinsam verschieben", Modifier.focusRequester(first), onMove)
+        MenuRow("★ Zu den Favoriten", if (canMove) Modifier else Modifier.focusRequester(first), onFavorites)
+        customGroups.forEach { (group, name) -> MenuRow("📁 In „$name“ aufnehmen") { onAddToGroup(group, name) } }
+        MenuRow("＋ Neue Gruppe mit diesen Sendern …", onClick = onNewGroup)
+        onRemove?.let { MenuRow("✕ Aus dieser Liste entfernen", onClick = it) }
+        MenuRow("Auswahl beenden", onClick = onCancel)
     }
 }
 
@@ -523,7 +616,7 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
             Spacer(Modifier.height(12.dp))
         }
         Spacer(Modifier.weight(1f))
-        Text("OK abspielen  ·  OK halten = Favorit, Gruppen, Verschieben", fontSize = 13.sp, color = AyuColors.TextSecondary)
+        Text("OK abspielen  ·  OK halten = Favorit, Gruppen, Verschieben, Mehrfachauswahl", fontSize = 13.sp, color = AyuColors.TextSecondary)
         Text("OK halten auf Gruppe = ausblenden bzw. bearbeiten", fontSize = 13.sp, color = AyuColors.TextSecondary)
     }
 }

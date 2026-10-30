@@ -1110,13 +1110,11 @@ class DeviceTourTest {
             val (a, b, c) = group.value.take(3)
             val playlists = group.value.map { it.playlistId }.distinct()
             suspend fun showAgain() = playlists.forEach { content.setGroupsHidden(it, de.ayutv.data.db.GroupKind.LIVE, listOf(group.key), hidden = false) }
-            val created = runBlocking { content.createGroup("Meine Sender", a.key) }
-            runBlocking {
-                content.toggleInGroup(created, b.key)
-                content.toggleInGroup(created, c.key)
-                if (!container.db.favorites().isFavorite(a.key)) content.toggleFavorite(a.key)
-                if (!container.db.favorites().isFavorite(c.key)) content.toggleFavorite(c.key)
-            }
+            val created = runBlocking { content.createGroup("Meine Sender", listOf(a.key)) }
+            // Mehrfachauswahl: mehrere Sender auf einmal in die Gruppe und zu den Favoriten (schon enthaltene zählen nicht).
+            val addedToGroup = runBlocking { content.addToGroup(created, listOf(a.key, b.key, c.key)) }
+            runBlocking { content.addFavorites(listOf(a.key, c.key)) }
+            assertEquals("Mehrfach in Gruppe aufgenommen", 2, addedToGroup)
             try {
                 // Gruppe beim Anbieter ausblenden: verschwindet aus „Alle“, bleibt in Favoriten und eigener Gruppe.
                 runBlocking { content.hideGroupEverywhere(de.ayutv.data.db.GroupKind.LIVE, group.key) }

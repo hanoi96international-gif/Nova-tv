@@ -100,20 +100,6 @@ class ContentRepository(
         ChannelVariants.merge(channels.filter { ChannelQuality.passes(it.key, it.name) }, { it.name }, { it.playlistId }, { ChannelQuality.score(it.key, it.name) })
     }
 
-    /**
-     * „Best of“: die stabilsten Sender (je Sender die beste Fassung), getrennt nach Sport ([sport] = true) und
-     * normalem Fernsehen. Zählt nur, was schon geschaut oder im Sender-Check gemessen wurde; die wenigsten
-     * Abbrüche je Stunde zuerst.
-     */
-    suspend fun bestOf(sport: Boolean, limit: Int = 60): List<ChannelEntity> = withContext(Dispatchers.Default) {
-        mergeVariants(db.channels().all())
-            .filter { (ProgrammeText.isSportChannel(it.name) || it.groupTitle.contains("sport", ignoreCase = true)) == sport }
-            .mapNotNull { channel -> ChannelQuality.stability(channel.key)?.let { channel to it } }
-            .sortedBy { it.second }
-            .take(limit)
-            .map { it.first }
-    }
-
     /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
     suspend fun variantsOf(channel: ChannelEntity): List<ChannelEntity> = withContext(Dispatchers.Default) {
         if (ChannelVariants.key(channel.name) == null) return@withContext emptyList()
@@ -210,12 +196,45 @@ class ContentRepository(
     suspend fun groupLabel(group: String): String =
         customGroupId(group)?.let { id -> db.customGroups().group(id)?.name?.let { "📁 $it" } } ?: group
 
-    /** Neue eigene Gruppe (am Ende), auf Wunsch gleich mit dem Sender [firstKey]. Liefert die Kennung für die Liste. */
-    suspend fun createGroup(name: String, firstKey: String? = null): String {
+    /** Neue eigene Gruppe (am Ende), auf Wunsch gleich mit den Sendern [firstKeys]. Liefert die Kennung für die Liste. */
+    suspend fun createGroup(name: String, firstKeys: List<String> = emptyList()): String {
         val id = db.customGroups().insert(CustomGroupEntity(name = name.trim(), position = db.customGroups().maxGroupPosition() + 1))
-        firstKey?.let { db.customGroups().addItem(CustomGroupItemEntity(id, it, 1)) }
+        firstKeys.forEachIndexed { index, key -> db.customGroups().addItem(CustomGroupItemEntity(id, key, index + 1)) }
         return customGroupKey(id)
     }
+
+    /** Mehrere Sender in eine eigene Gruppe aufnehmen (ans Ende, schon enthaltene bleiben, wo sie sind). Liefert die Anzahl neuer. */
+    suspend fun addToGroup(group: String, keys: List<String>): Int {
+        val id = customGroupId(group) ?: return 0
+        var position = db.customGroups().maxItemPosition(id)
+        var added = 0
+        for (key in keys) {
+            if (id in db.customGroups().groupsOf(key)) continue
+            db.customGroups().addItem(CustomGroupItemEntity(id, key, ++position))
+            added++
+        }
+        return added
+    }
+
+    suspend fun removeFromGroup(group: String, keys: List<String>) {
+        val id = customGroupId(group) ?: return
+        keys.forEach { db.customGroups().removeItem(id, it) }
+    }
+
+    /** Mehrere Sender zu den Favoriten (ans Ende). Liefert die Anzahl neuer. */
+    suspend fun addFavorites(keys: List<String>): Int {
+        var position = db.favorites().maxPosition()
+        var added = 0
+        val now = System.currentTimeMillis()
+        for (key in keys) {
+            if (db.favorites().isFavorite(key)) continue
+            db.favorites().add(FavoriteEntity(key, now, ++position))
+            added++
+        }
+        return added
+    }
+
+    suspend fun removeFavorites(keys: List<String>) = keys.forEach { db.favorites().remove(it) }
 
     suspend fun renameGroup(group: String, name: String) {
         customGroupId(group)?.let { db.customGroups().rename(it, name.trim()) }
