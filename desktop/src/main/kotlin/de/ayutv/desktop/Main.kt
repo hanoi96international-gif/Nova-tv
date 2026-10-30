@@ -20,6 +20,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -63,6 +65,7 @@ fun main(args: Array<String>) {
             onCloseRequest = { app.close(); exitApplication() },
             state = window,
             title = "DnA-TV",
+            icon = remember { appIcon() },
         ) {
             // Tasten vom Handy gehen an dieses Fenster.
             LaunchedEffect(Unit) { app.remote.window = this@Window.window }
@@ -70,6 +73,11 @@ fun main(args: Array<String>) {
         }
     }
 }
+
+private fun appIcon(): BitmapPainter? = runCatching {
+    val bytes = object {}.javaClass.getResourceAsStream("/dna-tv.png")!!.use { it.readBytes() }
+    BitmapPainter(org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap())
+}.getOrNull()
 
 @Composable
 fun App(app: AppState, window: WindowState) {

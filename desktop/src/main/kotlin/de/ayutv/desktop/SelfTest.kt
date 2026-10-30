@@ -23,10 +23,12 @@ object SelfTest {
                 val picture = BufferedImage(640, 360, BufferedImage.TYPE_INT_RGB)
                 picture.createGraphics().apply { color = Color(0x3DA9FC); fillRect(0, 0, 640, 360); dispose() }
                 ImageIO.write(picture, "png", image)
-                player.play(image.toURI().toString(), null, 0, ":image-duration=10")
+                // Pfad direkt übergeben (VLC versteht unter Windows „file:/D:/…“ nicht, nur „file:///D:/…“).
+                player.play(image.absolutePath, null, 0, ":image-duration=10")
                 val until = System.currentTimeMillis() + 30_000
                 while (player.framesRendered.get() == 0L && System.currentTimeMillis() < until) Thread.sleep(200)
-                lines += "frames=${player.framesRendered.get()}"
+                Thread.sleep(300)
+                lines += "frames=${player.framesRendered.get()} playing=${player.playing} error=${player.error}"
                 ok = player.framesRendered.get() > 0
                 player.release()
                 image.delete()

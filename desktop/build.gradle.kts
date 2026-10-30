@@ -94,6 +94,7 @@ compose.desktop {
                 dirChooser = true
                 perUserInstall = true
                 upgradeUuid = "6f1c6b0e-3c52-4c8e-9d0a-5b8f2f6a7d41"
+                iconFile.set(project.file("icons/dna-tv.ico"))
             }
         }
     }
