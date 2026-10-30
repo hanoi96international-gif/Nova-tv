@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
+import de.ayutv.data.parse.IntroSkip
+import de.ayutv.desktop.data.IntroMark
 import kotlinx.coroutines.delay
 
 /**
@@ -102,6 +104,32 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
         app.play(vod.copy(key = Episodes.key(series.key, episode.id), title = Episodes.title(series.name, episode), url = url, startMs = 0, episodeId = episode.id))
     }
 
+    // Intro überspringen (Serien): Knopf am Anfang, gelernte Stelle je Serie; Spulen kurz danach korrigiert sie.
+    val series = (playback as? Playback.Vod)?.series
+    val learned = series?.let { s -> app.store.user.value.intros[s.key]?.let { IntroSkip.Intro(it.startMs, it.lengthMs) } }
+    var skippedFrom by remember(playback) { mutableLongStateOf(-1L) }
+    var skippedAt by remember(playback) { mutableLongStateOf(0L) }
+    val introVisible = series != null && skippedFrom < 0 && IntroSkip.visible(player.positionMs, learned)
+
+    fun skipIntro() {
+        val from = player.positionMs
+        skippedFrom = from
+        skippedAt = System.currentTimeMillis()
+        player.seekTo(IntroSkip.target(from, learned))
+    }
+
+    fun seek(delta: Long) {
+        player.seekBy(delta)
+        val s = series ?: return
+        if (skippedFrom >= 0 && System.currentTimeMillis() - skippedAt < IntroSkip.LEARN_WINDOW_MS) {
+            skippedAt = System.currentTimeMillis()
+            val target = (player.positionMs + delta).coerceAtLeast(0)
+            IntroSkip.learn(skippedFrom, target)?.let { intro ->
+                app.store.updateUser { it.copy(intros = it.intros + (s.key to IntroMark(intro.startMs, intro.lengthMs))) }
+            }
+        }
+    }
+
     fun trackMenu(audio: Boolean) {
         val tracks = if (audio) player.audioTracks else player.subtitleTracks
         menu = {
@@ -141,9 +169,16 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
                 when (e.key) {
                     Key.DirectionUp, Key.PageUp, Key.ChannelUp -> { if (live) zap(-1) else player.changeVolume(5); true }
                     Key.DirectionDown, Key.PageDown, Key.ChannelDown -> { if (live) zap(1) else player.changeVolume(-5); true }
-                    Key.DirectionLeft, Key.MediaRewind -> { if (!live) player.seekBy(-step); true }
-                    Key.DirectionRight, Key.MediaFastForward -> { if (!live) player.seekBy(step); true }
-                    Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> { if (!live && osd) player.togglePause(); true }
+                    Key.DirectionLeft, Key.MediaRewind -> { if (!live) seek(-step); true }
+                    Key.DirectionRight, Key.MediaFastForward -> { if (!live) seek(step); true }
+                    Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> {
+                        when {
+                            introVisible -> skipIntro()
+                            !live && osd -> player.togglePause()
+                        }
+                        true
+                    }
+                    Key.I -> { if (introVisible) skipIntro(); true }
                     Key.Spacebar, Key.MediaPlayPause -> { player.togglePause(); true }
                     Key.MediaNext -> { if (live) zap(1) else playNext(); true }
                     Key.MediaPrevious -> { if (live) zap(-1); true }
@@ -209,6 +244,11 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
                 TextButton(if (fullscreen) "⤢ Fenster" else "⤢ Vollbild", { toggleFullscreen() })
                 Spacer(Modifier.width(8.dp))
                 TextButton("✕", { app.stopPlayback() })
+            }
+        }
+        if (introVisible) {
+            Box(Modifier.align(Alignment.BottomEnd).padding(end = 32.dp, bottom = if (osd) 150.dp else 40.dp)) {
+                TextButton("⏭ Intro überspringen (Enter)", { skipIntro() }, primary = true)
             }
         }
         menu?.invoke()

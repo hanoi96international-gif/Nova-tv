@@ -72,6 +72,9 @@ data class Programme(
     val flags: Int = 0,
 )
 
+@Serializable
+data class IntroMark(val startMs: Long, val lengthMs: Long)
+
 /** Eigene Sendergruppe (Sender aus allen Playlists, in eigener Reihenfolge). */
 @Serializable
 data class CustomGroup(val id: Long, val name: String, val keys: List<String> = emptyList())
@@ -96,5 +99,7 @@ data class UserData(
     val subtitleLanguage: String = "de",
     /** Handy als Fernbedienung eingeschaltet, und die PIN in der Adresse. */
     val phoneRemote: Boolean = false,
+    /** Gelerntes Intro je Serie (Serienschlüssel → Beginn und Länge in ms). */
+    val intros: Map<String, IntroMark> = emptyMap(),
     val remotePin: String = "",
 )
