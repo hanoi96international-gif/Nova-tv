@@ -101,6 +101,7 @@ fun GuideScreen() {
     val scope = rememberCoroutineScope()
     val groups by content.groups.collectAsStateWithLifecycle(emptyList())
     val favorites by content.favoriteChannels.collectAsStateWithLifecycle(emptyList())
+    val customGroups by content.customGroups.collectAsStateWithLifecycle(emptyList())
     val playlists by container.playlists.playlists.collectAsStateWithLifecycle(emptyList())
     var group by rememberSaveable { mutableStateOf<String?>(null) }
     // Ohne eigene Wahl: Favoriten zuerst (wie in Live TV), sonst die erste Gruppe.
@@ -112,7 +113,8 @@ fun GuideScreen() {
     // Jeder Sender eine Zeile, auch wenn der Anbieter ihn in SD, HD und 4K führt.
     val channels by produceState(emptyList<ChannelEntity>(), rawChannels, appSettings?.mergeVariants, activeGroup, appSettings?.minQuality, appSettings?.preferUhd) {
         appSettings?.let { de.ayutv.data.parse.ChannelQuality.configure(it.minQuality.height, it.preferUhd, it.hideBrokenChannels) }
-        value = if (appSettings?.mergeVariants != false && activeGroup != FAVORITES_GROUP) content.mergeVariants(rawChannels) else rawChannels
+        val own = activeGroup == FAVORITES_GROUP || activeGroup?.let(de.ayutv.data.repo::customGroupId) != null
+        value = if (appSettings?.mergeVariants != false && !own) content.mergeVariants(rawChannels) else rawChannels
     }
     val minute by rememberMinuteTicker()
     // Nur die Vorschau liest diesen Zustand: Fokuswechsel im Raster bauen das Raster nicht neu auf.
@@ -191,6 +193,10 @@ fun GuideScreen() {
         ) {
             if (favorites.isNotEmpty()) {
                 item(key = FAVORITES_GROUP) { GroupChip("★ Favoriten", activeGroup == FAVORITES_GROUP) { group = FAVORITES_GROUP } }
+            }
+            items(customGroups.filter { it.count > 0 }, key = { "eigene-${it.id}" }) { g ->
+                val key = de.ayutv.data.repo.customGroupKey(g.id)
+                GroupChip("📁 ${g.name}", key == activeGroup) { group = key }
             }
             items(groups, key = { it.name }) { g ->
                 GroupChip(g.name, g.name == activeGroup) { group = g.name }

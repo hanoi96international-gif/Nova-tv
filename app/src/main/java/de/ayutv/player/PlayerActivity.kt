@@ -375,7 +375,7 @@ class PlayerActivity : ComponentActivity() {
                 val favoritesOnly = intent.getBooleanExtra(EXTRA_FAVORITES, false)
                 listTitle = when {
                     favoritesOnly -> "★ Favoriten"
-                    group != null -> group
+                    group != null -> container.content.groupLabel(group)
                     else -> "Alle Sender"
                 }
                 // Erst den Sender starten, dann die (evtl. zehntausende Einträge lange) Zapp-Liste laden.

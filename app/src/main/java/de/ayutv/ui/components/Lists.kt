@@ -99,7 +99,8 @@ fun ChannelListItem(
     }
 }
 
-data class CategoryEntry(val id: String?, val label: String, val count: Int?, val removable: Boolean = true)
+/** [action]: kein Gruppeneintrag, sondern ein Knopf (z. B. „Neue Gruppe“): Fokus wählt nichts aus, OK löst [onAction] aus. */
+data class CategoryEntry(val id: String?, val label: String, val count: Int?, val removable: Boolean = true, val action: Boolean = false)
 
 /**
  * Linke Kategorienspalte. Die Auswahl folgt dem Fokus (wie bei TiviMate), leicht verzögert,
@@ -115,6 +116,7 @@ fun CategoryColumn(
     width: Dp = if (isPortrait) 170.dp else 260.dp,
     /** Langes Drücken auf eine echte Gruppe (nicht "Alle"/"Favoriten"), z. B. zum Ausblenden. */
     onLongClick: ((String) -> Unit)? = null,
+    onAction: ((String) -> Unit)? = null,
 ) {
     var focusedId by remember { mutableStateOf<Any?>(Unset) }
     LaunchedEffect(focusedId) {
@@ -131,9 +133,9 @@ fun CategoryColumn(
         items(entries, key = { it.id ?: "\u0000all" }) { entry ->
             val id = entry.id
             Surface(
-                onClick = { onSelect(entry.id) },
+                onClick = { if (entry.action && id != null) onAction?.invoke(id) else onSelect(entry.id) },
                 onLongClick = if (onLongClick != null && id != null && entry.removable) ({ onLongClick(id) }) else null,
-                modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) focusedId = entry.id },
+                modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused && !entry.action) focusedId = entry.id },
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = if (entry.id == selected) AyuColors.SurfaceRaised else Color.Transparent,
