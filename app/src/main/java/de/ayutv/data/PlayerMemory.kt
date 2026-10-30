@@ -32,6 +32,18 @@ class PlayerMemory(context: Context) {
         prefs.edit().putString(key, encode(next)).apply()
     }
 
+    private val sources = context.getSharedPreferences("subtitle_source", Context.MODE_PRIVATE)
+
+    /**
+     * Woher die Untertitel kommen sollen: [SOURCE_FILE] (OpenSubtitles) oder [SOURCE_TRANSLATE] (Spur des Films
+     * übersetzen). Von Hand gewählt je Film oder Serie; automatisch entschieden je Film oder Folge ([autoKey]).
+     */
+    fun subtitleSource(key: String): String? = sources.getString(key, null)
+
+    fun setSubtitleSource(key: String, source: String?) {
+        sources.edit().apply { if (source == null) remove(key) else putString(key, source) }.apply()
+    }
+
     private val rates = context.getSharedPreferences("frame_rates", Context.MODE_PRIVATE)
 
     /**
@@ -50,6 +62,9 @@ class PlayerMemory(context: Context) {
 
     companion object {
         const val OFF = "-"
+        const val SOURCE_FILE = "os"
+        const val SOURCE_TRANSLATE = "tr"
+        fun autoKey(key: String) = "auto:$key"
         private const val LAST_LIVE = "~live"
 
         fun encode(c: Choice): String = listOf(c.audio.orEmpty(), c.text.orEmpty(), c.aspect?.name.orEmpty(), c.load.orEmpty()).joinToString("|")

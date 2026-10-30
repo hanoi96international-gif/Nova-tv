@@ -778,6 +778,22 @@ private fun TracksOverlay(activity: PlayerActivity) {
                 OptionRow("${Languages.label(language)} (geladen)", external == language) { activity.showLoaded(language) }
             }
         }
+        // Immer die Wahl: Datei von OpenSubtitles oder die Spur des Films übersetzen (je Film bzw. Serie gemerkt).
+        activity.sourceChoiceLanguage?.let { language ->
+            val label = Languages.label(language)
+            item { MenuHeader("$label: Quelle") }
+            item {
+                val fit = activity.matchPercent?.takeIf { external == language }?.let { " · passt $it %" }
+                    ?: activity.autoSwitched?.takeIf { liveTarget == language }?.let { " · passte nur $it %" }
+                    ?: ""
+                OptionRow("OpenSubtitles$fit", external == language) { activity.chooseSubtitleSource(language, translate = false) }
+            }
+            item {
+                OptionRow("Übersetzung der Film-Spur (${activity.translatorName})", liveTarget == language) {
+                    activity.chooseSubtitleSource(language, translate = true)
+                }
+            }
+        }
         if (external != null) {
             item { MenuHeader("Untertitel-Zeit") }
             item { OptionRow("Untertitel-Zeit einstellen … (${activity.subtitleShiftLabel})", selected = false) { activity.openSyncPanel() } }

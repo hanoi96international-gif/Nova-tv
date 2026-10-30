@@ -598,6 +598,76 @@ class DeviceTourTest {
             }
         }
 
+        // 4b2. OpenSubtitles zuerst, schnell geprüft: Eine passende Datei (andere Fassung, 1,7 s versetzt) wird nach wenigen
+        // vorausgelesenen Einblendungen ausgerichtet und bleibt. Eine Datei, die nicht passt, wird gegen die Übersetzung der
+        // Spur (DeepL) getauscht. Zeiten der eingebetteten Spur wie in ci/make-test-media.sh.
+        if (movie != null) section("subtitle_source") {
+            fun ts(ms: Long) = "%02d:%02d:%02d,%03d".format(ms / 3_600_000, ms / 60_000 % 60, ms / 1_000 % 60, ms % 1_000)
+            var t = 1_000L
+            val fitting = (0 until 220).map { i ->
+                val gap = 2_000L + (i.toLong() * i * 7_919 + i.toLong() * 104_729) % 4_001
+                de.ayutv.data.parse.SrtCue(ts(t + 1_700), ts(t + 1_700 + minOf(1_800L, gap - 200)), "Hallo Nummer $i").also { t += gap }
+            }
+            val noise = java.util.Random(5)
+            var w = 4_000L
+            val wrong = (0 until 220).map { i ->
+                w += 1_500L + noise.nextInt(5_500)
+                de.ayutv.data.parse.SrtCue(ts(w), ts(w + 1_200), "Falsch $i")
+            }
+            container.subtitles.saveTranslation(movie.key + "#quelle-ok", "de", fitting)
+            container.subtitles.saveTranslation(movie.key + "#quelle-falsch", "de", wrong)
+            val server = FakeDeepL()
+            de.ayutv.data.repo.Translators.deeplBase = server.url
+            runBlocking { container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.DEEPL, deeplKey = "test:fx") } }
+            try {
+                fun open(key: String, block: (ActivityScenario<PlayerActivity>) -> Unit) {
+                    val request = VodRequest(key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url)
+                    launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->
+                        waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
+                        block(scenario)
+                    }
+                }
+                open(movie.key + "#quelle-ok") { scenario ->
+                    val started = System.currentTimeMillis()
+                    scenario.onActivity { it.loadSubtitles("de") }
+                    val synced = waitFor(30_000) { scenario.read { it.subtitleAutoSynced && it.subtitleTiming.offsetMs in -2_000L..-1_400L } }
+                    val ms = System.currentTimeMillis() - started
+                    Thread.sleep(20_000)
+                    val (language, percent, live) = scenario.read { Triple(it.externalLanguage, it.matchPercent, it.liveTranslateTarget) }
+                    scenario.onActivity { it.openTracks() }
+                    Thread.sleep(800)
+                    shot("25_subtitle_source")
+                    key(KeyEvent.KEYCODE_BACK)
+                    log("subtitle_source fit: synced=$synced ms=$ms offset=${scenario.read { it.subtitleTiming.offsetMs }} percent=$percent external=$language live=$live")
+                    assertTrue("Passende Datei nicht schnell ausgerichtet ($ms ms)", synced)
+                    assertEquals("Passende Datei wurde getauscht", "de", language)
+                }
+                open(movie.key + "#quelle-falsch") { scenario ->
+                    val started = System.currentTimeMillis()
+                    scenario.onActivity { it.loadSubtitles("de") }
+                    val switched = waitFor(90_000) {
+                        scenario.read { it.liveTranslateTarget == "de" && it.externalLanguage == null && it.translatedCue?.startsWith("TR:") == true }
+                    }
+                    log(
+                        "subtitle_source miss: switched=$switched ms=${System.currentTimeMillis() - started} auto=${scenario.read { it.autoSwitched }} " +
+                            "status=${scenario.read { it.statusHistory.toList() }.takeLast(2)}"
+                    )
+                    assertTrue("Unpassende Datei nicht gegen die Übersetzung getauscht", switched)
+                }
+                // Beim nächsten Mal gleich die Übersetzung (für diesen Film entschieden).
+                open(movie.key + "#quelle-falsch") { scenario ->
+                    scenario.onActivity { it.loadSubtitles("de") }
+                    val direct = waitFor(30_000) { scenario.read { it.liveTranslateTarget } == "de" }
+                    log("subtitle_source remembered: direct=$direct external=${scenario.read { it.externalLanguage }}")
+                    assertTrue("Entscheidung nicht gemerkt", direct && scenario.read { it.externalLanguage } == null)
+                }
+            } finally {
+                de.ayutv.data.repo.Translators.deeplBase = null
+                runBlocking { container.settings.update { it.copy(translationProvider = de.ayutv.data.TranslationProvider.ON_DEVICE, deeplKey = "") } }
+                server.close()
+            }
+        }
+
         // 4c. Nachts vorbereiten: eingebettete Untertitel aus der ganzen Datei lesen und übersetzen. Beim Schauen
         // sind die Zeilen dann sofort da (gleiche Spur und Zeiten wie im Player), ohne Vorlauf.
         if (movie != null) section("embedded_prep") {
