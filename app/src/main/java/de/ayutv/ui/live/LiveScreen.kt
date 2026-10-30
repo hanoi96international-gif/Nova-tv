@@ -527,9 +527,29 @@ private fun MenuDialog(title: String, onDismiss: () -> Unit, content: @Composabl
             delay(30)
         }
     }
+    // Geöffnet mit „OK gedrückt halten“: Die Taste ist noch unten. Ihr Loslassen (und das Wiederholen beim Halten) darf
+    // im Menü nichts auswählen, sonst wäre sofort der erste Punkt gewählt. Erst nach dem Loslassen oder bei einem neuen
+    // Druck reagiert das Menü auf OK.
+    val opened = remember { android.os.SystemClock.uptimeMillis() }
+    var armed by remember { mutableStateOf(false) }
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         de.ayutv.ui.components.Surface(
-            modifier = Modifier.width(520.dp),
+            modifier = Modifier.width(520.dp).onPreviewKeyEvent { event ->
+                val native = event.nativeKeyEvent
+                val ok = native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER || native.keyCode == android.view.KeyEvent.KEYCODE_ENTER
+                when {
+                    armed || !ok -> false
+                    event.type == KeyEventType.KeyUp -> {
+                        armed = true
+                        true
+                    }
+                    native.repeatCount == 0 && native.downTime > opened -> {
+                        armed = true
+                        false
+                    }
+                    else -> true
+                }
+            },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
             colors = androidx.tv.material3.SurfaceDefaults.colors(containerColor = AyuColors.SurfaceRaised),
         ) {
