@@ -69,6 +69,19 @@ Screenshots, Logs und Ruckler-Statistik liegen nach jedem Lauf im Branch `ci-res
 
 Für den Alltag die **Release-APK** nehmen, nicht die Debug-Variante: Compose ist im Debug-Build deutlich langsamer.
 
+## DnA-TV für Windows
+
+Im selben [Release](../../releases/latest) liegt die Windows-App (Windows 10/11, 64 Bit), VLC ist mit drin:
+
+- `DnA-TV-Windows-Setup.exe` oder `DnA-TV-Windows.msi`: Installation ohne Administratorrechte, mit Startmenü-Eintrag.
+- `DnA-TV-Windows-portable.zip`: entpacken und `DnA-TV.exe` starten, ohne Installation.
+
+Einrichten: *Einstellungen → Sicherung übernehmen …* holt Playlists, Favoriten, eigene Gruppen und Reihenfolgen direkt vom Fire TV (Adresse aus „Einrichtung per Handy“). Alternativ eine Playlist von Hand anlegen.
+
+Bedienung: Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur oder Bluetooth-Fernbedienung (Pfeiltasten, Enter, Esc) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
+
+Gebaut wird sie aus `desktop/` (Kotlin + Compose Desktop, Wiedergabe über VLC) mit denselben Lesern für M3U, Xtream, TV-Guide und Sicherung wie die Fire-TV-App: `./gradlew -p desktop run` bzw. `./gradlew -p desktop packageMsi`.
+
 ## Untertitel und Übersetzung einrichten (optional, kostenlos)
 
 Übersetzen funktioniert ohne jede Einrichtung: Pro Sprachrichtung lädt DnA-TV einmalig ein Übersetzungsmodell (ca. 110 MB, [OPUS-MT](https://github.com/Helsinki-NLP/Opus-MT), Universität Helsinki, CC BY 4.0) und übersetzt danach auf dem Gerät.
