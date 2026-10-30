@@ -150,7 +150,7 @@ data class AppSettings(
     /** Zuletzt gewählte Sprache der Live-Übersetzung: deren Modell wird vorab geladen ("" = noch keine). */
     val lastTranslationTarget: String = "",
     /** In der Ruhezeit Untertitel für „Weiter schauen“ und die nächste Folge vorab holen und übersetzen. */
-    val pretranslate: Boolean = true,
+    val pretranslate: Boolean = false,
     /** Mindestqualität der Sender (bekannt niedrigere werden ausgeblendet). */
     val minQuality: MinQuality = MinQuality.ALL,
     /** Bei doppelt geführten Sendern 4K statt Full HD bevorzugen. */
@@ -241,7 +241,8 @@ class SettingsStore(private val context: Context) {
         val dataSaver = booleanPreferencesKey("data_saver")
         val alertKeywords = stringSetPreferencesKey("alert_keywords")
         val phoneRemote = booleanPreferencesKey("phone_remote")
-        val pretranslate = booleanPreferencesKey("pretranslate")
+        // Neuer Schlüssel (0.35.1): Vorbereiten im Hintergrund ist für alle erst einmal aus, auch wer es nie umgestellt hat.
+        val pretranslate = booleanPreferencesKey("pretranslate_on")
         val uiTheme = stringPreferencesKey("ui_theme")
         val minQuality = stringPreferencesKey("min_quality")
         val preferUhd = booleanPreferencesKey("prefer_uhd")
@@ -432,7 +433,7 @@ class SettingsStore(private val context: Context) {
         alertKeywords = this[Keys.alertKeywords] ?: emptySet(),
         phoneRemote = this[Keys.phoneRemote] ?: true,
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
-        pretranslate = this[Keys.pretranslate] ?: true,
+        pretranslate = this[Keys.pretranslate] ?: false,
         uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.NORDLICHT),
         minQuality = enumOrDefault(this[Keys.minQuality], MinQuality.ALL),
         preferUhd = this[Keys.preferUhd] ?: false,
