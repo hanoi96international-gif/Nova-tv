@@ -231,13 +231,27 @@ class DeviceTourTest {
             shot("07c_settings_playlists")
             val first = runBlocking { container.db.playlists().all() }.first().name
             val height = app.resources.displayMetrics.heightPixels
-            // Nur Texte, die genau so lauten (die Suche findet auch Teiltreffer).
-            fun bounds(text: String): List<android.graphics.Rect> = instrumentation.uiAutomation.rootInActiveWindow
-                ?.findAccessibilityNodeInfosByText(text).orEmpty()
-                .filter { it.text?.toString() == text }
-                .map { node -> android.graphics.Rect().also { node.getBoundsInScreen(it) } }
-            val name = bounds(first)
-            val groups = bounds("Gruppen").filter { it.top in 0 until height }
+            // Den Element-Baum selbst durchlaufen: Die Textsuche der Bedienungshilfe durchsucht Compose nicht.
+            // Texte, die genau so lauten; Compose baut die Daten erst auf, wenn jemand fragt (daher kurz wiederholen).
+            fun bounds(text: String): List<android.graphics.Rect> {
+                val found = ArrayList<android.graphics.Rect>()
+                fun walk(node: android.view.accessibility.AccessibilityNodeInfo?, depth: Int) {
+                    if (node == null || depth > 60) return
+                    if (node.text?.toString() == text || node.contentDescription?.toString() == text) {
+                        found += android.graphics.Rect().also { node.getBoundsInScreen(it) }
+                    }
+                    for (i in 0 until node.childCount) walk(node.getChild(i), depth + 1)
+                }
+                walk(instrumentation.uiAutomation.rootInActiveWindow, 0)
+                return found
+            }
+            var name = emptyList<android.graphics.Rect>()
+            var groups = emptyList<android.graphics.Rect>()
+            waitFor(8_000) {
+                name = bounds(first)
+                groups = bounds("Gruppen").filter { it.top in 0 until height }
+                name.isNotEmpty() && groups.isNotEmpty()
+            }
             log("settings_playlists: first=$first name=$name groups=${groups.size} height=$height")
             assertTrue("Playlist-Name „$first“ ohne Platz: $name", name.any { it.width() >= 80 && it.height() in 1..200 })
             assertTrue("Knopf „Gruppen“ nicht auf dem Bildschirm", groups.isNotEmpty())
