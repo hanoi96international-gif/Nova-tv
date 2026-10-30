@@ -9,6 +9,8 @@ import de.ayutv.ui.components.isPortrait
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,6 +39,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -88,7 +91,7 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -> Unit, onChooseCountries: () -> Unit = {}) {
     val container = LocalContainer.current
@@ -237,7 +240,11 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         )
                     }
                     item {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(vertical = 8.dp),
+                        ) {
                             Button(onClick = onAddPlaylist) { Text("+ Playlist hinzufügen") }
                             OutlinedButton(onClick = { container.scope.launch { container.playlists.syncAll(force = true) } }) {
                                 Text("Alles aktualisieren")
@@ -1106,6 +1113,7 @@ private fun CredentialField(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PlaylistRow(
     playlist: PlaylistEntity,
@@ -1122,53 +1130,58 @@ private fun PlaylistRow(
         value = withContext(Dispatchers.IO) { container.playlists.epgStatus(playlist.id) }
     }
     val missingGuide = guide?.missing?.isNotEmpty() == true
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Schalter vorne: Welche Playlists aktiv sind, entscheidet der Nutzer selbst.
-        ActiveToggle(playlist.enabled, onToggle)
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                playlist.name,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (playlist.enabled) Color.Unspecified else AyuColors.TextSecondary,
-            )
-            val type = if (playlist.type == PlaylistType.XTREAM) "Xtream Codes" else "M3U"
-            val synced = if (playlist.lastSync > 0) {
-                "aktualisiert " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(playlist.lastSync))
-            } else {
-                "noch nicht geladen"
-            }
-            val state = if (playlist.enabled) "" else " · ausgeschaltet, erscheint nirgends"
-            Text("$type · $synced$state", color = AyuColors.TextSecondary, fontSize = 13.sp)
-            guide?.let { g ->
-                val sources = g.sources.filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }
+    // Zwei Zeilen: oben Schalter und Name, darunter die Knöpfe. Nebeneinander war die Seite schmaler als alle Knöpfe
+    // zusammen; der Name bekam dann keine Breite, die Zeile wurde riesig hoch und die Liste sah leer aus.
+    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Schalter vorne: Welche Playlists aktiv sind, entscheidet der Nutzer selbst.
+            ActiveToggle(playlist.enabled, onToggle)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
-                    "TV-Guide: ${g.withGuide} von ${g.total} Sendern" + (if (sources.isNotEmpty()) " ($sources)" else ""),
-                    color = AyuColors.TextSecondary, fontSize = 13.sp,
+                    playlist.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (playlist.enabled) Color.Unspecified else AyuColors.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                if (g.missing.isNotEmpty()) {
+                val type = if (playlist.type == PlaylistType.XTREAM) "Xtream Codes" else "M3U"
+                val synced = if (playlist.lastSync > 0) {
+                    "aktualisiert " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(playlist.lastSync))
+                } else {
+                    "noch nicht geladen"
+                }
+                val state = if (playlist.enabled) "" else " · ausgeschaltet, erscheint nirgends"
+                Text("$type · $synced$state", color = AyuColors.TextSecondary, fontSize = 13.sp)
+                guide?.let { g ->
+                    val sources = g.sources.filter { it.second > 0 }.joinToString(", ") { "${it.first}: ${it.second}" }
                     Text(
-                        "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " … (ganze Liste: „TV-Guide zuordnen“)" else ""),
-                        color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 2,
+                        "TV-Guide: ${g.withGuide} von ${g.total} Sendern" + (if (sources.isNotEmpty()) " ($sources)" else ""),
+                        color = AyuColors.TextSecondary, fontSize = 13.sp,
                     )
+                    if (g.missing.isNotEmpty()) {
+                        Text(
+                            "Ohne Programm: " + g.missing.take(12).joinToString(", ") + (if (g.total - g.withGuide > 12) " … (ganze Liste: „TV-Guide zuordnen“)" else ""),
+                            color = AyuColors.TextSecondary, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
-        OutlinedButton(onClick = onGroups) { Text("Gruppen") }
-        if (missingGuide) {
-            Spacer(Modifier.width(10.dp))
-            OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
+        // Reicht die Breite nicht (schmale Seite, große Schrift), brechen die Knöpfe in eine weitere Zeile um.
+        FlowRow(
+            Modifier.fillMaxWidth().padding(start = 134.dp, top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedButton(onClick = onGroups) { Text("Gruppen") }
+            if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
+            OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
+            OutlinedButton(
+                onClick = onDelete,
+                colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
+            ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
         }
-        Spacer(Modifier.width(10.dp))
-        OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
-        Spacer(Modifier.width(10.dp))
-        OutlinedButton(
-            onClick = onDelete,
-            colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
-        ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen") }
     }
 }
 

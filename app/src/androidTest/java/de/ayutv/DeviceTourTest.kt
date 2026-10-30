@@ -221,6 +221,28 @@ class DeviceTourTest {
             next("07_settings")
         } }
 
+        // Einstellungen → Playlists: Name und Knöpfe müssen sichtbar sein. Früher standen alle Knöpfe neben dem Namen;
+        // auf 960 dp Breite blieb dem Namen keine Breite, die Zeile wurde riesig hoch und die Seite wirkte leer.
+        section("settings_playlists") { ActivityScenario.launch(MainActivity::class.java).use {
+            Thread.sleep(3_000)
+            key(KeyEvent.KEYCODE_DPAD_LEFT, 4)
+            key(KeyEvent.KEYCODE_DPAD_DOWN, 10)
+            key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(2_000)
+            shot("07c_settings_playlists")
+            val first = runBlocking { container.db.playlists().all() }.first().name
+            val height = app.resources.displayMetrics.heightPixels
+            // Nur Texte, die genau so lauten (die Suche findet auch Teiltreffer).
+            fun bounds(text: String): List<android.graphics.Rect> = instrumentation.uiAutomation.rootInActiveWindow
+                ?.findAccessibilityNodeInfosByText(text).orEmpty()
+                .filter { it.text?.toString() == text }
+                .map { node -> android.graphics.Rect().also { node.getBoundsInScreen(it) } }
+            val name = bounds(first)
+            val groups = bounds("Gruppen").filter { it.top in 0 until height }
+            log("settings_playlists: first=$first name=$name groups=${groups.size} height=$height")
+            assertTrue("Playlist-Name „$first“ ohne Platz: $name", name.any { it.width() >= 80 && it.height() in 1..200 })
+            assertTrue("Knopf „Gruppen“ nicht auf dem Bildschirm", groups.isNotEmpty())
+        } }
+
         // Wie auf dem Fire TV Stick 4K (weniger Bewegung): Bereiche ohne Überblendung, Seitenleiste ohne Feder,
         // Hintergrund kleiner gezeichnet. Bedienung und Fokus müssen genauso funktionieren.
         section("ui_reduced") {
