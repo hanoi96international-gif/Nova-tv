@@ -197,6 +197,9 @@ class EmbeddedSubtitles(
     /** Hängt sich zwischen Extractor und Player und liest Untertitel-Samples mit. */
     fun tap(delegate: ExtractorsFactory): ExtractorsFactory = TapFactory(delegate, this)
 
+    /** Bekommt die Ton-Samples mit (Auswertung, wenn der Ton an Soundbar oder Receiver geht), sonst null. */
+    @Volatile var audio: AudioAhead? = null
+
     companion object {
         /** Kennung einer Spur für gespeicherte Übersetzungen: gleich beim Schauen und beim nächtlichen Lesen. */
         fun trackKey(format: Format): String = format.id ?: format.language ?: "spur"
@@ -251,6 +254,7 @@ private class TapOutput(private val delegate: ExtractorOutput, private val store
 
     override fun track(id: Int, type: Int): TrackOutput {
         val track = delegate.track(id, type)
+        if (type == C.TRACK_TYPE_AUDIO) return outputs.getOrPut(id) { AudioTapTrackOutput(track, store) }
         if (type != C.TRACK_TYPE_TEXT) return track
         return outputs.getOrPut(id) { TapTrackOutput(track, store) }
     }
@@ -316,5 +320,69 @@ private class TapTrackOutput(private val delegate: TrackOutput, private val stor
             val cues = decoder.decode(timeUs, bytes, start, size)
             store.add(current, timeUs, cues.durationUs, cues.cues)
         }
+    }
+}
+
+/**
+ * Ton-Samples unverändert weiterreichen und, solange die Auswertung sie haben will ([AudioAhead.wants]), eine Kopie
+ * übergeben. Sonst nur Weiterreichen, ohne jede Kopie.
+ */
+private class AudioTapTrackOutput(private val delegate: TrackOutput, private val store: EmbeddedSubtitles) : TrackOutput {
+    private var format: Format? = null
+    private val pending = ByteArrayOutputStream()
+    private var copying = false
+
+    override fun format(format: Format) {
+        this.format = format
+        delegate.format(format)
+    }
+
+    override fun durationUs(durationUs: Long) = delegate.durationUs(durationUs)
+
+    override fun sampleData(input: DataReader, length: Int, allowEndOfInput: Boolean, sampleDataPart: Int): Int {
+        if (!wanted() || sampleDataPart != TrackOutput.SAMPLE_DATA_PART_MAIN) {
+            copying = false
+            pending.reset()
+            return delegate.sampleData(input, length, allowEndOfInput, sampleDataPart)
+        }
+        val buffer = ByteArray(length)
+        val read = input.read(buffer, 0, length)
+        if (read == C.RESULT_END_OF_INPUT) {
+            if (allowEndOfInput) return C.RESULT_END_OF_INPUT
+            throw EOFException()
+        }
+        copying = true
+        pending.write(buffer, 0, read)
+        delegate.sampleData(ParsableByteArray(buffer, read), read, sampleDataPart)
+        return read
+    }
+
+    override fun sampleData(data: ParsableByteArray, length: Int, sampleDataPart: Int) {
+        if (wanted() && sampleDataPart == TrackOutput.SAMPLE_DATA_PART_MAIN) {
+            copying = true
+            pending.write(data.data, data.position, length)
+        }
+        delegate.sampleData(data, length, sampleDataPart)
+    }
+
+    override fun sampleMetadata(timeUs: Long, flags: Int, size: Int, offset: Int, cryptoData: TrackOutput.CryptoData?) {
+        delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
+        if (!copying) return
+        val current = format ?: return
+        val ahead = store.audio ?: return
+        val bytes = pending.toByteArray()
+        pending.reset()
+        val end = bytes.size - offset
+        if (offset > 0 && end >= 0) pending.write(bytes, end, offset) else copying = false
+        val start = end - size
+        if (start < 0 || size <= 0 || cryptoData != null) return
+        runCatching { if (ahead.wants(current, timeUs)) ahead.offer(current, timeUs, bytes.copyOfRange(start, end)) }
+    }
+
+    private fun wanted(): Boolean {
+        val current = format ?: return false
+        val ahead = store.audio ?: return false
+        // Zeit des nächsten Samples ist hier noch unbekannt: grob nach Spur prüfen, genau in sampleMetadata.
+        return ahead.active && ahead.wants(current, 0L)
     }
 }
