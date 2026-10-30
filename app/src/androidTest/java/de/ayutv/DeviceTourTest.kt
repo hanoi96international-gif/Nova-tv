@@ -562,10 +562,18 @@ class DeviceTourTest {
                     waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                     val started = System.currentTimeMillis()
                     scenario.onActivity { it.loadSubtitles("tr") }
-                    val shown = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("TR:") == true }
+                    // Mit DeepL soll möglichst nie erst das Original und dann die Übersetzung erscheinen.
+                    val originals = HashSet<String>()
+                    var preroll = false
+                    val shown = waitFor(60_000) {
+                        if (scenario.read { it.prerollProgress } != null) preroll = true
+                        val cue = scenario.read { it.translatedCue }
+                        if (cue != null && !cue.startsWith("TR:")) originals += cue
+                        cue?.startsWith("TR:") == true
+                    }
                     val ms = System.currentTimeMillis() - started
                     val lines = server.texts.toList()
-                    log("deepl_batch: shown=$shown ms=$ms requests=${server.requests} lines=${lines.size} cue=${scenario.read { it.translatedCue }?.replace('\n', '/')}")
+                    log("deepl_batch: shown=$shown ms=$ms requests=${server.requests} lines=${lines.size} preroll=$preroll originals=${originals.size} cue=${scenario.read { it.translatedCue }?.replace('\n', '/')}")
                     assertTrue("DeepL-Übersetzung nicht angezeigt", shown)
                     assertTrue("Zeilen nicht gebündelt (${server.requests} Anfragen für ${lines.size} Texte)", lines.size > server.requests)
                 }

@@ -1484,7 +1484,7 @@ class PlayerActivity : ComponentActivity() {
         liveTranslateTarget = target
         if (settings.lastTranslationTarget != target) container.scope.launch { container.settings.update { it.copy(lastTranslationTarget = target) } }
         startAhead(format, target)
-        if (preroll && vod != null && !isLive) startPreroll(format)
+        if (preroll && vod != null && !isLive) startPreroll(format, thorough = onlineTranslation())
         val via = Translators.from(settings)?.name?.let { " mit $it" }.orEmpty()
         val kind = if (format.isBitmapSubtitle()) "Bild-Untertitel " else ""
         subtitleStatus = "Übersetze ${kind}${liveSourceLanguage?.let { Languages.label(it) + " " }.orEmpty()}→ ${Languages.label(target)}$via"
@@ -1524,11 +1524,15 @@ class PlayerActivity : ComponentActivity() {
                 while (true) {
                     val store = embedded
                     if (store != null && store.hasEntries(format)) {
-                        val entry = store.at(format, player?.currentPosition ?: 0L)
+                        val position = player?.currentPosition ?: 0L
+                        val entry = store.at(format, position)
                         val translated = entry?.let { aheadTranslations[it.startMs]?.ifEmpty { null } }
                         // Noch nicht übersetzt: das Original zeigen (Text selbst, Bild-Untertitel über den Player)
-                        // statt gar nichts, solange der Übersetzer lädt oder nicht hinterherkommt.
-                        translatedCue = translated ?: if (bitmap) null else entry?.text
+                        // statt gar nichts, solange der Übersetzer lädt oder nicht hinterherkommt. Mit DeepL kommt die
+                        // Übersetzung meist binnen einer Sekunde: so lange nichts zeigen, statt Englisch und dann Deutsch.
+                        val waitForOnline = entry != null && translated == null && !bitmap && onlineTranslation() &&
+                            position - entry.startMs < ONLINE_HOLD_MS
+                        translatedCue = translated ?: if (bitmap || waitForOnline) null else entry?.text
                         originalVisible = bitmap && entry != null && translated == null
                     }
                     delay(100)
@@ -1715,7 +1719,7 @@ class PlayerActivity : ComponentActivity() {
      * Zeilen schon vor. Was schon übersetzt ist (über Nacht, früheres Schauen), braucht keinen Vorlauf.
      * OK oder Zurück: sofort weiterschauen.
      */
-    private fun startPreroll(format: Format) {
+    private fun startPreroll(format: Format, thorough: Boolean = false) {
         endPreroll()
         val p = player ?: return
         val from = p.currentPosition
@@ -1732,13 +1736,24 @@ class PlayerActivity : ComponentActivity() {
                 val loadedUntil = minOf(until, player.bufferedPosition)
                 // Puffer voll (lädt nicht mehr) oder Fenster geladen: mehr Zeilen kommen vorerst nicht dazu.
                 val loaded = loadedUntil >= until || !player.isLoading && player.bufferedPosition > from
-                val lines = store?.upcoming(format, from, 400) { it.startMs < loadedUntil }.orEmpty()
+                // Ab der aktuellen Stelle: Schon vorbeigezogene Zeilen (übersprungen) halten nichts mehr auf.
+                val lines = store?.upcoming(format, maxOf(from, player.currentPosition), 400) { it.startMs < loadedUntil }.orEmpty()
                 val done = lines.count { it.startMs in aheadTranslations }
                 val elapsed = SystemClock.elapsedRealtime() - started
                 if ((loaded && done >= lines.size) || elapsed >= PREROLL_MAX_MS) break
-                // Nur anhalten, wenn wirklich Zeilen fehlen, und nur gleich zu Beginn: Ist alles Bekannte schon
-                // übersetzt (über Nacht vorbereitet), läuft der Film einfach weiter, statt mitten drin zu stoppen.
-                if (!paused && (done >= lines.size || elapsed > PREROLL_DECIDE_MS)) {
+                if (thorough) {
+                    // Übersetzer im Internet: Anhalten, sobald eine Zeile der nächsten Sekunden noch fehlt, und weiter,
+                    // sobald diese Sekunden geladen und übersetzt sind (DeepL braucht dafür meist nur 1–3 s).
+                    val soon = player.currentPosition + ONLINE_LEAD_MS
+                    val missing = lines.any { it.startMs !in aheadTranslations && it.startMs < soon }
+                    if (paused && !missing && (loaded || player.bufferedPosition >= soon)) break
+                    if (!paused && !missing) {
+                        delay(250)
+                        continue
+                    }
+                } else if (!paused && (done >= lines.size || elapsed > PREROLL_DECIDE_MS)) {
+                    // Nur anhalten, wenn wirklich Zeilen fehlen, und nur gleich zu Beginn: Ist alles Bekannte schon
+                    // übersetzt (über Nacht vorbereitet), läuft der Film einfach weiter, statt mitten drin zu stoppen.
                     if (done >= lines.size && elapsed <= PREROLL_DECIDE_MS) {
                         delay(250)
                         continue
@@ -1764,6 +1779,11 @@ class PlayerActivity : ComponentActivity() {
             }
         }
     }
+
+    /** Übersetzt gerade ein Dienst im Internet (DeepL, ohne Störung)? Dann lohnt kurzes Warten auf die Übersetzung. */
+    private fun onlineTranslation(): Boolean =
+        settings.translationProvider == de.ayutv.data.TranslationProvider.DEEPL && settings.deeplKey.isNotBlank() &&
+            de.ayutv.data.translate.DeepLTranslator.problem == null
 
     /** Vorlauf beenden und den Film weiterlaufen lassen (falls er vorher lief). */
     fun endPreroll() {
@@ -3324,6 +3344,14 @@ class PlayerActivity : ComponentActivity() {
                 if (vod != null && externalLanguage != null && abs(newPosition.positionMs - oldPosition.positionMs) >= SEEK_RECHECK_JUMP_MS) {
                     seekRecheckFrom = newPosition.positionMs
                 }
+                // Übersetzung mit DeepL: An der neuen Stelle sind die Zeilen noch nicht gelesen. Kurz anhalten, bis
+                // sie übersetzt sind, statt erst Englisch und dann Deutsch zu zeigen.
+                val format = aheadFormat
+                if (vod != null && !isLive && format != null && liveTranslateTarget != null && onlineTranslation() && player?.playWhenReady == true &&
+                    abs(newPosition.positionMs - oldPosition.positionMs) >= ONLINE_SEEK_JUMP_MS
+                ) {
+                    startPreroll(format, thorough = true)
+                }
             }
         }
 
@@ -3790,6 +3818,12 @@ class PlayerActivity : ComponentActivity() {
         private const val ONLINE_BATCH = 40
         /** Nur in den ersten Sekunden entscheidet sich, ob angehalten wird. */
         private const val PREROLL_DECIDE_MS = 3_000L
+        /** DeepL: Fehlt eine Zeile der nächsten so vielen Millisekunden, hält der Vorlauf an. */
+        private const val ONLINE_LEAD_MS = 10_000L
+        /** DeepL: So lange bleibt eine noch nicht übersetzte Zeile leer, bevor das Original erscheint. */
+        private const val ONLINE_HOLD_MS = 1_500L
+        /** DeepL: Ab so einem Sprung gibt es an der neuen Stelle einen kurzen Vorlauf. */
+        private const val ONLINE_SEEK_JUMP_MS = 5_000L
         private const val DROP_WARN_COUNT = 3
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
