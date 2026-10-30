@@ -58,4 +58,35 @@ class LiveScoresTest {
         // Frauenspiel derselben Vereine passt nicht
         assertFalse(bvb.matches("Borussia Dortmund Frauen – Eintracht Frankfurt Frauen"))
     }
+
+    /** Sky nennt Einzelspiele oft nur „Live: 2. BL“ und in der Beschreibung das Stadion. */
+    @Test
+    fun findsMatchByVenue() {
+        val kickoff = 1_761_850_800_000L // 18:30
+        fun m(id: Long, t1: String, t2: String, city: String?, stadium: String?, league: String = "bl2") = LiveScores.Match(
+            id, league, t1, t1, t2, t2, kickoff, 0, 0, false, 0, null, city, stadium,
+        )
+        val matches = listOf(
+            m(1, "Arminia Bielefeld", "SC Paderborn 07", "Bielefeld", "SchücoArena"),
+            m(2, "Hertha BSC", "1. FC Kaiserslautern", "Berlin", "Olympiastadion"),
+            m(3, "Hannover 96", "Karlsruher SC", "Hannover", "Heinz von Heiden Arena"),
+            m(4, "FC Bayern München", "Borussia Dortmund", "München", "Allianz Arena", league = "bl1"),
+        )
+        val start = kickoff - 30 * 60_000L
+        val stop = kickoff + 2 * 3_600_000L
+        val scores = LiveScores(okhttp3.OkHttpClient())
+        assertEquals(1L, scores.byVenue(matches, "Live: 2. BL", null, "Aus der Schüco-Arena in Bielefeld.", start, stop)?.id)
+        assertEquals(3L, scores.byVenue(matches, "Live: 2. BL", null, "Aus der Heinz von Heiden Arena.", start, stop)?.id)
+        // Nur nach Verein, ohne Stadion
+        assertEquals(2L, scores.byVenue(matches, "Live: 2. BL", null, "Der 1. FC Kaiserslautern gastiert in Berlin.", start, stop)?.id)
+        // Konferenz: mehrere Spiele, keine Zuordnung
+        assertNull(scores.byVenue(matches, "Live: 2. BL: Freitags-Konferenz – 10. Spieltag", null, "Aus Bielefeld und Berlin.", start, stop))
+        // Andere Liga: nicht das Zweitligaspiel
+        assertNull(scores.byVenue(matches, "Live: Bundesliga", null, "Aus der Schüco-Arena in Bielefeld.", start, stop))
+        // Kein Hinweis im Text: keins
+        assertNull(scores.byVenue(matches, "Live: 2. BL", null, "Spannung pur am Freitagabend.", start, stop))
+        assertEquals("bl2", LiveScores.leagueOf("Live: 2. BL"))
+        assertEquals("bl3", LiveScores.leagueOf("3. Liga: Spieltag"))
+        assertEquals("bl1", LiveScores.leagueOf("Bundesliga live"))
+    }
 }

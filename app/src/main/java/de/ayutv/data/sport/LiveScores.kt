@@ -40,6 +40,9 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         val goalCount: Int,
         /** Letzter Torschütze mit Minute, falls bekannt („Füllkrug 67'“). */
         val lastGoal: String?,
+        /** Spielort laut OpenLigaDB (Stadt, Stadion), falls angegeben. */
+        val city: String? = null,
+        val stadium: String? = null,
     ) {
         val score: String get() = "$goals1:$goals2"
         fun started(now: Long) = now >= kickoff
@@ -88,6 +91,29 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         cached
     }
 
+    /**
+     * Sendung ohne Paarung („Live: 2. BL“, in der Beschreibung „Aus der Schüco-Arena in Bielefeld.“): das Spiel, das in
+     * ihrer Zeit angepfiffen wird und dessen Stadion, Stadt oder Verein im Text vorkommt. Bei mehreren gleich guten: keins.
+     * Konferenzen und Multiview zeigen mehrere Spiele: keins.
+     */
+    fun byVenue(matches: List<Match>, title: String, subtitle: String?, description: String?, start: Long, stop: Long): Match? {
+        val head = title + " " + subtitle.orEmpty()
+        if (MULTI.containsMatchIn(head)) return null
+        val text = Teams.textWords(head + " " + description.orEmpty())
+        val league = leagueOf(head)
+        val scored = matches
+            .filter { it.kickoff in (start - 15 * MINUTE) until stop && (league == null || it.league == league) }
+            .map { m ->
+                val venue = listOfNotNull(m.city, m.stadium).flatMap { Teams.textWords(it) }.filter { it.length >= 4 && it !in VENUE_WORDS }.toSet()
+                // Stadion oder Stadt zählen doppelt (so nennt Sky Einzelspiele), Vereinsnamen einfach.
+                val score = 2 * venue.count { it in text } + Teams.keywords(m.team1).count { it in text } + Teams.keywords(m.team2).count { it in text }
+                m to score
+            }
+            .filter { it.second > 0 }
+        val best = scored.maxByOrNull { it.second } ?: return null
+        return best.first.takeIf { scored.count { it.second == best.second } == 1 }
+    }
+
     /** Das Spiel zur TV-Paarung, falls es eins gibt (Anstoß höchstens 3 Stunden neben der Sendung). */
     fun find(matches: List<Match>, pairing: String?, start: Long, context: String = ""): Match? {
         if (pairing == null) return null
@@ -96,6 +122,18 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
 
     companion object {
         private val LEAGUES = listOf("bl1", "bl2", "bl3")
+        private const val MINUTE = 60_000L
+        /** Wörter, die in vielen Stadionnamen stehen: allein kein Hinweis auf den Ort. */
+        private val VENUE_WORDS = setOf("arena", "stadion", "stadium", "park", "sportpark", "sportplatz", "kampfbahn")
+        private val MULTI = Regex("""(?i)konferenz|multiview|alle spiele|highlights|zusammenfassung""")
+
+        /** Welche Liga die Sendung nennt (bl1, bl2, bl3), sonst null. */
+        fun leagueOf(text: String): String? = when {
+            Regex("""(?i)\b3\.\s*liga\b""").containsMatchIn(text) -> "bl3"
+            Regex("""(?i)\b2\.\s*(bl|bundesliga)\b""").containsMatchIn(text) -> "bl2"
+            Regex("""(?i)\b(bl|bundesliga)\b""").containsMatchIn(text) -> "bl1"
+            else -> null
+        }
         private const val CACHE_MS = 60_000L
         private const val HOUR = 3_600_000L
         private const val MAX_DURATION_MS = 150 * 60_000L
@@ -139,6 +177,8 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
                         team2 = t2.str("teamName"), short2 = t2.str("shortName"),
                         kickoff = kickoff, goals1 = g1, goals2 = g2, finished = finished,
                         goalCount = goals.size, lastGoal = scorer,
+                        city = (o["location"] as? JsonObject)?.str("locationCity")?.ifEmpty { null },
+                        stadium = (o["location"] as? JsonObject)?.str("locationStadium")?.ifEmpty { null },
                     ).takeIf { it.team1.isNotEmpty() && it.team2.isNotEmpty() }
                 }.getOrNull()
             }

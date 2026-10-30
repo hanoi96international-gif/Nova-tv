@@ -44,6 +44,17 @@ object Teams {
         }
     }
 
+    /** Aussagekräftige Wörter eines Vereinsnamens (ohne Kürzel und Allerweltswörter), klein und ohne Akzente. */
+    fun keywords(text: String): Set<String> = words(text).filter { it !in GENERIC && it.length >= 4 }.toSet()
+
+    /** Text als Wortmenge, klein, ohne Akzente; „Schüco-Arena“ ergibt zusätzlich „schucoarena“ (Wörter verbunden). */
+    fun textWords(text: String): Set<String> {
+        val plain = words(text)
+        val joined = Normalizer.normalize(text.lowercase().replace("ß", "ss"), Normalizer.Form.NFKD).replace(MARKS, "")
+            .split(Regex("""\s+""")).map { it.replace(NON_WORD, "") }.filter { it.isNotEmpty() }
+        return plain + joined
+    }
+
     private fun words(text: String): Set<String> =
         Normalizer.normalize(text.lowercase().replace("ß", "ss"), Normalizer.Form.NFKD).replace(MARKS, "")
             .split(NON_WORD).filter { it.isNotEmpty() }.toSet()
