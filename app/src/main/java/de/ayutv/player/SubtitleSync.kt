@@ -30,6 +30,26 @@ object SubtitleSync {
      * [references]: Startzeiten eingebetteter Einblendungen (Filmzeit), [starts]: Startzeiten der
      * geladenen Datei. null, solange das Ergebnis nicht eindeutig ist.
      */
+    /**
+     * Anteil der eingebetteten Einblendungen (in %), zu denen die geladene Datei mit [timing] eine Zeile hat
+     * (auf ±[MATCH_MS] genau). Schon mit wenigen Einblendungen aussagekräftig, wenn sie fast alle oder fast keine
+     * treffen.
+     */
+    fun coverage(references: List<Long>, starts: List<Long>, timing: SubtitleTiming): Int {
+        if (references.isEmpty() || starts.isEmpty()) return 0
+        val sorted = starts.map { timing.toVideo(it) }.sorted().toLongArray()
+        val hits = references.count { r ->
+            var lo = 0
+            var hi = sorted.size
+            while (lo < hi) {
+                val mid = (lo + hi) ushr 1
+                if (sorted[mid] < r) lo = mid + 1 else hi = mid
+            }
+            (lo < sorted.size && abs(sorted[lo] - r) <= MATCH_MS) || (lo > 0 && abs(sorted[lo - 1] - r) <= MATCH_MS)
+        }
+        return hits * 100 / references.size
+    }
+
     fun estimate(references: List<Long>, starts: List<Long>): Fit? {
         if (references.size < MIN_REFERENCES || starts.isEmpty()) return null
         val sorted = starts.sorted().toLongArray()

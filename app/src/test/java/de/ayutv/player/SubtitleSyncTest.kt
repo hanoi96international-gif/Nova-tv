@@ -68,6 +68,25 @@ class SubtitleSyncTest {
         assertTrue(abs(timing.toSubtitle(timing.toVideo(3_600_000)) - 3_600_000) <= 1)
     }
 
+    /** Schnellprüfung: Schon die ersten ~10 vorausgelesenen Einblendungen zeigen, ob eine Datei passt. */
+    @Test
+    fun fewLinesTellFitAndMiss() {
+        val first = speech.filter { it < 45_000 }.map { it + random.nextLong(-120, 120) }
+        assertTrue("zu wenige Einblendungen: ${first.size}", first.size in 6..20)
+        // Passende Datei einer anderen Fassung (3,1 s später): Versatz sofort gefunden, fast alles trifft.
+        val file = speech.map { it + 3_100 }
+        val fit = requireFit(SubtitleSync.estimate(first, file))
+        assertTrue("Versatz ${fit.timing.offsetMs}", abs(fit.timing.offsetMs + 3_100) < 150)
+        assertTrue(SubtitleSync.coverage(first, file, fit.timing) >= 90)
+        // Datei eines anderen Films: kein eindeutiger Versatz, und mit jedem Versatz trifft kaum etwas.
+        val other = Random(99)
+        var t = 0L
+        val wrong = List(800) { t += other.nextLong(1_500, 7_000); t }
+        val miss = SubtitleSync.estimate(first, wrong)
+        assertTrue(miss == null || SubtitleSync.coverage(first, wrong, miss.timing) < 60)
+        assertTrue(SubtitleSync.coverage(first, wrong, SubtitleTiming()) < 40)
+    }
+
     private fun requireFit(fit: SubtitleSync.Fit?): SubtitleSync.Fit {
         assertNotNull("kein eindeutiges Ergebnis", fit)
         return fit!!

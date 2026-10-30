@@ -231,6 +231,10 @@ class PlayerActivity : ComponentActivity() {
     private var syncedByReference = false
     /** Zeile für Zeile an den eingebetteten Untertiteln ausgerichtet (null = noch nicht oder nicht möglich). */
     private var elasticTiming: ElasticTiming? = null
+    /** Geladene Datei automatisch gegen die Übersetzung der Spur tauschen, wenn sie zu schlecht passt. */
+    private var autoSwitch = false
+    private var autoSwitchNext = false
+    private var sourceDecided = false
     /** Wie gut die geladene Datei zur Spur des Films passt, in Prozent (null = noch nicht gemessen). */
     var matchPercent by mutableStateOf<Int?>(null); private set
     private var elasticJob: Job? = null
@@ -1277,9 +1281,16 @@ class PlayerActivity : ComponentActivity() {
      * 3. gespeicherte Datei oder OpenSubtitles (automatisch ausgerichtet), 4. erzwungene eingebettete
      * Untertitel übersetzen, 5. eine Online-Vorlage vorausschauend übersetzen, 6. ehrlich sagen, woran es fehlt.
      */
-    fun loadSubtitles(language: String) {
+    /**
+     * Untertitel in [language]. [via]: von Hand gewählte Quelle ([PlayerMemory.SOURCE_FILE] = OpenSubtitles,
+     * [PlayerMemory.SOURCE_TRANSLATE] = Spur des Films übersetzen), wird je Film bzw. Serie gemerkt.
+     */
+    fun loadSubtitles(language: String, via: String? = null) {
         val request = vod
         if (request != null) memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(text = null, load = language) } }
+        if (request != null && via != null) memoryKey()?.let { container.playerMemory.setSubtitleSource(it, via) }
+        val chosen = via ?: memoryKey()?.let { container.playerMemory.subtitleSource(it) }
+        val decided = request?.let { container.playerMemory.subtitleSource(PlayerMemory.autoKey(it.key)) }
         languagePicker = false
         closeOverlay()
         stopLiveTranslation()
@@ -1291,16 +1302,18 @@ class PlayerActivity : ComponentActivity() {
         val label = Languages.label(language)
         subtitleJob?.cancel()
         subtitleJob = lifecycleScope.launch {
-            // 2. Eingebettete Untertitel einer anderen Sprache übersetzen (auch Bild-Untertitel per Texterkennung).
-            //    Gibt es sie, nie auf eine heruntergeladene Datei ausweichen: Die stammen oft aus einer anderen
-            //    Fassung (falscher Takt oder falscher Film), die eingebetteten passen immer exakt. Englisch geht vor
-            //    (direkte Modelle). Kurzer Vorlauf: Die erste Minute wird übersetzt, bevor es weitergeht.
+            // 2. Eingebettete Untertitel einer anderen Sprache übersetzen (auch Bild-Untertitel per Texterkennung), wenn
+            //    so gewählt oder für diesen Film schon entschieden, und bei Sendern. Englisch geht vor (direkte Modelle).
+            //    Kurzer Vorlauf: Die erste Minute wird übersetzt, bevor es weitergeht.
             val embeddedSource = if (settings.translationEnabled) bestTranslationSource(allowForced = false) else null
-            if (embeddedSource != null) {
+            val translate = chosen == PlayerMemory.SOURCE_TRANSLATE ||
+                chosen == null && decided == PlayerMemory.SOURCE_TRANSLATE || request == null
+            if (embeddedSource != null && translate) {
                 startLiveTranslation(language, embeddedSource, preroll = true)
                 return@launch
             }
-            // 3. Gespeicherte Datei oder Untertitel in der Zielsprache von OpenSubtitles (werden automatisch ausgerichtet)
+            // 3. OpenSubtitles zuerst (menschlich übersetzt): Datei laden und an der Spur des Films ausrichten. Passt sie
+            //    nach dem Abgleich unter [FIT_PERCENT], wird auf die Übersetzung der Spur gewechselt (nur mit DeepL).
             var onlineProblem: String? = null
             if (request != null) {
                 if (settings.onlineSubtitlesEnabled) subtitleStatus = "Suche Untertitel ($label) …"
@@ -1311,9 +1324,15 @@ class PlayerActivity : ComponentActivity() {
                     onlineProblem = describeOnlineProblem(it)
                 }.getOrNull()
                 if (found != null) {
+                    autoSwitchNext = embeddedSource != null && chosen != PlayerMemory.SOURCE_FILE
                     attachLoaded(language, found)
                     return@launch
                 }
+            }
+            if (embeddedSource != null) {
+                startLiveTranslation(language, embeddedSource, preroll = true)
+                if (chosen == PlayerMemory.SOURCE_FILE) subtitleStatus = "Keine Datei bei OpenSubtitles – übersetze stattdessen die Spur des Films"
+                return@launch
             }
             if (!settings.translationEnabled) {
                 subtitleStatus = onlineProblem ?: "Keine Untertitel in $label gefunden (Übersetzung ist in den Einstellungen aus)"
@@ -1936,6 +1955,9 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun beginExternal(language: String, cues: List<TimedCue>, texts: java.util.concurrent.atomic.AtomicReferenceArray<String>?) {
         externalLanguage = language
+        autoSwitch = autoSwitchNext
+        autoSwitchNext = false
+        sourceDecided = false
         manualAnchor = null
         manualSync = false
         seekRecheckFrom = -1L
@@ -2013,14 +2035,26 @@ class PlayerActivity : ComponentActivity() {
         val starts = cues.map { it.start }
         elasticJob = lifecycleScope.launch {
             var lastCount = 0
-            delay(2_000)
+            delay(500)
             while (isActive && externalLanguage == language) {
                 val references = embedded?.referenceStarts().orEmpty()
+                // Schnell: Der Player liest 20–30 s voraus. Schon mit den ersten Einblendungen dort den Versatz bestimmen und
+                // sofort übernehmen, bevor die Zeilen zu sehen sind (nicht erst warten, bis sie gezeigt wurden).
+                if (references.size >= SubtitleSync.MIN_REFERENCES && references.size != lastCount && elasticTiming == null && !manualSync) {
+                    val fit = withContext(Dispatchers.Default) { SubtitleSync.estimate(references, starts) }
+                    if (externalLanguage != language) break
+                    if (fit != null) {
+                        syncedByReference = true
+                        applyFit(fit.timing, bySpeech = false, toleranceMs = 150)
+                    }
+                    matchPercent = fit?.let { SubtitleSync.coverage(references, starts, it.timing) } ?: 0
+                }
                 if (references.size >= SubtitleAlign.MIN_REFERENCES && references.size != lastCount) {
                     lastCount = references.size
                     val (global, result) = withContext(Dispatchers.Default) { alignTo(references, starts) }
                     if (externalLanguage != language) break
-                    matchPercent = result?.percent
+                    // Zeilen-Abgleich noch ohne Ergebnis (zu wenige sichere Zuordnungen): die Schnellprüfung gilt weiter.
+                    result?.let { matchPercent = it.percent }
                     if (result != null && result.percent >= ELASTIC_MIN_PERCENT && !manualSync) {
                         val first = elasticTiming == null
                         elasticTiming = result.timing
@@ -2034,6 +2068,12 @@ class PlayerActivity : ComponentActivity() {
                             subtitleStatus = "Untertitel Zeile für Zeile an der Spur des Films ausgerichtet – passt ${result.percent} %"
                         }
                     }
+                    // OpenSubtitles oder Übersetzung der Spur: entscheiden, sobald es sicher ist.
+                    if (autoSwitch && !sourceDecided) {
+                        if (decideSource(language, references)) return@launch
+                        delay(1_000)
+                        continue
+                    }
                     // Passt mäßig (oder gar nicht): einmal weitere Dateien vergleichen und die beste nehmen.
                     if (language !in comparedLanguages && references.size >= COMPARE_REFERENCES &&
                         (result?.percent ?: 0) < de.ayutv.data.repo.OpenSubtitlesQuota.compareBelowPercent
@@ -2042,9 +2082,75 @@ class PlayerActivity : ComponentActivity() {
                         if (compareCandidates(language, references, result?.percent ?: 0)) return@launch
                     }
                 }
-                delay(if (elasticTiming == null) 5_000 else 30_000)
+                delay(if (elasticTiming == null) 1_000 else 30_000)
             }
         }
+    }
+
+    /**
+     * Passt die geladene Datei? Klar daneben (unter [EARLY_MISS_PERCENT] bei den ersten Einblendungen) oder nach
+     * [DECIDE_REFERENCES] Einblendungen unter [FIT_PERCENT]: erst weitere Dateien vergleichen, dann auf die Übersetzung
+     * der Spur des Films wechseln (nur mit DeepL: auf dem Gerät wäre sie zu langsam). true = Datei gewechselt.
+     */
+    private suspend fun decideSource(language: String, references: List<Long>): Boolean {
+        val percent = matchPercent ?: 0
+        val clearMiss = percent < EARLY_MISS_PERCENT
+        if (!clearMiss && references.size < DECIDE_REFERENCES) return false
+        if (percent >= FIT_PERCENT) {
+            sourceDecided = true
+            Log.i(SUBTITLE_TAG, "OpenSubtitles passt ($percent % nach ${references.size} Einblendungen) – bleibt")
+            return false
+        }
+        if (language !in comparedLanguages) {
+            comparedLanguages += language
+            // Eine besser passende Datei beginnt die Prüfung von vorn.
+            autoSwitchNext = true
+            if (compareCandidates(language, references, percent)) return true
+            autoSwitchNext = false
+        }
+        if (externalLanguage != language) return true
+        sourceDecided = true
+        if (!onlineTranslation() || bestTranslationSource(allowForced = false) == null) {
+            Log.i(SUBTITLE_TAG, "OpenSubtitles passt nur $percent %, keine schnelle Übersetzung – bleibt")
+            return false
+        }
+        val best = matchPercent ?: percent
+        Log.i(SUBTITLE_TAG, "OpenSubtitles passt nur $best % (${references.size} Einblendungen) – wechsle zur Übersetzung der Spur")
+        lifecycleScope.launch { switchToTranslation(language, best) }
+        return true
+    }
+
+    /** Statt der geladenen Datei die Spur des Films übersetzen; für diesen Film (diese Folge) gemerkt. */
+    private fun switchToTranslation(language: String, percent: Int) {
+        val source = bestTranslationSource(allowForced = false) ?: return
+        vod?.let { container.playerMemory.setSubtitleSource(PlayerMemory.autoKey(it.key), PlayerMemory.SOURCE_TRANSLATE) }
+        stopLiveTranslation()
+        // Der Player ist schon 20–30 s voraus: Die Übersetzung ist fertig, bevor die Zeilen kommen, kein Vorlauf nötig.
+        startLiveTranslation(language, source)
+        autoSwitched = percent
+        subtitleStatus = "OpenSubtitles passt nur $percent % – übersetze stattdessen die Spur des Films"
+    }
+
+    /** Übereinstimmung der Datei, gegen die automatisch zur Übersetzung gewechselt wurde (für das Menü). */
+    var autoSwitched by mutableStateOf<Int?>(null); private set
+
+    /**
+     * Sprache, für die im Menü zwischen OpenSubtitles und Übersetzung gewählt werden kann (nur Filme mit
+     * übersetzbarer eingebetteter Spur).
+     */
+    val sourceChoiceLanguage: String? get() {
+        if (vod == null || !settings.translationEnabled) return null
+        val language = externalLanguage ?: liveTranslateTarget ?: return null
+        return language.takeIf { bestTranslationSource(allowForced = false) != null }
+    }
+
+    /** Name des Übersetzers für das Menü („DeepL“, „DnA-Übersetzer“ …). */
+    val translatorName: String get() = Translators.from(settings)?.name ?: "Übersetzer"
+
+    /** Im Menü gewählt: OpenSubtitles ([translate] = false) oder Übersetzung der Spur; je Film bzw. Serie gemerkt. */
+    fun chooseSubtitleSource(language: String, translate: Boolean) {
+        autoSwitched = null
+        loadSubtitles(language, if (translate) PlayerMemory.SOURCE_TRANSLATE else PlayerMemory.SOURCE_FILE)
     }
 
     /** Erst grob (Versatz und Bildrate), dann Zeile für Zeile. */
@@ -3863,6 +3969,12 @@ class PlayerActivity : ComponentActivity() {
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */
         private const val WRONG_FILE_REFERENCES = 60
+        /** OpenSubtitles bleibt ab so viel Prozent Übereinstimmung, darunter wird zur Übersetzung der Spur gewechselt. */
+        private const val FIT_PERCENT = 90
+        /** So viele Einblendungen, bevor endgültig entschieden wird (meist die ersten 20–30 s Dialog, vorausgelesen). */
+        private const val DECIDE_REFERENCES = 20
+        /** Darunter ist die Datei schon bei den ersten Einblendungen klar daneben. */
+        private const val EARLY_MISS_PERCENT = 40
         /** Zeilen-Abgleich: ab so viel Prozent übernehmen, darunter vergleichen. */
         private const val ELASTIC_MIN_PERCENT = 50
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
