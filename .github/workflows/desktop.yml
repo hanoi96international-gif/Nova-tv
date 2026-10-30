@@ -1,0 +1,137 @@
+name: Windows
+
+# Windows-App (desktop/): eigener Gradle-Build, unabhängig vom Android-Build und ohne Gerätetest
+# (teilt sich deshalb auch nicht den Branch ci-results).
+on:
+  push:
+    paths:
+      - "desktop/**"
+      - "app/src/main/java/de/ayutv/data/parse/**"
+      - "app/src/main/java/de/ayutv/data/setup/BackupCrypto.kt"
+      - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
+      - "app/build.gradle.kts"
+      - ".github/workflows/desktop.yml"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "app/src/main/java/de/ayutv/data/parse/**"
+      - "app/src/main/java/de/ayutv/data/setup/BackupCrypto.kt"
+      - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
+      - "app/build.gradle.kts"
+      - ".github/workflows/desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Kompilieren und Unit-Tests (schnell, unter Linux).
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Kompilieren und testen
+        run: ./gradlew -p desktop test --console=plain
+      - name: Testergebnisse
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-tests
+          path: desktop/build/reports/tests/
+          if-no-files-found: ignore
+
+  # Installer (MSI und EXE) und portable ZIP bauen, VLC mitliefern, Starttest.
+  windows:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: VLC-Version bestimmen
+        id: vlc
+        shell: pwsh
+        run: |
+          $version = "3.0.21"
+          try {
+            $index = (Invoke-WebRequest -UseBasicParsing "https://download.videolan.org/pub/videolan/vlc/last/win64/").Content
+            if ($index -match 'vlc-(3\.[0-9.]+)-win64\.zip') { $version = $Matches[1] }
+          } catch { Write-Host "Liste nicht lesbar, nehme $version" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        id: vlc-cache
+        with:
+          path: desktop/resources/windows/vlc
+          key: vlc-win64-${{ steps.vlc.outputs.version }}
+
+      - name: VLC herunterladen
+        if: steps.vlc-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $v = "${{ steps.vlc.outputs.version }}"
+          $url = "https://download.videolan.org/pub/videolan/vlc/$v/win64/vlc-$v-win64.zip"
+          Invoke-WebRequest -UseBasicParsing $url -OutFile vlc.zip
+          Expand-Archive vlc.zip -DestinationPath vlc-unpacked
+          $src = Get-ChildItem vlc-unpacked -Directory | Select-Object -First 1
+          $dst = "desktop/resources/windows/vlc"
+          New-Item -ItemType Directory -Force $dst | Out-Null
+          Copy-Item "$($src.FullName)/libvlc.dll", "$($src.FullName)/libvlccore.dll" $dst
+          Copy-Item "$($src.FullName)/plugins" $dst -Recurse
+          # Plugin-Zwischenspeicher neu anlegen lassen (schnellerer Start).
+          Remove-Item "$dst/plugins/plugins.dat" -ErrorAction SilentlyContinue
+
+      - name: Installer bauen
+        run: ./gradlew -p desktop packageMsi packageExe createDistributable --console=plain
+
+      - name: Starttest (VLC laden, Fenster öffnen)
+        shell: pwsh
+        run: |
+          $app = Get-ChildItem desktop/build/compose/binaries/main/app -Directory | Select-Object -First 1
+          $exe = Join-Path $app.FullName "DnA-TV.exe"
+          $out = Join-Path $env:RUNNER_TEMP "selftest.txt"
+          $p = Start-Process $exe -ArgumentList "--selftest", "`"$out`"" -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "Selbsttest hängt" }
+          Get-Content $out
+          if (-not (Select-String -Path $out -Pattern "^result=OK" -Quiet)) { throw "Selbsttest fehlgeschlagen" }
+
+      - name: Dateien benennen
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item (Get-ChildItem desktop/build/compose/binaries/main/msi/*.msi | Select-Object -First 1).FullName out/DnA-TV-Windows.msi
+          Copy-Item (Get-ChildItem desktop/build/compose/binaries/main/exe/*.exe | Select-Object -First 1).FullName out/DnA-TV-Windows-Setup.exe
+          Compress-Archive -Path desktop/build/compose/binaries/main/app/DnA-TV -DestinationPath out/DnA-TV-Windows-portable.zip
+          Get-ChildItem out | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DnA-TV-Windows
+          path: out/
+
+      # Auf main an das Release der aktuellen Version hängen (das legt der Android-Build an; ggf. kurz warten).
+      - name: An Release anhängen
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          for i in $(seq 1 60); do
+            gh release view "v$version" >/dev/null 2>&1 && break
+            echo "Release v$version gibt es noch nicht, warte …"; sleep 30
+          done
+          gh release upload "v$version" out/DnA-TV-Windows.msi out/DnA-TV-Windows-Setup.exe out/DnA-TV-Windows-portable.zip --clobber
