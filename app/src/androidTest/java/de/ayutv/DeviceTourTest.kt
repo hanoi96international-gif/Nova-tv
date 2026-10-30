@@ -221,6 +221,42 @@ class DeviceTourTest {
             next("07_settings")
         } }
 
+        // Einstellungen → Playlists: Name und Knöpfe müssen sichtbar sein. Früher standen alle Knöpfe neben dem Namen;
+        // auf 960 dp Breite blieb dem Namen keine Breite, die Zeile wurde riesig hoch und die Seite wirkte leer.
+        section("settings_playlists") { ActivityScenario.launch(MainActivity::class.java).use {
+            Thread.sleep(3_000)
+            key(KeyEvent.KEYCODE_DPAD_LEFT, 4)
+            key(KeyEvent.KEYCODE_DPAD_DOWN, 10)
+            key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(2_000)
+            shot("07c_settings_playlists")
+            val first = runBlocking { container.db.playlists().all() }.first().name
+            val height = app.resources.displayMetrics.heightPixels
+            // Den Element-Baum selbst durchlaufen: Die Textsuche der Bedienungshilfe durchsucht Compose nicht.
+            // Texte, die genau so lauten; Compose baut die Daten erst auf, wenn jemand fragt (daher kurz wiederholen).
+            fun bounds(text: String): List<android.graphics.Rect> {
+                val found = ArrayList<android.graphics.Rect>()
+                fun walk(node: android.view.accessibility.AccessibilityNodeInfo?, depth: Int) {
+                    if (node == null || depth > 60) return
+                    if (node.text?.toString() == text || node.contentDescription?.toString() == text) {
+                        found += android.graphics.Rect().also { node.getBoundsInScreen(it) }
+                    }
+                    for (i in 0 until node.childCount) walk(node.getChild(i), depth + 1)
+                }
+                walk(instrumentation.uiAutomation.rootInActiveWindow, 0)
+                return found
+            }
+            var name = emptyList<android.graphics.Rect>()
+            var groups = emptyList<android.graphics.Rect>()
+            waitFor(8_000) {
+                name = bounds(first)
+                groups = bounds("Gruppen").filter { it.top in 0 until height }
+                name.isNotEmpty() && groups.isNotEmpty()
+            }
+            log("settings_playlists: first=$first name=$name groups=${groups.size} height=$height")
+            assertTrue("Playlist-Name „$first“ ohne Platz: $name", name.any { it.width() >= 80 && it.height() in 1..200 })
+            assertTrue("Knopf „Gruppen“ nicht auf dem Bildschirm", groups.isNotEmpty())
+        } }
+
         // Wie auf dem Fire TV Stick 4K (weniger Bewegung): Bereiche ohne Überblendung, Seitenleiste ohne Feder,
         // Hintergrund kleiner gezeichnet. Bedienung und Fokus müssen genauso funktionieren.
         section("ui_reduced") {
@@ -540,10 +576,18 @@ class DeviceTourTest {
                     waitFor(25_000) { scenario.read { it.player?.playbackState } == Player.STATE_READY }
                     val started = System.currentTimeMillis()
                     scenario.onActivity { it.loadSubtitles("tr") }
-                    val shown = waitFor(60_000) { scenario.read { it.translatedCue }?.startsWith("TR:") == true }
+                    // Mit DeepL soll möglichst nie erst das Original und dann die Übersetzung erscheinen.
+                    val originals = HashSet<String>()
+                    var preroll = false
+                    val shown = waitFor(60_000) {
+                        if (scenario.read { it.prerollProgress } != null) preroll = true
+                        val cue = scenario.read { it.translatedCue }
+                        if (cue != null && !cue.startsWith("TR:")) originals += cue
+                        cue?.startsWith("TR:") == true
+                    }
                     val ms = System.currentTimeMillis() - started
                     val lines = server.texts.toList()
-                    log("deepl_batch: shown=$shown ms=$ms requests=${server.requests} lines=${lines.size} cue=${scenario.read { it.translatedCue }?.replace('\n', '/')}")
+                    log("deepl_batch: shown=$shown ms=$ms requests=${server.requests} lines=${lines.size} preroll=$preroll originals=${originals.size} cue=${scenario.read { it.translatedCue }?.replace('\n', '/')}")
                     assertTrue("DeepL-Übersetzung nicht angezeigt", shown)
                     assertTrue("Zeilen nicht gebündelt (${server.requests} Anfragen für ${lines.size} Texte)", lines.size > server.requests)
                 }

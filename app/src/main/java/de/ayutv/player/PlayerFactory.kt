@@ -401,15 +401,24 @@ class FrameRateMatcher(private val activity: Activity) {
     var switching = false
         private set
 
+    /** Während eines Wechsels gewünschte Bildrate (z. B. geschätzt umgeschaltet, dann gemeldet): danach nachholen. */
+    private var pending = 0f
+
     /** Liefert true, wenn ein Wechsel angefordert wurde. */
     @Suppress("DEPRECATION")
     fun match(frameRate: Float): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || frameRate <= 0f || switching) return false
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || frameRate <= 0f) return false
+        if (switching) {
+            pending = frameRate
+            return false
+        }
         val display = activity.windowManager.defaultDisplay ?: return false
         val modes = display.supportedModes.map { DisplayModeInfo(it.modeId, it.physicalWidth, it.physicalHeight, it.refreshRate) }
         val current = display.mode
         val best = pickMode(modes, DisplayModeInfo(current.modeId, current.physicalWidth, current.physicalHeight, current.refreshRate), frameRate)
             ?: return false
+        // Für die Menüs merken (nur 50/60 Hz, bei 24 Hz liefe die Oberfläche ruckelig).
+        modes.firstOrNull { it.id == best }?.takeIf { it.refreshRate >= 47f }?.let { keptModeId = best }
         if (best == current.modeId || best == requestedModeId) return false
         requestedModeId = best
         startSwitch(best)
@@ -425,6 +434,22 @@ class FrameRateMatcher(private val activity: Activity) {
     fun currentRefreshRate(): Float = runCatching { activity.windowManager.defaultDisplay.refreshRate }.getOrDefault(0f)
 
     companion object {
+        /**
+         * Zuletzt für Sender und Filme gewählter 50/60-Hz-Modus. Die Menüs bleiben dabei, statt beim Verlassen des
+         * Players auf den Standard zurückzuschalten: Sonst wird das Bild beim nächsten Sender wieder schwarz.
+         */
+        @Volatile var keptModeId = 0
+
+        /** In [activity] (Menüs) den gemerkten Modus anfordern, oder mit [enabled] = false wieder den Standard. */
+        fun applyKept(activity: Activity, enabled: Boolean) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+            val wanted = if (enabled) keptModeId else 0
+            val attributes = activity.window.attributes
+            if (attributes.preferredDisplayModeId == wanted) return
+            attributes.preferredDisplayModeId = wanted
+            activity.window.attributes = attributes
+        }
+
         /**
          * Passender Anzeigemodus für [frameRate], bei gleicher Auflösung (kein Umschalten zwischen 4K und 1080p).
          * 25/30 fps bevorzugt mit 50/60 Hz, Filme (23,976/24) exakt. Je Ziel der nächstliegende Modus,
@@ -443,6 +468,7 @@ class FrameRateMatcher(private val activity: Activity) {
     }
 
     fun reset() {
+        pending = 0f
         finishSwitch()
         if (requestedModeId == 0 || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         val attributes = activity.window.attributes
@@ -485,6 +511,9 @@ class FrameRateMatcher(private val activity: Activity) {
         if (switching) {
             switching = false
             onSwitch(false)
+            val next = pending
+            pending = 0f
+            if (next > 0f) handler.post { match(next) }
         }
     }
 

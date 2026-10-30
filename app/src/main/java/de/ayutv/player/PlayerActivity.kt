@@ -284,6 +284,8 @@ class PlayerActivity : ComponentActivity() {
     /** Übersetzung eingebetteter Untertitel mit Vorlauf: Quellspur, Ergebnisse je Einblendung (Startzeit). */
     private var aheadFormat: Format? = null
     private val aheadTranslations = HashMap<Long, String>()
+    /** Beginn der Zeilen, die schon vor diesem Schauen übersetzt waren (früher geschaut, nachts vorbereitet). */
+    @Volatile private var storedAhead: Set<Long> = emptySet()
     private var aheadJob: Job? = null
     /** Kurzer Vorlauf vor der Übersetzung: Anteil (0–1), solange der Film dafür angehalten ist, sonst null. */
     var prerollProgress by mutableStateOf<Float?>(null); private set
@@ -614,6 +616,7 @@ class PlayerActivity : ComponentActivity() {
         val snapped = STANDARD_FRAME_RATES.minByOrNull { abs(it - measured) }
             ?.takeIf { abs(it - measured) / it < 0.06f } ?: return
         stats = stats.copy(frameRate = snapped, frameRateMeasured = true, displayHz = frameRateMatcher.currentRefreshRate())
+        memoryKey()?.let { container.playerMemory.rememberFrameRate(it, snapped, isLive) }
         suggestFrameRateMatching()
         if (settings.matchFrameRate) frameRateMatcher.match(snapped)
     }
@@ -827,6 +830,7 @@ class PlayerActivity : ComponentActivity() {
         p.repeatMode = Player.REPEAT_MODE_ONE
         p.prepare()
         p.playWhenReady = true
+        matchKnownFrameRate(channel.key, live = true)
         showOverlay(Overlay.INFO)
 
         loadChannelInfo(channel)
@@ -1057,6 +1061,19 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * Bildwiederholrate schon beim Start umschalten, solange der Stream noch lädt: mit der gemerkten Bildrate dieses
+     * Senders oder Films (bei einem neuen Sender die des zuletzt geschauten). Sonst schaltet der Fernseher erst um,
+     * wenn das Bild schon läuft (bei Sendern ohne Angabe nach einigen Sekunden Messung), und wird dann schwarz.
+     * Stimmt die Schätzung nicht, korrigiert die Messung wie bisher.
+     */
+    private fun matchKnownFrameRate(key: String, live: Boolean) {
+        if (!settings.matchFrameRate) return
+        val memory = container.playerMemory
+        val fps = memory.frameRate(key).takeIf { it > 0f } ?: if (live) memory.lastLiveFrameRate else 0f
+        if (fps > 0f) frameRateMatcher.match(fps)
+    }
+
     // ---------------------------------------------------------------- VOD
 
     private fun startVod(request: VodRequest, resumeMs: Long) {
@@ -1074,6 +1091,7 @@ class PlayerActivity : ComponentActivity() {
         p.setMediaItem(vodItem(request), resumeMs.coerceAtLeast(0))
         p.prepare()
         p.playWhenReady = true
+        matchKnownFrameRate(Episodes.seriesKeyOf(request.key) ?: request.key, live = false)
         showOverlay(Overlay.CONTROLS)
         if (request.kind == HistoryKind.EPISODE) prepareEpisodeExtras(request)
         checkMobileData()
@@ -1484,7 +1502,7 @@ class PlayerActivity : ComponentActivity() {
         liveTranslateTarget = target
         if (settings.lastTranslationTarget != target) container.scope.launch { container.settings.update { it.copy(lastTranslationTarget = target) } }
         startAhead(format, target)
-        if (preroll && vod != null && !isLive) startPreroll(format)
+        if (preroll && vod != null && !isLive) startPreroll(format, thorough = onlineTranslation())
         val via = Translators.from(settings)?.name?.let { " mit $it" }.orEmpty()
         val kind = if (format.isBitmapSubtitle()) "Bild-Untertitel " else ""
         subtitleStatus = "Übersetze ${kind}${liveSourceLanguage?.let { Languages.label(it) + " " }.orEmpty()}→ ${Languages.label(target)}$via"
@@ -1501,6 +1519,7 @@ class PlayerActivity : ComponentActivity() {
         saveAheadTranslations()
         aheadTranslations.clear()
         aheadDone.clear()
+        storedAhead = emptySet()
         aheadFormat = format
         val request = vod
         aheadKey = request?.let { Triple(it.key, EmbeddedSubtitles.trackKey(format), target) }
@@ -1517,6 +1536,7 @@ class PlayerActivity : ComponentActivity() {
                 val stored = withContext(Dispatchers.IO) { container.subtitles.lineTranslations(key, track, language) }
                 aheadTranslations.putAll(stored)
                 aheadDone.putAll(stored)
+                storedAhead = stored.keys
                 if (stored.isNotEmpty()) Log.i(SUBTITLE_TAG, "${stored.size} schon übersetzte Zeilen geladen")
             }
             var unsaved = 0
@@ -1524,11 +1544,15 @@ class PlayerActivity : ComponentActivity() {
                 while (true) {
                     val store = embedded
                     if (store != null && store.hasEntries(format)) {
-                        val entry = store.at(format, player?.currentPosition ?: 0L)
+                        val position = player?.currentPosition ?: 0L
+                        val entry = store.at(format, position)
                         val translated = entry?.let { aheadTranslations[it.startMs]?.ifEmpty { null } }
                         // Noch nicht übersetzt: das Original zeigen (Text selbst, Bild-Untertitel über den Player)
-                        // statt gar nichts, solange der Übersetzer lädt oder nicht hinterherkommt.
-                        translatedCue = translated ?: if (bitmap) null else entry?.text
+                        // statt gar nichts, solange der Übersetzer lädt oder nicht hinterherkommt. Mit DeepL kommt die
+                        // Übersetzung meist binnen einer Sekunde: so lange nichts zeigen, statt Englisch und dann Deutsch.
+                        val waitForOnline = entry != null && translated == null && !bitmap && onlineTranslation() &&
+                            position - entry.startMs < ONLINE_HOLD_MS
+                        translatedCue = translated ?: if (bitmap || waitForOnline) null else entry?.text
                         originalVisible = bitmap && entry != null && translated == null
                     }
                     delay(100)
@@ -1715,7 +1739,7 @@ class PlayerActivity : ComponentActivity() {
      * Zeilen schon vor. Was schon übersetzt ist (über Nacht, früheres Schauen), braucht keinen Vorlauf.
      * OK oder Zurück: sofort weiterschauen.
      */
-    private fun startPreroll(format: Format) {
+    private fun startPreroll(format: Format, thorough: Boolean = false) {
         endPreroll()
         val p = player ?: return
         val from = p.currentPosition
@@ -1732,13 +1756,25 @@ class PlayerActivity : ComponentActivity() {
                 val loadedUntil = minOf(until, player.bufferedPosition)
                 // Puffer voll (lädt nicht mehr) oder Fenster geladen: mehr Zeilen kommen vorerst nicht dazu.
                 val loaded = loadedUntil >= until || !player.isLoading && player.bufferedPosition > from
-                val lines = store?.upcoming(format, from, 400) { it.startMs < loadedUntil }.orEmpty()
+                // Ab der aktuellen Stelle: Schon vorbeigezogene Zeilen (übersprungen) halten nichts mehr auf.
+                val lines = store?.upcoming(format, maxOf(from, player.currentPosition), 400) { it.startMs < loadedUntil }.orEmpty()
                 val done = lines.count { it.startMs in aheadTranslations }
                 val elapsed = SystemClock.elapsedRealtime() - started
-                if ((loaded && done >= lines.size) || elapsed >= PREROLL_MAX_MS) break
-                // Nur anhalten, wenn wirklich Zeilen fehlen, und nur gleich zu Beginn: Ist alles Bekannte schon
-                // übersetzt (über Nacht vorbereitet), läuft der Film einfach weiter, statt mitten drin zu stoppen.
-                if (!paused && (done >= lines.size || elapsed > PREROLL_DECIDE_MS)) {
+                if (thorough) {
+                    // Übersetzer im Internet: 8–10 s anhalten. In der Zeit lädt der Player weit voraus und DeepL
+                    // übersetzt alles Geladene; danach bleibt die Übersetzung beim Schauen sicher vorn. Nur wenn
+                    // die Stelle schon übersetzt ist (früher geschaut, nachts vorbereitet), geht es ohne Halt weiter.
+                    // (Gespeicherte Übersetzungen kommen kurz nach dem Start aus der Datenbank.)
+                    if (elapsed < 2_000 && prepared(player.currentPosition)) break
+                    val soon = player.currentPosition + ONLINE_LEAD_MS
+                    val missing = lines.any { it.startMs !in aheadTranslations && it.startMs < soon }
+                    val ahead = loaded || player.bufferedPosition >= soon
+                    if (paused && elapsed >= ONLINE_PAUSE_MIN_MS && !missing && ahead || elapsed >= ONLINE_PAUSE_MAX_MS) break
+                } else if ((loaded && done >= lines.size) || elapsed >= PREROLL_MAX_MS) {
+                    break
+                } else if (!paused && (done >= lines.size || elapsed > PREROLL_DECIDE_MS)) {
+                    // Nur anhalten, wenn wirklich Zeilen fehlen, und nur gleich zu Beginn: Ist alles Bekannte schon
+                    // übersetzt (über Nacht vorbereitet), läuft der Film einfach weiter, statt mitten drin zu stoppen.
                     if (done >= lines.size && elapsed <= PREROLL_DECIDE_MS) {
                         delay(250)
                         continue
@@ -1751,7 +1787,7 @@ class PlayerActivity : ComponentActivity() {
                 }
                 val coverage = ((loadedUntil - from).toFloat() / PREROLL_WINDOW_MS).coerceIn(0f, 1f)
                 val share = if (lines.isEmpty()) 0f else done.toFloat() / lines.size
-                val byTime = elapsed.toFloat() / PREROLL_MAX_MS
+                val byTime = elapsed.toFloat() / (if (thorough) ONLINE_PAUSE_MIN_MS else PREROLL_MAX_MS)
                 prerollProgress = maxOf(byTime, coverage * 0.3f + share * coverage * 0.7f).coerceIn(0.02f, 0.99f)
                 delay(250)
             }
@@ -1764,6 +1800,15 @@ class PlayerActivity : ComponentActivity() {
             }
         }
     }
+
+    /** Sind die nächsten Minuten ab [positionMs] schon übersetzt (früher geschaut, nachts vorbereitet)? */
+    private fun prepared(positionMs: Long): Boolean =
+        storedAhead.count { it in positionMs..positionMs + PREPARED_WINDOW_MS } >= PREPARED_MIN_LINES
+
+    /** Übersetzt gerade ein Dienst im Internet (DeepL, ohne Störung)? Dann lohnt kurzes Warten auf die Übersetzung. */
+    private fun onlineTranslation(): Boolean =
+        settings.translationProvider == de.ayutv.data.TranslationProvider.DEEPL && settings.deeplKey.isNotBlank() &&
+            de.ayutv.data.translate.DeepLTranslator.problem == null
 
     /** Vorlauf beenden und den Film weiterlaufen lassen (falls er vorher lief). */
     fun endPreroll() {
@@ -3324,6 +3369,17 @@ class PlayerActivity : ComponentActivity() {
                 if (vod != null && externalLanguage != null && abs(newPosition.positionMs - oldPosition.positionMs) >= SEEK_RECHECK_JUMP_MS) {
                     seekRecheckFrom = newPosition.positionMs
                 }
+                // Übersetzung mit DeepL: An der neuen Stelle sind die Zeilen noch nicht gelesen. Kurz anhalten, bis
+                // sie übersetzt sind, statt erst Englisch und dann Deutsch zu zeigen.
+                val format = aheadFormat
+                if (vod != null && !isLive && format != null && liveTranslateTarget != null && onlineTranslation() && player?.playWhenReady == true &&
+                    abs(newPosition.positionMs - oldPosition.positionMs) >= ONLINE_SEEK_JUMP_MS
+                ) {
+                    // Zurück an eine schon übersetzte Stelle: kein Halt nötig.
+                    val at = newPosition.positionMs
+                    val known = embedded?.upcoming(format, at, 50) { it.startMs < at + ONLINE_LEAD_MS }.orEmpty()
+                    if (known.isEmpty() || known.any { it.startMs !in aheadTranslations }) startPreroll(format, thorough = true)
+                }
             }
         }
 
@@ -3529,6 +3585,7 @@ class PlayerActivity : ComponentActivity() {
                 else -> ""
             },
         )
+        video?.frameRate?.takeIf { it > 1f }?.let { fps -> memoryKey()?.let { container.playerMemory.rememberFrameRate(it, fps, isLive) } }
         if (settings.matchFrameRate) video?.frameRate?.let(frameRateMatcher::match)
         suggestFrameRateMatching()
     }
@@ -3790,6 +3847,18 @@ class PlayerActivity : ComponentActivity() {
         private const val ONLINE_BATCH = 40
         /** Nur in den ersten Sekunden entscheidet sich, ob angehalten wird. */
         private const val PREROLL_DECIDE_MS = 3_000L
+        /** DeepL: Vorlauf beim Start und nach dem Spulen, mindestens und höchstens. */
+        private const val ONLINE_PAUSE_MIN_MS = 8_000L
+        private const val ONLINE_PAUSE_MAX_MS = 10_000L
+        /** DeepL: So viel Film muss nach dem Vorlauf geladen und übersetzt sein. */
+        private const val ONLINE_LEAD_MS = 30_000L
+        /** Schon übersetzt gilt eine Stelle mit so vielen Zeilen in den nächsten zwei Minuten. */
+        private const val PREPARED_WINDOW_MS = 120_000L
+        private const val PREPARED_MIN_LINES = 10
+        /** DeepL: So lange bleibt eine noch nicht übersetzte Zeile leer, bevor das Original erscheint. */
+        private const val ONLINE_HOLD_MS = 1_500L
+        /** DeepL: Ab so einem Sprung gibt es an der neuen Stelle einen kurzen Vorlauf. */
+        private const val ONLINE_SEEK_JUMP_MS = 5_000L
         private const val DROP_WARN_COUNT = 3
         private const val FIRST_CONNECT_STALL_SECONDS = 15
         /** So viele eingebettete Einblendungen (gut 4 Minuten Dialog) ohne gemeinsamen Takt: falsche Datei. */

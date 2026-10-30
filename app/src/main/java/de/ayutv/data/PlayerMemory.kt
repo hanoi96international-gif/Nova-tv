@@ -32,8 +32,25 @@ class PlayerMemory(context: Context) {
         prefs.edit().putString(key, encode(next)).apply()
     }
 
+    private val rates = context.getSharedPreferences("frame_rates", Context.MODE_PRIVATE)
+
+    /**
+     * Bildrate, die bei [key] zuletzt gemessen oder gemeldet wurde (0 = unbekannt). Damit schaltet der Fernseher
+     * beim nächsten Start schon während des Ladens um, statt mitten im laufenden Bild schwarz zu werden.
+     */
+    fun frameRate(key: String): Float = rates.getFloat(key, 0f)
+
+    /** Zuletzt bei einem Sender gesehene Bildrate: gute Schätzung für einen noch unbekannten Sender. */
+    val lastLiveFrameRate: Float get() = rates.getFloat(LAST_LIVE, 0f)
+
+    fun rememberFrameRate(key: String, fps: Float, live: Boolean) {
+        if (fps <= 0f || (rates.getFloat(key, 0f) == fps && (!live || lastLiveFrameRate == fps))) return
+        rates.edit().putFloat(key, fps).apply { if (live) putFloat(LAST_LIVE, fps) }.apply()
+    }
+
     companion object {
         const val OFF = "-"
+        private const val LAST_LIVE = "~live"
 
         fun encode(c: Choice): String = listOf(c.audio.orEmpty(), c.text.orEmpty(), c.aspect?.name.orEmpty(), c.load.orEmpty()).joinToString("|")
 
