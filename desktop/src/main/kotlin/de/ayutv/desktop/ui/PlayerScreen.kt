@@ -157,6 +157,10 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
             if (live != null) {
                 val fav = live.channel.key in user.favorites
                 add(MenuItem(if (fav) "★ Aus Favoriten entfernen" else "☆ Zu Favoriten") { toggleFavorite(live.channel) })
+                guide[live.channel.key]?.let { nowOf(it) }?.let { current ->
+                    add(MenuItem("⏺ „${current.title}“ aufnehmen") { app.record(live.channel, current) })
+                    if (app.store.archiveUrl(live.channel, current.start, current.stop) != null) add(MenuItem("⏮ Sendung von Anfang") { app.playArchive(live.channel, current) })
+                }
             }
             player.audioTracks.forEach { (id, name) -> add(MenuItem("🔊 Ton: $name") { player.selectAudio(id) }) }
             player.subtitleTracks.forEach { (id, name) -> add(MenuItem("💬 Untertitel: $name") { player.selectSubtitle(id) }) }

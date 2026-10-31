@@ -189,6 +189,10 @@ private fun ProgrammeDialog(app: AppState, channel: Channel, list: List<Channel>
                     Spacer(Modifier.width(8.dp))
                 }
                 TextButton("▶ Sender einschalten", { onDismiss(); app.play(Playback.Live(channel, list)) }, primary = !archive)
+                if (p.stop > now) {
+                    Spacer(Modifier.width(8.dp))
+                    TextButton("⏺ Aufnehmen", { onDismiss(); app.record(channel, p) })
+                }
                 if (p.start > now) {
                     Spacer(Modifier.width(8.dp))
                     val set = app.store.hasReminder(channel, p.start)

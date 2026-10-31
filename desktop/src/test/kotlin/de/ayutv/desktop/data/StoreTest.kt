@@ -157,6 +157,26 @@ class StoreTest {
     }
 
     @Test
+    fun lockedGroupsDisappearEverywhereUntilUnlocked() {
+        val s = store().withChannels(channel(1, "Erwachsene"), channel(2, "News"))
+        s.toggleFavorite("1:c:1")
+        s.createGroup("Meine", listOf("1:c:1"))
+        s.updateUser { it.copy(parentalPin = "1234") }
+        s.setLocked(GroupKind.LIVE, "Erwachsene", lock = true)
+        assertEquals(listOf("1:c:2"), s.allVisible().map { it.key })
+        assertEquals(listOf("1:c:2"), s.listedChannels().map { it.key })
+        assertTrue(s.favorites().isEmpty())
+        assertEquals(listOf("News"), s.liveGroups().map { it.first })
+        assertEquals(false, s.unlock("0000"))
+        assertTrue(s.unlock("1234"))
+        assertEquals(2, s.allVisible().size)
+        s.relock()
+        assertEquals(1, s.allVisible().size)
+        // Die Entsperrung wird nicht gespeichert.
+        assertTrue(Store.JSON.encodeToString(UserData.serializer(), s.user.value.copy(parentalUnlocked = true)).contains("parentalUnlocked").not())
+    }
+
+    @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))
         assertEquals(listOf("x", "y"), Ordering.apply(listOf("y", "x"), listOf("x")) { it })

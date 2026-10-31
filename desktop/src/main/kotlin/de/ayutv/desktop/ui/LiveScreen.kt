@@ -156,6 +156,12 @@ fun LiveScreen(app: AppState) {
                             if (group == ref) group = GroupRef.All
                             app.toast("„${ref.name}“ ausgeblendet. Sender in Favoriten und eigenen Gruppen bleiben.")
                         },
+                        MenuItem("🔒 Mit PIN sperren") {
+                            if (user.parentalPin.isEmpty()) return@MenuItem app.toast("Zuerst unter Einstellungen → Kindersicherung eine PIN festlegen")
+                            store.setLocked(de.ayutv.desktop.data.GroupKind.LIVE, ref.name, lock = true)
+                            if (group == ref) group = GroupRef.All
+                            app.toast("„${ref.name}“ gesperrt. Entsperren: Einstellungen → Kindersicherung")
+                        },
                     )
                     else -> emptyList()
                 },

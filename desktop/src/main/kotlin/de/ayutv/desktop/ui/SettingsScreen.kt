@@ -181,6 +181,30 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Aufnahmen") }
+        item {
+            Column(Modifier.width(760.dp)) {
+                Label("Ordner: ${app.recorder.folder.absolutePath}. Aufnehmen: im TV-Guide eine Sendung öffnen → „Aufnehmen“, im Bild ☰ → „aufnehmen“. Jede laufende Aufnahme braucht beim Anbieter eine weitere Verbindung.", Type.small, maxLines = 3)
+                user.recordings.sortedByDescending { it.start }.forEach { r ->
+                    val state = when (r.state) {
+                        de.ayutv.desktop.data.Recording.PLANNED -> "geplant ${DATE_TIME.format(Instant.ofEpochMilli(r.start))}"
+                        de.ayutv.desktop.data.Recording.RUNNING -> "⏺ läuft"
+                        de.ayutv.desktop.data.Recording.DONE -> "fertig"
+                        else -> "fehlgeschlagen"
+                    }
+                    ListRow("${r.channelName}: ${r.title}", {
+                        if (r.state == de.ayutv.desktop.data.Recording.DONE) app.playRecording(r)
+                    }, subtitle = state, trailing = "☰ Löschen", onMenu = {
+                        app.removeRecording(r, deleteFile = r.state != de.ayutv.desktop.data.Recording.RUNNING)
+                        app.toast(if (r.state == de.ayutv.desktop.data.Recording.RUNNING) "Aufnahme beendet" else "Aufnahme gelöscht")
+                    })
+                }
+            }
+        }
+
+        item { Section("Kindersicherung") }
+        item { ParentalSection(app) }
+
         item { Section("Erinnerungen") }
         item {
             val upcoming = user.reminders.filter { it.start > System.currentTimeMillis() }.sortedBy { it.start }
@@ -248,6 +272,49 @@ fun SettingsScreen(app: AppState) {
 @Composable
 private fun Section(title: String) {
     Label(title, Type.heading, Modifier.padding(top = 22.dp, bottom = 6.dp))
+}
+
+/** PIN festlegen, gesperrte Gruppen zeigen, bis zum Beenden entsperren. Gesperrte Gruppen fehlen überall. */
+@Composable
+private fun ParentalSection(app: AppState) {
+    val user = app.store.user.collectAsState().value
+    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    Column(Modifier.width(760.dp)) {
+        Label(
+            when {
+                user.parentalPin.isEmpty() -> "Keine PIN. Mit PIN lassen sich Gruppen sperren (☰ auf einer Gruppe → „Mit PIN sperren“)."
+                user.parentalUnlocked -> "Entsperrt bis zum Beenden. ${user.lockedGroups.size} gesperrte Gruppen sind gerade sichtbar."
+                else -> "${user.lockedGroups.size} Gruppen gesperrt. Sie fehlen in Listen, Suche, Sport, TV-Guide und Favoriten."
+            },
+            Type.small, maxLines = 2,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row {
+            if (user.parentalPin.isEmpty()) {
+                TextButton("PIN festlegen …", {
+                    dialog = { NameDialog(app, "Neue PIN (nur Ziffern)", onDone = { pin ->
+                        val digits = pin.filter(Char::isDigit)
+                        if (digits.length < 4) app.toast("Bitte mindestens 4 Ziffern") else { app.store.updateUser { it.copy(parentalPin = digits) }; app.toast("PIN gespeichert") }
+                    }, onDismiss = { dialog = null }) }
+                })
+            } else {
+                if (user.parentalUnlocked) TextButton("🔒 Wieder sperren", { app.store.relock() }, primary = true)
+                else TextButton("🔓 Entsperren …", { dialog = { PinDialog(app, "PIN eingeben", { app.store.unlock(it) }, { dialog = null }) } }, primary = true)
+                Spacer(Modifier.width(8.dp))
+                TextButton("PIN und Sperren entfernen …", {
+                    dialog = { PinDialog(app, "Zum Entfernen die PIN eingeben", { pin ->
+                        (pin == user.parentalPin).also { ok -> if (ok) app.store.updateUser { it.copy(parentalPin = "", lockedGroups = emptySet(), parentalUnlocked = false) } }
+                    }, { dialog = null }) }
+                })
+            }
+        }
+        if (user.parentalUnlocked) user.lockedGroups.sorted().forEach { key ->
+            val (kind, _, name) = key.split('|', limit = 3).let { Triple(it.getOrElse(0) { "" }, it.getOrElse(1) { "" }, it.getOrElse(2) { key }) }
+            val groupKind = de.ayutv.desktop.data.GroupKind.entries.firstOrNull { it.lockName == kind } ?: de.ayutv.desktop.data.GroupKind.LIVE
+            ListRow("🔒  $name", { app.store.setLocked(groupKind, name, lock = false) }, trailing = "${groupKind.label} · OK = freigeben")
+        }
+    }
+    dialog?.invoke()
 }
 
 /** Version und Updates (wie auf dem Fire TV über die Releases bei GitHub). */

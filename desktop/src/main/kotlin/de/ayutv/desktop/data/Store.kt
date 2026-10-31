@@ -70,21 +70,57 @@ class Store(val dir: File) {
         return _content.value.filterKeys { it in enabled }.values.flatMap { it.series }
     }
 
-    /** Filme ohne ausgeblendete Kategorien. */
+    /** Filme ohne ausgeblendete und gesperrte Kategorien. */
     fun movies(): List<Movie> {
         val hidden = _user.value.hiddenMovieGroups
-        return allMovies().filter { "${it.playlistId}|${it.category}" !in hidden }
+        return allMovies().filter { "${it.playlistId}|${it.category}" !in hidden && !locked(GroupKind.MOVIES, it.playlistId, it.category) }
     }
 
-    /** Serien ohne ausgeblendete Kategorien. */
+    /** Serien ohne ausgeblendete und gesperrte Kategorien. */
     fun series(): List<Series> {
         val hidden = _user.value.hiddenSeriesGroups
-        return allSeries().filter { "${it.playlistId}|${it.category}" !in hidden }
+        return allSeries().filter { "${it.playlistId}|${it.category}" !in hidden && !locked(GroupKind.SERIES, it.playlistId, it.category) }
     }
+
+    // ---------------------------------------------------------------- Kindersicherung
+
+    private fun lockKey(kind: GroupKind, playlistId: Long, name: String) = "${kind.lockName}|$playlistId|$name"
+
+    /** Gruppe gesperrt (und nicht mit der PIN entsperrt)? */
+    fun locked(kind: GroupKind, playlistId: Long, name: String): Boolean {
+        val u = _user.value
+        return !u.parentalUnlocked && u.lockedGroups.isNotEmpty() && lockKey(kind, playlistId, name) in u.lockedGroups
+    }
+
+    private fun lockedChannel(c: Channel) = locked(GroupKind.LIVE, c.playlistId, c.group)
+
+    fun isGroupLocked(kind: GroupKind, playlistId: Long, name: String) = lockKey(kind, playlistId, name) in _user.value.lockedGroups
+
+    /** Gruppe [name] in allen Playlists sperren bzw. freigeben (braucht eine PIN). */
+    fun setLocked(kind: GroupKind, name: String, lock: Boolean) = updateUser { u ->
+        val ids = _content.value.filterValues { c ->
+            when (kind) {
+                GroupKind.LIVE -> c.channels.any { it.group == name }
+                GroupKind.MOVIES -> c.movies.any { it.category == name }
+                GroupKind.SERIES -> c.series.any { it.category == name }
+            }
+        }.keys
+        val keys = ids.map { lockKey(kind, it, name) }.toSet()
+        u.copy(lockedGroups = if (lock) u.lockedGroups + keys else u.lockedGroups - keys)
+    }
+
+    /** Mit der PIN entsperren (bis zum Beenden) bzw. wieder sperren. */
+    fun unlock(pin: String): Boolean {
+        if (pin != _user.value.parentalPin || pin.isEmpty()) return false
+        updateUser { it.copy(parentalUnlocked = true) }
+        return true
+    }
+
+    fun relock() = updateUser { it.copy(parentalUnlocked = false) }
 
     fun channel(key: String): Channel? = _content.value.values.firstNotNullOfOrNull { c -> c.channels.firstOrNull { it.key == key } }
 
-    private fun visible(channel: Channel, hidden: Set<String>) = "${channel.playlistId}|${channel.group}" !in hidden
+    private fun visible(channel: Channel, hidden: Set<String>) = "${channel.playlistId}|${channel.group}" !in hidden && !lockedChannel(channel)
 
     /** Doppelte Fassungen zusammenfassen (wenn eingeschaltet): jeder Sender einmal, in der besten Fassung. */
     private fun merged(list: List<Channel>): List<Channel> =
@@ -215,9 +251,10 @@ class Store(val dir: File) {
     /** Zuletzt geschaute Sender, neuester zuerst. */
     fun recentChannels(): List<Channel> = byKeys(_user.value.recent)
 
+    /** Sender nach Schlüssel (Favoriten, eigene Gruppen, Verlauf), ohne gesperrte Gruppen. */
     private fun byKeys(keys: List<String>): List<Channel> {
         val all = channels().associateBy { it.key }
-        return keys.mapNotNull { all[it] }
+        return keys.mapNotNull { all[it] }.filterNot(::lockedChannel)
     }
 
     fun programmes(channel: Channel): List<Programme> = _guide.value[channel.key].orEmpty()
@@ -436,7 +473,7 @@ class Store(val dir: File) {
 }
 
 /** Art der Gruppen (Gruppen ein- und ausblenden). */
-enum class GroupKind(val label: String) { LIVE("Live TV"), MOVIES("Filme"), SERIES("Serien") }
+enum class GroupKind(val label: String, val lockName: String) { LIVE("Live TV", "LIVE"), MOVIES("Filme", "VOD"), SERIES("Serien", "SERIES") }
 
 /** Ein Land in der Länderauswahl: Kürzel, Name, Anzahl Gruppen, gerade sichtbar. */
 data class CountryChoice(val code: String, val label: String, val groups: Int, val visible: Boolean)

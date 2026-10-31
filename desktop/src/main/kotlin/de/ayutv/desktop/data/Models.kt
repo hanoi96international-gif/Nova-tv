@@ -1,6 +1,7 @@
 package de.ayutv.desktop.data
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /** Art einer Playlist: M3U-Adresse oder Xtream-Codes-Zugang. */
 enum class PlaylistType { M3U, XTREAM }
@@ -99,6 +100,26 @@ data class IntroMark(val startMs: Long, val lengthMs: Long)
 @Serializable
 data class Reminder(val channelKey: String, val channelName: String, val title: String, val start: Long, val team: Boolean = false)
 
+/** Aufnahme: geplant, läuft, fertig oder fehlgeschlagen. [file] = Ziel (TS). */
+@Serializable
+data class Recording(
+    val id: Long,
+    val channelKey: String,
+    val channelName: String,
+    val title: String,
+    val start: Long,
+    val stop: Long,
+    val file: String,
+    val state: String = PLANNED,
+) {
+    companion object {
+        const val PLANNED = "PLANNED"
+        const val RUNNING = "RUNNING"
+        const val DONE = "DONE"
+        const val FAILED = "FAILED"
+    }
+}
+
 /** Eigene Sendergruppe (Sender aus allen Playlists, in eigener Reihenfolge). */
 @Serializable
 data class CustomGroup(val id: Long, val name: String, val keys: List<String> = emptyList())
@@ -143,6 +164,13 @@ data class UserData(
     val fullscreen: Boolean = false,
     /** Im Bild schalten ↑/↓ um (wie auf dem Fire TV); aus = ↑/↓ öffnen die Senderliste. */
     val zapWithUpDown: Boolean = true,
+    /** Aufnahmen (geplant, laufend, fertig). */
+    val recordings: List<Recording> = emptyList(),
+    /** Kindersicherung: PIN und gesperrte Gruppen ("LIVE|<Playlist>|<Gruppe>", ebenso VOD und SERIES). */
+    val parentalPin: String = "",
+    val lockedGroups: Set<String> = emptySet(),
+    /** Mit der PIN entsperrt (nur bis zum Beenden, wird nicht gespeichert). */
+    @Transient val parentalUnlocked: Boolean = false,
     /** Wann zuletzt geschaut (Sender, Filme, Folgen): für den Abgleich mit dem Fire TV. */
     val watchedAt: Map<String, Long> = emptyMap(),
     /** Fire TV für den Abgleich: Adresse (http://…:8096) und PIN; automatisch alle 30 Minuten. */

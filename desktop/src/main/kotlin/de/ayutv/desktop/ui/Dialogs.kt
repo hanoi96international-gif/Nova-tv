@@ -122,6 +122,35 @@ fun ReminderDialog(app: AppState, reminder: de.ayutv.desktop.data.Reminder) {
     FocusOnShow(first, reminder)
 }
 
+/** PIN eingeben (Kindersicherung). [onPin] liefert true, wenn die PIN stimmt. */
+@Composable
+fun PinDialog(app: AppState, title: String, onPin: (String) -> Boolean, onDismiss: () -> Unit) {
+    var pin by remember { mutableStateOf("") }
+    val field = remember { FocusRequester() }
+    Overlay(app, onDismiss) {
+        Column {
+            Label(title, Type.heading, maxLines = 2)
+            Spacer(Modifier.height(8.dp))
+            val submit: () -> Unit = {
+                if (onPin(pin)) {
+                    onDismiss()
+                } else {
+                    app.toast("Falsche PIN")
+                    pin = ""
+                }
+            }
+            Field("PIN", pin, { pin = it.filter(Char::isDigit).take(8) }, secret = true, focusRequester = field, onSubmit = submit)
+            Spacer(Modifier.height(12.dp))
+            Row {
+                TextButton("OK", submit, primary = true)
+                Spacer(Modifier.width(8.dp))
+                TextButton("Abbrechen", onDismiss)
+            }
+        }
+    }
+    FocusOnShow(field)
+}
+
 /** Ja/Nein-Frage. */
 @Composable
 fun ConfirmDialog(app: AppState, question: String, yes: String = "Ja", onYes: () -> Unit, onDismiss: () -> Unit) {

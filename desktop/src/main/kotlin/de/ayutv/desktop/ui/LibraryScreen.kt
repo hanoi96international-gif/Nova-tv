@@ -71,11 +71,19 @@ fun LibraryScreen(app: AppState, series: Boolean) {
                 items(categories, key = { it.first }) { (name, count) ->
                     ListRow(name, { category = name }, trailing = count.toString(), selected = category == name, onMenu = {
                         dialog = {
-                            MenuDialog(app, name, listOf(MenuItem("Kategorie ausblenden") {
-                                app.store.hideMovieGroup(name, series)
-                                if (category == name) category = RECENT
-                                app.toast("„$name“ ausgeblendet. Wieder einblenden: Einstellungen → Gruppen …")
-                            }), onDismiss = { dialog = null })
+                            MenuDialog(app, name, listOf(
+                                MenuItem("Kategorie ausblenden") {
+                                    app.store.hideMovieGroup(name, series)
+                                    if (category == name) category = RECENT
+                                    app.toast("„$name“ ausgeblendet. Wieder einblenden: Einstellungen → Gruppen …")
+                                },
+                                MenuItem("🔒 Mit PIN sperren") {
+                                    if (user.parentalPin.isEmpty()) return@MenuItem app.toast("Zuerst unter Einstellungen → Kindersicherung eine PIN festlegen")
+                                    app.store.setLocked(if (series) de.ayutv.desktop.data.GroupKind.SERIES else de.ayutv.desktop.data.GroupKind.MOVIES, name, lock = true)
+                                    if (category == name) category = RECENT
+                                    app.toast("„$name“ gesperrt")
+                                },
+                            ), onDismiss = { dialog = null })
                         }
                     })
                 }

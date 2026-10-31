@@ -74,6 +74,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     var remoteAddress by mutableStateOf<String?>(null); private set
     val updater = de.ayutv.desktop.update.Updater(sync.http)
     val deviceSync = de.ayutv.desktop.data.DeviceSync(store, sync.http)
+    val recorder = de.ayutv.desktop.player.Recorder()
     /** Ergebnis des letzten Abgleichs mit dem Fire TV (für die Einstellungen). */
     var deviceSyncStatus by mutableStateOf<String?>(null); private set
 
@@ -140,6 +141,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                     dueReminder = due
                     runCatching { input.window?.toFront() }
                 }
+                runCatching { runRecordings(now) }.onFailure { de.ayutv.desktop.Log.warn("Aufnahmen", it) }
                 // Vorbei: aufräumen.
                 val old = store.user.value.reminders.filter { now > it.start + 30 * 60_000L }
                 if (old.isNotEmpty()) store.updateUser { it.copy(reminders = it.reminders - old.toSet()) }
@@ -329,6 +331,69 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 deviceSyncStatus = "Fehlgeschlagen: ${it.message}"
                 if (!quiet) toast("Abgleich fehlgeschlagen: ${it.message}")
             }
+    }
+
+    // ---------------------------------------------------------------- Aufnahmen
+
+    /** Sendung aufnehmen (geplant oder laufend). Läuft sie schon, beginnt die Aufnahme sofort. */
+    fun record(channel: Channel, programme: de.ayutv.desktop.data.Programme) {
+        val r = de.ayutv.desktop.data.Recording(
+            id = System.currentTimeMillis(),
+            channelKey = channel.key, channelName = channel.name, title = programme.title,
+            start = programme.start, stop = programme.stop,
+            file = recorder.fileFor(channel.name, programme.title, programme.start).absolutePath,
+        )
+        store.updateUser { it.copy(recordings = it.recordings + r) }
+        toast(if (programme.start <= System.currentTimeMillis()) "⏺ Aufnahme läuft: ${programme.title}" else "⏺ Aufnahme geplant: ${programme.title} um ${clock(programme.start)}")
+        scope.launch { runRecordings(System.currentTimeMillis()) }
+    }
+
+    /** Aufnahme beenden bzw. Planung löschen; [deleteFile] löscht auch die Datei. */
+    fun removeRecording(r: de.ayutv.desktop.data.Recording, deleteFile: Boolean) {
+        recorder.stop(r.id)
+        if (!deleteFile && r.state == de.ayutv.desktop.data.Recording.RUNNING) {
+            // Laufende Aufnahme beenden: was bisher aufgenommen ist, bleibt.
+            store.updateUser { u -> u.copy(recordings = u.recordings.map { if (it.id == r.id) it.copy(state = de.ayutv.desktop.data.Recording.DONE, stop = System.currentTimeMillis()) else it }) }
+            return
+        }
+        if (deleteFile) java.io.File(r.file).delete()
+        store.updateUser { u -> u.copy(recordings = u.recordings.filterNot { it.id == r.id }) }
+    }
+
+    fun playRecording(r: de.ayutv.desktop.data.Recording) {
+        val file = java.io.File(r.file)
+        if (!file.isFile) return toast("Datei fehlt: ${file.name}")
+        play(Playback.Vod("rec:${r.id}", "${r.channelName}: ${r.title}", file.absolutePath, store.user.value.positions["rec:${r.id}"] ?: 0))
+    }
+
+    /** Fällige Aufnahmen starten (1 Minute vorher) und beenden (2 Minuten nach Ende). */
+    private fun runRecordings(now: Long) {
+        val list = store.user.value.recordings
+        if (list.isEmpty()) return
+        val changes = HashMap<Long, String>()
+        for (r in list) {
+            when (r.state) {
+                de.ayutv.desktop.data.Recording.PLANNED -> if (r.start - 60_000 <= now && now < r.stop) {
+                    val channel = store.channel(r.channelKey)
+                    val ok = channel != null && recorder.start(r, channel.url, Sync.USER_AGENT, Network.vlcOptions(channel.url))
+                    changes[r.id] = if (ok) de.ayutv.desktop.data.Recording.RUNNING else de.ayutv.desktop.data.Recording.FAILED
+                    if (!ok) toast("Aufnahme „${r.title}“ ließ sich nicht starten")
+                } else if (now >= r.stop) changes[r.id] = de.ayutv.desktop.data.Recording.FAILED
+                de.ayutv.desktop.data.Recording.RUNNING -> {
+                    if (now > r.stop + 120_000) {
+                        recorder.stop(r.id)
+                        val size = java.io.File(r.file).length()
+                        changes[r.id] = if (size > 100_000) de.ayutv.desktop.data.Recording.DONE else de.ayutv.desktop.data.Recording.FAILED
+                        toast(if (size > 100_000) "⏺ Aufnahme fertig: ${r.title}" else "Aufnahme „${r.title}“ ist leer geblieben")
+                    } else if (!recorder.isRunning(r.id)) {
+                        // Nach einem Neustart von DnA-TV weiter aufnehmen (in eine neue Datei).
+                        val channel = store.channel(r.channelKey)
+                        if (channel != null) recorder.start(r.copy(file = recorder.fileFor(r.channelName, r.title, now).absolutePath), channel.url, Sync.USER_AGENT, Network.vlcOptions(channel.url))
+                    }
+                }
+            }
+        }
+        if (changes.isNotEmpty()) store.updateUser { u -> u.copy(recordings = u.recordings.map { r -> changes[r.id]?.let { r.copy(state = it) } ?: r }) }
     }
 
     /** Fällige Erinnerung annehmen: zum Sender umschalten. */
@@ -582,6 +647,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         watchdog?.cancel()
         remote.stop()
         input.stop()
+        recorder.release()
         player.release()
     }
 }
