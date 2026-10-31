@@ -164,6 +164,8 @@ data class UserData(
     val mergeVariants: Boolean = true,
     /** Fehlendes Programm aus dem freien EPG (epgshare01, DE/AT/CH) ergänzen. */
     val publicEpg: Boolean = true,
+    /** Bildoptimierung für Full HD je Inhalt: "OFF", "AUTO", "STRONG". */
+    val pictureTuning: String = "AUTO",
     /** Länderauswahl nach dem ersten Laden schon gezeigt. */
     val countriesAsked: Boolean = false,
     /** Fenster zuletzt im Vollbild (beim nächsten Start wieder). */

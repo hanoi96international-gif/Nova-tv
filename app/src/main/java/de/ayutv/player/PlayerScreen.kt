@@ -717,6 +717,7 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, dro
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")
         if (stats.audioDecoder.isNotEmpty()) add("Ton: " + if ("ffmpeg" in stats.audioDecoder.lowercase()) "FFmpeg" else stats.audioDecoder)
         if (stats.decoder.isNotEmpty()) add(stats.decoder)
+        if (stats.picture.isNotEmpty()) add("Bildoptimierung: ${stats.picture}")
         if (stats.bandwidth > 0) add("Datenrate des Senders %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
         add("Verworfene Frames: ${stats.droppedFrames}")
         if (stats.startupMs > 0) add("Start in ${stats.startupMs} ms")
@@ -928,6 +929,16 @@ private fun TracksOverlay(activity: PlayerActivity) {
         item { MenuHeader("Bild") }
         AspectMode.entries.forEach { mode ->
             item { OptionRow(mode.label, activity.aspect == mode) { activity.chooseAspect(mode) } }
+        }
+        item { MenuHeader("Bildoptimierung (Full HD)") }
+        de.ayutv.data.parse.PictureTuning.Mode.entries.forEach { mode ->
+            item { OptionRow(mode.label, activity.pictureMode == mode) { activity.choosePictureMode(mode) } }
+        }
+        item {
+            MenuHint(
+                activity.pictureLabel.takeIf { it.isNotEmpty() }?.let { "Gerade: $it-Profil (schärfer, je nach Inhalt mehr Kontrast und Farbe). 4K und HDR bleiben unverändert." }
+                    ?: "Schärft und optimiert Full-HD-Bilder je nach Inhalt: Film, Serie, Sport, Fußball. 4K und HDR bleiben unverändert."
+            )
         }
         item { MenuHeader("Schlaf-Timer") }
         if (activity.sleepAt > 0) {

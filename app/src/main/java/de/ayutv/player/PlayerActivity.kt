@@ -57,6 +57,7 @@ import de.ayutv.data.Languages
 import de.ayutv.data.record.Recording
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
+import de.ayutv.data.parse.PictureTuning
 import de.ayutv.data.IntroStore
 import de.ayutv.hideSystemBars
 import de.ayutv.ui.components.FitToScreen
@@ -366,7 +367,10 @@ class PlayerActivity : ComponentActivity() {
             enhance.leveling = settings.loudnessLevel
             loudnessLevel = settings.loudnessLevel
             textDisabled = vod != null && !settings.subtitlesAutoOn
+            // Bildoptimierung (Full HD): Filme und Folgen gleich mit Profil; bei Sendern entscheidet der erste Start.
+            picturePipelineWanted = pictureAllowed()
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
+            if (vod != null) updatePictureProfile()
             startWatchdog()
             startGoalWatch()
 
@@ -440,7 +444,118 @@ class PlayerActivity : ComponentActivity() {
         built.player.addAnalyticsListener(analyticsListener)
         cushionActive = false
         streamGeneration++
+        // Bildoptimierung: Die Bildverarbeitung muss vor dem ersten Start stehen; die Werte je Inhalt
+        // wechseln danach ohne Neustart.
+        pictureActive = false
+        if (picturePipelineWanted) {
+            val profile = pictureProfile ?: PictureTuning.profile(PictureTuning.Content.OTHER, settings.pictureTuning)
+            if (profile != null) runCatching {
+                built.player.setVideoEffects(PictureEffects.of(profile))
+                pictureActive = true
+                pictureApplied = profile
+            }.onFailure { Log.w(TAG, "Bildoptimierung nicht verfügbar", it); pictureFailed = true }
+        }
         player = built.player
+    }
+
+    // ---------------------------------------------------------------- Bildoptimierung
+
+    /** Soll der nächste Player die Bildverarbeitung bekommen? */
+    private var picturePipelineWanted = true
+    /** Hat der aktuelle Player die Bildverarbeitung? */
+    private var pictureActive = false
+    /** Gewünschtes und angewandtes Profil (Film, Sport, Fußball …). */
+    private var pictureProfile: PictureTuning.Profile? = null
+    private var pictureApplied: PictureTuning.Profile? = null
+    private var pictureDropsAt = 0
+    private var pictureDropsCheckedAt = 0L
+
+    /** Bildoptimierung grundsätzlich möglich (Einstellung, kein Tunneling, kein Emulator, kein Fehler bisher)? */
+    private fun pictureAllowed(): Boolean =
+        settings.pictureTuning != PictureTuning.Mode.OFF && !settings.tunneling && !pictureFailed && !isEmulator()
+
+    private fun isEmulator(): Boolean =
+        Build.FINGERPRINT.startsWith("generic") || Build.HARDWARE.contains("ranchu") || Build.HARDWARE.contains("goldfish") ||
+            Build.PRODUCT.contains("sdk")
+
+    /**
+     * Vor dem Start eines Senders: Bildverarbeitung passend zur erwarteten Auflösung ein- oder ausbauen (4K und HDR
+     * laufen unverändert). Baut den Player nur um, wenn sich etwas ändert; der Sender startet danach wie gewohnt.
+     */
+    private fun preparePicture(expectedHeight: Int) {
+        val want = pictureAllowed() && PictureTuning.eligible(expectedHeight, hdr = false)
+        picturePipelineWanted = want
+        if (player != null && want != pictureActive) reinstallPlayer()
+    }
+
+    /** Player neu aufbauen, ohne etwas zu starten (der Aufrufer startet gleich den nächsten Sender). */
+    private fun reinstallPlayer() {
+        val old = player ?: return
+        val parameters = old.trackSelectionParameters
+        val userAgent = headers?.userAgent
+        old.removeListener(playerListener)
+        old.release()
+        installPlayer(asyncDecodingActive, forcePcmActive)
+        player?.trackSelectionParameters = parameters
+        userAgent?.let { headers?.userAgent = it }
+    }
+
+    /** Profil je Inhalt wählen und (wenn die Bildverarbeitung läuft) sofort anwenden. */
+    private fun updatePictureProfile() {
+        val channel = playing
+        val request = vod
+        val content = when {
+            request != null -> PictureTuning.classify(
+                request.title, vodMovie = request.kind == HistoryKind.VOD, vodEpisode = request.kind == HistoryKind.EPISODE,
+            )
+            channel != null -> {
+                val now = System.currentTimeMillis()
+                val programme = nowNext.firstOrNull { it.start <= now && it.stop > now }
+                PictureTuning.classify(channel.name, programme?.title, programme?.subtitle, programme?.category)
+            }
+            else -> PictureTuning.Content.OTHER
+        }
+        val profile = PictureTuning.profile(content, settings.pictureTuning)
+        pictureProfile = profile
+        val p = player ?: return
+        if (!pictureActive || profile == null || profile == pictureApplied) return
+        runCatching { p.setVideoEffects(PictureEffects.of(profile)) }
+            .onSuccess { pictureApplied = profile; stats = stats.copy(picture = profile.label) }
+            .onFailure { Log.w(TAG, "Bildprofil nicht gesetzt", it) }
+    }
+
+    /**
+     * Nach dem Start: Ist das Bild doch 4K oder HDR, die Bildverarbeitung ausbauen (einmal kurz neu starten). Ruckelt
+     * es mit ihr (Gerät zu langsam), für diese Sitzung abschalten.
+     */
+    private fun checkPicture(video: androidx.media3.common.Format?) {
+        if (!pictureActive || video == null || video.height <= 0) return
+        val transfer = video.colorInfo?.colorTransfer
+        val hdr = transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG || video.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION
+        if (!PictureTuning.eligible(video.height, hdr)) {
+            picturePipelineWanted = false
+            handler.post { rebuildPlayer() }
+            return
+        }
+        stats = stats.copy(picture = pictureApplied?.label.orEmpty())
+        val now = SystemClock.elapsedRealtime()
+        if (pictureDropsCheckedAt == 0L) {
+            pictureDropsCheckedAt = now
+            pictureDropsAt = stats.droppedFrames
+            return
+        }
+        val elapsed = now - pictureDropsCheckedAt
+        if (elapsed < 25_000) return
+        val dropped = stats.droppedFrames - pictureDropsAt
+        pictureDropsCheckedAt = now
+        pictureDropsAt = stats.droppedFrames
+        if (everReady && dropped > 60 && elapsed < 70_000) {
+            // Über 60 verworfene Bilder in einer halben Minute: Das Gerät schafft die Bildverarbeitung nicht.
+            pictureFailed = true
+            picturePipelineWanted = false
+            subtitleStatus = "Bildoptimierung pausiert: Das Gerät kommt nicht mit (Bild ruckelte). Wieder an: App neu starten"
+            handler.post { rebuildPlayer() }
+        }
     }
 
     /** Player mit anderer Decoder-Konfiguration neu aufbauen und an derselben Stelle weiterspielen. */
@@ -484,9 +599,21 @@ class PlayerActivity : ComponentActivity() {
         var framesAdvancing = false
         var frozenVideoSeconds = 0
         var seenGeneration = -1
+        var pictureTick = 0
         while (true) {
             delay(1_000)
             val p = player ?: continue
+            // Bildoptimierung: jede halbe Minute prüfen, ob eine neue Sendung läuft (Nachrichten → Fußball),
+            // und ob das Gerät mitkommt.
+            if (++pictureTick >= 30) {
+                pictureTick = 0
+                if (pictureActive) {
+                    val now = System.currentTimeMillis()
+                    val shown = nowNext.firstOrNull { it.start <= now && it.stop > now }
+                    if (isLive && shown == null) playing?.let { loadChannelInfo(it) } else updatePictureProfile()
+                    checkPicture(p.videoFormat)
+                }
+            }
             if (isLive) {
                 updateTimeshiftState(p)
                 checkDrops()
@@ -885,6 +1012,8 @@ class PlayerActivity : ComponentActivity() {
     }
 
     fun playChannel(channel: ChannelEntity) {
+        // Bildoptimierung nur für Full HD und kleiner: vorher passend auf- oder abbauen.
+        preparePicture(de.ayutv.data.parse.ChannelQuality.height(channel.key, channel.name))
         val p = player ?: return
         recordWatch()
         watchStartedAt = SystemClock.elapsedRealtime()
@@ -1083,6 +1212,7 @@ class PlayerActivity : ComponentActivity() {
         infoJob = lifecycleScope.launch {
             nowNext = container.content.upcoming(channel, 3)
             isFavorite = container.db.favorites().isFavorite(channel.key)
+            updatePictureProfile()
         }
     }
 
@@ -3084,6 +3214,32 @@ class PlayerActivity : ComponentActivity() {
         showGestureInfo(if (fill) "Bild füllt den Bildschirm" else "Ganzes Bild")
     }
 
+    /** Aktive Bildoptimierung für das Menü („Fußball“, „Film“ …; leer = keine). */
+    val pictureLabel: String get() = if (pictureActive) pictureApplied?.label.orEmpty() else ""
+    val pictureMode: PictureTuning.Mode get() = settings.pictureTuning
+
+    /** Bildoptimierung im ☰-Menü umschalten: gilt sofort (wenn nötig kurzer Neustart des Streams) und bleibt gespeichert. */
+    fun choosePictureMode(mode: PictureTuning.Mode) {
+        if (mode == settings.pictureTuning) return
+        settings = settings.copy(pictureTuning = mode)
+        container.scope.launch { container.settings.update { it.copy(pictureTuning = mode) } }
+        if (mode != PictureTuning.Mode.OFF) pictureFailed = false
+        val height = stats.height.takeIf { it > 0 } ?: playing?.let { de.ayutv.data.parse.ChannelQuality.height(it.key, it.name) } ?: 0
+        val want = pictureAllowed() && PictureTuning.eligible(height, hdr = stats.hdr.isNotEmpty())
+        picturePipelineWanted = want
+        pictureApplied = null
+        if (want != pictureActive) {
+            rebuildPlayer()
+        }
+        updatePictureProfile()
+        message = when {
+            mode == PictureTuning.Mode.OFF -> "Bildoptimierung aus"
+            !want && settings.tunneling -> "Bildoptimierung braucht „Tunneling“ aus (Einstellungen → Wiedergabe)"
+            !want -> "Bildoptimierung gilt für Full HD; dieser Sender läuft in 4K/HDR unverändert"
+            else -> "Bildoptimierung: ${mode.label}"
+        }
+    }
+
     fun chooseAspect(mode: AspectMode) {
         aspect = mode
         memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(aspect = mode) } }
@@ -3546,6 +3702,16 @@ class PlayerActivity : ComponentActivity() {
             val p = player ?: return
             Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
             playerErrors++
+            // Bildoptimierung scheitert auf diesem Gerät: ohne sie neu starten und für diese Sitzung aus lassen.
+            if (pictureActive && (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED ||
+                    error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)
+            ) {
+                pictureFailed = true
+                picturePipelineWanted = false
+                statusHistory += "Bildoptimierung abgeschaltet: ${error.errorCodeName}"
+                handler.post { rebuildPlayer() }
+                return
+            }
             // Für den Fehlerbericht: welcher Fehler, mit der eigentlichen Ursache.
             statusHistory += "Fehler ${error.errorCodeName}: ${(error.cause?.message ?: error.message).orEmpty().take(140)}"
             if (timeshifted) {
@@ -3743,6 +3909,7 @@ class PlayerActivity : ComponentActivity() {
         if (settings.matchFrameRate) video?.frameRate?.let(frameRateMatcher::match)
         suggestFrameRateMatching()
         checkDynamicRange(video)
+        checkPicture(video)
     }
 
     /**
@@ -4014,6 +4181,8 @@ class PlayerActivity : ComponentActivity() {
         /** Hinweis auf 50 Hz nur einmal pro App-Start, nicht bei jedem Sender. */
         private var afrHintShown = false
         private var dynamicRangeHintShown = false
+        /** Bildoptimierung hat auf diesem Gerät versagt (Fehler oder Ruckeln): bis zum nächsten App-Start aus. */
+        private var pictureFailed = false
         private const val MAX_RETRIES = 3
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L

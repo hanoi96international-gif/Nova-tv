@@ -338,6 +338,16 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
+                            "Bildoptimierung (Full HD)",
+                            settings.pictureTuning.label,
+                            "Schärft und optimiert Full-HD-Bilder automatisch je nach Inhalt: Filme bleiben natürlich (nur leicht nachgeschärft), " +
+                                "Serien etwas schärfer, Sport deutlich schärfer mit mehr Kontrast, Fußball zusätzlich mit kräftigerem Rasengrün. " +
+                                "4K und HDR bleiben unverändert. Läuft auf dem Grafikchip; ruckelt es, schaltet sie sich von selbst ab. " +
+                                "Nicht zusammen mit „Tunneling“. Im Bild auch über ☰ → Bild umschaltbar.",
+                        ) { update { it.copy(pictureTuning = it.pictureTuning.next()) } }
+                    }
+                    item {
+                        SettingRow(
                             "Bildwiederholrate anpassen",
                             onOff(settings.matchFrameRate),
                             "Empfohlen: An. Deutsches TV läuft mit 50 Hz, Filme mit 23,976 Hz – der Fire TV gibt sonst 60 Hz aus, das ruckelt bei " +
