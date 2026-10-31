@@ -63,4 +63,14 @@ class SubtitleAlignTest {
     fun tooFewReferences() {
         assertNull(SubtitleAlign.align(lines(7).take(5), lines(7)))
     }
+
+    @Test
+    fun farFromAnchorsIsReportedAsUncovered() {
+        // Nur die ersten Minuten sind gelesen (Player stand am Anfang), dann wird weit gesprungen.
+        val file = lines(5)
+        val early = file.filter { it < 5 * 60_000L }.map { it - 2_500 }
+        val result = SubtitleAlign.align(early, file)!!
+        assertTrue(result.timing.distanceTo(2 * 60_000L) < 10_000)
+        assertTrue("Nach dem Sprung dürfen die frühen Anker nicht als passend gelten", result.timing.distanceTo(60 * 60_000L) > 90_000)
+    }
 }

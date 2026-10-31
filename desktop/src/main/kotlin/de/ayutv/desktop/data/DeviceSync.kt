@@ -22,13 +22,20 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Abgleich mit dem Fire TV (und darüber mit dem Handy), wie zwischen Handy und Fernseher in der Fire-TV-App:
- * Favoriten und Verlauf („Weiter schauen“, zuletzt gesehene Sender). Beide Seiten tauschen ihren Stand aus und
- * übernehmen, was beim anderen neuer ist; Favoriten kommen dazu, entfernt wird nichts.
+ * Favoriten, Verlauf („Weiter schauen“, zuletzt gesehene Sender), eigene Gruppen und ausgeblendete Gruppen. Beide
+ * Seiten tauschen ihren Stand aus und übernehmen, was beim anderen neuer ist oder fehlt; entfernt wird nichts. So hat
+ * jedes Gerät eine Kopie der eigenen Gruppen (Regeln in SyncMerge, gleich wie auf dem Fire TV).
  * Weg: POST `http://<Fire TV>:8096/<PIN>/sync` (Adresse und PIN unter Fire TV → Einstellungen → Handy als Fernbedienung).
  */
 class DeviceSync(private val store: Store, http: OkHttpClient) {
-    data class Result(val favorites: Int, val history: Int) {
-        val text: String get() = if (favorites == 0 && history == 0) "Schon auf demselben Stand." else "Übernommen: $favorites Favoriten, $history Verlaufseinträge."
+    data class Result(val favorites: Int, val history: Int, val groups: Int = 0, val hidden: Int = 0) {
+        val text: String get() = if (favorites == 0 && history == 0 && groups == 0 && hidden == 0) "Schon auf demselben Stand." else
+            "Übernommen: " + listOfNotNull(
+                "$favorites Favoriten",
+                "$history Verlaufseinträge",
+                "$groups eigene Gruppen".takeIf { groups > 0 },
+                "$hidden Ausblendungen".takeIf { hidden > 0 },
+            ).joinToString(", ") + "."
     }
 
     private val http = http.newBuilder().connectTimeout(5, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS).build()
@@ -68,6 +75,19 @@ class DeviceSync(private val store: Store, http: OkHttpClient) {
                         put("position", index)
                     })
                 }
+            })
+            put("customGroups", buildJsonArray {
+                for (g in u.customGroups) add(buildJsonObject {
+                    put("name", g.name)
+                    put("keys", buildJsonArray { g.keys.forEach { add(JsonPrimitive(it)) } })
+                })
+            })
+            put("hiddenGroups", buildJsonArray {
+                for (h in hiddenOf(u)) add(buildJsonObject {
+                    put("playlistId", h.playlistId)
+                    put("kind", h.kind)
+                    put("name", h.name)
+                })
             })
             put("history", buildJsonArray {
                 // Sender (zuletzt gesehen) und Filme/Folgen (Wiedergabestand).
@@ -111,8 +131,19 @@ class DeviceSync(private val store: Store, http: OkHttpClient) {
         }
         val ids = SyncMerge.idMap(remote, local)
 
+        val incomingGroups = root["customGroups"]?.jsonArray.orEmpty().mapNotNull { e ->
+            val o = e as? JsonObject ?: return@mapNotNull null
+            SyncMerge.Group(o.string("name") ?: return@mapNotNull null, o["keys"]?.jsonArray.orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull })
+        }
+        val incomingHidden = root["hiddenGroups"]?.jsonArray.orEmpty().mapNotNull { e ->
+            val o = e as? JsonObject ?: return@mapNotNull null
+            SyncMerge.Hidden(o.long("playlistId") ?: return@mapNotNull null, o.string("kind") ?: return@mapNotNull null, o.string("name") ?: return@mapNotNull null)
+        }
+
         var favorites = 0
         var history = 0
+        var groups = 0
+        var hidden = 0
         store.updateUser { u ->
             val known = u.favorites.toMutableList()
             val times = u.watchedAt.toMutableMap()
@@ -148,9 +179,31 @@ class DeviceSync(private val store: Store, http: OkHttpClient) {
             }
             // Sender nach Zeitpunkt ordnen (neuester zuerst), höchstens 30 wie sonst.
             val ordered = recent.sortedByDescending { times[it] ?: 0L }.take(30)
-            u.copy(favorites = known, recent = ordered, positions = positions, durations = durations, watchedAt = times)
+            // Eigene Gruppen, die es hier (nach Name) nicht gibt; Ausblendungen nur, wo hier noch nichts ausgeblendet ist.
+            val newGroups = SyncMerge.newGroups(u.customGroups.map { it.name }, incomingGroups, ids)
+            groups = newGroups.size
+            var nextId = (u.customGroups.maxOfOrNull { it.id } ?: 0) + 1
+            val take = SyncMerge.hiddenToTake(hiddenOf(u), incomingHidden, ids)
+            hidden = take.size
+            fun Set<String>.plus(kind: String) = this + take.filter { it.kind == kind }.map { "${it.playlistId}|${it.name}" }
+            u.copy(
+                favorites = known, recent = ordered, positions = positions, durations = durations, watchedAt = times,
+                customGroups = u.customGroups + newGroups.map { CustomGroup(nextId++, it.name, it.keys) },
+                hiddenGroups = u.hiddenGroups.plus(GroupKind.LIVE.lockName),
+                hiddenMovieGroups = u.hiddenMovieGroups.plus(GroupKind.MOVIES.lockName),
+                hiddenSeriesGroups = u.hiddenSeriesGroups.plus(GroupKind.SERIES.lockName),
+            )
         }
-        return Result(favorites, history)
+        return Result(favorites, history, groups, hidden)
+    }
+
+    /** Ausgeblendete Gruppen im Format des Fire TV („<Playlist>|<Gruppe>“ → Playlist, Art, Name). */
+    private fun hiddenOf(u: UserData): List<SyncMerge.Hidden> {
+        fun Set<String>.refs(kind: GroupKind) = mapNotNull { entry ->
+            val id = entry.substringBefore('|').toLongOrNull() ?: return@mapNotNull null
+            SyncMerge.Hidden(id, kind.lockName, entry.substringAfter('|'))
+        }
+        return u.hiddenGroups.refs(GroupKind.LIVE) + u.hiddenMovieGroups.refs(GroupKind.MOVIES) + u.hiddenSeriesGroups.refs(GroupKind.SERIES)
     }
 
     companion object {

@@ -21,4 +21,33 @@ class SyncMergeTest {
         val result = SyncMerge.newer(mapOf("a" to 20L, "b" to 4L), incoming, { it.first }, { it.second })
         assertEquals(listOf("b" to 5L, "c" to 1L), result)
     }
+
+    @Test
+    fun missingCustomGroupsComeOverWithLocalKeys() {
+        val ids = mapOf(1L to 9L)
+        val incoming = listOf(
+            SyncMerge.Group("Sport DE", listOf("1:c:5", "1:c:6", "2:c:1")),
+            SyncMerge.Group("Kinder", listOf("1:c:7")),
+            SyncMerge.Group("Nur fremd", listOf("2:c:3")),
+        )
+        val result = SyncMerge.newGroups(listOf(" kinder "), incoming, ids)
+        // „Kinder“ gibt es hier schon (bleibt unverändert), „Nur fremd“ hat hier keinen Sender.
+        assertEquals(listOf(SyncMerge.Group("Sport DE", listOf("9:c:5", "9:c:6"))), result)
+    }
+
+    @Test
+    fun hiddenGroupsOnlyWhereNothingIsHiddenYet() {
+        val ids = mapOf(1L to 9L, 2L to 8L)
+        val local = listOf(SyncMerge.Hidden(9, "LIVE", "Eigene Wahl"))
+        val incoming = listOf(
+            SyncMerge.Hidden(1, "LIVE", "UK Sport"),
+            SyncMerge.Hidden(1, "VOD", "Bollywood"),
+            SyncMerge.Hidden(2, "LIVE", "FR News"),
+            SyncMerge.Hidden(3, "LIVE", "Unbekannt"),
+        )
+        assertEquals(
+            listOf(SyncMerge.Hidden(9, "VOD", "Bollywood"), SyncMerge.Hidden(8, "LIVE", "FR News")),
+            SyncMerge.hiddenToTake(local, incoming, ids),
+        )
+    }
 }

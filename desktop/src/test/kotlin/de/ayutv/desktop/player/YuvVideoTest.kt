@@ -82,5 +82,57 @@ class YuvVideoTest {
         assertEquals(0, px[(45 * 160 + 5) * 4].toInt() and 0xFF)
         assertEquals(255, px[(45 * 160 + 80) * 4].toInt() and 0xFF)
     }
-}
 
+    /** Mittlerer Bildpunkt eines fertigen Bildes. */
+    private fun center(frame: YuvFrame, outW: Int = 128, outH: Int = 72, x: Int = outW / 2, y: Int = outH / 2): IntArray {
+        val surface = Surface.makeRaster(ImageInfo(outW, outH, ColorType.RGBA_8888, ColorAlphaType.PREMUL))
+        frame.draw(surface.canvas, outW.toFloat(), outH.toFloat())
+        val px = org.jetbrains.skia.Bitmap.makeFromImage(surface.makeImageSnapshot())
+            .readPixels(ImageInfo(outW, outH, ColorType.RGBA_8888, ColorAlphaType.PREMUL), outW * 4, 0, 0)!!
+        frame.close()
+        val at = (y * outW + x) * 4
+        return intArrayOf(px[at].toInt() and 0xFF, px[at + 1].toInt() and 0xFF, px[at + 2].toInt() and 0xFF)
+    }
+
+    @Test
+    fun edgesStayClean() {
+        // Am Rand dürfen Low/High-Byte bzw. U/V nicht vertauscht werden (eigene Randbehandlung im Shader).
+        for (layout in YuvVideo.Layout.entries) {
+            val frame = { YuvVideo.solid(layout, 64, 36, 81, 90, 240) }
+            near(intArrayOf(255, 0, 0), center(frame(), x = 127, y = 71), 8)
+            near(intArrayOf(255, 0, 0), center(frame(), x = 0, y = 0), 8)
+        }
+    }
+
+    @Test
+    fun allLayoutsGiveTheSameColours() {
+        for (layout in YuvVideo.Layout.entries) {
+            near(intArrayOf(255, 255, 255), center(YuvVideo.solid(layout, 64, 36, 235, 128, 128)))
+            near(intArrayOf(0, 0, 0), center(YuvVideo.solid(layout, 64, 36, 16, 128, 128)))
+            // Rot (BT.601) und Testblau des Starttests: U und V dürfen nicht vertauscht sein.
+            near(intArrayOf(255, 0, 0), center(YuvVideo.solid(layout, 64, 36, 81, 90, 240)), 6)
+            near(intArrayOf(0, 0, 255), center(YuvVideo.solid(layout, 64, 36, 41, 240, 110)), 8)
+        }
+    }
+
+    @Test
+    fun p010KeepsTenBitSteps() {
+        // Zwei Grauwerte, die sich nur um einen 10-Bit-Schritt unterscheiden, ergeben in P010 verschiedene Eingangswerte;
+        // in 8 Bit wären sie gleich. Hier: der Shader liest die 16-Bit-Ebene überhaupt (sonst wäre alles schwarz).
+        val grey = center(YuvVideo.solid(YuvVideo.Layout.P010, 64, 36, 126, 128, 128))
+        near(intArrayOf(128, 128, 128), grey, 2)
+        val hdr = center(YuvVideo.solid(YuvVideo.Layout.P010, 64, 36, 143, 128, 128, YuvVideo.Transfer.PQ))
+        assertTrue("P010 HDR 203 Nits soll fast weiß sein: ${hdr.toList()}", hdr.all { it in 230..255 })
+    }
+
+    @Test
+    fun planeSizesFitTheLayout() {
+        val (p420, _) = YuvVideo.planes(3840, 2160, YuvVideo.Layout.I420)
+        val (nv12, nvLines) = YuvVideo.planes(3840, 2160, YuvVideo.Layout.NV12)
+        val (p010, _) = YuvVideo.planes(3840, 2160, YuvVideo.Layout.P010)
+        assertEquals(3, p420.size)
+        assertEquals(listOf(3840, 3840), nv12.toList())
+        assertEquals(listOf(2160, 1088), nvLines.toList())
+        assertEquals(listOf(7680, 7680), p010.toList())
+    }
+}

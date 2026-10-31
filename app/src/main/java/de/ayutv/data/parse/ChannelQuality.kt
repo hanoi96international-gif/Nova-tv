@@ -12,7 +12,11 @@ import java.util.concurrent.ConcurrentHashMap
  */
 object ChannelQuality {
     /** [watchedMs]/[drops]: wie lange insgesamt geschaut und wie oft dabei die Verbindung abbrach. */
-    data class Info(val height: Int, val startupMs: Long, val failures: Int, val checkedAt: Long, val watchedMs: Long = 0, val drops: Int = 0) {
+    data class Info(
+        val height: Int, val startupMs: Long, val failures: Int, val checkedAt: Long, val watchedMs: Long = 0, val drops: Int = 0,
+        /** Gemessene Datenrate des Senders (kbit/s), 0 = unbekannt. Bei gleicher Auflösung ist mehr = schärferes Bild. */
+        val kbps: Int = 0,
+    ) {
         val broken: Boolean get() = failures >= 2
     }
 
@@ -40,15 +44,27 @@ object ChannelQuality {
     fun recordPlayback(key: String, height: Int, startupMs: Long, now: Long = System.currentTimeMillis()) {
         if (height <= 0) return
         val previous = known[key]
-        known[key] = Info(height, startupMs.takeIf { it > 0 } ?: previous?.startupMs ?: 0, 0, now, previous?.watchedMs ?: 0, previous?.drops ?: 0)
+        known[key] = Info(height, startupMs.takeIf { it > 0 } ?: previous?.startupMs ?: 0, 0, now, previous?.watchedMs ?: 0, previous?.drops ?: 0, previous?.kbps ?: 0)
+        dirty = true
+    }
+
+    /**
+     * Datenrate des Senders (beim Schauen oder im Leitungs-Check gemessen). Live-Sender kommen in Echtzeit, die Rate
+     * ist also die Qualität, mit der der Anbieter sendet. Gleitend gemittelt, damit ein kurzer Ausreißer nicht zählt.
+     */
+    fun recordBitrate(key: String, kbps: Int, now: Long = System.currentTimeMillis()) {
+        if (kbps <= 100) return
+        val previous = known[key] ?: Info(0, 0, 0, now)
+        val mixed = if (previous.kbps > 0) (previous.kbps * 2 + kbps) / 3 else kbps
+        known[key] = previous.copy(kbps = mixed)
         dirty = true
     }
 
     /** Vom Check gemessen oder ausgefallen ([height] 0). */
     fun recordCheck(key: String, height: Int, startupMs: Long, now: Long = System.currentTimeMillis()) {
         val previous = known[key]
-        known[key] = if (height > 0) Info(height, startupMs, 0, now, previous?.watchedMs ?: 0, previous?.drops ?: 0)
-        else Info(previous?.height ?: 0, previous?.startupMs ?: 0, (previous?.failures ?: 0) + 1, now, previous?.watchedMs ?: 0, previous?.drops ?: 0)
+        known[key] = if (height > 0) Info(height, startupMs, 0, now, previous?.watchedMs ?: 0, previous?.drops ?: 0, previous?.kbps ?: 0)
+        else Info(previous?.height ?: 0, previous?.startupMs ?: 0, (previous?.failures ?: 0) + 1, now, previous?.watchedMs ?: 0, previous?.drops ?: 0, previous?.kbps ?: 0)
         dirty = true
     }
 
@@ -116,6 +132,9 @@ object ChannelQuality {
         if (h > cap) score += 900
         if (BACKUP.containsMatchIn(" " + name.lowercase() + " ")) score += 600
         if (info != null && info.startupMs > 4_000) score += 60
+        // Gleiche Auflösung: höhere Datenrate des Senders zuerst (je Mbit/s ein Punkt, höchstens 40; Auflösung zählt
+        // in Hunderten und bleibt deshalb vorrangig).
+        if (info != null && info.kbps > 0) score -= minOf(info.kbps / 1000, 40)
         if (info != null && info.broken) score += 10_000
         return score
     }
@@ -137,7 +156,7 @@ object ChannelQuality {
                 val p = line.split('\t')
                 if (p.size >= 5) known[p[0]] = Info(
                     p[1].toIntOrNull() ?: 0, p[2].toLongOrNull() ?: 0, p[3].toIntOrNull() ?: 0, p[4].toLongOrNull() ?: 0,
-                    p.getOrNull(5)?.toLongOrNull() ?: 0, p.getOrNull(6)?.toIntOrNull() ?: 0,
+                    p.getOrNull(5)?.toLongOrNull() ?: 0, p.getOrNull(6)?.toIntOrNull() ?: 0, p.getOrNull(7)?.toIntOrNull() ?: 0,
                 )
             }
         }
@@ -151,7 +170,8 @@ object ChannelQuality {
             tmp.bufferedWriter().use { out ->
                 for ((key, i) in known) out.append(key.replace('\t', ' ')).append('\t').append(i.height.toString()).append('\t')
                     .append(i.startupMs.toString()).append('\t').append(i.failures.toString()).append('\t').append(i.checkedAt.toString())
-                    .append('\t').append(i.watchedMs.toString()).append('\t').append(i.drops.toString()).append('\n')
+                    .append('\t').append(i.watchedMs.toString()).append('\t').append(i.drops.toString())
+                    .append('\t').append(i.kbps.toString()).append('\n')
             }
             tmp.renameTo(file)
         }

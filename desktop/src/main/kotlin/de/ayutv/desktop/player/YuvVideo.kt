@@ -30,6 +30,20 @@ object YuvVideo {
     /** HDR-Art des Bildes. */
     enum class Transfer { SDR, PQ, HLG }
 
+    /**
+     * Wie VLC das Bild ablegt.
+     * - [I420]: drei Ebenen mit 8 Bit (bisheriger Weg, „Kompatibel“).
+     * - [NV12]: Helligkeit + Farbe verschränkt, 8 Bit. So liefert die Hardware-Dekodierung das Bild ohnehin; VLC muss
+     *   nichts umsortieren (bei 4K mit 50 Bildern spart das je Sekunde rund 600 MB Speicherverkehr).
+     * - [P010]: wie NV12, aber mit 10 Bit je Wert (in 16 Bit). Für HDR und 10-Bit-HEVC: keine Abstufungen („Banding“)
+     *   in Himmel und Verläufen, weil die volle Genauigkeit bis in die Tonwertanpassung erhalten bleibt.
+     */
+    enum class Layout(val chroma: String, val planes: Int) {
+        I420("I420", 3),
+        NV12("NV12", 2),
+        P010("P010", 2),
+    }
+
     /** Farbmatrix (Luma-Anteile Rot/Blau) nach Norm. */
     enum class Matrix(val kr: Float, val kb: Float) {
         BT601(0.299f, 0.114f),
@@ -37,13 +51,29 @@ object YuvVideo {
         BT2020(0.2627f, 0.0593f),
     }
 
-    /** Pitch (Zeilenlänge) und Zeilen je Ebene, wie VLC sie für „I420“ anlegt (ausgerichtet auf 32 bzw. 16). */
-    fun planes(width: Int, height: Int): Pair<IntArray, IntArray> {
+    /** Pitch (Zeilenlänge in Bytes) und Zeilen je Ebene für [layout] (ausgerichtet auf 32 bzw. 16). */
+    fun planes(width: Int, height: Int, layout: Layout = Layout.I420): Pair<IntArray, IntArray> {
         val cw = (width + 1) / 2
         val ch = (height + 1) / 2
-        val pitches = intArrayOf(align(width, 32), align(cw, 32), align(cw, 32))
-        val lines = intArrayOf(align(height, 16), align(ch, 16), align(ch, 16))
-        return pitches to lines
+        return when (layout) {
+            Layout.I420 -> intArrayOf(align(width, 32), align(cw, 32), align(cw, 32)) to intArrayOf(align(height, 16), align(ch, 16), align(ch, 16))
+            // Farbebene: je Bildpunkt-Paar U und V nebeneinander (NV12: 2 Bytes, P010: 4 Bytes).
+            Layout.NV12 -> intArrayOf(align(width, 32), align(cw * 2, 32)) to intArrayOf(align(height, 16), align(ch, 16))
+            Layout.P010 -> intArrayOf(align(width * 2, 32), align(cw * 4, 32)) to intArrayOf(align(height, 16), align(ch, 16))
+        }
+    }
+
+    /**
+     * Breite der Ebene [index] als Graustufenbild in Bytes: Alle Ebenen werden als 8-Bit-Graustufen hochgeladen (das
+     * kann jede Grafik); verschränkte Farbe (U/V) und 16-Bit-Werte setzt der Shader selbst zusammen.
+     */
+    fun byteWidth(layout: Layout, index: Int, width: Int): Int {
+        val cw = (width + 1) / 2
+        return when (layout) {
+            Layout.I420 -> if (index == 0) width else cw
+            Layout.NV12 -> if (index == 0) width else cw * 2
+            Layout.P010 -> if (index == 0) width * 2 else cw * 4
+        }
     }
 
     private fun align(value: Int, to: Int) = (value + to - 1) / to * to
@@ -61,6 +91,9 @@ uniform float kb;
 uniform float fullRange;
 uniform float transfer;   // 0 = SDR, 1 = PQ, 2 = HLG
 uniform float peak;       // Spitzenhelligkeit des Inhalts (Nits) für die Tonwertanpassung
+uniform float planes;     // 0 = I420 (drei Ebenen), 1 = NV12 (Farbe verschränkt), 2 = P010 (wie NV12, 10 Bit)
+uniform float2 lumaSize;  // Bildpunkte der Helligkeit (NV12/P010)
+uniform float2 chromaSize; // Bildpunkte der Farbe (NV12/P010)
 
 float3 pqToNits(float3 e) {
     float3 p = pow(clamp(e, 0.0, 1.0), float3(1.0 / 78.84375));
@@ -83,14 +116,67 @@ float3 srgbEncode(float3 v) {
     return mix(v * 12.92, 1.055 * pow(v, float3(1.0 / 2.4)) - 0.055, step(0.0031308, v));
 }
 
+// Ein Bildpunkt (ganzzahlig) einer Ebene als Graustufe; die Ebenen werden dafür ohne Filter gelesen.
+float texY(float x, float y) {
+    return luma.eval(float2(x + 0.5, y + 0.5)).r;
+}
+
+float texC(float x, float y) {
+    return cb.eval(float2(x + 0.5, y + 0.5)).r;
+}
+
+// Helligkeit am Bildpunkt t: NV12 ein Byte, P010 zwei Bytes (Low, High), Ergebnis 0..1 bezogen auf 8 bzw. 16 Bit.
+float lumaAt(float2 t) {
+    t = clamp(t, float2(0.0), lumaSize - 1.0);
+    if (planes < 1.5) return texY(t.x, t.y);
+    return (texY(2.0 * t.x + 1.0, t.y) * 255.0 * 256.0 + texY(2.0 * t.x, t.y) * 255.0) / 65535.0;
+}
+
+float2 chromaAt(float2 t) {
+    t = clamp(t, float2(0.0), chromaSize - 1.0);
+    if (planes < 1.5) return float2(texC(2.0 * t.x, t.y), texC(2.0 * t.x + 1.0, t.y));
+    float u = texC(4.0 * t.x + 1.0, t.y) * 255.0 * 256.0 + texC(4.0 * t.x, t.y) * 255.0;
+    float v = texC(4.0 * t.x + 3.0, t.y) * 255.0 * 256.0 + texC(4.0 * t.x + 2.0, t.y) * 255.0;
+    return float2(u, v) / 65535.0;
+}
+
+// Bilinear wie die Grafikkarte, aber selbst gerechnet (verschränkte Werte dürfen nicht gemischt werden).
+float lumaLinear(float2 p) {
+    float2 q = p - 0.5;
+    float2 i = floor(q);
+    float2 f = q - i;
+    return mix(mix(lumaAt(i), lumaAt(i + float2(1.0, 0.0)), f.x), mix(lumaAt(i + float2(0.0, 1.0)), lumaAt(i + float2(1.0, 1.0)), f.x), f.y);
+}
+
+float2 chromaLinear(float2 p) {
+    float2 q = p - 0.5;
+    float2 i = floor(q);
+    float2 f = q - i;
+    return mix(mix(chromaAt(i), chromaAt(i + float2(1.0, 0.0)), f.x), mix(chromaAt(i + float2(0.0, 1.0)), chromaAt(i + float2(1.0, 1.0)), f.x), f.y);
+}
+
 half4 main(float2 p) {
-    float y = luma.eval(p).r;
-    float u = cb.eval(p * 0.5).r;
-    float v = cr.eval(p * 0.5).r;
-    // Begrenzter Bereich (16–235/240) ist bei Fernsehen üblich.
-    float Y = fullRange > 0.5 ? y : (y * 255.0 - 16.0) / 219.0;
-    float U = fullRange > 0.5 ? u - 0.5 : (u * 255.0 - 128.0) / 224.0;
-    float V = fullRange > 0.5 ? v - 0.5 : (v * 255.0 - 128.0) / 224.0;
+    float y;
+    float u;
+    float v;
+    if (planes < 0.5) {
+        y = luma.eval(p).r;
+        u = cb.eval(p * 0.5).r;
+        v = cr.eval(p * 0.5).r;
+    } else {
+        y = lumaLinear(p);
+        float2 c = chromaLinear(p * 0.5);
+        u = c.x;
+        v = c.y;
+    }
+    // In Codewerte umrechnen: 8 Bit 0–255, P010 0–1023 (10 Bit in den oberen Bits von 16).
+    float scale = planes > 1.5 ? 65535.0 / 64.0 : 255.0;
+    float k = planes > 1.5 ? 4.0 : 1.0;
+    float top = planes > 1.5 ? 1023.0 : 255.0;
+    // Begrenzter Bereich (16–235/240, bei 10 Bit 64–940/960) ist bei Fernsehen üblich.
+    float Y = fullRange > 0.5 ? y * scale / top : (y * scale - 16.0 * k) / (219.0 * k);
+    float U = fullRange > 0.5 ? (u * scale - 128.0 * k) / top : (u * scale - 128.0 * k) / (224.0 * k);
+    float V = fullRange > 0.5 ? (v * scale - 128.0 * k) / top : (v * scale - 128.0 * k) / (224.0 * k);
     float kg = 1.0 - kr - kb;
     float R = Y + 2.0 * (1.0 - kr) * V;
     float B = Y + 2.0 * (1.0 - kb) * U;
@@ -148,6 +234,23 @@ half4 main(float2 p) {
         return copyPlane(buffer, pitch, width, height)
     }
 
+    /** Für Tests und den Starttest: einfarbiges Bild in [layout] aus 8-Bit-Codewerten (bei P010 ×4). */
+    fun solid(layout: Layout, width: Int, height: Int, y: Int, u: Int, v: Int, transfer: Transfer = Transfer.SDR): YuvFrame {
+        val (pitches, lines) = planes(width, height, layout)
+        val cw = (width + 1) / 2
+        val ch = (height + 1) / 2
+        fun plane(index: Int, w: Int, h: Int, pattern: ByteArray): Image {
+            val bytes = ByteArray(pitches[index] * lines[index]) { pattern[(it % pitches[index]) % pattern.size] }
+            return planeFrom(bytes, pitches[index], byteWidth(layout, index, width), h)
+        }
+        fun p010(code8: Int): ByteArray { val word = (code8 * 4) shl 6; return byteArrayOf(word.toByte(), (word shr 8).toByte()) }
+        return when (layout) {
+            Layout.I420 -> YuvFrame(plane(0, width, height, byteArrayOf(y.toByte())), plane(1, cw, ch, byteArrayOf(u.toByte())), plane(2, cw, ch, byteArrayOf(v.toByte())), width, height, width.toFloat() / height, transfer)
+            Layout.NV12 -> YuvFrame(plane(0, width, height, byteArrayOf(y.toByte())), plane(1, cw, ch, byteArrayOf(u.toByte(), v.toByte())), null, width, height, width.toFloat() / height, transfer, layout = layout)
+            Layout.P010 -> YuvFrame(plane(0, width, height, p010(y)), plane(1, cw, ch, p010(u) + p010(v)), null, width, height, width.toFloat() / height, transfer, layout = layout)
+        }
+    }
+
     /** Adresse eines direkten Puffers (nur zur Kontrolle, ob VLC wirklich native Puffer liefert). */
     fun isNative(buffer: ByteBuffer): Boolean = buffer.isDirect && Pointer.nativeValue(Native.getDirectBufferPointer(buffer)) != 0L
 
@@ -165,14 +268,17 @@ half4 main(float2 p) {
  */
 class YuvFrame(
     val y: Image,
+    /** Farbe: bei I420 nur U, bei NV12/P010 U und V verschränkt. */
     val u: Image,
-    val v: Image,
+    /** Nur bei I420. */
+    val v: Image?,
     val width: Int,
     val height: Int,
     val aspect: Float,
     val transfer: YuvVideo.Transfer,
     val fullRange: Boolean = false,
     val peakNits: Float = 1000f,
+    val layout: YuvVideo.Layout = YuvVideo.Layout.I420,
 ) : AutoCloseable {
     val matrix: YuvVideo.Matrix = YuvVideo.matrixFor(height, transfer)
 
@@ -192,14 +298,19 @@ class YuvFrame(
         val left = (dstWidth - shownWidth) / 2f
         val top = (dstHeight - shownHeight) / 2f
         val builder = RuntimeShaderBuilder(effect)
-        builder.child("luma", y.makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, SamplingMode.LINEAR, null))
-        builder.child("cb", u.makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, SamplingMode.LINEAR, null))
-        builder.child("cr", v.makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, SamplingMode.LINEAR, null))
+        // I420: die Grafikkarte filtert; NV12/P010: Bytes unverändert lesen, der Shader filtert selbst.
+        val sampling = if (layout == YuvVideo.Layout.I420) SamplingMode.LINEAR else SamplingMode.DEFAULT
+        builder.child("luma", y.makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, sampling, null))
+        builder.child("cb", u.makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, sampling, null))
+        builder.child("cr", (v ?: u).makeShader(FilterTileMode.CLAMP, FilterTileMode.CLAMP, sampling, null))
+        builder.uniform("lumaSize", width.toFloat(), height.toFloat())
+        builder.uniform("chromaSize", ((width + 1) / 2).toFloat(), ((height + 1) / 2).toFloat())
         builder.uniform("kr", matrix.kr)
         builder.uniform("kb", matrix.kb)
         builder.uniform("fullRange", if (fullRange) 1f else 0f)
         builder.uniform("transfer", transfer.ordinal.toFloat())
         builder.uniform("peak", peakNits)
+        builder.uniform("planes", layout.ordinal.toFloat())
         // Bildschirmpunkt → Bildpunkt der Y-Ebene.
         val sx = width / shownWidth
         val sy = height / shownHeight
@@ -216,6 +327,6 @@ class YuvFrame(
     override fun close() {
         y.close()
         u.close()
-        v.close()
+        v?.close()
     }
 }

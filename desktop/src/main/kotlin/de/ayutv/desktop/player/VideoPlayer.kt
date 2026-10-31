@@ -54,6 +54,71 @@ class VideoPlayer {
     /** Der gerade benutzte der beiden. */
     private var player: EmbeddedMediaPlayer? = normal
 
+    /**
+     * Direktausgabe ([DirectWindow]): VLC dekodiert und zeigt das Bild komplett auf der Grafikkarte (Direct3D 11, ohne
+     * Umweg über den Hauptspeicher). OFF = nie, AUTO = bei 4K (Standard: sonst kommt der PC bei 4K mit 50 Bildern nicht
+     * hinterher und das Bild läuft wie in Zeitlupe), ALWAYS = immer (z. B. HDR-Bildschirm). Nicht beim Ausrichten von
+     * Untertiteln am Ton.
+     */
+    @Volatile var directMode = "AUTO"
+    /** Vom Aufrufer vor [play]: Der Stream ist bekanntlich 4K (früher gemessen oder „4K/UHD“ im Namen). */
+    @Volatile var expectUhd = false
+    /** Fenster für die Direktausgabe (von der App gesetzt, kennt das Hauptfenster). */
+    var directWindow: DirectWindow? = null
+    private var directPlayer: EmbeddedMediaPlayer? = null
+    /** Läuft gerade über die Direktausgabe. */
+    val isDirect: Boolean get() = player != null && player === directPlayer
+    /** Letzter Start (für den Wechsel auf die Direktausgabe, sobald 4K erkannt wird). */
+    private var lastStart: Triple<String, String?, Array<out String>>? = null
+    @Volatile private var switching = false
+
+    /** Läuft auf dem normalen Weg, ist aber 4K: auf die Direktausgabe wechseln (an derselben Stelle). */
+    private fun switchToDirect() {
+        if (directMode != "AUTO" || isDirect || tapAudio || directWindow == null || switching) return
+        val (url, agent, extra) = lastStart ?: return
+        switching = true
+        try {
+            de.ayutv.desktop.Log.info("4K erkannt: wechsle auf die Direktausgabe")
+            val at = player?.status()?.time()?.takeIf { durationMs > 0 && it > 0 } ?: 0L
+            expectUhd = true
+            play(url, agent, at, *extra)
+        } finally {
+            switching = false
+        }
+    }
+
+    private fun directPlayer(): EmbeddedMediaPlayer? {
+        directPlayer?.let { return it }
+        val f = factory ?: return null
+        val window = directWindow ?: return null
+        window.prepare()
+        return f.mediaPlayers().newEmbeddedMediaPlayer().also { p ->
+            p.videoSurface().set(f.videoSurfaces().newVideoSurface(window.canvas))
+            // Tasten und Maus nicht von VLC schlucken lassen: Sie gehen an DnA-TV weiter.
+            runCatching { p.input().enableKeyInputHandling(false); p.input().enableMouseInputHandling(false) }
+            listen(p)
+            directPlayer = p
+        }
+    }
+
+    /** Menüs oder Senderliste offen: Direktausgabe kurz ausblenden (die Oberfläche liegt im Hauptfenster). */
+    fun coverDirect(covered: Boolean) {
+        directWindow?.cover(covered)
+    }
+
+    /** Kurzer Text im Bild der Direktausgabe (z. B. Sendername beim Umschalten); sonst nichts. */
+    fun osd(text: String) {
+        val p = player?.takeIf { it === directPlayer } ?: return
+        runCatching {
+            p.marquee().setText(text)
+            p.marquee().setSize(40)
+            p.marquee().setColour(java.awt.Color.WHITE)
+            p.marquee().setPosition(uk.co.caprica.vlcj.player.base.MarqueePosition.TOP_LEFT)
+            p.marquee().setTimeout(4_000)
+            p.marquee().enable(true)
+        }
+    }
+
     /** Sprechpausen aus dem Ton (nur, solange [tapAudio] an ist). */
     val speech = SpeechActivity()
     private val tap = AudioTap(speech) { player?.status()?.time() ?: 0L }
@@ -84,6 +149,10 @@ class VideoPlayer {
     private fun prepare(p: EmbeddedMediaPlayer) {
         val f = factory ?: return
         p.videoSurface().set(f.videoSurfaces().newVideoSurface(format, render, true))
+        listen(p)
+    }
+
+    private fun listen(p: EmbeddedMediaPlayer) {
         p.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
             // Nur Meldungen des gerade benutzten Players zählen (der andere ist gestoppt).
             private fun mine(mediaPlayer: MediaPlayer) = mediaPlayer === player
@@ -91,13 +160,18 @@ class VideoPlayer {
                 if (!mine(mediaPlayer)) return@ui
                 detectHdr(mediaPlayer)
                 playing = true; buffering = false; error = null; paused = false; readTracks()
+                if (muted) mediaPlayer.audio().setMute(true)
                 // Lautstärke gilt je Player: beim Wechsel mitnehmen.
                 if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
             }
             override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; paused = true } }
             override fun stopped(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { if (mine(mediaPlayer)) buffering = newCache < 100f }
-            override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { if (mine(mediaPlayer)) positionMs = newTime }
+            override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) {
+                // Direktausgabe: Bilder sehen wir nicht; laufende Zeit zählt als Bild (für den Watchdog).
+                if (mediaPlayer === directPlayer && mediaPlayer === player) directFrame()
+                ui { if (mine(mediaPlayer)) positionMs = newTime }
+            }
             override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { if (mine(mediaPlayer)) durationMs = newLength }
             override fun error(mediaPlayer: MediaPlayer) = ui {
                 if (mine(mediaPlayer)) {
@@ -124,9 +198,19 @@ class VideoPlayer {
     val available: Boolean get() = player != null
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
-        val next = (if (tapAudio) tappedPlayer() else normal) ?: return
+        lastStart = Triple(url, userAgent, extra)
+        val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd)
+        expectUhd = false
+        val useDirect = wantDirect && !tapAudio && directWindow != null
+        val next = (if (useDirect) directPlayer() else if (tapAudio) tappedPlayer() else normal) ?: return
         if (next !== player) runCatching { player?.controls()?.stop() }
         player = next
+        if (next === directPlayer) {
+            clearFrames()
+            directWindow?.show()
+        } else {
+            directWindow?.hide()
+        }
         val p = next
         if (tapAudio) {
             speech.clear()
@@ -174,11 +258,15 @@ class VideoPlayer {
                 corrupted = stats?.demuxCorrupted() ?: 0,
                 startupMs = startupMs,
                 cacheMs = networkCacheMs,
-                output = (if (gpuVideo) "Grafikkarte (YUV)" else "RGB") + when (transfer) {
+                output = if (p === directPlayer) "Direkt über die Grafikkarte (VLC, Direct3D 11, Hardware-Dekodierung)" else (if (gpuVideo) "Grafikkarte (" + when (layout) {
+                    YuvVideo.Layout.I420 -> "I420"
+                    YuvVideo.Layout.NV12 -> "NV12"
+                    YuvVideo.Layout.P010 -> "P010, 10 Bit"
+                } + ")" else "RGB") + (when (transfer) {
                     YuvVideo.Transfer.PQ -> ", HDR10 angepasst"
                     YuvVideo.Transfer.HLG -> ", HLG angepasst"
                     YuvVideo.Transfer.SDR -> ""
-                },
+                }),
             )
         }.getOrNull()
     }
@@ -208,6 +296,13 @@ class VideoPlayer {
 
     fun toggleMute() = player?.audio()?.mute()
 
+    /** Stumm (Multiview: nur ein Feld hat Ton; Mini-Vorschau). Gilt sofort und für jeden weiteren Start. */
+    @Volatile var muted = false
+        set(value) {
+            field = value
+            runCatching { player?.audio()?.setMute(value) }
+        }
+
     fun selectAudio(id: Int) = player?.audio()?.setTrack(id)
     fun selectSubtitle(id: Int) = player?.subpictures()?.setTrack(id)
 
@@ -227,6 +322,7 @@ class VideoPlayer {
 
     fun stop() {
         player?.controls()?.stop()
+        directWindow?.hide()
         tap.close()
         clearFrames()
         playing = false
@@ -237,8 +333,11 @@ class VideoPlayer {
         runCatching { normal?.controls()?.stop() }
         runCatching { tapped?.controls()?.stop() }
         tap.close()
+        runCatching { directPlayer?.controls()?.stop() }
         runCatching { normal?.release() }
         runCatching { tapped?.release() }
+        runCatching { directPlayer?.release() }
+        runCatching { directWindow?.dispose() }
         runCatching { factory?.release() }
     }
 
@@ -265,6 +364,34 @@ class VideoPlayer {
     @Volatile private var aspect = 16f / 9f
     @Volatile private var planeWidth = 0
     @Volatile private var planeHeight = 0
+
+    /**
+     * Videoweg: AUTO = NV12, bei 10-Bit-Quellen (HDR, HEVC Main 10) P010 mit voller Genauigkeit; I420 = kompatibel wie
+     * bis Version 0.42 (falls eine Grafikkarte mit dem neuen Weg Probleme hat). P010 nur für den Starttest erzwingbar.
+     * Gilt ab dem nächsten [play].
+     */
+    @Volatile var videoLayout = "AUTO"
+    /** Ablage der gerade gelieferten Bilder. */
+    @Volatile var layout = YuvVideo.Layout.I420; private set
+
+    /** Welche Ablage VLC liefern soll. */
+    private fun chooseLayout(sourceHeight: Int): YuvVideo.Layout = when (videoLayout) {
+        "I420" -> YuvVideo.Layout.I420
+        "P010" -> YuvVideo.Layout.P010
+        "NV12" -> YuvVideo.Layout.NV12
+        else -> if (tenBitSource(sourceHeight)) YuvVideo.Layout.P010 else YuvVideo.Layout.NV12
+    }
+
+    /** 10 Bit: HDR erzwungen, HEVC Main 10 oder AV1 in UHD (VLC 3 meldet die Bittiefe nicht direkt). */
+    private fun tenBitSource(sourceHeight: Int): Boolean {
+        if (hdrMode == "PQ" || hdrMode == "HLG") return true
+        if (hdrMode == "OFF") return false
+        val track = runCatching { player?.media()?.info()?.videoTracks()?.firstOrNull() }.getOrNull() ?: return looksHdr
+        val codec = track.codecName().orEmpty().lowercase()
+        val hevcMain10 = (codec.contains("hevc") || codec.contains("h265")) && track.profile() == 2
+        val av1 = codec.contains("av01") || codec.contains("av1")
+        return hevcMain10 || (av1 && sourceHeight >= 2000)
+    }
 
     /** HDR-Art des laufenden Streams (für den Shader); aus Einstellung und Codec bestimmt. */
     @Volatile var transfer = YuvVideo.Transfer.SDR; private set
@@ -297,10 +424,14 @@ class VideoPlayer {
             aspect = if (sourceHeight > 0) sourceWidth.toFloat() / sourceHeight else 16f / 9f
             planeWidth = sourceWidth
             planeHeight = sourceHeight
+            // 4K auf dem normalen Weg: gleich auf die Direktausgabe wechseln (bevor ruckelnde Bilder zu sehen sind).
+            if (sourceHeight >= UHD_HEIGHT && directMode == "AUTO" && directWindow != null && !tapAudio) ui { switchToDirect() }
             if (gpuVideo) {
-                // I420: drei Ebenen, VLC rechnet nichts in RGB um (bei Hardware-Dekodierung nur Umsortieren).
-                val (pitches, lines) = YuvVideo.planes(sourceWidth, sourceHeight)
-                return BufferFormat("I420", sourceWidth, sourceHeight, pitches, lines)
+                // YUV wie vom Dekoder: VLC rechnet nichts in RGB um. NV12/P010 liefert die Hardware-Dekodierung direkt.
+                val chosen = chooseLayout(sourceHeight)
+                layout = chosen
+                val (pitches, lines) = YuvVideo.planes(sourceWidth, sourceHeight, chosen)
+                return BufferFormat(chosen.chroma, sourceWidth, sourceHeight, pitches, lines)
             }
             info = ImageInfo(sourceWidth, sourceHeight, ColorType.BGRA_8888, ColorAlphaType.PREMUL)
             pixels = ByteArray(sourceWidth * sourceHeight * 4)
@@ -332,18 +463,21 @@ class VideoPlayer {
         }
 
         private fun showYuv(buffers: Array<out ByteBuffer>, format: BufferFormat, displayWidth: Int, displayHeight: Int) {
-            if (buffers.size < 3) return
+            val l = layout
+            if (buffers.size < l.planes) return
             val w = planeWidth.takeIf { it > 0 } ?: format.width
             val h = planeHeight.takeIf { it > 0 } ?: format.height
             val pitches = format.pitches
+            val ch = (h + 1) / 2
             val frame = runCatching {
                 YuvFrame(
-                    YuvVideo.copyPlane(buffers[0], pitches[0], w, h),
-                    YuvVideo.copyPlane(buffers[1], pitches[1], (w + 1) / 2, (h + 1) / 2),
-                    YuvVideo.copyPlane(buffers[2], pitches[2], (w + 1) / 2, (h + 1) / 2),
+                    YuvVideo.copyPlane(buffers[0], pitches[0], YuvVideo.byteWidth(l, 0, w), h),
+                    YuvVideo.copyPlane(buffers[1], pitches[1], YuvVideo.byteWidth(l, 1, w), ch),
+                    if (l == YuvVideo.Layout.I420) YuvVideo.copyPlane(buffers[2], pitches[2], YuvVideo.byteWidth(l, 2, w), ch) else null,
                     w, h,
                     if (displayWidth > 0 && displayHeight > 0 && (displayWidth != w || displayHeight != h)) displayWidth.toFloat() / displayHeight else aspect,
                     transfer,
+                    layout = l,
                 )
             }.getOrNull() ?: return
             val old = yuv.getAndSet(frame)
@@ -377,6 +511,17 @@ class VideoPlayer {
         while (retired.size > RETIRED_FRAMES) retired.removeFirst().close()
     }
 
+    /** Direktausgabe: Bild läuft (VLC zeigt es selbst). */
+    private fun directFrame() {
+        framesRendered.incrementAndGet()
+        val now = System.currentTimeMillis()
+        lastFrameAt = now
+        if (startupMs == 0L && startedAt > 0) {
+            val took = (now - startedAt).coerceAtLeast(1)
+            ui { if (startupMs == 0L) startupMs = took; if (!hasFrame) hasFrame = true }
+        }
+    }
+
     /** Bilder des vorigen Streams verwerfen (kein altes Standbild beim nächsten). */
     private fun clearFrames() {
         val old = yuv.getAndSet(null)
@@ -392,6 +537,8 @@ class VideoPlayer {
 
     companion object {
         const val NETWORK_CACHE_MS = 2_500
+        /** Ab dieser Bildhöhe gilt ein Stream als 4K. */
+        const val UHD_HEIGHT = 1_600
         /** So viele ersetzte Bilder bleiben kurz erhalten, bevor ihr Speicher frei wird. */
         private const val RETIRED_FRAMES = 3
         private val VLC_OPTIONS = arrayOf(
@@ -453,7 +600,7 @@ data class StreamInfo(
         "Bildrate" to if (fps > 0) "%.3f fps".format(java.util.Locale.GERMAN, fps).replace(",000", "") else "–",
         "Video" to videoCodec.ifBlank { "–" },
         "Ton" to (audioCodec.ifBlank { "–" } + if (audioChannels > 0) ", ${channelsLabel(audioChannels)}" else ""),
-        "Leitung" to if (inputKbps > 0) mbit(inputKbps) else "–",
+        "Empfangen" to if (inputKbps > 0) mbit(inputKbps) else "–",
         "Datenrate" to if (demuxKbps > 0) mbit(demuxKbps) else "–",
         "Bilder" to "$displayed gezeigt, $lost verworfen" + if (corrupted > 0) ", $corrupted beschädigt" else "",
         "Startzeit" to if (startupMs > 0) "%.2f s".format(java.util.Locale.GERMAN, startupMs / 1000.0) else "–",

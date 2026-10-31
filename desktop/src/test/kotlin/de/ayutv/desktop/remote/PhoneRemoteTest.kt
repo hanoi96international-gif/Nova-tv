@@ -26,7 +26,8 @@ class PhoneRemoteTest {
         store.savePlaylist(Playlist(1, "P", PlaylistType.XTREAM, "http://x"))
         store.setContent(1, Store.Content(listOf(Channel("1:c:1", 1, "Das Erste HD", "DE", url = "u"), Channel("1:c:2", 1, "ZDF", "DE", url = "u"))))
         var played: String? = null
-        val remote = PhoneRemote(store, de.ayutv.desktop.input.RemoteInput()) { played = it }
+        var typed: Pair<String, Boolean>? = null
+        val remote = PhoneRemote(store, de.ayutv.desktop.input.RemoteInput(), onPlay = { played = it }, onText = { t, enter -> typed = t to enter })
         remote.start()
         try {
             val base = "http://127.0.0.1:${PhoneRemote.PORT}"
@@ -41,6 +42,11 @@ class PhoneRemoteTest {
             javax.swing.SwingUtilities.invokeAndWait {}
             assertEquals("1:c:2", played)
             assertEquals(400, get("$base/${remote.pin()}/key?k=nix", "POST").first)
+            // Text vom Handy (Umlaute, Leerzeichen) kommt vollständig am PC an, Enter getrennt.
+            assertEquals(204, get("$base/${remote.pin()}/text?t=Sky%20B%C3%BCndesliga&enter=1", "POST").first)
+            Thread.sleep(300)
+            javax.swing.SwingUtilities.invokeAndWait {}
+            assertEquals("Sky Bündesliga" to true, typed)
         } finally {
             remote.stop()
         }

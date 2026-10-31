@@ -22,6 +22,12 @@ class ElasticTiming(anchors: List<Pair<Long, Long>>, val ratio: Double) {
     /** Filmzeit → Zeit in der Datei (für die Anzeige der Zeile, die gerade zu sehen sein soll). */
     fun toSubtitle(videoMs: Long): Long = ((videoMs - offsets[nearest(video, videoMs)]) / ratio).toLong()
 
+    /**
+     * Abstand der Filmzeit [videoMs] zum nächsten Anker. Weit weg (z. B. direkt nach einem großen Sprung im Film, bevor
+     * dort Einblendungen gelesen wurden) ist der Versatz dort nur geraten: Springt er dazwischen, wären die Zeilen falsch.
+     */
+    fun distanceTo(videoMs: Long): Long = if (video.isEmpty()) Long.MAX_VALUE else abs(video[nearest(video, videoMs)] - videoMs)
+
     private fun nearest(sorted: LongArray, value: Long): Int {
         var lo = 0
         var hi = sorted.size - 1

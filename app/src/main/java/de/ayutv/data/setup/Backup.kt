@@ -161,7 +161,7 @@ class Backup(private val container: AppContainer) {
             val type = runCatching { PlaylistType.valueOf(o.string("type").orEmpty()) }.getOrNull() ?: continue
             val url = o.string("url") ?: continue
             val username = o.string("username")
-            val same = existing.firstOrNull { it.type == type && it.url == url && it.username == username }
+            val same = existing.firstOrNull { de.ayutv.data.parse.PlaylistIdentity.same(it.type.name, it.url, it.username, type.name, url, username) }
             ids[oldId] = same?.id ?: run {
                 added++
                 val newId = container.playlists.add(

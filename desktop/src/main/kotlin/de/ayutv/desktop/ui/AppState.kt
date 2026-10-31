@@ -70,7 +70,30 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     val player = VideoPlayer()
     val backup = BackupImport(store)
     val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
-    val remote = PhoneRemote(store, input) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
+    val remote = PhoneRemote(
+        store, input,
+        onPlay = { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } },
+        onText = { text, submit -> receiveText(text, submit) },
+    )
+
+    /** Text, den die Suche übernehmen soll (vom Handy, wenn gerade kein Feld ausgewählt war). */
+    var phoneSearch by mutableStateOf<String?>(null)
+
+    /**
+     * Text von der Handy-Fernbedienung: ins ausgewählte Feld; ist keins ausgewählt und läuft nichts, in die Suche.
+     * Beim Fernsehen bleibt das Bild (das Handy zeigt dann nur passende Sender).
+     */
+    private fun receiveText(text: String, submit: Boolean) {
+        val target = TextTarget.current
+        if (target != null) {
+            target.set(text)
+            if (submit) target.submit()
+            return
+        }
+        if (playing != null || multiview != null) return
+        screen = Screen.SEARCH
+        phoneSearch = text
+    }
     var remoteAddress by mutableStateOf<String?>(null); private set
     val updater = de.ayutv.desktop.update.Updater(sync.http)
     val deviceSync = de.ayutv.desktop.data.DeviceSync(store, sync.http)
@@ -206,6 +229,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     fun applyBuffer() {
         player.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
         player.hdrMode = store.user.value.hdrMode
+        player.videoLayout = store.user.value.videoLayout
+        player.directMode = store.user.value.directMode
     }
 
     fun toast(text: String) {
@@ -228,6 +253,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     private var watchdog: Job? = null
 
     fun play(playback: Playback) {
+        // Vorschau und Multiview vorher beenden: Viele Konten erlauben nur eine Verbindung gleichzeitig.
+        stopPreview()
+        multiview?.let { closeMultiview(null) }
         stopAligning()
         val before = (playing as? Playback.Live)?.channel
         // Ton nur abgreifen, wenn Untertitel ausgerichtet werden sollen (sonst gibt VLC den Ton selbst aus).
@@ -241,17 +269,114 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         }
         lastPlaybackAt = System.currentTimeMillis()
         (playing as? Playback.Live)?.let { previous ->
-            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) }
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) ; de.ayutv.data.parse.ChannelQuality.recordBitrate(previous.channel.key, info.inputKbps) }
         }
         playing = playback
         start(playback)
         watch(playback)
     }
 
+    // ---------------------------------------------------------------- Multiview und Vorschau
+
+    /** Multiview offen (bis zu vier Sender gleichzeitig); null = nicht. */
+    var multiview by mutableStateOf<Multiview?>(null); private set
+
+    /** Multiview aus dem laufenden Sender öffnen: der kommt ins erste Feld (mit Ton). */
+    fun openMultiview() {
+        val live = playing as? Playback.Live ?: return
+        stopPlayback()
+        val mv = Multiview(live.list)
+        multiview = mv
+        setTile(0, live.channel)
+    }
+
+    fun setTile(index: Int, channel: Channel) {
+        val mv = multiview ?: return
+        val tile = mv.tiles[index]
+        val p = tile.player ?: VideoPlayer().also { created ->
+            created.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
+            created.hdrMode = store.user.value.hdrMode
+            created.videoLayout = store.user.value.videoLayout
+            tile.player = created
+        }
+        p.muted = mv.audio != index
+        tile.channel = channel
+        p.play(channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(channel.url).toTypedArray())
+        lastPlaybackAt = System.currentTimeMillis()
+    }
+
+    fun clearTile(index: Int) {
+        val mv = multiview ?: return
+        val tile = mv.tiles[index]
+        tile.player?.stop()
+        tile.channel = null
+        if (mv.audio == index) mv.tiles.indexOfFirst { it.channel != null }.takeIf { it >= 0 }?.let { setMultiviewAudio(it) }
+    }
+
+    fun zapTile(index: Int, step: Int) {
+        val mv = multiview ?: return
+        val from = mv.tiles[index].channel ?: return
+        val list = mv.list.takeIf { it.size > 1 } ?: return
+        val at = list.indexOfFirst { it.key == from.key }.coerceAtLeast(0)
+        setTile(index, list[(at + step).mod(list.size)])
+    }
+
+    /** Ton zu Feld [index]; die anderen stumm. */
+    fun setMultiviewAudio(index: Int) {
+        val mv = multiview ?: return
+        if (mv.tiles[index].channel == null) return
+        mv.audio = index
+        mv.tiles.forEachIndexed { i, t -> t.player?.muted = i != index }
+    }
+
+    /** Multiview schließen; mit [fullscreen] diesen Sender danach groß weiterschauen. */
+    fun closeMultiview(fullscreen: Channel?) {
+        val mv = multiview ?: return
+        multiview = null
+        // Erst alle Verbindungen schließen (Kontolimit), dann die Player im Hintergrund freigeben.
+        mv.tiles.forEach { it.player?.stop() }
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) { mv.tiles.forEach { t -> t.player?.let { p -> runCatching { p.release() } } } }
+        if (fullscreen != null) play(Playback.Live(fullscreen, mv.list))
+    }
+
+    /** Mini-Vorschau in der Senderliste (stumm, kleiner Puffer); erst bei Bedarf angelegt. */
+    var preview by mutableStateOf<VideoPlayer?>(null); private set
+    var previewKey by mutableStateOf<String?>(null); private set
+
+    fun showPreview(channel: Channel?) {
+        if (channel == null || playing != null || multiview != null || !store.user.value.livePreview) return stopPreview()
+        if (previewKey == channel.key) return
+        val p = preview ?: VideoPlayer().also { created ->
+            created.muted = true
+            created.networkCacheMs = 1_200
+            created.videoLayout = store.user.value.videoLayout
+            preview = created
+        }
+        previewKey = channel.key
+        p.play(channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(channel.url).toTypedArray())
+    }
+
+    fun stopPreview() {
+        if (previewKey == null) return
+        previewKey = null
+        preview?.stop()
+    }
+
+    /** Laufende Wiedergabe neu starten (z. B. nach Wechsel der Videoausgabe), Filme an derselben Stelle. */
+    fun restartPlayback() {
+        val current = playing ?: return
+        start(current, atMs = (current as? Playback.Vod)?.let { player.positionMs })
+        watch(current)
+    }
+
     private fun start(playback: Playback, atMs: Long? = null) = when (playback) {
         is Playback.Live -> {
             store.rememberWatched(playback.channel.key)
+            // Schon als 4K bekannt (gemessen oder „4K/UHD“ im Namen): gleich über die Direktausgabe starten.
+            player.expectUhd = de.ayutv.data.parse.ChannelQuality.height(playback.channel.key, playback.channel.name) >= de.ayutv.desktop.player.VideoPlayer.UHD_HEIGHT
             player.play(playback.channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(playback.channel.url).toTypedArray())
+            // Direktausgabe: Die Infoleiste liegt im verdeckten Hauptfenster, deshalb den Namen ins Bild schreiben.
+            player.osd(playback.channel.name + (store.guide.value[playback.channel.key]?.let { nowOf(it) }?.let { "  ·  ${it.title}" } ?: ""))
         }
         is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
     }
@@ -514,7 +639,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         lastPlaybackAt = System.currentTimeMillis()
         (playing as? Playback.Live)?.let { live ->
             // Beim Schauen gemessen: Auflösung und Startzeit fließen in die Wahl der besten Fassung ein.
-            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(live.channel.key, info.height, info.startupMs) }
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(live.channel.key, info.height, info.startupMs) ; de.ayutv.data.parse.ChannelQuality.recordBitrate(live.channel.key, info.inputKbps) }
             channelCheck.save()
         }
         stopAligning()
@@ -530,6 +655,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
 
     /** Taste Home: wie auf dem Fire TV zur Startseite (Wiedergabe und offene Dialoge schließen). */
     fun goHome() {
+        multiview?.let { closeMultiview(null) }
+        stopPreview()
         if (playing != null) stopPlayback()
         openSeries = null
         // Offene Dialoge und Unterseiten schließen (begrenzt: ein Handler bleibt bis zum nächsten Zeichnen aktiv).
@@ -695,6 +822,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         recorder.release()
         channelCheck.save()
         channelCheck.release()
+        multiview?.tiles?.forEach { t -> t.player?.let { runCatching { it.release() } } }
+        preview?.let { runCatching { it.release() } }
         player.release()
     }
 }

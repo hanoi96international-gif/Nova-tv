@@ -191,6 +191,42 @@ class DeviceTourTest {
                 "sync=${container.playlists.state.value}"
         )
 
+        // 1b2. Denselben Zugang noch einmal eingeben (z. B. per Handy, anders geschrieben): keine zweite Playlist.
+        section("same_account") {
+            val before = runBlocking { container.db.playlists().all() }
+            val again = runBlocking {
+                container.playlists.add(
+                    PlaylistEntity(name = "Xtream", type = PlaylistType.XTREAM, url = XtreamClient.normalizeServer(base.uppercase().replace("HTTP://", "http://") + "/"), username = "ayu", password = "test")
+                )
+            }
+            val after = runBlocking { container.db.playlists().all() }
+            val original = before.first { it.name == "Xtream-Test" }
+            log("same_account: original=${original.id} again=$again before=${before.size} after=${after.size}")
+            assertTrue("Gleicher Zugang als neue Playlist angelegt", again == original.id && after.size == before.size)
+            assertTrue("Name der vorhandenen Playlist überschrieben", after.first { it.id == original.id }.name == "Xtream-Test")
+        }
+
+        // 1b3. Abgleich als Kopie: Eigene Gruppe geht hier verloren, der Stand des anderen Geräts bringt sie zurück.
+        section("sync_groups") {
+            val db = container.db
+            val key = channels.first().key
+            val sync = de.ayutv.data.remote.DeviceSync(container)
+            runBlocking {
+                val id = db.customGroups().insert(de.ayutv.data.db.CustomGroupEntity(name = "Sync-Test", position = db.customGroups().maxGroupPosition() + 1))
+                db.customGroups().addItem(de.ayutv.data.db.CustomGroupItemEntity(id, key, 0))
+                val other = sync.export()
+                db.customGroups().deleteItems(id)
+                db.customGroups().deleteGroup(id)
+                val result = sync.import(other)
+                val back = db.customGroups().groups().firstOrNull { it.name == "Sync-Test" }
+                val items = back?.let { g -> db.customGroups().allItems().filter { it.groupId == g.id }.map { it.key } }
+                log("sync_groups: result=${result.text} back=${back != null} items=$items")
+                back?.let { db.customGroups().deleteItems(it.id); db.customGroups().deleteGroup(it.id) }
+                assertTrue("Eigene Gruppe kam per Abgleich nicht zurück", items == listOf(key))
+                assertTrue("Abgleich zählt die Gruppe nicht", result.groups == 1)
+            }
+        }
+
         // 1c. Sport: ein Bundesliga-Spiel im TV-Guide erscheint in der Sport-Übersicht, Verein folgen setzt die Erinnerung.
         section("sport") {
             val channel = channels.firstOrNull { it.epgId == "hd.test" } ?: error("Testsender fehlt")
@@ -1201,6 +1237,20 @@ class DeviceTourTest {
             val result = runBlocking { de.ayutv.data.repo.LineCheck(container.http).run(hd, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, seconds = 6) }
             log("line_check: ${result.summary} empfehlung=${result.recommendation}")
             assertTrue("Leitungs-Check ohne Daten: ${result.summary}", result.failed == null && result.kbps > 0)
+        }
+        // HLS: Datenrate des Senders aus Segmentgröße je Sekunde, nicht die Ladegeschwindigkeit eines Segments (die wäre
+        // im Emulator Hunderte Mbit/s). Dazu der Fassungsvergleich über alle Playlists.
+        section("hls_bitrate") {
+            val hls = live.firstOrNull { it.name == "HLS Test" } ?: error("HLS-Testsender fehlt")
+            val check = de.ayutv.data.repo.LineCheck(container.http)
+            val kbps = runBlocking { check.hls(hls.url, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT) }
+            val lineRate = runBlocking { check.run(hls, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, seconds = 4) }
+            val outcome = runBlocking {
+                de.ayutv.data.repo.VariantCompare(container.db, check).run(hls, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, de.ayutv.data.LiveFormat.TS)
+            }
+            log("hls_bitrate: kbps=$kbps line_check=${lineRate.kbps} variants=${outcome.candidates.size} ${outcome.text()}")
+            assertTrue("HLS-Datenrate unplausibel: $kbps", kbps != null && kbps in 50..30_000)
+            assertTrue("Leitungs-Check bei HLS misst die Leitung statt der Datenrate: ${lineRate.kbps}", lineRate.kbps in 50..30_000)
         }
         // Spielstände (OpenLigaDB, echtes Netz): nur protokollieren, das Ergebnis hängt vom Spieltag ab
         section("live_scores") {

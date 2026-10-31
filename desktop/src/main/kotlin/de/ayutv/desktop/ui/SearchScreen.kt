@@ -33,6 +33,10 @@ fun SearchScreen(app: AppState) {
     var query by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<Results?>(null) }
     val field = remember { FocusRequester() }
+    // Vom Handy getippt, als noch kein Feld ausgewählt war.
+    LaunchedEffect(app.phoneSearch) {
+        app.phoneSearch?.let { query = it; app.phoneSearch = null; runCatching { field.requestFocus() } }
+    }
 
     LaunchedEffect(query, content, guide) {
         val q = fold(query.trim())

@@ -267,11 +267,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         // Leitungs-Check: zuletzt geschauter Sender (sonst ein Favorit) einige Sekunden laden und messen.
                         var running by remember { mutableStateOf(false) }
                         var result by remember { mutableStateOf<de.ayutv.data.repo.LineCheck.Result?>(null) }
+                        var variants by remember { mutableStateOf<String?>(null) }
+                        var hlsBetter by remember { mutableStateOf(false) }
                         SettingRow(
                             "Leitungs-Check",
                             if (running) "misst …" else "Jetzt messen",
-                            result?.let { r -> r.summary + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
-                                ?: "Lädt den zuletzt geschauten Sender 10 Sekunden (ohne Bild) und misst Antwortzeit und Aussetzer beim Anbieter.",
+                            result?.let { r -> r.summary + (variants?.let { "\n$it" } ?: "") + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
+                                ?: "Lädt den zuletzt geschauten Sender (ohne Bild) und misst Antwortzeit, Aussetzer und Datenrate, dann alle Fassungen desselben Senders (auch als HLS) und kurz einen Film für die Höchstgeschwindigkeit vom Anbieter. Dauert bis zu einer Minute.",
                         ) {
                             if (running) return@SettingRow
                             running = true
@@ -279,8 +281,33 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 val channel = container.db.history().recentLiveKeys(1).firstOrNull()?.let { container.db.channels().byKey(it) }
                                     ?: container.db.favorites().keys().firstOrNull()?.let { container.db.channels().byKey(it) }
                                     ?: container.db.channels().all().firstOrNull()
-                                result = channel?.let { de.ayutv.data.repo.LineCheck(container.http).run(it, it.userAgent ?: settings.userAgent) }
+                                val check = de.ayutv.data.repo.LineCheck(container.http)
+                                variants = null
+                                val live = channel?.let { check.run(it, it.userAgent ?: settings.userAgent) }
+                                result = live
+                                // Maximum suchen: alle Fassungen desselben Senders (auch anderer Playlists) und bei Xtream beide
+                                // Formate je 5 s messen. Die beste wird ab jetzt bei doppelten Sendern bevorzugt.
+                                hlsBetter = false
+                                if (channel != null && live != null && live.failed == null) {
+                                    val outcome = de.ayutv.data.repo.VariantCompare(container.db, check)
+                                        .run(channel, settings.userAgent, settings.liveFormat, current = live.kbps.takeIf { de.ayutv.data.repo.VariantCompare.hlsForm(channel.url) == null || settings.liveFormat == LiveFormat.TS })
+                                    hlsBetter = outcome.hlsWins && settings.liveFormat == LiveFormat.TS
+                                    variants = (outcome.text() + (outcome.better?.let { b ->
+                                        "\nSchärfer: „${b.label}“ mit ${"%.1f".format(b.kbps / 1000.0)} Mbit/s" +
+                                            if (b.hls && settings.liveFormat == LiveFormat.TS) " – dafür unten das Live-Format auf HLS stellen." else " – wird ab jetzt bevorzugt."
+                                    } ?: if (outcome.candidates.size > 1) "\nDie geschaute Fassung ist schon die beste." else "")).ifBlank { null }
+                                }
+                                // Dazu die echte Geschwindigkeit vom Anbieter: ein Film wird nicht in Echtzeit, sondern so schnell wie möglich geliefert.
+                                val movie = runCatching { container.db.vod().search("", 1).firstOrNull() }.getOrNull()
+                                val provider = movie?.let { check.provider(it.url, settings.userAgent) }
+                                if (live != null && provider != null) result = live.copy(providerKbps = provider)
                                 running = false
+                            }
+                        }
+                        if (hlsBetter) {
+                            SettingRow("Live-Format auf HLS stellen", "Übernehmen", "Dein Anbieter schickt über HLS eine höhere Datenrate (schärferes Bild) als über MPEG-TS.") {
+                                update { it.copy(liveFormat = LiveFormat.HLS) }
+                                hlsBetter = false
                             }
                         }
                         result?.takeIf { it.recommendation != settings.bufferProfile }?.let { r ->
@@ -593,6 +620,21 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             onOff(settings.showGuide),
                             "Das Programm-Raster. Die Programmdaten (Jetzt läuft, Suche, Empfehlungen) bleiben auch ausgeblendet aktiv.",
                         ) { update { it.copy(showGuide = !it.showGuide) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Mini-Vorschau in Live TV",
+                            onOff(settings.livePreview),
+                            "Der ausgewählte Sender läuft nach kurzer Zeit stumm in der Detailspalte. Beim Abspielen wird sie vorher beendet (auch bei Konten mit nur einer Verbindung).",
+                        ) { update { it.copy(livePreview = !it.livePreview) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Flüssige Bedienung",
+                            onOff(settings.smoothUi),
+                            "Ohne Überblendungen zwischen den Bereichen und mit sparsamerem Hintergrund: Die Menüs reagieren schneller, " +
+                                "vor allem auf älteren Sticks (dort automatisch an).",
+                        ) { update { it.copy(smoothUi = !it.smoothUi) } }
                     }
                     if (showAdvanced) item {
                         SettingRow(
@@ -984,7 +1026,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                     "In der DnA-TV-App auf dem Handy: Einstellungen → Fernseher fernbedienen. Adresse $address, PIN $pin. " +
                                         "Oder den Code scannen (Fernbedienung im Browser). Auch wenn DnA-TV nicht geöffnet ist: 📺 im Handy-Player " +
                                         "startet Sender oder Film hier. OK schaltet aus."
-                                } else "Steuert DnA-TV vom Handy aus (gleiches WLAN, nur mit PIN) und gleicht Favoriten und Verlauf ab.",
+                                } else "Steuert DnA-TV vom Handy aus (gleiches WLAN, nur mit PIN) und gleicht Favoriten, Verlauf und eigene Gruppen ab.",
                             ) {
                                 val on = !settings.phoneRemote
                                 update { it.copy(phoneRemote = on) }

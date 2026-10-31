@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -180,6 +181,13 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     app.toast("HDR-Anpassung: ${next.second}")
                 })
             }
+            if (live != null) add(MenuItem("◫ Multiview (bis zu 4 Sender gleichzeitig)") { app.openMultiview() })
+            val nextDirect = DIRECT_MODES[(DIRECT_MODES.indexOfFirst { it.first == user.directMode } + 1).mod(DIRECT_MODES.size)]
+            add(MenuItem("Direktausgabe: ${directLabel(user.directMode)} → ${nextDirect.second}") {
+                store.updateUser { it.copy(directMode = nextDirect.first) }
+                app.applyBuffer()
+                app.restartPlayback()
+            })
             add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
         }
         menu = {
@@ -191,6 +199,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     BackHandler(app, enabled = menu == null && layer != Layer.CHANNELS && tech) { tech = false }
     LaunchedEffect(Unit) { refocus() }
     LaunchedEffect(menu, layer) { if (menu == null && layer != Layer.CHANNELS) refocus() }
+    // Direktausgabe (HDR-Bildschirm): Menü, Senderliste und Stream-Info liegen im Hauptfenster, das Vollbild so lange weg.
+    LaunchedEffect(menu, layer, tech) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech) }
+    DisposableEffect(Unit) { onDispose { player.coverDirect(true) } }
     // Info nach 5 Sekunden ohne Eingabe ausblenden (nicht bei Pause, Fehler oder offener Stream-Info).
     LaunchedEffect(lastInput, layer, player.playing, tech) {
         if (layer != Layer.INFO || tech) return@LaunchedEffect
@@ -627,6 +638,10 @@ fun duration(ms: Long): String {
     val s = ms / 1000
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
+
+/** Direktausgabe: Wert und Anzeige. */
+val DIRECT_MODES = listOf("AUTO" to "Bei 4K (empfohlen)", "ALWAYS" to "Immer", "OFF" to "Aus")
+fun directLabel(mode: String) = DIRECT_MODES.firstOrNull { it.first == mode }?.second ?: "Bei 4K (empfohlen)"
 
 /** HDR-Anpassung: Wert und Anzeige. */
 val HDR_MODES = listOf("AUTO" to "Automatisch", "PQ" to "HDR10", "HLG" to "HLG", "OFF" to "Aus")

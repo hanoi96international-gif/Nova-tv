@@ -175,8 +175,9 @@ fun ChannelCard(
                 )
             }
             Spacer(Modifier.height(10.dp))
+            val headline = androidx.compose.runtime.remember(now) { now?.headlineWithBadge()?.ifEmpty { null } ?: "Keine Programminfo" }
             Text(
-                now?.headlineWithBadge()?.ifEmpty { null } ?: "Keine Programminfo",
+                headline,
                 style = MaterialTheme.typography.bodySmall,
                 color = AyuColors.TextSecondary,
                 maxLines = 1,

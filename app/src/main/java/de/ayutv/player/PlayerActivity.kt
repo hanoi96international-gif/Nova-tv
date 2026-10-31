@@ -801,6 +801,9 @@ class PlayerActivity : ComponentActivity() {
         if (!isLive || watchStartedAt == 0L) return
         val watched = SystemClock.elapsedRealtime() - watchStartedAt
         watchStartedAt = 0L
+        // Datenrate des Senders merken (ab 20 s Schauen ist die Schätzung eingeschwungen): Bei doppelten Sendern gewinnt
+        // bei gleicher Auflösung die Fassung, die der Anbieter mit mehr Daten (schärfer) schickt.
+        if (watched >= 20_000 && stats.bandwidth > 0) de.ayutv.data.parse.ChannelQuality.recordBitrate(channel.key, (stats.bandwidth / 1000).toInt())
         if (watched < 60_000) return
         de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
     }
@@ -1930,7 +1933,15 @@ class PlayerActivity : ComponentActivity() {
         externalJob?.cancel()
         externalJob = lifecycleScope.launch {
             while (true) {
-                val at = subtitleTimeAt(player?.currentPosition ?: 0L)
+                val position = player?.currentPosition ?: 0L
+                // Zeilen-Abgleich ohne Anker in der Nähe (gerade weit gesprungen): lieber kurz nichts als falsche Zeilen,
+                // bis die Einblendungen dort gelesen und neu ausgerichtet sind (dauert wenige Sekunden).
+                if (!elasticCovers(position)) {
+                    translatedCue = null
+                    delay(100)
+                    continue
+                }
+                val at = subtitleTimeAt(position)
                 val shown = externalTexts
                 translatedCue = cues.indices.filter { cues[it].start <= at && cues[it].end > at }
                     .takeIf { it.isNotEmpty() }
@@ -1964,6 +1975,10 @@ class PlayerActivity : ComponentActivity() {
             speechSyncInfo = "Von den schon ausgerichteten Untertiteln (${Languages.label(other)}) übernommen, wird am Ton nachgeprüft"
         }
     }
+
+    /** Gibt es beim Zeilen-Abgleich einen Anker in der Nähe von [position]? (Ohne Zeilen-Abgleich immer.) */
+    private fun elasticCovers(position: Long): Boolean =
+        elasticTiming?.let { it.distanceTo(position - subtitleDelayMs) <= ELASTIC_COVER_MS } ?: true
 
     /** Filmposition → Zeit in der geladenen Datei (automatische und manuelle Verschiebung eingerechnet). */
     private fun subtitleTimeAt(position: Long): Long =
@@ -2027,7 +2042,16 @@ class PlayerActivity : ComponentActivity() {
                         if (compareCandidates(language, references, result?.percent ?: 0)) return@launch
                     }
                 }
-                delay(if (elasticTiming == null) 1_000 else 30_000)
+                // Ausgerichtet und Anker in der Nähe: selten nachprüfen. Nach einem Sprung (kein Anker in der Nähe): sofort
+                // mit den dort neu gelesenen Einblendungen weiter ausrichten.
+                delay(1_000)
+                if (elasticTiming != null) {
+                    var waited = 1_000L
+                    while (waited < 30_000 && isActive && elasticCovers(player?.currentPosition ?: 0L)) {
+                        delay(1_000)
+                        waited += 1_000
+                    }
+                }
             }
         }
     }
@@ -2821,6 +2845,14 @@ class PlayerActivity : ComponentActivity() {
     /** Auswahl für das kleine Bild: laufende Spiele und der vorige Sender (Sender, Beschriftung). */
     var pipChoices by mutableStateOf<List<Pair<ChannelEntity, String>>?>(null); private set
     private var pipRetries = 0
+    /** Multiview: zweiter Sender gleich groß neben dem Hauptbild statt klein unten rechts (gemerkt). */
+    var pipSplit by mutableStateOf(false); private set
+
+    fun togglePipSplit() {
+        pipSplit = !pipSplit
+        getSharedPreferences(PIP_PREFS, MODE_PRIVATE).edit().putBoolean(PIP_SPLIT, pipSplit).apply()
+        closeOverlay()
+    }
 
     fun openPipPicker() {
         lifecycleScope.launch {
@@ -2874,6 +2906,7 @@ class PlayerActivity : ComponentActivity() {
             })
         }
         pipRetries = 0
+        pipSplit = getSharedPreferences(PIP_PREFS, MODE_PRIVATE).getBoolean(PIP_SPLIT, false)
         val url = adaptLiveUrl(channel.url)
         preview.setMediaItem(mediaItem(url, guessMime(url)))
         preview.repeatMode = Player.REPEAT_MODE_ONE
@@ -3922,6 +3955,10 @@ class PlayerActivity : ComponentActivity() {
         private const val EARLY_MISS_PERCENT = 40
         /** Zeilen-Abgleich: ab so viel Prozent übernehmen, darunter vergleichen. */
         private const val ELASTIC_MIN_PERCENT = 50
+        private const val PIP_PREFS = "multiview"
+        private const val PIP_SPLIT = "split"
+        /** Weiter als so weit vom nächsten Anker weg gilt der Zeilen-Abgleich dort als ungeklärt. */
+        private const val ELASTIC_COVER_MS = 90_000L
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
         private const val COMPARE_REFERENCES = 40
         private const val SPEECH_CHECK_MS = 20_000L

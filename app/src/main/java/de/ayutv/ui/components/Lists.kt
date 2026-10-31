@@ -90,7 +90,9 @@ fun ChannelListItem(
                     if (favorite) Text("  ★", color = AyuColors.Accent, fontSize = 14.sp)
                 }
                 if (now != null) {
-                    Text(now.headlineWithBadge(), color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // Einmal je Sendung berechnen (Texterkennung mit regulären Ausdrücken), nicht bei jedem Neuzeichnen.
+                    val headline = androidx.compose.runtime.remember(now) { now.headlineWithBadge() }
+                    Text(headline, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(3.dp))
                     ProgressLine(now.progress())
                 }

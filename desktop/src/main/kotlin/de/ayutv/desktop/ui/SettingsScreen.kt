@@ -125,9 +125,42 @@ fun SettingsScreen(app: AppState) {
                 else "Videoausgabe: RGB (kompatibel; die Grafik kann den schnellen Weg nicht). HDR wird nicht angepasst.",
                 Type.small, maxLines = 2,
             )
+            if (app.player.gpuVideo) {
+                Spacer(Modifier.height(8.dp))
+                Label("Videoweg", Type.body)
+                Row(Modifier.padding(vertical = 4.dp)) {
+                    listOf("AUTO" to "Automatisch (10 Bit für HDR)", "I420" to "Kompatibel").forEach { (value, label) ->
+                        Selectable({
+                            app.store.updateUser { it.copy(videoLayout = value) }
+                            app.applyBuffer()
+                            app.toast("Videoweg: $label (gilt ab dem nächsten Sender)")
+                        }, selected = user.videoLayout == value) { Label(label) }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                }
+                Label(
+                    "Automatisch übernimmt das Bild so, wie die Hardware-Dekodierung es liefert (weniger Arbeit bei 4K), und HDR/10-Bit-Sender mit voller Genauigkeit (keine Farbstufen in Verläufen). „Kompatibel“ nur, falls das Bild damit fehlerhaft ist.",
+                    Type.small, maxLines = 3,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Label("Direktausgabe über die Grafikkarte", Type.body)
+            Row(Modifier.padding(vertical = 4.dp)) {
+                DIRECT_MODES.forEach { (value, label) ->
+                    Selectable({ app.store.updateUser { it.copy(directMode = value) }; app.applyBuffer() }, selected = user.directMode == value) { Label(label) }
+                    Spacer(Modifier.width(6.dp))
+                }
+            }
+            Label(
+                "VLC dekodiert und zeigt das Bild komplett auf der Grafikkarte – der schnellste Weg, flüssig auch bei 4K mit 50 Bildern, und mit HDR-Bildschirm kommt HDR10 unverändert an. Menüs und Senderliste erscheinen wie gewohnt; solange sie offen sind, ist das Bild ausgeblendet. „Bei 4K“ wechselt automatisch, sobald ein Sender 4K liefert.",
+                Type.small, maxLines = 4,
+            )
             Spacer(Modifier.height(8.dp))
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
+            }
+            Toggle("Mini-Vorschau in der Senderliste (ausgewählter Sender läuft stumm im Infofeld)", user.livePreview) {
+                app.store.updateUser { u -> u.copy(livePreview = !u.livePreview) }
             }
             Toggle("Im Bild schalten ↑/↓ um (aus: ↑/↓ öffnen die Senderliste)", user.zapWithUpDown) {
                 app.store.updateUser { u -> u.copy(zapWithUpDown = !u.zapWithUpDown) }
@@ -137,7 +170,7 @@ fun SettingsScreen(app: AppState) {
         item { Section("Abgleich mit dem Fire TV") }
         item {
             Column(Modifier.width(560.dp)) {
-                Label("Favoriten und Verlauf (Weiter schauen, zuletzt gesehen) zwischen PC und Fire TV abgleichen, wie mit dem Handy. Adresse und PIN: Fire TV → Einstellungen → Handy als Fernbedienung.", Type.small, maxLines = 3)
+                Label("Favoriten, Verlauf, eigene und ausgeblendete Gruppen zwischen PC und Fire TV abgleichen – so hat jedes Gerät eine Kopie. Adresse und PIN: Fire TV → Einstellungen → Handy als Fernbedienung.", Type.small, maxLines = 3)
                 Row {
                     Field("Adresse des Fire TV (z. B. http://192.168.178.40:8096)", user.syncAddress, { v -> app.store.updateUser { it.copy(syncAddress = v.trim()) } }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))
@@ -453,8 +486,12 @@ private fun PlaylistDialog(app: AppState, original: Playlist, onDismiss: () -> U
             Row {
                 TextButton("Speichern und laden", {
                     if (url.isBlank()) return@TextButton app.toast("Bitte die Adresse eintragen")
-                    val saved = original.copy(
-                        name = name.ifBlank { if (type == PlaylistType.XTREAM) "Xtream" else "M3U" }.trim(),
+                    // Denselben Zugang gibt es schon: den aktualisieren statt einen zweiten anlegen (eigene Gruppen bleiben).
+                    val same = if (!isNew) null else app.store.playlists.value.firstOrNull {
+                        de.ayutv.data.parse.PlaylistIdentity.same(it.type.name, it.url, it.username, type.name, url, username)
+                    }
+                    val saved = (same ?: original).copy(
+                        name = if (same != null && name.isBlank()) same.name else name.ifBlank { if (type == PlaylistType.XTREAM) "Xtream" else "M3U" }.trim(),
                         type = type,
                         url = url.trim(),
                         username = username.trim().takeIf { type == PlaylistType.XTREAM && it.isNotEmpty() },
@@ -462,6 +499,7 @@ private fun PlaylistDialog(app: AppState, original: Playlist, onDismiss: () -> U
                         epgUrl = epg.trim().ifEmpty { null },
                     )
                     app.store.savePlaylist(saved)
+                    if (same != null) app.toast("„${same.name}“ gibt es schon – aktualisiert, eigene Gruppen bleiben")
                     onDismiss()
                     app.scope.launch {
                         runCatching { app.sync.syncPlaylist(saved.id); app.sync.syncGuide() }
