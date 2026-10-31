@@ -16,6 +16,14 @@ object SelfTest {
         val lines = ArrayList<String>()
         var ok = false
         try {
+            // Fire-TV-Fernbedienung: Raw Input und Tastatur-Hook unter Windows einrichten (ohne Taste zu drücken).
+            if (de.ayutv.desktop.input.WindowsRemote.isWindows) {
+                val remote = de.ayutv.desktop.input.WindowsRemote(onButton = { _, _, _ -> }, isForeground = { false })
+                remote.start()
+                Thread.sleep(1_500)
+                lines += "remote=" + (remote.problem?.let { "FEHLER $it" } ?: if (remote.running) "OK" else "beendet")
+                remote.stop()
+            }
             val player = VideoPlayer()
             lines += "vlc=${player.vlcVersion ?: "fehlt"} ${player.error.orEmpty()}".trim()
             if (player.available) {

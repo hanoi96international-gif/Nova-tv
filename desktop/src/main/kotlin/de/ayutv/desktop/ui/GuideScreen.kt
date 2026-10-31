@@ -1,5 +1,10 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import de.ayutv.desktop.input.RemoteButton
+import de.ayutv.desktop.input.remote
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -64,7 +69,16 @@ fun GuideScreen(app: AppState) {
         is GroupRef.Provider -> g.name
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // Wie auf dem Fire TV: ⏪/⏩ verschieben das Zeitfenster, ⏯ springt auf jetzt.
+    Box(Modifier.fillMaxSize().onKeyEvent { e ->
+        if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+        when (e.remote()) {
+            RemoteButton.REWIND -> { start -= 2 * HOUR; true }
+            RemoteButton.FAST_FORWARD -> { start += 2 * HOUR; true }
+            RemoteButton.PLAY_PAUSE -> { start = System.currentTimeMillis() / (HOUR / 2) * (HOUR / 2); true }
+            else -> false
+        }
+    }) {
         Column(Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton("▤ $groupName", {
@@ -87,6 +101,8 @@ fun GuideScreen(app: AppState) {
                 TextButton("+1 Tag", { start += 24 * HOUR })
                 Spacer(Modifier.width(16.dp))
                 Label(DAY_LABEL.format(Instant.ofEpochMilli(start)), Type.heading)
+                Spacer(Modifier.width(16.dp))
+                Label("⏪/⏩ 2 Std. · ⏯ jetzt · OK Sendung", Type.small)
             }
             Spacer(Modifier.height(10.dp))
             if (channels.isEmpty()) {
