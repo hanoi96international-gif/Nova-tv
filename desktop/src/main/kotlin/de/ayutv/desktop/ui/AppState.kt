@@ -98,6 +98,25 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     /** Erinnerung, die gerade fällig ist (Dialog „Umschalten?“). */
     var dueReminder by mutableStateOf<de.ayutv.desktop.data.Reminder?>(null)
     private val shownReminders = HashSet<String>()
+    /** Profilauswahl zeigen (beim Start, wenn es mehrere Profile gibt, und aus der Navigation). */
+    var choosingProfile by mutableStateOf(store.profiles.value.size > 1)
+
+    /** Zu einem anderen Profil wechseln (Wiedergabe endet, Startseite). false = falsche PIN. */
+    fun switchProfile(id: Long, pin: String = ""): Boolean {
+        if (id == store.profile.value) { choosingProfile = false; return true }
+        if (playing != null) stopPlayback()
+        if (!store.switchProfile(id, pin)) return false
+        liveGroup = null
+        liveFocus = null
+        openSeries = null
+        applyBuffer()
+        applyProxy()
+        screen = Screen.HOME
+        choosingProfile = false
+        toast("Profil: ${store.currentProfile().name}")
+        return true
+    }
+
     /** Länderauswahl anbieten (nach dem ersten Laden). */
     var askCountries by mutableStateOf(false)
 

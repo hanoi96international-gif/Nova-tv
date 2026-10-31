@@ -48,7 +48,8 @@ fun SettingsScreen(app: AppState) {
     var importing by remember { mutableStateOf(false) }
     var groupsOf by remember { mutableStateOf<Playlist?>(null) }
     var countries by remember { mutableStateOf(false) }
-    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    val dialogState = remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    var dialog by dialogState
 
     LazyColumn(Modifier.fillMaxSize()) {
         item { ScreenHeader("Einstellungen", "OK ändert · ☰ Menü einer Playlist") }
@@ -181,6 +182,9 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Profile") }
+        item { ProfileSection(app, dialogState) }
+
         item { Section("Aufnahmen") }
         item {
             Column(Modifier.width(760.dp)) {
@@ -203,7 +207,7 @@ fun SettingsScreen(app: AppState) {
         }
 
         item { Section("Kindersicherung") }
-        item { ParentalSection(app) }
+        item { ParentalSection(app, dialogState) }
 
         item { Section("Erinnerungen") }
         item {
@@ -274,11 +278,44 @@ private fun Section(title: String) {
     Label(title, Type.heading, Modifier.padding(top = 22.dp, bottom = 6.dp))
 }
 
+/** Profile: eigene Favoriten, Gruppen und Verlauf je Person; optional mit PIN. */
+@Composable
+private fun ProfileSection(app: AppState, dialogState: androidx.compose.runtime.MutableState<(@Composable () -> Unit)?>) {
+    val profiles by app.store.profiles.collectAsState()
+    val current by app.store.profile.collectAsState()
+    var dialog by dialogState
+    Column(Modifier.width(760.dp)) {
+        Label("Jedes Profil hat eigene Favoriten, eigene Gruppen, Verlauf und Erinnerungen. Playlists und Einstellungen werden beim Anlegen übernommen. Beim Start fragt DnA-TV, wer schaut.", Type.small, maxLines = 2)
+        profiles.forEach { p ->
+            ListRow(
+                "👤  ${p.name}" + if (p.pin.isNotEmpty()) "  🔒" else "",
+                onClick = { app.switchProfile(p.id).also { ok -> if (!ok) dialog = { PinDialog(app, "PIN für „${p.name}“", { app.switchProfile(p.id, it) }, { dialog = null }) } } },
+                subtitle = if (p.id == current) "aktiv" else null,
+                trailing = "☰ Menü",
+                onMenu = {
+                    dialog = {
+                        MenuDialog(app, p.name, buildList {
+                            add(MenuItem("Umbenennen") { dialog = { NameDialog(app, "Profil umbenennen", p.name, { app.store.updateProfile(p.copy(name = it)) }, { dialog = null }) } })
+                            add(MenuItem(if (p.pin.isEmpty()) "🔒 PIN festlegen" else "PIN entfernen") {
+                                if (p.pin.isNotEmpty()) app.store.updateProfile(p.copy(pin = ""))
+                                else dialog = { NameDialog(app, "PIN für „${p.name}“ (Ziffern)", onDone = { pin -> app.store.updateProfile(p.copy(pin = pin.filter(Char::isDigit))) }, onDismiss = { dialog = null }) }
+                            })
+                            if (p.id != 0L && p.id != current) add(MenuItem("Löschen") { app.store.deleteProfile(p.id) })
+                        }, onDismiss = { if (dialog != null) dialog = null })
+                    }
+                },
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        TextButton("＋ Profil anlegen", { dialog = { NameDialog(app, "Neues Profil", onDone = { app.store.createProfile(it) }, onDismiss = { dialog = null }) } })
+    }
+}
+
 /** PIN festlegen, gesperrte Gruppen zeigen, bis zum Beenden entsperren. Gesperrte Gruppen fehlen überall. */
 @Composable
-private fun ParentalSection(app: AppState) {
+private fun ParentalSection(app: AppState, dialogState: androidx.compose.runtime.MutableState<(@Composable () -> Unit)?>) {
     val user = app.store.user.collectAsState().value
-    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    var dialog by dialogState
     Column(Modifier.width(760.dp)) {
         Label(
             when {
@@ -314,7 +351,6 @@ private fun ParentalSection(app: AppState) {
             ListRow("🔒  $name", { app.store.setLocked(groupKind, name, lock = false) }, trailing = "${groupKind.label} · OK = freigeben")
         }
     }
-    dialog?.invoke()
 }
 
 /** Version und Updates (wie auf dem Fire TV über die Releases bei GitHub). */

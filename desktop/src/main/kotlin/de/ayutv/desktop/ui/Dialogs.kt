@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,6 +121,41 @@ fun ReminderDialog(app: AppState, reminder: de.ayutv.desktop.data.Reminder) {
         }
     }
     FocusOnShow(first, reminder)
+}
+
+/** Wer schaut? Profile wählen (mit PIN, falls gesetzt) oder ein neues anlegen. */
+@Composable
+fun ProfileDialog(app: AppState, onDismiss: () -> Unit) {
+    val profiles by app.store.profiles.collectAsState()
+    val current by app.store.profile.collectAsState()
+    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    val first = remember { FocusRequester() }
+    Overlay(app, onDismiss, width = 480) {
+        Column {
+            Label("Wer schaut?", Type.heading)
+            Spacer(Modifier.height(10.dp))
+            LazyColumn {
+                itemsIndexed(profiles) { index, p ->
+                    ListRow(
+                        "👤  ${p.name}" + if (p.pin.isNotEmpty()) "  🔒" else "",
+                        onClick = {
+                            if (p.pin.isEmpty() || p.id == current) app.switchProfile(p.id)
+                            else dialog = { PinDialog(app, "PIN für „${p.name}“", { pin -> app.switchProfile(p.id, pin) }, { dialog = null }) }
+                        },
+                        selected = p.id == current,
+                        focusRequester = if (index == 0) first else null,
+                    )
+                }
+                item {
+                    ListRow("＋  Neues Profil", onClick = {
+                        dialog = { NameDialog(app, "Neues Profil", onDone = { name -> app.store.createProfile(name) }, onDismiss = { dialog = null }) }
+                    })
+                }
+            }
+        }
+    }
+    FocusOnShow(first)
+    dialog?.invoke()
 }
 
 /** PIN eingeben (Kindersicherung). [onPin] liefert true, wenn die PIN stimmt. */

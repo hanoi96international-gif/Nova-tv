@@ -44,6 +44,12 @@ class Store(val dir: File) {
     private val _user = MutableStateFlow(UserData())
     val user: StateFlow<UserData> = _user.asStateFlow()
 
+    /** Profile (das erste heißt „Ich“ und nutzt die alte user.json weiter). */
+    private val _profiles = MutableStateFlow(listOf(Profile(0, "Ich")))
+    val profiles: StateFlow<List<Profile>> = _profiles.asStateFlow()
+    private val _profile = MutableStateFlow(0L)
+    val profile: StateFlow<Long> = _profile.asStateFlow()
+
     init {
         dir.mkdirs()
         load()
@@ -269,7 +275,7 @@ class Store(val dir: File) {
 
     fun updateUser(transform: (UserData) -> UserData) {
         _user.update(transform)
-        save(USER, UserData.serializer(), _user.value)
+        save(userFile(_profile.value), UserData.serializer(), _user.value)
     }
 
     fun toggleFavorite(key: String): Boolean {
@@ -427,11 +433,64 @@ class Store(val dir: File) {
         return guide.mapValues { (_, list) -> list.map { it.copy(start = it.start + shift, stop = it.stop + shift) } }
     }
 
+    // ---------------------------------------------------------------- Profile
+
+    private fun userFile(profile: Long) = if (profile == 0L) USER else "user-$profile.json"
+
+    fun currentProfile(): Profile = _profiles.value.firstOrNull { it.id == _profile.value } ?: _profiles.value.first()
+
+    /**
+     * Neues Profil: übernimmt Einstellungen (Schlüssel, Proxy, ausgeblendete Gruppen, Kindersicherung), aber keine
+     * Favoriten, eigenen Gruppen, Verlauf, Erinnerungen und Aufnahmen.
+     */
+    fun createProfile(name: String, pin: String = ""): Profile {
+        val id = (_profiles.value.maxOfOrNull { it.id } ?: 0) + 1
+        val profile = Profile(id, name.trim().ifEmpty { "Profil $id" }, pin)
+        val base = _user.value.copy(
+            favorites = emptyList(), customGroups = emptyList(), groupOrder = emptyMap(), recent = emptyList(),
+            positions = emptyMap(), durations = emptyMap(), watchedAt = emptyMap(), reminders = emptyList(),
+            followedTeams = emptySet(), recordings = emptyList(), subtitleTimings = emptyMap(), intros = emptyMap(),
+            parentalUnlocked = false,
+        )
+        save(userFile(id), UserData.serializer(), base)
+        _profiles.update { it + profile }
+        save(PROFILES, ListSerializer(Profile.serializer()), _profiles.value)
+        return profile
+    }
+
+    fun updateProfile(profile: Profile) {
+        _profiles.update { list -> list.map { if (it.id == profile.id) profile else it } }
+        save(PROFILES, ListSerializer(Profile.serializer()), _profiles.value)
+    }
+
+    /** Profil löschen (nicht das erste und nicht das aktuelle). */
+    fun deleteProfile(id: Long) {
+        if (id == 0L || id == _profile.value) return
+        _profiles.update { list -> list.filterNot { it.id == id } }
+        save(PROFILES, ListSerializer(Profile.serializer()), _profiles.value)
+        File(dir, userFile(id)).delete()
+    }
+
+    /** Zu Profil [id] wechseln; false bei falscher PIN. */
+    fun switchProfile(id: Long, pin: String = ""): Boolean {
+        val target = _profiles.value.firstOrNull { it.id == id } ?: return false
+        if (target.pin.isNotEmpty() && target.pin != pin) return false
+        if (id == _profile.value) return true
+        save(userFile(_profile.value), UserData.serializer(), _user.value)
+        _profile.value = id
+        _user.value = read(userFile(id), UserData.serializer()) ?: UserData()
+        save(CURRENT_PROFILE, Long.serializer(), id)
+        _guide.value = shifted(rawGuide)
+        return true
+    }
+
     // ---------------------------------------------------------------- Dateien
 
     private fun load() {
         _playlists.value = read(PLAYLISTS, ListSerializer(Playlist.serializer())) ?: emptyList()
-        _user.value = read(USER, UserData.serializer()) ?: UserData()
+        _profiles.value = read(PROFILES, ListSerializer(Profile.serializer())) ?: listOf(Profile(0, "Ich"))
+        _profile.value = _profiles.value.firstOrNull { it.id == (read(CURRENT_PROFILE, Long.serializer()) ?: 0L) }?.id ?: 0L
+        _user.value = read(userFile(_profile.value), UserData.serializer()) ?: UserData()
         _content.value = _playlists.value.mapNotNull { p -> read("content-${p.id}.json.gz", Content.serializer())?.let { p.id to it } }.toMap()
         // Vergangenes nicht wieder laden.
         val now = System.currentTimeMillis()
@@ -462,6 +521,8 @@ class Store(val dir: File) {
     companion object {
         private const val PLAYLISTS = "playlists.json"
         private const val USER = "user.json"
+        private const val PROFILES = "profiles.json"
+        private const val CURRENT_PROFILE = "profile.json"
         private const val GUIDE = "guide.json.gz"
         private const val DAY = 24 * 3_600_000L
         val JSON = Json { ignoreUnknownKeys = true; encodeDefaults = false }

@@ -188,6 +188,7 @@ fun App(app: AppState, window: WindowState) {
                 }
             }
             if (app.askCountries) CountryDialog(app, first = true, onDismiss = { app.askCountries = false })
+            if (app.choosingProfile) de.ayutv.desktop.ui.ProfileDialog(app, onDismiss = { app.choosingProfile = false })
         }
         app.dueReminder?.let { r -> de.ayutv.desktop.ui.ReminderDialog(app, r) }
         val line = app.message ?: status
@@ -210,9 +211,15 @@ private fun Sidebar(app: AppState) {
         }
     }
     Column(Modifier.width(210.dp).fillMaxHeight().background(Palette.surface).padding(10.dp)) {
-        Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 18.dp), verticalAlignment = Alignment.Bottom) {
+        Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
             Label("DnA-TV", Type.title, Modifier.weight(1f))
             Label(clock(now), Type.small)
+        }
+        val profiles by app.store.profiles.collectAsState()
+        val profileId by app.store.profile.collectAsState()
+        if (profiles.size > 1) {
+            ListRow("👤  ${profiles.firstOrNull { it.id == profileId }?.name ?: "Profil"}", onClick = { app.choosingProfile = true })
+            Spacer(Modifier.height(8.dp))
         }
         Screen.entries.forEach { screen ->
             ListRow(

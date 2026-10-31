@@ -177,6 +177,29 @@ class StoreTest {
     }
 
     @Test
+    fun profilesKeepOwnFavoritesAndSurviveRestart() {
+        val dir = Files.createTempDirectory("dna-store").toFile()
+        val s = Store(dir).withChannels(channel(1, "A"), channel(2, "A"))
+        s.toggleFavorite("1:c:1")
+        s.updateUser { it.copy(deeplKey = "geheim") }
+        val kids = s.createProfile("Kinder", pin = "")
+        val parents = s.createProfile("Eltern", pin = "4711")
+        assertTrue(s.switchProfile(kids.id))
+        assertTrue(s.favorites().isEmpty())
+        assertEquals("geheim", s.user.value.deeplKey)
+        s.toggleFavorite("1:c:2")
+        assertEquals(false, s.switchProfile(parents.id, "0000"))
+        assertTrue(s.switchProfile(0))
+        assertEquals(listOf("1:c:1"), s.favorites().map { it.key })
+        assertTrue(s.switchProfile(kids.id))
+        // Nach einem Neustart: dasselbe Profil, dieselben Favoriten.
+        val again = Store(dir)
+        assertEquals(kids.id, again.profile.value)
+        assertEquals(listOf("1:c:2"), again.user.value.favorites)
+        assertEquals(3, again.profiles.value.size)
+    }
+
+    @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))
         assertEquals(listOf("x", "y"), Ordering.apply(listOf("y", "x"), listOf("x")) { it })

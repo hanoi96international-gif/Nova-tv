@@ -120,6 +120,10 @@ data class Recording(
     }
 }
 
+/** Profil: eigene Favoriten, Gruppen, Verlauf, Erinnerungen. [pin] schützt das Profil (leer = offen). */
+@Serializable
+data class Profile(val id: Long, val name: String, val pin: String = "")
+
 /** Eigene Sendergruppe (Sender aus allen Playlists, in eigener Reihenfolge). */
 @Serializable
 data class CustomGroup(val id: Long, val name: String, val keys: List<String> = emptyList())
