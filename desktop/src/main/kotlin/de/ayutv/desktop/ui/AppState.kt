@@ -75,6 +75,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     val updater = de.ayutv.desktop.update.Updater(sync.http)
     val deviceSync = de.ayutv.desktop.data.DeviceSync(store, sync.http)
     val recorder = de.ayutv.desktop.player.Recorder()
+    val channelCheck = de.ayutv.desktop.player.ChannelCheck(store)
+    /** Zuletzt etwas abgespielt (der Sender-Check wartet danach 5 Minuten). */
+    @Volatile private var lastPlaybackAt = System.currentTimeMillis()
     /** Ergebnis des letzten Abgleichs mit dem Fire TV (für die Einstellungen). */
     var deviceSyncStatus by mutableStateOf<String?>(null); private set
 
@@ -134,6 +137,18 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 delay(6 * 3_600_000L)
             }
         }
+        // Sender-Check in der Ruhezeit (nichts läuft seit 5 Minuten), höchstens alle 12 Stunden.
+        scope.launch {
+            delay(5 * 60_000L)
+            while (true) {
+                fun idle() = playing == null && System.currentTimeMillis() - lastPlaybackAt > 5 * 60_000L &&
+                    store.user.value.recordings.none { it.state == de.ayutv.desktop.data.Recording.RUNNING }
+                if (idle() && System.currentTimeMillis() - channelCheck.lastRun > de.ayutv.desktop.player.ChannelCheck.EVERY_MS) {
+                    runCatching { channelCheck.run(::idle) }.onFailure { de.ayutv.desktop.Log.warn("Sender-Check", it) }
+                }
+                delay(5 * 60_000L)
+            }
+        }
         // Abgleich mit dem Fire TV alle 30 Minuten (wenn eingeschaltet).
         scope.launch {
             delay(30_000)
@@ -160,7 +175,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                     dueReminder = due
                     runCatching { input.window?.toFront() }
                 }
-                runCatching { runRecordings(now) }.onFailure { de.ayutv.desktop.Log.warn("Aufnahmen", it) }
+                runCatching { withContext(Dispatchers.IO) { runRecordings(now) } }.onFailure { de.ayutv.desktop.Log.warn("Aufnahmen", it) }
                 // Vorbei: aufräumen.
                 val old = store.user.value.reminders.filter { now > it.start + 30 * 60_000L }
                 if (old.isNotEmpty()) store.updateUser { it.copy(reminders = it.reminders - old.toSet()) }
@@ -224,6 +239,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             if (before != null && before.key != playback.channel.key) previousChannel = before
             triedVariants = mutableSetOf(playback.channel.key)
         }
+        lastPlaybackAt = System.currentTimeMillis()
+        (playing as? Playback.Live)?.let { previous ->
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) }
+        }
         playing = playback
         start(playback)
         watch(playback)
@@ -270,6 +289,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 }
                 val live = playback as? Playback.Live
                 val next = live?.let { l -> store.alternatives(l.channel).firstOrNull { it.key !in triedVariants } }
+                live?.let { de.ayutv.data.parse.ChannelQuality.recordFailure(it.channel.key) }
                 if (live != null && next != null) {
                     de.ayutv.desktop.Log.info("Ausweichen: ${live.channel.name} → ${next.name}")
                     triedVariants.add(next.key)
@@ -364,7 +384,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         )
         store.updateUser { it.copy(recordings = it.recordings + r) }
         toast(if (programme.start <= System.currentTimeMillis()) "⏺ Aufnahme läuft: ${programme.title}" else "⏺ Aufnahme geplant: ${programme.title} um ${clock(programme.start)}")
-        scope.launch { runRecordings(System.currentTimeMillis()) }
+        scope.launch { withContext(Dispatchers.IO) { runRecordings(System.currentTimeMillis()) } }
     }
 
     /** Aufnahme beenden bzw. Planung löschen; [deleteFile] löscht auch die Datei. */
@@ -491,6 +511,12 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     }
 
     fun stopPlayback() {
+        lastPlaybackAt = System.currentTimeMillis()
+        (playing as? Playback.Live)?.let { live ->
+            // Beim Schauen gemessen: Auflösung und Startzeit fließen in die Wahl der besten Fassung ein.
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(live.channel.key, info.height, info.startupMs) }
+            channelCheck.save()
+        }
         stopAligning()
         savePosition()
         watchdog?.cancel()
@@ -667,6 +693,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         remote.stop()
         input.stop()
         recorder.release()
+        channelCheck.save()
+        channelCheck.release()
         player.release()
     }
 }

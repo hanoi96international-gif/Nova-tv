@@ -130,7 +130,7 @@ class Store(val dir: File) {
 
     /** Doppelte Fassungen zusammenfassen (wenn eingeschaltet): jeder Sender einmal, in der besten Fassung. */
     private fun merged(list: List<Channel>): List<Channel> =
-        if (_user.value.mergeVariants) ChannelVariants.merge(list, { it.name }, { it.playlistId }) else list
+        if (_user.value.mergeVariants) ChannelVariants.merge(list, { it.name }, { it.playlistId }, { de.ayutv.data.parse.ChannelQuality.score(it.key, it.name) }) else list
 
     /** Gruppen des Anbieters (Live), die nicht ausgeblendet sind, mit Anzahl, in der Reihenfolge der Playlist. */
     fun liveGroups(): List<Pair<String, Int>> {
@@ -169,7 +169,10 @@ class Store(val dir: File) {
      * Auch Fassungen aus ausgeblendeten Gruppen zählen (sie sind nur in den Listen verborgen).
      */
     fun alternatives(channel: Channel): List<Channel> =
-        ChannelVariants.alternatives(channel, _content.value[channel.playlistId]?.channels.orEmpty(), { it.name }, { it.playlistId }, { a, b -> a.key == b.key })
+        ChannelVariants.alternatives(
+            channel, _content.value[channel.playlistId]?.channels.orEmpty(), { it.name }, { it.playlistId }, { a, b -> a.key == b.key },
+            score = { de.ayutv.data.parse.ChannelQuality.score(it.key, it.name) },
+        )
 
     /** Archiv-Adresse (Catch-up) für eine vergangene oder laufende Sendung; null = kein Archiv. */
     fun archiveUrl(channel: Channel, start: Long, stop: Long, now: Long = System.currentTimeMillis()): String? {
