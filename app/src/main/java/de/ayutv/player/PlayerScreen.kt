@@ -251,6 +251,16 @@ fun PlayerScreen(activity: PlayerActivity) {
             LiveInfoBar(activity)
         }
 
+        // Schnellwahl (◀ halten): Logos der zuletzt gesehenen Sender und Favoriten.
+        AnimatedVisibility(
+            visible = activity.quickZap != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            activity.quickZap?.let { QuickZapBar(it, activity.quickIndex) }
+        }
+
         AnimatedVisibility(
             visible = activity.overlay == Overlay.CONTROLS && !activity.isLive,
             enter = fadeIn(),
@@ -476,10 +486,38 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         Text(
             if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
             else "▲▼ Umschalten   OK Senderliste   " + (activity.previousChannel?.let { "◀ zurück zu ${it.name}   " } ?: "") +
-                "▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
+                "◀ halten: Schnellwahl   ▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 13.sp,
         )
+    }
+}
+
+/** Schnellwahl: Senderlogos nebeneinander, der gewählte hervorgehoben; ◀ ▶ wählen, OK schaltet um. */
+@Composable
+private fun QuickZapBar(channels: List<de.ayutv.data.db.ChannelEntity>, index: Int) {
+    val state = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(index) { state.animateScrollToItem((index - 2).coerceAtLeast(0)) }
+    Column(Modifier.fillMaxWidth().background(bottomScrim).padding(start = 48.dp, end = 48.dp, top = 56.dp, bottom = 28.dp)) {
+        Text("Schnellwahl  ·  ◀ ▶ wählen  ·  OK umschalten  ·  Zurück schließen", color = AyuColors.TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(10.dp))
+        androidx.compose.foundation.lazy.LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            items(channels.size, key = { channels[it].key }) { i ->
+                val c = channels[i]
+                val selected = i == index
+                Column(
+                    Modifier.width(148.dp)
+                        .border(if (selected) 3.dp else 1.dp, if (selected) AyuColors.Accent else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                        .background(if (selected) AyuColors.AccentSoft.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ChannelLogo(c.logo, c.name, Modifier.size(width = 120.dp, height = 70.dp))
+                    Spacer(Modifier.height(6.dp))
+                    Text(c.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
     }
 }
 

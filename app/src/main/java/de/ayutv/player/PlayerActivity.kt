@@ -809,6 +809,72 @@ class PlayerActivity : ComponentActivity() {
         de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
     }
 
+    // ---------------------------------------------------------------- Schnellumschalter
+
+    /** Leiste mit zuletzt gesehenen Sendern und Favoriten (◀ halten); null = zu. */
+    var quickZap by mutableStateOf<List<ChannelEntity>?>(null); private set
+    var quickIndex by mutableIntStateOf(0); private set
+    private var quickOpenedThisPress = false
+    private var quickHide: kotlinx.coroutines.Job? = null
+
+    private fun openQuickZap() {
+        lifecycleScope.launch {
+            val current = playing?.key
+            val recent = runCatching { container.db.history().recentLiveKeys(20) }.getOrDefault(emptyList())
+                .mapNotNull { container.db.channels().byKey(it) }
+            val favorites = runCatching { container.content.zapList(null, favoritesOnly = true, merge = settings.mergeVariants) }.getOrDefault(emptyList())
+            val list = (listOfNotNull(previousChannel) + recent + favorites).filter { it.key != current }.distinctBy { it.key }.take(16)
+            if (list.isEmpty()) {
+                openChannelList()
+                return@launch
+            }
+            quickZap = list
+            quickIndex = 0
+            armQuickHide()
+        }
+    }
+
+    private fun armQuickHide() {
+        quickHide?.cancel()
+        quickHide = lifecycleScope.launch {
+            delay(6_000)
+            quickZap = null
+        }
+    }
+
+    /** Tasten, solange die Schnellwahl offen ist: ◀ ▶ wählen, OK schaltet um, Zurück schließt. */
+    private fun handleQuickKey(event: KeyEvent): Boolean {
+        val list = quickZap ?: return false
+        val code = event.keyCode
+        if (event.action != KeyEvent.ACTION_DOWN) {
+            if (code == KeyEvent.KEYCODE_DPAD_LEFT) quickOpenedThisPress = false
+            return code in setOf(KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)
+        }
+        when (code) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (!quickOpenedThisPress) quickIndex = (quickIndex - 1).coerceAtLeast(0)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> quickIndex = (quickIndex + 1).coerceAtMost(list.size - 1)
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                val target = list.getOrNull(quickIndex)
+                quickZap = null
+                quickHide?.cancel()
+                target?.let { playChannel(it) }
+                return true
+            }
+            KeyEvent.KEYCODE_BACK -> {
+                quickZap = null
+                quickHide?.cancel()
+                return true
+            }
+            else -> {
+                // Andere Tasten (Umschalten, Menü …) schließen die Leiste und wirken wie gewohnt.
+                quickZap = null
+                return false
+            }
+        }
+        armQuickHide()
+        return true
+    }
+
     /** Zum vorherigen Sender; null, wenn es keinen gibt. */
     fun backZap(): Unit? {
         val previous = previousChannel?.takeIf { it.key != playing?.key } ?: return null
@@ -3706,6 +3772,7 @@ class PlayerActivity : ComponentActivity() {
             if (event.action == KeyEvent.ACTION_UP) handleReminderKey(code)
             return true
         }
+        if (quickZap != null && handleQuickKey(event)) return true
         if (code == KeyEvent.KEYCODE_BACK) {
             if (event.action == KeyEvent.ACTION_UP) {
                 when {
@@ -3726,6 +3793,12 @@ class PlayerActivity : ComponentActivity() {
         if (overlay == Overlay.CHANNELS || overlay == Overlay.TRACKS) {
             if (event.action == KeyEvent.ACTION_DOWN) overlayToken++
             return super.dispatchKeyEvent(event)
+        }
+        // ◀ kurz: zum letzten Sender (beim Loslassen, damit Halten die Schnellwahl öffnen kann).
+        if (isLive && !timeshifted && code == KeyEvent.KEYCODE_DPAD_LEFT && event.action == KeyEvent.ACTION_UP) {
+            if (!quickOpenedThisPress) backZap() ?: openChannelList()
+            quickOpenedThisPress = false
+            return true
         }
         if (event.action != KeyEvent.ACTION_DOWN) return isHandledKey(code) || super.dispatchKeyEvent(event)
         return if (isLive) handleLiveKey(code, event.repeatCount) else handleVodKey(code, event.repeatCount)
@@ -3763,7 +3836,11 @@ class PlayerActivity : ComponentActivity() {
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> zap(-1)
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> openChannelList()
             // ◀ springt zum vorherigen Sender (und von dort wieder zurück); ohne vorherigen öffnet es die Liste.
-            KeyEvent.KEYCODE_DPAD_LEFT -> if (repeat == 0) backZap() ?: openChannelList()
+            // ◀ halten (etwa eine halbe Sekunde): Schnellwahl mit zuletzt gesehenen Sendern und Favoriten.
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (repeat == 3 && !quickOpenedThisPress) {
+                quickOpenedThisPress = true
+                openQuickZap()
+            }
             KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_INFO -> {
                 if (overlay == Overlay.INFO) showTech = !showTech
                 showOverlay(Overlay.INFO)

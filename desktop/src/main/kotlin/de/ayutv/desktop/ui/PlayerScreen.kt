@@ -97,6 +97,10 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
 
     fun refocus() = runCatching { focus.requestFocus() }
 
+    // Schnellwahl (◀ halten): zuletzt gesehene Sender und Favoriten als Logo-Leiste.
+    var quick by remember { mutableStateOf<List<Channel>?>(null) }
+    var quickOpened by remember { mutableStateOf(false) }
+
     fun show(next: Layer = Layer.INFO) {
         lastInput = System.currentTimeMillis()
         layer = next
@@ -200,7 +204,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     LaunchedEffect(Unit) { refocus() }
     LaunchedEffect(menu, layer) { if (menu == null && layer != Layer.CHANNELS) refocus() }
     // Direktausgabe (HDR-Bildschirm): Menü, Senderliste und Stream-Info liegen im Hauptfenster, das Vollbild so lange weg.
-    LaunchedEffect(menu, layer, tech) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech) }
+    LaunchedEffect(menu, layer, tech, quick) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech || quick != null) }
     DisposableEffect(Unit) { onDispose { player.coverDirect(true) } }
     // Info nach 5 Sekunden ohne Eingabe ausblenden (nicht bei Pause, Fehler oder offener Stream-Info).
     LaunchedEffect(lastInput, layer, player.playing, tech) {
@@ -245,11 +249,18 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 val button = e.remote()
                 if (e.type == KeyEventType.KeyUp) {
                     if (button != null && button == holdKey) holdKey = null
+                    // ◀ kurz (beim Loslassen): zum letzten Sender; gehalten hat es die Schnellwahl geöffnet.
+                    if (button == RemoteButton.LEFT && live != null && layer != Layer.CHANNELS && menu == null && quick == null) {
+                        if (!quickOpened && !app.backZap()) show(Layer.CHANNELS)
+                        quickOpened = false
+                        return@onKeyEvent true
+                    }
+                    if (button == RemoteButton.LEFT) quickOpened = false
                     return@onKeyEvent false
                 }
                 if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
                 // Senderliste offen: dort navigiert der Fokus (die Liste fängt OK selbst ab).
-                if (layer == Layer.CHANNELS || menu != null) return@onKeyEvent false
+                if (layer == Layer.CHANNELS || menu != null || quick != null) return@onKeyEvent false
                 val first = button != holdKey
                 if (first) {
                     holdKey = button
@@ -285,7 +296,12 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         RemoteButton.CHANNEL_DOWN, RemoteButton.PREVIOUS -> app.zap(-1)
                         RemoteButton.OK, RemoteButton.GUIDE -> if (first) show(Layer.CHANNELS)
                         // ◀ springt zum vorherigen Sender (und von dort zurück); ohne vorherigen öffnet es die Liste.
-                        RemoteButton.LEFT -> if (first && !app.backZap()) show(Layer.CHANNELS)
+                        RemoteButton.LEFT -> if (!first && !quickOpened && quick == null && System.currentTimeMillis() - holdSince > 450) {
+                            quickOpened = true
+                            quick = (listOfNotNull(app.previousChannel) + store.recentChannels() + store.favorites())
+                                .filter { it.key != live.channel.key }.distinctBy { it.key }.take(16).ifEmpty { null }
+                            if (quick == null) show(Layer.CHANNELS)
+                        }
                         RemoteButton.RIGHT, RemoteButton.INFO -> if (first) { if (layer == Layer.INFO) tech = !tech; show() }
                         RemoteButton.LAST_CHANNEL, RemoteButton.BLUE -> if (first) app.backZap()
                         RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
@@ -433,6 +449,43 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 TextButton("⏭ Intro überspringen (OK)", { skipIntro() }, primary = true)
             }
         }
+        quick?.let { list ->
+            val firstTile = remember { FocusRequester() }
+            BackHandler(app) { quick = null; refocus() }
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                    .padding(start = 40.dp, end = 40.dp, top = 48.dp, bottom = 28.dp),
+            ) {
+                Label("Schnellwahl  ·  ◀ ▶ wählen  ·  OK umschalten  ·  Zurück schließen", Type.small)
+                Spacer(Modifier.height(10.dp))
+                androidx.compose.foundation.lazy.LazyRow {
+                    items(list.size, key = { list[it].key }) { i ->
+                        val c = list[i]
+                        Selectable(
+                            { quick = null; live?.let { app.play(Playback.Live(c, it.list)) } },
+                            Modifier.width(150.dp),
+                            focusRequester = if (i == 0) firstTile else null,
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(134.dp)) {
+                                Logo(c.logo, 64)
+                                Spacer(Modifier.height(4.dp))
+                                Label(c.name, Type.small)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                    }
+                }
+            }
+            FocusOnShow(firstTile, list)
+            // Ohne Eingabe schließt sie nach 6 Sekunden.
+            LaunchedEffect(list, lastInput) {
+                kotlinx.coroutines.delay(6_000)
+                quick = null
+            }
+        }
+
         if (layer == Layer.CHANNELS && live != null) {
             ChannelPanel(app, live, Modifier.align(Alignment.CenterStart).fillMaxHeight().width(460.dp)) { picked, list ->
                 if (picked.key != live.channel.key) app.play(Playback.Live(picked, list))
