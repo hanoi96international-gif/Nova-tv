@@ -16,7 +16,7 @@ DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.41)
+## Funktionen (Version 0.42)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`), Xtream Codes API (Live, Filme, Serien, EPG)
 - **TV-Guide automatisch:** Ohne Eintrag kommt das EPG vom Anbieter: bei Xtream `xmltv.php`, bei einer M3U alle Adressen aus `url-tvg`, und kommt die M3U von einem Xtream-Server (`get.php?username=…`), dessen `xmltv.php`. Eigene EPG-Adressen (mehrere mit Komma) gehen vor; jede weitere Quelle füllt nur Sender, für die noch nichts da ist. Was dann noch fehlt (oft Sky und DAZN), ergänzt DnA-TV aus dem freien EPG von [epgshare01](https://epgshare01.online) für Deutschland, Österreich und die Schweiz (abschaltbar unter *Einstellungen → Anzeige*, höchstens einmal am Tag geladen). Unter *Einstellungen → Playlists* steht, wie viele Sender ein Programm haben und welche nicht. Sender werden auch mit Zusätzen erkannt: „DE: RTL 4K“, „|DE| RTL HD+“, „RTL ᵁᴴᴰ“, „Pro7 FHD“ oder „ARD HD“ finden „RTL“, „ProSieben“ und „Das Erste“ im EPG, auch wenn die Kennung der Playlist im EPG fehlt
