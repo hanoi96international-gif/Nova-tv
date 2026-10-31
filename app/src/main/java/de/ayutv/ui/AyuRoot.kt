@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -294,8 +295,10 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
             )
             .onFocusChanged { expanded = it.hasFocus }
             .focusRestorer()
-            .padding(vertical = 24.dp, horizontal = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            // Passt sie nicht ganz auf den Bildschirm (viele Bereiche, kleiner Bildschirm), lässt sie sich scrollen.
+            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            .padding(vertical = 16.dp, horizontal = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Text(
             if (expanded) "DnA-TV" else "DnA",
@@ -303,7 +306,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
             fontSize = if (expanded) 22.sp else 18.sp,
             maxLines = 1,
             color = AyuColors.Accent,
-            modifier = Modifier.padding(start = 12.dp, bottom = 18.dp),
+            modifier = Modifier.padding(start = 12.dp, bottom = 10.dp),
         )
         sections.forEach { item ->
             val isSelected = item == selected
@@ -336,7 +339,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
                             )
                         } else Modifier)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
