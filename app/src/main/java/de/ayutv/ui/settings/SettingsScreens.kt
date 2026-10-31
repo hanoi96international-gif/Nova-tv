@@ -271,7 +271,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Leitungs-Check",
                             if (running) "misst …" else "Jetzt messen",
                             result?.let { r -> r.summary + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
-                                ?: "Lädt den zuletzt geschauten Sender 10 Sekunden (ohne Bild) und misst Antwortzeit und Aussetzer beim Anbieter.",
+                                ?: "Lädt den zuletzt geschauten Sender 10 Sekunden (ohne Bild) und misst Antwortzeit und Aussetzer, dann kurz einen Film für die Höchstgeschwindigkeit vom Anbieter.",
                         ) {
                             if (running) return@SettingRow
                             running = true
@@ -279,7 +279,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 val channel = container.db.history().recentLiveKeys(1).firstOrNull()?.let { container.db.channels().byKey(it) }
                                     ?: container.db.favorites().keys().firstOrNull()?.let { container.db.channels().byKey(it) }
                                     ?: container.db.channels().all().firstOrNull()
-                                result = channel?.let { de.ayutv.data.repo.LineCheck(container.http).run(it, it.userAgent ?: settings.userAgent) }
+                                val check = de.ayutv.data.repo.LineCheck(container.http)
+                                val live = channel?.let { check.run(it, it.userAgent ?: settings.userAgent) }
+                                result = live
+                                // Dazu die echte Geschwindigkeit vom Anbieter: ein Film wird nicht in Echtzeit, sondern so schnell wie möglich geliefert.
+                                val movie = runCatching { container.db.vod().search("", 1).firstOrNull() }.getOrNull()
+                                val provider = movie?.let { check.provider(it.url, settings.userAgent) }
+                                if (live != null && provider != null) result = live.copy(providerKbps = provider)
                                 running = false
                             }
                         }

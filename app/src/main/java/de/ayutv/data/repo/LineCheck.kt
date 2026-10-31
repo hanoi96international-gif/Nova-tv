@@ -22,11 +22,40 @@ class LineCheck(private val http: OkHttpClient) {
         val stalls: Int,
         val longestGapMs: Long,
         val failed: String? = null,
+        /** Höchstgeschwindigkeit vom Anbieter (Film-Datei so schnell wie möglich geladen); null = nicht gemessen. */
+        val providerKbps: Int? = null,
     ) {
         val recommendation: BufferProfile get() = recommend(firstByteMs, stalls, longestGapMs, kbps, failed)
-        val summary: String get() = failed?.let { "$channel: kein Empfang ($it)" }
-            ?: "$channel: Antwort nach ${firstByteMs} ms, ${"%.1f".format(kbps / 1000.0)} Mbit/s, " +
-                (if (stalls == 0) "keine Aussetzer" else "$stalls Aussetzer (längster ${"%.1f".format(longestGapMs / 1000.0)} s)")
+        val summary: String get() = (failed?.let { "$channel: kein Empfang ($it)" }
+            ?: "$channel: Antwort nach ${firstByteMs} ms, Datenrate des Senders ${"%.1f".format(kbps / 1000.0)} Mbit/s, " +
+                (if (stalls == 0) "keine Aussetzer" else "$stalls Aussetzer (längster ${"%.1f".format(longestGapMs / 1000.0)} s)")) +
+            (providerKbps?.let { "\nVom Anbieter geladen (Film): bis ${"%.0f".format(it / 1000.0)} Mbit/s – Live-Sender kommen in Echtzeit, nie schneller als ihre Datenrate (kein Limit der App)" } ?: "")
+    }
+
+    /**
+     * Wie schnell liefert der Anbieter überhaupt? Eine Film-Datei wird nicht in Echtzeit geschickt, sondern so schnell
+     * es geht: [seconds] Sekunden (höchstens [maxBytes]) laden und die Geschwindigkeit messen. null bei Fehler.
+     */
+    suspend fun provider(url: String, userAgent: String, seconds: Int = 6, maxBytes: Long = 300L * 1024 * 1024): Int? = withContext(Dispatchers.IO) {
+        val client = http.newBuilder().readTimeout(8, TimeUnit.SECONDS).build()
+        runCatching {
+            client.newCall(Request.Builder().url(url).header("User-Agent", userAgent).build()).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val stream = response.body.byteStream()
+                val buffer = ByteArray(256 * 1024)
+                var bytes = 0L
+                var begin = -1L
+                val end = SystemClock.elapsedRealtime() + seconds * 1000L
+                while (SystemClock.elapsedRealtime() < end && bytes < maxBytes) {
+                    val n = stream.read(buffer)
+                    if (n < 0) break
+                    // Ab dem ersten Byte messen (Antwortzeit des Servers zählt nicht zur Geschwindigkeit).
+                    if (begin < 0) begin = SystemClock.elapsedRealtime() else bytes += n
+                }
+                val ms = (SystemClock.elapsedRealtime() - begin).coerceAtLeast(1)
+                if (bytes < 1_000_000) null else (bytes * 8 / ms).toInt()
+            }
+        }.getOrNull()
     }
 
     suspend fun run(channel: ChannelEntity, userAgent: String, seconds: Int = 10): Result = withContext(Dispatchers.IO) {
