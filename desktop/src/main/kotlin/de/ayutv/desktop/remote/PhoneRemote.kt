@@ -21,7 +21,13 @@ import javax.swing.SwingUtilities
  * Handy als Fernbedienung: kleine Webseite im Heimnetz (http://<PC>:8096/<PIN>), keine App nötig.
  * Tasten gehen direkt an das DnA-TV-Fenster (nicht an andere Programme), Sender lassen sich suchen und starten.
  */
-class PhoneRemote(private val store: Store, private val input: RemoteInput, private val onPlay: (String) -> Unit) {
+class PhoneRemote(
+    private val store: Store,
+    private val input: RemoteInput,
+    private val onPlay: (String) -> Unit,
+    /** Text vom Handy (ganzer Inhalt des Eingabefelds) für das gerade ausgewählte Feld am PC; [submit] = Enter. */
+    private val onText: (text: String, submit: Boolean) -> Unit = { _, _ -> },
+) {
     private var server: HttpServer? = null
     @Volatile var window: Window? = null
 
@@ -80,6 +86,12 @@ class PhoneRemote(private val store: Store, private val input: RemoteInput, priv
                 val list = store.listedChannels().filter { q.isEmpty() || it.name.lowercase().contains(q) }.take(60)
                 val json = JsonArray(list.map { c -> buildJsonObject { put("key", c.key); put("name", c.name); put("group", c.group) } })
                 exchange.reply(200, "application/json; charset=utf-8", json.toString())
+            }
+            "text" -> {
+                val text = query["t"].orEmpty().take(200)
+                val submit = query["enter"] == "1"
+                SwingUtilities.invokeLater { onText(text, submit) }
+                exchange.reply(204, "text/plain", "")
             }
             "play" -> {
                 val key = query["key"] ?: return exchange.reply(400, "text/plain", "kein Sender")
@@ -163,12 +175,15 @@ li{list-style:none;padding:12px;border-bottom:1px solid #1E2631}ul{padding:0;mar
 <div class="row">
 <button class="small" onclick="k('subs')">UT</button><button class="small" onclick="k('audio')">Ton</button><button class="small" onclick="k('next')">⏭</button><span></span>
 </div>
-<input id="q" placeholder="Sender suchen …" oninput="s()">
+<input id="q" placeholder="Text eingeben / suchen …" oninput="s()" onkeydown="if(event.key==='Enter'){send(true);this.blur()}" enterkeyhint="search" autocomplete="off">
+<p style="color:#9AA7B4;font-size:13px;margin:6px 2px">Erscheint am PC im ausgewählten Feld (sonst in der Suche). Darunter: passende Sender zum Antippen.</p>
 <ul id="list"></ul>
 <script>
 const base=location.pathname.replace(/\/$/,'');
 function k(n){fetch(base+'/key?k='+n,{method:'POST'});if(navigator.vibrate)navigator.vibrate(15)}
-let t;function s(){clearTimeout(t);t=setTimeout(async()=>{const q=document.getElementById('q').value;
+let u;function send(enter){clearTimeout(u);const q=document.getElementById('q').value;
+fetch(base+'/text?t='+encodeURIComponent(q)+(enter?'&enter=1':''),{method:'POST'})}
+let t;function s(){clearTimeout(u);u=setTimeout(()=>send(false),120);clearTimeout(t);t=setTimeout(async()=>{const q=document.getElementById('q').value;
 const r=await fetch(base+'/channels?q='+encodeURIComponent(q));const l=await r.json();
 document.getElementById('list').innerHTML='';for(const c of l){const li=document.createElement('li');
 li.textContent=c.name;const g=document.createElement('small');g.textContent=c.group;li.appendChild(g);

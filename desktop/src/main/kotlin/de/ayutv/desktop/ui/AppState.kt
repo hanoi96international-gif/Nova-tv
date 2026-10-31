@@ -70,7 +70,30 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     val player = VideoPlayer()
     val backup = BackupImport(store)
     val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
-    val remote = PhoneRemote(store, input) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
+    val remote = PhoneRemote(
+        store, input,
+        onPlay = { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } },
+        onText = { text, submit -> receiveText(text, submit) },
+    )
+
+    /** Text, den die Suche übernehmen soll (vom Handy, wenn gerade kein Feld ausgewählt war). */
+    var phoneSearch by mutableStateOf<String?>(null)
+
+    /**
+     * Text von der Handy-Fernbedienung: ins ausgewählte Feld; ist keins ausgewählt und läuft nichts, in die Suche.
+     * Beim Fernsehen bleibt das Bild (das Handy zeigt dann nur passende Sender).
+     */
+    private fun receiveText(text: String, submit: Boolean) {
+        val target = TextTarget.current
+        if (target != null) {
+            target.set(text)
+            if (submit) target.submit()
+            return
+        }
+        if (playing != null || multiview != null) return
+        screen = Screen.SEARCH
+        phoneSearch = text
+    }
     var remoteAddress by mutableStateOf<String?>(null); private set
     val updater = de.ayutv.desktop.update.Updater(sync.http)
     val deviceSync = de.ayutv.desktop.data.DeviceSync(store, sync.http)

@@ -189,6 +189,12 @@ fun Field(
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val focusManager = LocalFocusManager.current
+    // Ausgewähltes Feld: Text von der Handy-Fernbedienung kommt hier an.
+    val currentChange by androidx.compose.runtime.rememberUpdatedState(onChange)
+    val currentSubmit by androidx.compose.runtime.rememberUpdatedState(onSubmit)
+    val target = remember { TextTarget.Entry({ currentChange(it) }, { currentSubmit?.invoke() }) }
+    androidx.compose.runtime.LaunchedEffect(focused) { if (focused) TextTarget.current = target else if (TextTarget.current === target) TextTarget.current = null }
+    androidx.compose.runtime.DisposableEffect(target) { onDispose { if (TextTarget.current === target) TextTarget.current = null } }
     Column(modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Label(label, Type.small)
         Spacer(Modifier.height(2.dp))
@@ -287,4 +293,10 @@ fun Tile(
             if (!subtitle.isNullOrEmpty()) Label(subtitle, Type.small)
         }
     }
+}
+
+/** Textfeld, das gerade ausgewählt ist (für Text von der Handy-Fernbedienung). Nur auf dem Oberflächen-Thread. */
+object TextTarget {
+    class Entry(val set: (String) -> Unit, val submit: () -> Unit)
+    var current: Entry? = null
 }
