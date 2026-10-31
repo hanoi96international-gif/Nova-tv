@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -294,6 +296,17 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
                 )
             )
             .onFocusChanged { expanded = it.hasFocus }
+            // ▲/▼ am Anfang oder Ende der Leiste bleiben in ihr (sprangen sonst schräg in den Inhalt daneben, z. B. von
+            // „Einstellungen“ auf den untersten Bereich der Einstellungen). Hinein geht es mit OK oder ▶.
+            .focusProperties {
+                onExit = {
+                    if (requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Up ||
+                        requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Down
+                    ) cancelFocusChange()
+                }
+            }
+            // Eigene Gruppe außen herum: focusRestorer setzt sein eigenes onExit und würde das obere sonst ersetzen.
+            .focusGroup()
             .focusRestorer()
             // Passt sie nicht ganz auf den Bildschirm (viele Bereiche, kleiner Bildschirm), lässt sie sich scrollen.
             .verticalScroll(androidx.compose.foundation.rememberScrollState())
