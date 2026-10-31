@@ -118,6 +118,7 @@ fun App(app: AppState, window: WindowState) {
     val status by app.sync.status.collectAsState()
     val root = remember { FocusRequester() }
     var rootFocused by remember { mutableStateOf(false) }
+    var rootHasFocus by remember { mutableStateOf(false) }
     val source = app.input.source
 
     fun toggleFullscreen() {
@@ -128,13 +129,19 @@ fun App(app: AppState, window: WindowState) {
 
     // Erste Taste der Fire-TV-Fernbedienung: kurz bestätigen, dass sie erkannt wurde.
     LaunchedEffect(source?.deviceName) { if (source != null) app.toast("✓ ${source.label} erkannt") }
-    // Beim Start etwas auswählen, damit Pfeiltasten und Fernbedienung sofort wirken.
-    LaunchedEffect(Unit) { runCatching { root.requestFocus() } }
+    // Beim Start etwas auswählen, damit Pfeiltasten und Fernbedienung sofort wirken. Geht die Auswahl verloren
+    // (ausgewähltes Element verschwindet: Player oder Menü geschlossen), fängt die Oberfläche sie wieder auf –
+    // sonst kämen Tasten der Fernbedienung nirgends an, bis jemand mit der Maus klickt.
+    LaunchedEffect(rootHasFocus) {
+        if (rootHasFocus) return@LaunchedEffect
+        kotlinx.coroutines.delay(120)
+        if (!rootHasFocus) runCatching { root.requestFocus() }
+    }
 
     Box(
         Modifier.fillMaxSize().background(Palette.background)
             .focusRequester(root)
-            .onFocusChanged { rootFocused = it.isFocused }
+            .onFocusChanged { rootFocused = it.isFocused; rootHasFocus = it.hasFocus }
             .focusable()
             .onKeyEvent { e ->
                 // Was kein Element selbst nutzt: Pfeiltasten wechseln den Fokus, Zurück geht eine Ebene zurück,

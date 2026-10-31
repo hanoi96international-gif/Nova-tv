@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.desktop.data.BackupImport
 import de.ayutv.desktop.data.Channel
+import de.ayutv.desktop.data.GroupRef
 import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Series
 import de.ayutv.desktop.data.Store
@@ -84,6 +85,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     var openSeries by mutableStateOf<Series?>(null)
     var message by mutableStateOf<String?>(null); private set
     private var messageJob: Job? = null
+    /** Live TV: zuletzt gewählte Gruppe und Sender (nach dem Schauen geht es dort weiter). */
+    var liveGroup: GroupRef? = null
+    var liveFocus: String? = null
     /** Länderauswahl anbieten (nach dem ersten Laden). */
     var askCountries by mutableStateOf(false)
 

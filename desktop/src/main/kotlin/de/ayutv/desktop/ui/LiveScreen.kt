@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -55,8 +56,10 @@ fun LiveScreen(app: AppState) {
     val guide by store.guide.collectAsState()
     val playlists by store.playlists.collectAsState()
 
-    var group by remember { mutableStateOf<GroupRef>(if (user.favorites.isNotEmpty()) GroupRef.Favorites else GroupRef.All) }
-    var focusedKey by remember { mutableStateOf<String?>(null) }
+    var group by remember { mutableStateOf(app.liveGroup ?: if (user.favorites.isNotEmpty()) GroupRef.Favorites else GroupRef.All) }
+    var focusedKey by remember { mutableStateOf(app.liveFocus) }
+    LaunchedEffect(group) { app.liveGroup = group }
+    LaunchedEffect(focusedKey) { app.liveFocus = focusedKey }
     // Auswahl für Mehrfachauswahl; Verschieben bewegt die ausgewählten (oder den einen) Sender.
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
@@ -223,6 +226,16 @@ fun LiveScreen(app: AppState) {
                 } else {
                     val listState = rememberLazyListState()
                     val firstRow = remember { FocusRequester() }
+                    // Zurück aus dem Player: beim zuletzt gewählten Sender weitermachen.
+                    val restoreKey = remember { app.liveFocus?.takeIf { k -> shown.any { it.key == k } } }
+                    val restore = remember { FocusRequester() }
+                    LaunchedEffect(Unit) {
+                        val at = shown.indexOfFirst { it.key == restoreKey }
+                        if (at < 0) return@LaunchedEffect
+                        listState.scrollToItem((at - 3).coerceAtLeast(0))
+                        withFrameNanos { }
+                        runCatching { restore.requestFocus() }
+                    }
                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().onPreviewKeyEvent { e ->
                         val list = moving
                         if (list == null || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -246,7 +259,11 @@ fun LiveScreen(app: AppState) {
                                 subtitle = programme?.let { "${clock(it.start)}  ${it.title}" },
                                 trailing = if (group == GroupRef.All || group == GroupRef.Favorites || group is GroupRef.Custom) channel.group else null,
                                 selected = channel.key == focusedKey || (moving != null && channel.key in selected),
-                                focusRequester = if (index == 0) firstRow else null,
+                                focusRequester = when {
+                                    channel.key == restoreKey -> restore
+                                    index == 0 -> firstRow
+                                    else -> null
+                                },
                                 onMenu = { if (moving == null) channelMenu(channel) },
                                 onClick = {
                                     when {
