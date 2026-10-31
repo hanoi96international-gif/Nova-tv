@@ -14,13 +14,19 @@ import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Series
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
+import de.ayutv.desktop.data.TimingMark
+import de.ayutv.desktop.player.SubtitleFiles
 import de.ayutv.desktop.player.Subtitles
-import de.ayutv.desktop.remote.PhoneRemote
 import de.ayutv.desktop.player.VideoPlayer
+import de.ayutv.desktop.remote.PhoneRemote
+import de.ayutv.player.SpeechSync
+import de.ayutv.player.SubtitleTiming
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class Screen(val label: String, val icon: String) {
     LIVE("Live TV", "📺"),
@@ -96,6 +102,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     }
 
     fun play(playback: Playback) {
+        stopAligning()
+        // Ton nur abgreifen, wenn Untertitel ausgerichtet werden sollen (sonst gibt VLC den Ton selbst aus).
+        player.tapAudio = false
         playing = playback
         when (playback) {
             is Playback.Live -> {
@@ -107,6 +116,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     }
 
     fun stopPlayback() {
+        stopAligning()
         savePosition()
         player.stop()
         playing = null
@@ -121,17 +131,95 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         store.savePosition(vod.key, if (duration > 0 && position > duration - 60_000) 0 else position, duration)
     }
 
-    /** Untertitel in der eingestellten Sprache suchen (OpenSubtitles, sonst DeepL) und einblenden. */
+    /** Stand der Ausrichtung am Ton (für die Leiste im Player; null = keine Untertitel geladen). */
+    var subtitleSync by mutableStateOf<String?>(null); private set
+    private var alignJob: Job? = null
+
+    private fun stopAligning() {
+        alignJob?.cancel()
+        alignJob = null
+        subtitleSync = null
+    }
+
+    /**
+     * Untertitel in der eingestellten Sprache suchen (OpenSubtitles, sonst DeepL), einblenden und am Ton ausrichten:
+     * Wie auf dem Fire TV werden die Sprechpausen des Films mit den Einblendungen verglichen; nach rund 1,5 Minuten
+     * Gespräch sitzt der Versatz (auch bei anderer Bildrate). Die Ausrichtung wird je Film gemerkt.
+     */
     fun loadSubtitles(vod: Playback.Vod) = scope.launch {
         val user = store.user.value
         runCatching {
             subtitles.find(vod.key, vod.title, user.subtitleLanguage.ifBlank { "de" }, user.openSubtitlesKey, user.deeplKey) { toast(it) }
         }.onSuccess { found ->
-            if (playing == vod || (playing as? Playback.Vod)?.key == vod.key) {
-                player.addSubtitleFile(found.file)
-                toast("Untertitel eingeblendet (${found.source}). G/H verschiebt sie.")
+            if ((playing as? Playback.Vod)?.key != vod.key) return@onSuccess
+            val text = withContext(Dispatchers.IO) { found.file.readText() }
+            val cues = SubtitleFiles.cues(text)
+            val known = user.subtitleTimings[vod.key]?.let { SubtitleTiming(it.ratio, it.offsetMs) }
+            if (known != null) {
+                showSubtitles(vod, found.file, text, known)
+                toast("Untertitel eingeblendet (${found.source}), wie beim letzten Mal ausgerichtet.")
+                subtitleSync = "Ausgerichtet (gemerkt)"
+                return@onSuccess
             }
+            player.addSubtitleFile(found.file)
+            toast("Untertitel eingeblendet (${found.source}). Sie richten sich gleich am Ton aus.")
+            align(vod, found.file, text, cues)
         }.onFailure { toast(it.message ?: "Keine Untertitel") }
+    }
+
+    private suspend fun showSubtitles(vod: Playback.Vod, file: java.io.File, text: String, timing: SubtitleTiming) {
+        val aligned = java.io.File(file.parentFile, file.nameWithoutExtension + ".sync.srt")
+        withContext(Dispatchers.IO) { aligned.writeText(SubtitleFiles.shifted(text, timing)) }
+        if ((playing as? Playback.Vod)?.key == vod.key) player.addSubtitleFile(aligned)
+    }
+
+    private fun align(vod: Playback.Vod, file: java.io.File, text: String, cues: List<Pair<Long, Long>>) {
+        alignJob?.cancel()
+        alignJob = scope.launch {
+            if (cues.size < 20) {
+                subtitleSync = "Zu wenige Einblendungen zum Ausrichten"
+                return@launch
+            }
+            // Für die Auswertung den Ton selbst ausgeben: kurz an derselben Stelle neu starten.
+            if (!player.tapAudio) {
+                player.tapAudio = true
+                val position = player.positionMs
+                player.play(vod.url, Sync.USER_AGENT, position, *Network.vlcOptions(vod.url).toTypedArray())
+                delay(1_500)
+                player.addSubtitleFile(file)
+            }
+            var applied: SubtitleTiming? = null
+            var lastHeard = -1
+            while (true) {
+                delay(10_000)
+                if (!player.playing) continue
+                val heard = player.speech.seconds()
+                if (heard < SpeechSync.MIN_SECONDS) {
+                    if (applied == null) subtitleSync = "Hört zu: $heard von ${SpeechSync.MIN_SECONDS} Sekunden Ton"
+                    continue
+                }
+                if (heard == lastHeard) continue
+                lastHeard = heard
+                val position = player.positionMs
+                val fit = withContext(Dispatchers.Default) {
+                    SpeechSync.estimate(player.speech.signal(position - WINDOW_MS, position + 5_000), cues)
+                }
+                if (fit == null) {
+                    if (applied == null) subtitleSync = "${heard / 60} min Ton geprüft, noch kein eindeutiger Takt – prüft weiter"
+                    continue
+                }
+                val timing = fit.timing
+                // Nur neu einblenden, wenn sich an der aktuellen Stelle wirklich etwas ändert.
+                val now = applied
+                if (now != null && kotlin.math.abs(timing.toVideo(position) - now.toVideo(position)) < 250) continue
+                showSubtitles(vod, file, text, timing)
+                applied = timing
+                store.updateUser { it.copy(subtitleTimings = it.subtitleTimings + (vod.key to TimingMark(timing.ratio, timing.offsetMs))) }
+                val shift = "%+.1f s".format(java.util.Locale.GERMAN, timing.offsetMs / 1000.0) + if (timing.ratio != 1.0) ", Bildrate angepasst" else ""
+                subtitleSync = "Am Ton ausgerichtet ($shift)"
+                toast("Untertitel am Ton ausgerichtet ($shift)")
+            }
+        }
     }
 
     fun back(): Boolean {
@@ -148,6 +236,11 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     fun syncNow() = scope.launch {
         runCatching { sync.syncAll() }.onFailure { toast("Laden fehlgeschlagen: ${it.message}") }
         applyProxy()
+    }
+
+    private companion object {
+        /** So viel gehörter Ton (rückwärts ab jetzt) zählt für die Ausrichtung. */
+        const val WINDOW_MS = 15 * 60_000L
     }
 
     fun close() {

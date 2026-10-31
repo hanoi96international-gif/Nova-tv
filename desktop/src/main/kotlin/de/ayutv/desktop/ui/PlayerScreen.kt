@@ -230,7 +230,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
             ) {
                 when (playback) {
                     is Playback.Live -> LiveBar(playback, guide[playback.channel.key].orEmpty(), player.volume)
-                    is Playback.Vod -> VodBar(playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, ::playNext) { player.seekTo(it) }
+                    is Playback.Vod -> VodBar(playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync, ::playNext) { player.seekTo(it) }
                 }
             }
             Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
@@ -286,6 +286,7 @@ private fun VodBar(
     playing: Boolean,
     volume: Int,
     hasNext: Boolean,
+    subtitleSync: String?,
     onNext: () -> Unit,
     onSeek: (Long) -> Unit,
 ) {
@@ -300,6 +301,7 @@ private fun VodBar(
         Spacer(Modifier.height(4.dp))
         Row {
             Label("${if (playing) "▶" else "⏸"}  ${duration(position)} / ${duration(duration)}", Type.body, Modifier.weight(1f))
+            subtitleSync?.let { Label("💬 $it   ", Type.small) }
             Label("🔊 $volume %   ←/→ 10 s (Umschalt: 1 min)", Type.small)
         }
     }

@@ -78,6 +78,8 @@ Im selben [Release](../../releases/latest) liegt die Windows-App (Windows 10/11,
 
 Einrichten: *Einstellungen → Sicherung übernehmen …* holt Playlists, Favoriten, eigene Gruppen und Reihenfolgen direkt vom Fire TV (Adresse aus „Einrichtung per Handy“). Alternativ eine Playlist von Hand anlegen.
 
+Untertitel (Taste L oder „💬 DE laden“ im Player) kommen von OpenSubtitles oder per DeepL übersetzt und richten sich wie auf dem Fire TV nach rund 1,5 Minuten Gespräch selbst am Ton aus (auch bei anderer Bildrate); die Ausrichtung wird je Film gemerkt.
+
 Bedienung: Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur oder Bluetooth-Fernbedienung (Pfeiltasten, Enter, Esc) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
 
 Gebaut wird sie aus `desktop/` (Kotlin + Compose Desktop, Wiedergabe über VLC) mit denselben Lesern für M3U, Xtream, TV-Guide und Sicherung wie die Fire-TV-App: `./gradlew -p desktop run` bzw. `./gradlew -p desktop packageMsi`.

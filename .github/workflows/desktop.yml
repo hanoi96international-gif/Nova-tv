@@ -11,6 +11,8 @@ on:
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
       - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/src/main/java/de/ayutv/data/net/**"
+      - "app/src/main/java/de/ayutv/player/SpeechSync.kt"
+      - "app/src/main/java/de/ayutv/player/SubtitleSync.kt"
       - "app/build.gradle.kts"
       - ".github/workflows/desktop.yml"
   pull_request:
@@ -21,6 +23,8 @@ on:
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
       - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/src/main/java/de/ayutv/data/net/**"
+      - "app/src/main/java/de/ayutv/player/SpeechSync.kt"
+      - "app/src/main/java/de/ayutv/player/SubtitleSync.kt"
       - "app/build.gradle.kts"
       - ".github/workflows/desktop.yml"
   workflow_dispatch:
