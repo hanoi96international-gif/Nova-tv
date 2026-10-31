@@ -55,6 +55,7 @@ sourceSets {
             "de/ayutv/data/parse/KeyRescue.kt",
             "de/ayutv/data/parse/PlaylistIdentity.kt",
             "de/ayutv/data/parse/StreamingApps.kt",
+            "de/ayutv/data/parse/StreamBadges.kt",
             "de/ayutv/data/remote/SyncMerge.kt",
             "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
             "de/ayutv/data/parse/Srt.kt",

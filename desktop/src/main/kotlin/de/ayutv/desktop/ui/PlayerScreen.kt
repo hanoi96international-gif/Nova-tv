@@ -395,7 +395,22 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 when (playback) {
                     is Playback.Live -> {
                         val shown = app.zapTarget ?: playback.channel
-                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs)
+                        // Kennzeichen (4K, HDR, 50 fps, Dolby) alle 2 s aus der Stream-Info, solange die Leiste offen ist.
+                        val badges by androidx.compose.runtime.produceState(emptyList<String>(), shown.key) {
+                            while (true) {
+                                value = player.streamInfo()?.let { i ->
+                                    val hdr = when (player.transfer) {
+                                        de.ayutv.desktop.player.YuvVideo.Transfer.PQ -> "HDR10"
+                                        de.ayutv.desktop.player.YuvVideo.Transfer.HLG -> "HLG"
+                                        else -> ""
+                                    }
+                                    de.ayutv.data.parse.StreamBadges.video(i.height, i.fps.toFloat(), hdr) +
+                                        listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(i.audioCodec, i.audioChannels))
+                                }.orEmpty()
+                                kotlinx.coroutines.delay(2_000)
+                            }
+                        }
+                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs, badges)
                     }
                     is Playback.Vod -> VodBar(
                         playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
@@ -541,7 +556,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
 }
 
 @Composable
-private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long) {
+private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long, badges: List<String> = emptyList()) {
     val now = System.currentTimeMillis()
     val current = programmes.firstOrNull { it.start <= now && it.stop > now }
     val next = programmes.firstOrNull { it.start >= (current?.stop ?: now) }
@@ -552,9 +567,17 @@ private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Prog
             Column(Modifier.weight(1f)) {
                 val index = live.list.indexOfFirst { it.key == channel.key }
                 val number = channel.number.takeIf { it > 0 } ?: (index + 1)
-                Label("${if (number > 0) "$number  " else ""}${channel.name}${if (favorite) "  ★" else ""}", Type.title)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Label("${if (number > 0) "$number  " else ""}${channel.name}${if (favorite) "  ★" else ""}", Type.title)
+                    badges.forEach { b ->
+                        Spacer(Modifier.width(8.dp))
+                        Label(b, Type.small, Modifier.background(Palette.accentSoft, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 1.dp), color = Palette.text)
+                    }
+                }
                 if (current != null) {
-                    Label("${clock(current.start)} – ${clock(current.stop)}   ${current.title}", Type.heading)
+                    val rest = de.ayutv.data.parse.StreamBadges.remaining(current.stop)?.let { "  ·  $it" }.orEmpty()
+                    Label("${clock(current.start)} – ${clock(current.stop)}$rest", Type.small, color = Palette.secondary)
+                    Label(current.title, Type.heading)
                     Spacer(Modifier.height(6.dp))
                     Progress(current.fraction())
                 } else {
