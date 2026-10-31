@@ -144,6 +144,9 @@ class BackupImport(private val store: Store) {
         // Schlüssel aus den Einstellungen (alle Gruppen durchsuchen).
         val settings = (root["settings"] as? JsonObject)?.values?.mapNotNull { it as? JsonObject }.orEmpty()
         fun setting(key: String) = settings.firstNotNullOfOrNull { it[key]?.jsonPrimitive?.contentOrNull?.takeIf { v -> v.isNotBlank() } }
+        fun flag(key: String) = setting(key)?.toBooleanStrictOrNull()
+        fun <T : Enum<T>> choice(key: String, current: T): T =
+            setting(key)?.let { name -> current.declaringJavaClass.enumConstants.firstOrNull { it.name == name } } ?: current
 
         // Proxy (Fire TV: Einstellungen → Proxy). Das Passwort steht nur in Sicherungen mit Passwort.
         val proxyIds = settings.firstNotNullOfOrNull { it["proxy_playlists"] as? JsonArray }.orEmpty()
@@ -169,6 +172,27 @@ class BackupImport(private val store: Store) {
                 openSubtitlesKey = setting("opensubtitles_key") ?: u.openSubtitlesKey,
                 deeplKey = setting("deepl_key") ?: u.deeplKey,
                 subtitleLanguage = setting("subtitle_language_code") ?: u.subtitleLanguage,
+                // Einstellungen, die es auch unter Windows gibt (gleiche Namen wie in der Fire-TV-App).
+                buffer = choice("buffer_profile", u.buffer),
+                liveFormat = choice("live_format", u.liveFormat),
+                matchFrameRate = flag("match_frame_rate") ?: u.matchFrameRate,
+                userAgent = setting("user_agent") ?: u.userAgent,
+                zapWithUpDown = flag("zap_up_down") ?: u.zapWithUpDown,
+                guideShiftHours = setting("epg_shift_hours")?.toIntOrNull() ?: u.guideShiftHours,
+                subtitlesAuto = flag("subtitles_auto_on") ?: u.subtitlesAuto,
+                subtitleSize = choice("subtitle_size", u.subtitleSize),
+                subtitleColor = choice("subtitle_color", u.subtitleColor),
+                subtitleBackground = choice("subtitle_background", u.subtitleBackground),
+                subtitlePosition = choice("subtitle_position", u.subtitlePosition),
+                audioMode = choice("audio_mode", u.audioMode),
+                normalizeVolume = flag("loudness_level") ?: u.normalizeVolume,
+                autoNextEpisode = flag("auto_next_episode") ?: u.autoNextEpisode,
+                theme = when (setting("ui_theme")) {
+                    "NORDLICHT" -> Theme.NORDLICHT
+                    "HANNOVER" -> Theme.HANNOVER
+                    "CLASSIC" -> Theme.STANDARD
+                    else -> u.theme
+                },
             )
         }
         return Result(ids.size, added, groups, missing, proxy?.let { it.password.isNotEmpty() || it.user.isEmpty() }, encrypted)

@@ -1,5 +1,6 @@
 package de.ayutv.desktop
 
+import de.ayutv.desktop.player.PlayerConfig
 import de.ayutv.desktop.player.VideoPlayer
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -21,9 +22,17 @@ object SelfTest {
             VideoPlayer().release()
             val firstMs = System.currentTimeMillis() - first
             val second = System.currentTimeMillis()
-            val player = VideoPlayer()
+            val player = VideoPlayer(PlayerConfig.EVERYTHING)
             val secondMs = System.currentTimeMillis() - second
             lines += "vlc=${player.vlcVersion ?: "fehlt"} ${player.error.orEmpty()}".trim()
+            // Jede Einstellung aus den Einstellungen muss VLC kennen (sonst startet es mit ihr gar nicht).
+            var optionsOk = true
+            for (variant in PlayerConfig.VARIANTS) {
+                val probe = VideoPlayer(variant)
+                lines += "options ${variant.vlcOptions().joinToString(" ")}: " + (probe.configProblem ?: if (probe.available) "OK" else "fehlt")
+                if (probe.configProblem != null || !probe.available) optionsOk = false
+                probe.release()
+            }
             lines += "vlc_start_ms first=$firstMs second=$secondMs"
             if (player.available) {
                 val image = File.createTempFile("dna-tv-test", ".png")
@@ -36,7 +45,7 @@ object SelfTest {
                 while (player.framesRendered.get() == 0L && System.currentTimeMillis() < until) Thread.sleep(200)
                 Thread.sleep(300)
                 lines += "frames=${player.framesRendered.get()} playing=${player.playing} error=${player.error}"
-                ok = player.framesRendered.get() > 0
+                ok = player.framesRendered.get() > 0 && optionsOk
                 player.release()
                 image.delete()
             }

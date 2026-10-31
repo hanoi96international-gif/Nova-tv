@@ -11,6 +11,7 @@ import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
 import org.jetbrains.skia.ImageInfo
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
+import uk.co.caprica.vlcj.player.base.Equalizer
 import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
 import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer
@@ -28,7 +29,7 @@ import javax.swing.SwingUtilities
  * an die Oberfläche übergeben ([frame]); so liegen Senderinfo, Untertitel und Steuerleiste über dem Video.
  * VLC spielt praktisch jedes Format (TS, HLS, MKV, HEVC, Dolby, DTS) und kümmert sich um Pufferung und Neuverbinden.
  */
-class VideoPlayer {
+class VideoPlayer(initial: PlayerConfig = PlayerConfig()) {
     /** Letztes Bild (null = noch keins). */
     var frame by mutableStateOf<ImageBitmap?>(null); private set
     var playing by mutableStateOf(false); private set
@@ -41,18 +42,56 @@ class VideoPlayer {
     var audioTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
     var subtitleTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
 
-    private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*(VLC_OPTIONS + cacheOptions())) }
-        .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
+    /** Einstellungen, mit denen VLC gerade läuft (Bild, Ton, Untertitel-Aussehen). */
+    private var built: PlayerConfig? = null
+    /** Gewünschte Einstellungen; weichen sie von [built] ab, startet VLC beim nächsten [play] damit neu. */
+    var config = initial
+
+    private var factory: MediaPlayerFactory? = null
     // Vor den Playern anlegen: [prepare] braucht sie schon beim Anlegen von [normal].
     private val format = Format()
     private val render = Render()
 
     /** Normaler Player: VLC gibt den Ton selbst aus (auch Raumklang/Durchreichen). */
-    private val normal: EmbeddedMediaPlayer? = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also(::prepare)
+    private var normal: EmbeddedMediaPlayer? = null
     /** Player mit abgegriffenem Ton ([AudioTap]), für das Ausrichten der Untertitel; erst bei Bedarf angelegt. */
     private var tapped: EmbeddedMediaPlayer? = null
     /** Der gerade benutzte der beiden. */
-    private var player: EmbeddedMediaPlayer? = normal
+    private var player: EmbeddedMediaPlayer? = null
+    private var equalizer: Equalizer? = null
+
+    /** Nicht null: Die Einstellungen ließen VLC nicht starten (läuft mit Grundeinstellung). */
+    var configProblem by mutableStateOf<String?>(null); private set
+
+    init {
+        build(config)
+    }
+
+    /**
+     * VLC mit [wanted] (neu) starten. Kennt das mitgelieferte VLC eine Einstellung nicht, startet es sonst gar nicht:
+     * dann ohne die Einstellungen (Grundeinstellung) und [configProblem] setzen.
+     */
+    private fun build(wanted: PlayerConfig) {
+        runCatching { normal?.controls()?.stop() }
+        runCatching { tapped?.controls()?.stop() }
+        runCatching { normal?.release() }
+        runCatching { tapped?.release() }
+        runCatching { factory?.release() }
+        normal = null; tapped = null; player = null; equalizer = null
+        val base = VLC_OPTIONS + cacheOptions()
+        factory = runCatching { MediaPlayerFactory(*(base + wanted.vlcOptions().toTypedArray())) }
+            .onSuccess { configProblem = null }
+            .recoverCatching { first ->
+                MediaPlayerFactory(*base).also { configProblem = "VLC kennt eine Einstellung nicht (${first.message}); Grundeinstellung aktiv." }
+            }
+            .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
+        built = wanted
+        normal = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also(::prepare)
+        player = normal
+        equalizer = wanted.equalizerBands()?.let { bands ->
+            runCatching { factory?.equalizer()?.newEqualizer()?.apply { bands.forEachIndexed { i, db -> if (i < bandCount()) setAmp(i, db) } } }.getOrNull()
+        }
+    }
 
     /** Sprechpausen aus dem Ton (nur, solange [tapAudio] an ist). */
     val speech = SpeechActivity()
@@ -62,7 +101,7 @@ class VideoPlayer {
     var tapAudio = false
 
     /** VLC-Version (null = VLC nicht geladen). */
-    val vlcVersion: String? = runCatching { factory?.application()?.version() }.getOrNull()
+    val vlcVersion: String? get() = runCatching { factory?.application()?.version() }.getOrNull()
     /** Gezeigte Bilder (für den Selbsttest). */
     val framesRendered = java.util.concurrent.atomic.AtomicLong()
 
@@ -88,6 +127,7 @@ class VideoPlayer {
                 playing = true; buffering = false; error = null; readTracks()
                 // Lautstärke gilt je Player: beim Wechsel mitnehmen.
                 if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
+                applyRuntime(mediaPlayer)
             }
             override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
             override fun stopped(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
@@ -112,6 +152,8 @@ class VideoPlayer {
     val available: Boolean get() = player != null
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
+        val current = built
+        if (current == null || config.vlcOptions() != current.vlcOptions() || config.equalizerBands() != current.equalizerBands()) build(config)
         val next = (if (tapAudio) tappedPlayer() else normal) ?: return
         if (next !== player) runCatching { player?.controls()?.stop() }
         player = next
@@ -127,7 +169,10 @@ class VideoPlayer {
         val options = buildList {
             userAgent?.let { add(":http-user-agent=$it") }
             if (startMs > 0) add(":start-time=${startMs / 1000.0}")
-            add(":network-caching=$NETWORK_CACHE_MS")
+            add(":network-caching=${config.networkCachingMs}")
+            add(":live-caching=${config.networkCachingMs}")
+            if (config.audioLanguage.isNotBlank()) add(":audio-language=${config.audioLanguage}")
+            if (config.subtitleLanguage.isNotBlank()) add(":sub-language=${config.subtitleLanguage}")
             addAll(extra)
         }
         p.media().play(url, *options.toTypedArray())
@@ -154,6 +199,27 @@ class VideoPlayer {
     }
 
     fun toggleMute() = player?.audio()?.mute()
+
+    /** Lautstärke vom letzten Mal (vor dem ersten Abspielen). */
+    fun restoreVolume(value: Int) {
+        volume = value.coerceIn(0, 150)
+    }
+
+    /** Ton-Versatz und Klang sofort übernehmen (ohne Neustart). */
+    fun applyRuntime(p: MediaPlayer? = player) {
+        val mp = p ?: return
+        runCatching { mp.audio().setDelay(config.audioDelayMs * 1000) }
+        if (equalizer != null) runCatching { mp.audio().setEqualizer(equalizer) }
+    }
+
+    /** Ein Untertitel ist eingeschaltet (eingebaut oder Datei). */
+    fun subtitleActive(): Boolean = runCatching { (player?.subpictures()?.track() ?: -1) >= 0 }.getOrDefault(false)
+
+    /** Bildrate des laufenden Videos (0 = noch unbekannt). */
+    fun frameRate(): Double = runCatching {
+        val track = player?.media()?.info()?.videoTracks()?.firstOrNull() ?: return 0.0
+        if (track.frameRateBase() > 0) track.frameRate().toDouble() / track.frameRateBase() else 0.0
+    }.getOrDefault(0.0)
 
     fun selectAudio(id: Int) = player?.audio()?.setTrack(id)
     fun selectSubtitle(id: Int) = player?.subpictures()?.setTrack(id)
@@ -230,8 +296,7 @@ class VideoPlayer {
     private inline fun ui(crossinline block: () -> Unit) = SwingUtilities.invokeLater { block() }
 
     companion object {
-        private const val NETWORK_CACHE_MS = 3_000
-        private val VLC_OPTIONS = arrayOf("--quiet", "--no-video-title-show", "--http-reconnect", "--avcodec-hw=any")
+        private val VLC_OPTIONS = arrayOf("--quiet", "--no-video-title-show", "--http-reconnect")
 
         /**
          * Mitgeliefertes VLC (im App-Ordner, Unterordner „vlc“) vor dem ersten Player bekannt machen. Ohne eigenes VLC

@@ -26,12 +26,16 @@ kotlin {
 val keyResources = layout.buildDirectory.dir("generated/keys")
 val writeKeys by tasks.registering {
     val key = providers.environmentVariable("OPENSUBTITLES_API_KEY").orElse("")
+    val versionName = appVersionName
     inputs.property("keyHash", key.map { it.trim().hashCode() })
+    inputs.property("version", versionName)
     outputs.dir(keyResources)
     doLast {
         val file = keyResources.get().file("opensubtitles.key").asFile
         file.parentFile.mkdirs()
         file.writeText(key.get().trim())
+        // Versionsnummer für „Nach Updates suchen“.
+        keyResources.get().file("version.txt").asFile.writeText(versionName)
     }
 }
 

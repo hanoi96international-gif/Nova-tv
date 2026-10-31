@@ -194,13 +194,17 @@ fun App(app: AppState, window: WindowState) {
 
     // Beim Start: Playlists auffrischen, wenn der letzte Abgleich älter als 12 Stunden ist.
     LaunchedEffect(Unit) {
+        val user = app.store.user.value
+        if (user.startMaximized) window.placement = WindowPlacement.Maximized
+        // Wie ein Fernseher: mit dem letzten Sender starten (Einstellung).
+        if (user.resumeLastChannel) user.recent.firstNotNullOfOrNull { app.store.channel(it) }?.let { app.play(Playback.Live(it, app.store.allVisible())) }
         val stale = app.store.playlists.value.any { it.enabled && System.currentTimeMillis() - it.lastSync > 12 * 3_600_000L }
         if (stale) app.syncNow()
         else if (app.store.guide.value.isEmpty() && app.store.playlists.value.isNotEmpty()) runCatching { app.sync.syncGuide() }
     }
 
     Box(
-        Modifier.fillMaxSize().background(Palette.background).onPreviewKeyEvent { e ->
+        Modifier.fillMaxSize().background(Palette.background).background(Palette.backdrop).onPreviewKeyEvent { e ->
             // F11 immer, auch während ein Eingabefeld den Fokus hat.
             if (e.key != Key.F11 || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             // Im Player: Vollbild-Fenster; sonst das Hauptfenster maximieren.
@@ -255,7 +259,7 @@ fun App(app: AppState, window: WindowState) {
 @Composable
 private fun Sidebar(app: AppState, window: WindowState) {
     val first = remember { FocusRequester() }
-    Column(Modifier.width(200.dp).fillMaxHeight().background(Palette.surface).padding(10.dp)) {
+    Column(Modifier.width(200.dp).fillMaxHeight().background(Palette.surface.copy(alpha = 0.75f)).padding(10.dp)) {
         Label("DnA-TV", Type.title, Modifier.padding(start = 12.dp, top = 8.dp, bottom = 16.dp))
         Screen.entries.forEachIndexed { index, screen ->
             ListRow(
