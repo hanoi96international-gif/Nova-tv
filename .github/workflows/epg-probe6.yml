@@ -1,0 +1,67 @@
+name: EPG-Probe-6
+on:
+  push:
+    branches: [epg-probe6]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: MagentaTV und Dyn
+        run: |
+          set +e
+          mkdir out && cd out
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          D=$(date -u +%Y%m%d)
+          M=https://api.prod.sngtv.magentatv.de/EPG/JSON
+          curl -sS -m 60 -A "$UA" -D auth_headers.txt -o auth.json -X POST "$M/Authenticate?SID=firstup&T=Windows_chrome_118" \
+            -H "Content-Type: application/json" \
+            --data '{"terminalid":"00:00:00:00:00:00","mac":"00:00:00:00:00:00","terminaltype":"WEBTV","utcEnable":1,"timezone":"Etc/GMT0","userType":3,"terminalvendor":"Unknown"}'
+          TOKEN=$(python3 -c "import json;print(json.load(open('auth.json')).get('csrfToken',''))")
+          COOKIE=$(grep -i '^set-cookie' auth_headers.txt | sed 's/^[Ss]et-[Cc]ookie: *//; s/;.*//' | grep -E 'JSESSIONID|CSESSIONID|CSRFSESSION' | paste -sd';' -)
+          echo "TOKEN=${TOKEN:0:6}... COOKIE=$(echo $COOKIE | sed 's/=[^;]*/=x/g')" > magenta_auth.txt
+          curl -sS -m 60 -A "$UA" -o magenta_all.json -X POST "$M/AllChannel" -H "X_CSRFToken: $TOKEN" -H "Cookie: $COOKIE" -H "Content-Type: application/json" \
+            --data '{"channelNamespace":2,"filterlist":[{"key":"IsHide","value":"-1"}],"metaDataVer":"Channel/1.1","properties":[{"include":"/channellist/logicalChannel/contentId,/channellist/logicalChannel/name,/channellist/logicalChannel/chanNo","name":"logicalChannel"}],"returnSatChannel":0}'
+          python3 - <<'PY'
+          import json
+          d=json.load(open('magenta_all.json'))
+          ch=d.get('channellist',[])
+          open('magenta_channels.txt','w').write("\n".join("%s\t%s\t%s"%(c.get('contentId'),c.get('chanNo',''),c.get('name')) for c in ch))
+          print(len(ch))
+          PY
+          for id in 5075 4777 540; do
+            curl -sS -m 60 -A "$UA" -o "magenta_pb_$id.json" -X POST "$M/PlayBillList" -H "X_CSRFToken: $TOKEN" -H "Cookie: $COOKIE" -H "Content-Type: application/json" \
+              --data "{\"count\":-1,\"isFillProgram\":1,\"offset\":0,\"properties\":[{\"include\":\"endtime,genres,id,name,starttime,channelid,pictures,introduce,subName,seasonNum,subNum\",\"name\":\"playbill\"}],\"type\":2,\"begintime\":\"${D}000000\",\"channelid\":\"$id\",\"endtime\":\"${D}235959\"}"
+          done
+          # mehrere Sender in einer Abfrage?
+          curl -sS -m 60 -A "$UA" -o magenta_pb_multi.json -X POST "$M/PlayBillList" -H "X_CSRFToken: $TOKEN" -H "Cookie: $COOKIE" -H "Content-Type: application/json" \
+            --data "{\"count\":-1,\"isFillProgram\":1,\"offset\":0,\"properties\":[{\"include\":\"endtime,name,starttime,channelid\",\"name\":\"playbill\"}],\"type\":2,\"begintime\":\"${D}000000\",\"endtime\":\"${D}235959\"}"
+          head -c 3000 magenta_pb_5075.json > magenta_pb_5075.head.txt
+          head -c 3000 magenta_pb_multi.json > magenta_pb_multi.head.txt
+          # Dyn: Seiten der Sportarten
+          B=https://production-cdn.d3.dyn.sport/api
+          for p in sport_volleyball sport_handball sport_basketball sport_tischtennis sport_hockey; do
+            curl -sSL --compressed -m 60 -A "$UA" -o "dyn_$p.json" "$B/page?path=/$p&device=web_browser&sub=Anonymous"
+          done
+          for l in 2799 38606 56005 56006 84889; do curl -sSL --compressed -m 60 -A "$UA" -o "dyn_list_$l.json" "$B/lists/$l?device=web_browser&sub=Anonymous&page_size=100"; done
+          python3 - <<'PY'
+          import json, glob, re
+          out=open('dyn_summary.txt','w')
+          for f in sorted(glob.glob('dyn_*.json')):
+              s=open(f).read()
+              try: d=json.loads(s)
+              except Exception as e: out.write("%s: kein JSON %s\n"%(f,s[:200])); continue
+              ev=re.findall(r'"ScheduleStart","value":"([^"]*)"',s)
+              out.write("%s: %d Bytes, %d Termine\n"%(f,len(s),len(ev)))
+              for e in (d.get('entries') or []):
+                  lst=e.get('list') or {}
+                  out.write("   entry %s %s list=%s size=%s paging=%s\n"%(e.get('type'),e.get('title'),lst.get('id'),lst.get('size'),json.dumps(lst.get('paging'))[:200]))
+                  for it in (lst.get('items') or [])[:3]:
+                      cm={m['name']:m['value'] for m in it.get('customMetadata',[])}
+                      out.write("      %s | %s | %s | %s–%s | %s\n"%(it.get('type'),it.get('title'),cm.get('CompetitionName'),cm.get('ScheduleStart'),cm.get('ScheduleEnd'),it.get('path')))
+          PY
+          git init -q -b epg-probe6-results && git config user.name ci && git config user.email ci@users.noreply.github.com
+          rm -f auth_headers.txt auth.json
+          git add -A && git commit -qm results && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" epg-probe6-results
