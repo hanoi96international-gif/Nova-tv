@@ -191,6 +191,21 @@ class DeviceTourTest {
                 "sync=${container.playlists.state.value}"
         )
 
+        // 1b2. Denselben Zugang noch einmal eingeben (z. B. per Handy, anders geschrieben): keine zweite Playlist.
+        section("same_account") {
+            val before = runBlocking { container.db.playlists().all() }
+            val again = runBlocking {
+                container.playlists.add(
+                    PlaylistEntity(name = "Xtream", type = PlaylistType.XTREAM, url = XtreamClient.normalizeServer(base.uppercase().replace("HTTP://", "http://") + "/"), username = "ayu", password = "test")
+                )
+            }
+            val after = runBlocking { container.db.playlists().all() }
+            val original = before.first { it.name == "Xtream-Test" }
+            log("same_account: original=${original.id} again=$again before=${before.size} after=${after.size}")
+            assertTrue("Gleicher Zugang als neue Playlist angelegt", again == original.id && after.size == before.size)
+            assertTrue("Name der vorhandenen Playlist überschrieben", after.first { it.id == original.id }.name == "Xtream-Test")
+        }
+
         // 1c. Sport: ein Bundesliga-Spiel im TV-Guide erscheint in der Sport-Übersicht, Verein folgen setzt die Erinnerung.
         section("sport") {
             val channel = channels.firstOrNull { it.epgId == "hd.test" } ?: error("Testsender fehlt")

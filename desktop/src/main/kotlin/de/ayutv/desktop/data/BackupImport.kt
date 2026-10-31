@@ -64,7 +64,7 @@ class BackupImport(private val store: Store) {
             val type = runCatching { PlaylistType.valueOf(o.str("type").orEmpty()) }.getOrNull() ?: continue
             val url = o.str("url") ?: continue
             val username = o.str("username")
-            val existing = store.playlists.value.firstOrNull { it.type == type && it.url == url && it.username == username }
+            val existing = store.playlists.value.firstOrNull { de.ayutv.data.parse.PlaylistIdentity.same(it.type.name, it.url, it.username, type.name, url, username) }
             val password = o.str("password") ?: existing?.password
             if (type == PlaylistType.XTREAM && password.isNullOrEmpty()) missing++
             val playlist = Playlist(

@@ -99,8 +99,29 @@ class PlaylistRepository(
 
     val playlists = db.playlists().observeAll()
 
-    suspend fun add(playlist: PlaylistEntity): Long =
-        db.playlists().insert(playlist.copy(password = withContext(Dispatchers.Default) { Credentials.protect(playlist.password) }))
+    /**
+     * Playlist speichern. Gibt es denselben Zugang schon (gleicher Server und Benutzer bzw. gleiche Adresse, siehe
+     * [de.ayutv.data.parse.PlaylistIdentity]), wird der vorhandene aktualisiert (Passwort, EPG-Adresse, eingeschaltet)
+     * und seine Nummer zurückgegeben: Eigene Gruppen, Favoriten und Ausblendungen bleiben so an ihm hängen.
+     */
+    suspend fun add(playlist: PlaylistEntity): Long {
+        val password = withContext(Dispatchers.Default) { Credentials.protect(playlist.password) }
+        val same = findSame(playlist)
+        if (same == null) return db.playlists().insert(playlist.copy(password = password))
+        db.playlists().update(
+            same.copy(
+                password = password ?: same.password,
+                epgUrl = playlist.epgUrl ?: same.epgUrl,
+                enabled = true,
+            )
+        )
+        return same.id
+    }
+
+    /** Vorhandene Playlist mit demselben Zugang, sonst null. */
+    suspend fun findSame(playlist: PlaylistEntity): PlaylistEntity? = db.playlists().all().firstOrNull {
+        de.ayutv.data.parse.PlaylistIdentity.same(it.type.name, it.url, it.username, playlist.type.name, playlist.url, playlist.username)
+    }
 
     /** Einmalig: Passwörter aus älteren Versionen verschlüsselt ablegen. */
     suspend fun protectStoredPasswords() = withContext(Dispatchers.Default) {

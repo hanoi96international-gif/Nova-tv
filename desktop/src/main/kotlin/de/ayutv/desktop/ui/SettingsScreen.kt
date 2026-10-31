@@ -453,8 +453,12 @@ private fun PlaylistDialog(app: AppState, original: Playlist, onDismiss: () -> U
             Row {
                 TextButton("Speichern und laden", {
                     if (url.isBlank()) return@TextButton app.toast("Bitte die Adresse eintragen")
-                    val saved = original.copy(
-                        name = name.ifBlank { if (type == PlaylistType.XTREAM) "Xtream" else "M3U" }.trim(),
+                    // Denselben Zugang gibt es schon: den aktualisieren statt einen zweiten anlegen (eigene Gruppen bleiben).
+                    val same = if (!isNew) null else app.store.playlists.value.firstOrNull {
+                        de.ayutv.data.parse.PlaylistIdentity.same(it.type.name, it.url, it.username, type.name, url, username)
+                    }
+                    val saved = (same ?: original).copy(
+                        name = if (same != null && name.isBlank()) same.name else name.ifBlank { if (type == PlaylistType.XTREAM) "Xtream" else "M3U" }.trim(),
                         type = type,
                         url = url.trim(),
                         username = username.trim().takeIf { type == PlaylistType.XTREAM && it.isNotEmpty() },
@@ -462,6 +466,7 @@ private fun PlaylistDialog(app: AppState, original: Playlist, onDismiss: () -> U
                         epgUrl = epg.trim().ifEmpty { null },
                     )
                     app.store.savePlaylist(saved)
+                    if (same != null) app.toast("„${same.name}“ gibt es schon – aktualisiert, eigene Gruppen bleiben")
                     onDismiss()
                     app.scope.launch {
                         runCatching { app.sync.syncPlaylist(saved.id); app.sync.syncGuide() }

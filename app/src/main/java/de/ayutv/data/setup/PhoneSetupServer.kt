@@ -198,28 +198,28 @@ class PhoneSetupServer(private val container: AppContainer) {
         val lines = mutableListOf<KeyCheck.Line>()
         val m3u = field("m3u_url")
         if (m3u.isNotEmpty()) {
-            val id = container.playlists.add(
-                PlaylistEntity(name = field("m3u_name").ifEmpty { "Playlist" }, type = PlaylistType.M3U, url = m3u, epgUrl = field("epg_url").ifEmpty { null })
-            )
+            val entity = PlaylistEntity(name = field("m3u_name").ifEmpty { "Playlist" }, type = PlaylistType.M3U, url = m3u, epgUrl = field("epg_url").ifEmpty { null })
+            val known = container.playlists.findSame(entity)
+            val id = container.playlists.add(entity)
             container.scope.launch { container.playlists.sync(id) }
-            lines += KeyCheck.Line(true, "Playlist hinzugefügt, wird jetzt geladen")
+            lines += KeyCheck.Line(true, if (known != null) "Playlist „${known.name}“ gibt es schon – aktualisiert, eigene Gruppen bleiben" else "Playlist hinzugefügt, wird jetzt geladen")
         }
         val server = field("xt_server")
         if (server.isNotEmpty()) {
             val normalized = XtreamClient.normalizeServer(server)
             val error = container.playlists.verifyXtream(normalized, field("xt_user"), field("xt_password"))
             if (error == null) {
-                val id = container.playlists.add(
-                    PlaylistEntity(
-                        name = field("xt_name").ifEmpty { "Xtream" },
-                        type = PlaylistType.XTREAM,
-                        url = normalized,
-                        username = field("xt_user"),
-                        password = field("xt_password"),
-                    )
+                val entity = PlaylistEntity(
+                    name = field("xt_name").ifEmpty { "Xtream" },
+                    type = PlaylistType.XTREAM,
+                    url = normalized,
+                    username = field("xt_user"),
+                    password = field("xt_password"),
                 )
+                val known = container.playlists.findSame(entity)
+                val id = container.playlists.add(entity)
                 container.scope.launch { container.playlists.sync(id) }
-                lines += KeyCheck.Line(true, "Xtream-Zugang hinzugefügt, wird jetzt geladen")
+                lines += KeyCheck.Line(true, if (known != null) "Xtream-Zugang „${known.name}“ gibt es schon – aktualisiert, eigene Gruppen bleiben" else "Xtream-Zugang hinzugefügt, wird jetzt geladen")
             } else {
                 lines += KeyCheck.Line(false, "Xtream: $error")
             }
