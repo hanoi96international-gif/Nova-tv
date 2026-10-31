@@ -1,0 +1,23 @@
+CHANNEL Cinemax.Hits.us2 (54) Cinemax Hits
+CHANNEL Paramount+.with.Showtime.HD.us2 (59) Paramount+ with Showtime HD
+CHANNEL Starz.Cinema.HD.us2 (60) Starz Cinema HD
+CHANNEL Paramount+.with.Showtime.HD.(Pacific).us2 (57) Paramount+ with Showtime HD (Pacific)
+CHANNEL Cinemax.Classics.us2 (54) Cinemax Classics
+CHANNEL Amazon.Movies.us2 (46) Amazon Movies
+CHANNEL Cinemax.HD.us2 (51) Cinemax HD
+CHANNEL AFN.prime.Pacific.us2 (0) AFN prime Pacific
+CHANNEL The.Film.Detective.us2 (91) The Film Detective
+CHANNEL Cinema.Dinamita.us2 (45) Cinema Dinamita
+CHANNEL Cinema.Dinamita.(HD.Feed).us2 (45) Cinema Dinamita (HD Feed)
+CHANNEL Film.24h.us2 (47) Film 24h
+CHANNEL Cinemax.HD.(Pacific).us2 (51) Cinemax HD (Pacific)
+CHANNEL Cinemax.(Pacific).us2 (51) Cinemax (Pacific)
+CHANNEL Cinemax.Spanish.HD.us2 (52) Cinemax Spanish HD
+CHANNEL Cinemax.Action.us2 (54) Cinemax Action
+CHANNEL Paramount.Network.HD.us2 (78) Paramount Network HD
+CHANNEL Atreseries.us2 (69) Atreseries
+CHANNEL Cinema.One.us2 (50) Cinema One
+CHANNEL AFN.prime.Atlantic.us2 (0) AFN prime Atlantic
+CHANNEL Prime.Revenue.Frontier.us2 (190) Prime Revenue Frontier
+CHANNEL 88.Films.us2 (59) 88 Films
+CHANNEL Filmrise.Mysteries.us2 (104) Filmrise Mysteries

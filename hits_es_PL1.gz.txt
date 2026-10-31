@@ -1,0 +1,30 @@
+CHANNEL Sky.Cinema.pl (69) Sky Cinema
+CHANNEL FILMAX.pl (112) FILMAX
+CHANNEL Ale.kino+.pl (86) Ale kino+
+CHANNEL Cinemax2.pl (72) Cinemax2
+CHANNEL Kino.TV.pl (76) Kino TV
+CHANNEL CANAL+.Film.pl (94) CANAL+ Film
+CHANNEL Kino.Polska.Muzyka.pl (87) Kino Polska Muzyka
+CHANNEL Sky.Cinema.+.24.pl (0) Sky Cinema + 24
+CHANNEL Prime.Fight.HD.pl (36) Prime Fight HD
+CHANNEL Kino.Polska.pl (97) Kino Polska
+CHANNEL Polsat.Film.HD.pl (96) Polsat Film HD
+CHANNEL Cinemax.HD.pl (73) Cinemax HD
+CHANNEL Sky.Cinema.Special.pl (66) Sky Cinema Special
+CHANNEL Paramount.Network.pl (75) Paramount Network
+CHANNEL Cinemax.pl (73) Cinemax
+CHANNEL Film.UA.Drama.pl (136) Film UA Drama
+CHANNEL FilmBox.Premium.HD.pl (67) FilmBox Premium HD
+CHANNEL FilmBox.Extra.HD.pl (68) FilmBox Extra HD
+CHANNEL Kino.Polska.HD.pl (97) Kino Polska HD
+CHANNEL FilmBox.Arthouse.HD.pl (92) FilmBox Arthouse HD
+CHANNEL Polsat.Film.pl (96) Polsat Film
+CHANNEL FilmBox.Action.pl (64) FilmBox Action
+CHANNEL Cinemax2.HD.pl (72) Cinemax2 HD
+CHANNEL Star.Cinema.pl (31) Star Cinema
+CHANNEL FilmBox.Arthouse.pl (92) FilmBox Arthouse
+CHANNEL CANAL+.Film.HD.pl (94) CANAL+ Film HD
+CHANNEL Ale.kino+.HD.pl (86) Ale kino+ HD
+CHANNEL FilmBox.Family.pl (71) FilmBox Family
+CHANNEL Kino.TV.HD.pl (77) Kino TV HD
+CHANNEL FILMAX.HD.pl (111) FILMAX HD

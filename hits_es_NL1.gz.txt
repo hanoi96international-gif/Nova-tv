@@ -1,0 +1,112 @@
+CHANNEL Film1.Action.nl (63) Film1 Action
+CHANNEL Film1.Drama.nl (55) Film1 Drama
+CHANNEL Film1.Family.nl (62) Film1 Family
+CHANNEL Film1.Pakket.nl (24) Film1 Pakket
+CHANNEL Film1.Premiere.nl (56) Film1 Premiere
+CHANNEL FilmBox.nl (53) FilmBox
+CHANNEL Paramount.Network.nl (104) Paramount Network
+CHANNEL Zee.Cinema.nl (34) Zee Cinema
+202610310030 202610310110 Paramount.Network.nl           | Ghost Whisperer
+202610310110 202610310155 Paramount.Network.nl           | Ghost Whisperer
+202610310155 202610310240 Paramount.Network.nl           | The Graham Norton Show
+202610310240 202610310300 Paramount.Network.nl           | Ink Master: Redemption
+202610310300 202610310320 Paramount.Network.nl           | Ink Master: Redemption
+202610310320 202610310340 Paramount.Network.nl           | Ink Master: Redemption
+202610310340 202610310400 Paramount.Network.nl           | Ink Master: Redemption
+202610310400 202610310445 Paramount.Network.nl           | Ghost Whisperer
+202610310445 202610310525 Paramount.Network.nl           | Ghost Whisperer
+202610310525 202610310620 Paramount.Network.nl           | Ghost Whisperer
+202610310620 202610310710 Paramount.Network.nl           | Ghost Whisperer
+202610310710 202610310805 Paramount.Network.nl           | Ghost Whisperer
+202610310805 202610310835 Paramount.Network.nl           | Judge Judy
+202610310835 202610310900 Paramount.Network.nl           | Judge Judy
+202610310900 202610310925 Paramount.Network.nl           | Judge Judy
+202610310925 202610310950 Paramount.Network.nl           | Judge Judy
+202610310950 202610311020 Paramount.Network.nl           | Judge Judy
+202610311020 202610311040 Paramount.Network.nl           | Judge Judy
+202610311040 202610311240 Paramount.Network.nl           | Lemony Snicket's A Series of Unfortunate Events
+202610311240 202610311520 Paramount.Network.nl           | Ghost
+202610311520 202610311710 Paramount.Network.nl           | The Addams Family
+202610311710 202610311900 Paramount.Network.nl           | Addams Family Values
+202610311900 202610312110 Paramount.Network.nl           | Ghostbusters
+202610312110 202610312250 Paramount.Network.nl           | Don't Breathe
+202610312250 202611010040 Paramount.Network.nl           | Don't Breathe 2
+202611010040 202611010120 Paramount.Network.nl           | NCIS: Los Angeles
+202611010120 202611010200 Paramount.Network.nl           | NCIS: Los Angeles
+202611010200 202611010240 Paramount.Network.nl           | NCIS: Los Angeles
+202611010240 202611010320 Paramount.Network.nl           | NCIS: Los Angeles
+202611010320 202611010340 Paramount.Network.nl           | Ink Master: Redemption
+202611010340 202611010400 Paramount.Network.nl           | Ink Master: Redemption
+202611010400 202611010420 Paramount.Network.nl           | Judge Judy
+202611010420 202611010440 Paramount.Network.nl           | Judge Judy
+202611010440 202611010500 Paramount.Network.nl           | Judge Judy
+202611010500 202611010525 Paramount.Network.nl           | Judge Judy
+202611010525 202611010605 Paramount.Network.nl           | Charmed
+202611010605 202611010700 Paramount.Network.nl           | Ghost Whisperer
+202611010700 202611010840 Paramount.Network.nl           | A Christmas Carousel
+202611010840 202611011020 Paramount.Network.nl           | All I Want for Christmas
+202611011020 202611011155 Paramount.Network.nl           | Christmas 9 to 5
+202611011155 202611011325 Paramount.Network.nl           | Christmas at Grand Valley
+202611011325 202611011455 Paramount.Network.nl           | A Godwink Christmas: Second Chance, First Love
+202611011455 202611011655 Paramount.Network.nl           | The First Wives Club
+202611011655 202611011900 Paramount.Network.nl           | Super 8
+202611011900 202611012105 Paramount.Network.nl           | Project Almanac
+202611012105 202611012245 Paramount.Network.nl           | Paranormal Activity: The Marked Ones
+202611012245 202611020020 Paramount.Network.nl           | Paranormal Activity: The Ghost Dimension
+202611020040 202611020120 Paramount.Network.nl           | NCIS: Los Angeles
+202611020120 202611020200 Paramount.Network.nl           | NCIS: Los Angeles
+202611020200 202611020240 Paramount.Network.nl           | NCIS: Los Angeles
+202611020240 202611020320 Paramount.Network.nl           | NCIS: Los Angeles
+202611020320 202611020340 Paramount.Network.nl           | Ink Master: Redemption
+202611020340 202611020400 Paramount.Network.nl           | Ink Master: Redemption
+202611020400 202611020420 Paramount.Network.nl           | Judge Judy
+202611020420 202611020440 Paramount.Network.nl           | Judge Judy
+202611020440 202611020500 Paramount.Network.nl           | Judge Judy
+202611020500 202611020550 Paramount.Network.nl           | Charmed
+202611020550 202611020645 Paramount.Network.nl           | Charmed
+202611020645 202611020735 Paramount.Network.nl           | Beverly Hills, 90210
+202611020735 202611020830 Paramount.Network.nl           | Beverly Hills, 90210
+202611020830 202611021015 Paramount.Network.nl           | A Christmas Carousel
+202611021015 202611021040 Paramount.Network.nl           | Judge Judy
+202611021040 202611021110 Paramount.Network.nl           | Judge Judy
+202611021110 202611021135 Paramount.Network.nl           | Judge Judy
+202611021135 202611021230 Paramount.Network.nl           | NCIS: Los Angeles
+202611021230 202611021325 Paramount.Network.nl           | NCIS: Los Angeles
+202611021325 202611021420 Paramount.Network.nl           | Charmed
+202611021420 202611021515 Paramount.Network.nl           | Charmed
+202611021515 202611021605 Paramount.Network.nl           | Charmed
+202611021605 202611021700 Paramount.Network.nl           | Charmed
+202611021700 202611021800 Paramount.Network.nl           | Beverly Hills, 90210
+202611021800 202611021900 Paramount.Network.nl           | Beverly Hills, 90210
+202611021900 202611022225 Paramount.Network.nl           | The English Patient
+202611022225 202611022325 Paramount.Network.nl           | FBI
+202611022325 202611030020 Paramount.Network.nl           | FBI
+202611030020 202611030115 Paramount.Network.nl           | Ghost Whisperer
+202611030115 202611030200 Paramount.Network.nl           | Ghost Whisperer
+202611030200 202611030240 Paramount.Network.nl           | Ghost Whisperer
+202611030240 202611030320 Paramount.Network.nl           | Ghost Whisperer
+202611030320 202611030340 Paramount.Network.nl           | Ink Master: Redemption
+202611030340 202611030400 Paramount.Network.nl           | Ink Master: Redemption
+202611030400 202611030420 Paramount.Network.nl           | Judge Judy
+202611030420 202611030440 Paramount.Network.nl           | Judge Judy
+202611030440 202611030500 Paramount.Network.nl           | Judge Judy
+202611030500 202611030550 Paramount.Network.nl           | Charmed
+202611030550 202611030645 Paramount.Network.nl           | Charmed
+202611030645 202611030735 Paramount.Network.nl           | Beverly Hills, 90210
+202611030735 202611030830 Paramount.Network.nl           | Beverly Hills, 90210
+202611030830 202611031015 Paramount.Network.nl           | All I Want for Christmas
+202611031015 202611031040 Paramount.Network.nl           | Judge Judy
+202611031040 202611031105 Paramount.Network.nl           | Judge Judy
+202611031105 202611031130 Paramount.Network.nl           | Judge Judy
+202611031130 202611031230 Paramount.Network.nl           | NCIS: Los Angeles
+202611031230 202611031325 Paramount.Network.nl           | NCIS: Los Angeles
+202611031325 202611031420 Paramount.Network.nl           | Charmed
+202611031420 202611031515 Paramount.Network.nl           | Charmed
+202611031515 202611031605 Paramount.Network.nl           | Charmed
+202611031605 202611031700 Paramount.Network.nl           | Charmed
+202611031700 202611031800 Paramount.Network.nl           | Beverly Hills, 90210
+202611031800 202611031900 Paramount.Network.nl           | Beverly Hills, 90210
+202611031900 202611032150 Paramount.Network.nl           | Downsizing
+202611032150 202611032250 Paramount.Network.nl           | FBI
+202611032250 202611032350 Paramount.Network.nl           | FBI
+202611032350 202611040050 Paramount.Network.nl           | Ghost Whisperer

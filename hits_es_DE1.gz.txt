@@ -1,0 +1,209 @@
+CHANNEL Prime.HD.de (0) Prime HD
+CHANNEL Sky.Cinema.Premiere.HD.de (54) Sky Cinema Premiere HD
+CHANNEL Sky.Cinema.Family.HD.de (52) Sky Cinema Family HD
+CHANNEL Sky.Cinema.Highlights.HD.de (47) Sky Cinema Highlights HD
+CHANNEL Sky.Cinema.Action.HD.de (51) Sky Cinema Action HD
+CHANNEL Sky.Cinema.Classics.HD.de (51) Sky Cinema Classics HD
+CHANNEL Warner.TV.Film.de (51) Warner TV Film
+CHANNEL KinoweltTV.de (53) KinoweltTV
+CHANNEL Warner.TV.Serie.de (116) Warner TV Serie
+CHANNEL Motorvision+.de (193) Motorvision+
+CHANNEL eoTV.de (0) eoTV
+CHANNEL FUSSBALL.TV.1.de (0) FUSSBALL.TV 1
+CHANNEL FUSSBALL.TV.2.de (0) FUSSBALL.TV 2
+CHANNEL FUSSBALL.TV.3.de (0) FUSSBALL.TV 3
+CHANNEL Top.Serien.de (157) Top Serien
+CHANNEL Prime.de (0) Prime
+202610310030 202610310100 Motorvision+.de                | On Tour
+202610310100 202610310125 Motorvision+.de                | Classic
+202610310125 202610310150 Motorvision+.de                | Grüne Welle
+202610310150 202610310215 Motorvision+.de                | Made in....
+202610310215 202610310240 Motorvision+.de                | Abenteuer Allrad
+202610310240 202610310310 Motorvision+.de                | Perfect Ride
+202610310310 202610310340 Motorvision+.de                | 4x4 - Das Allrad Magazin
+202610310340 202610310405 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202610310405 202610310440 Motorvision+.de                | Top Speed Classic
+202610310440 202610310505 Motorvision+.de                | Car History
+202610310505 202610310525 Motorvision+.de                | Perfect Ride
+202610310525 202610310555 Motorvision+.de                | Going Pro 2026
+202610310555 202610310620 Motorvision+.de                | Folge 10
+202610310620 202610310650 Motorvision+.de                | Perfect Ride
+202610310650 202610310715 Motorvision+.de                | Super Cars
+202610310715 202610310740 Motorvision+.de                | Grüne Welle
+202610310740 202610310810 Motorvision+.de                | On Tour
+202610310810 202610310835 Motorvision+.de                | MotorStories
+202610310835 202610310930 Motorvision+.de                | Australian Boat Racing 2026
+202610310930 202610311020 Motorvision+.de                | NZ Jetsprint Championship 2025
+202610311020 202610311050 Motorvision+.de                | UIM Aquabike World Championship 2026
+202610311050 202610311115 Motorvision+.de                | UIM F1H2O World Powerboat Championship 2026
+202610311115 202610311205 Motorvision+.de                | UIM E1 World Championship 2025
+202610311205 202610311230 Motorvision+.de                | FIM Superenduro World Championship 2024
+202610311230 202610311320 Motorvision+.de                | FIM Sidecarcross World Championship 2026
+202610311320 202610311350 Motorvision+.de                | FIM Supermoto World and European Championship 2026
+202610311350 202610311420 Motorvision+.de                | FIM Enduro World Championship 2026
+202610311420 202610311515 Motorvision+.de                | FIM X-Trial World Championship 2025
+202610311515 202610311535 Motorvision+.de                | Crash
+202610311535 202610311605 Motorvision+.de                | Icelandic Formula Offroad 2025
+202610311605 202610311630 Motorvision+.de                | Monster Jam Championship 2025
+202610311630 202610311655 Motorvision+.de                | FIM Quadcross World Championship 2026
+202610311655 202610311720 Motorvision+.de                | All Wheel Drive Safari Challenge 2025
+202610311720 202610311750 Motorvision+.de                | Africa Eco Race 2025
+202610311750 202610311815 Motorvision+.de                | EMX Quad European Championship 2025
+202610311815 202610311900 Motorvision+.de                | Australian Drag Racing Championship 2024
+202610311900 202610312005 Motorvision+.de                | IndyNXT 2026
+202610312005 202610312030 Motorvision+.de                | Scottish Rally Championship 2026
+202610312030 202610312100 Motorvision+.de                | Tour European Rally 2026
+202610312100 202610312125 Motorvision+.de                | Belgian Rally Championship 2026
+202610312125 202610312215 Motorvision+.de                | British Rally Championship 2025
+202610312215 202610312310 Motorvision+.de                | NZ Rally Championship 2026
+202610312310 202610312340 Motorvision+.de                | Belgian Rallycross Championship 2025
+202610312340 202611010005 Motorvision+.de                | World Rally Raid Championship 2026
+202611010005 202611010105 Motorvision+.de                | IndyNXT 2026
+202611010105 202611010130 Motorvision+.de                | On Tour
+202611010130 202611010155 Motorvision+.de                | Grüne Welle
+202611010155 202611010220 Motorvision+.de                | Made in....
+202611010220 202611010245 Motorvision+.de                | Abenteuer Allrad
+202611010245 202611010315 Motorvision+.de                | Perfect Ride
+202611010315 202611010340 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202611010340 202611010405 Motorvision+.de                | Top Speed Classic
+202611010405 202611010440 Motorvision+.de                | Car History
+202611010440 202611010505 Motorvision+.de                | Super Cars
+202611010505 202611010555 Motorvision+.de                | Isle of Man Tourist Trophy 2026
+202611010555 202611010645 Motorvision+.de                | Isle of Man Tourist Trophy 2026
+202611010645 202611010740 Motorvision+.de                | NZ Speedway Championship 2026
+202611010740 202611011035 Motorvision+.de                | IMSA WeatherTech SportsCar Championship 2026
+202611011035 202611011305 Motorvision+.de                | NTT Indycar Series 2026
+202611011305 202611011350 Motorvision+.de                | IndyNXT 2026
+202611011350 202611011445 Motorvision+.de                | NTT Indycar Series 2026 Qualifying
+202611011445 202611011540 Motorvision+.de                | IndyNXT 2026
+202611011540 202611011630 Motorvision+.de                | IndyNXT 2026
+202611011630 202611011855 Motorvision+.de                | NTT Indycar Series 2026
+202611011855 202611012115 Motorvision+.de                | NTT Indycar Series 2026
+202611012115 202611012350 Motorvision+.de                | NTT Indycar Series 2026
+202611012350 202611020115 Motorvision+.de                | NTT Indycar Series 2026 Qualifying
+202611020115 202611020220 Motorvision+.de                | IndyNXT 2026
+202611020220 202611020325 Motorvision+.de                | IndyNXT 2026
+202611020325 202611020415 Motorvision+.de                | Isle of Man Tourist Trophy 2026
+202611020415 202611020505 Motorvision+.de                | Isle of Man Tourist Trophy 2026
+202611020505 202611020550 Motorvision+.de                | Australian Drag Racing Championship 2024
+202611020550 202611020615 Motorvision+.de                | Crash
+202611020615 202611020640 Motorvision+.de                | Dumbest Stuff on Wheels
+202611020640 202611020735 Motorvision+.de                | IndyNXT 2026
+202611020735 202611020805 Motorvision+.de                | Classic Ride
+202611020805 202611020830 Motorvision+.de                | Top Speed Classic
+202611020830 202611020900 Motorvision+.de                | Stunt Heroes
+202611020900 202611020930 Motorvision+.de                | Biker Lifestyle
+202611020930 202611020955 Motorvision+.de                | On Tour
+202611020955 202611021025 Motorvision+.de                | Classic
+202611021025 202611021050 Motorvision+.de                | Grüne Welle
+202611021050 202611021120 Motorvision+.de                | Made in....
+202611021120 202611021145 Motorvision+.de                | Abenteuer Allrad
+202611021145 202611021215 Motorvision+.de                | Perfect Ride
+202611021215 202611021245 Motorvision+.de                | 4x4 - Das Allrad Magazin
+202611021245 202611021310 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202611021310 202611021340 Motorvision+.de                | Top Speed Classic
+202611021340 202611021405 Motorvision+.de                | Car History
+202611021405 202611021435 Motorvision+.de                | Super Cars
+202611021435 202611021525 Motorvision+.de                | NTT Indycar Series 2026
+202611021525 202611021620 Motorvision+.de                | NZ Rally Championship 2026
+202611021620 202611021650 Motorvision+.de                | Belgian Rallycross Championship 2025
+202611021650 202611021720 Motorvision+.de                | Scottish Rally Championship 2026
+202611021720 202611021745 Motorvision+.de                | Tour European Rally 2026
+202611021745 202611021815 Motorvision+.de                | Belgian Rally Championship 2026
+202611021815 202611021905 Motorvision+.de                | British Rally Championship 2025
+202611021905 202611021955 Motorvision+.de                | IndyNXT 2026
+202611021955 202611022025 Motorvision+.de                | FIM Superenduro World Championship 2024
+202611022025 202611022115 Motorvision+.de                | FIM Sidecarcross World Championship 2026
+202611022115 202611022145 Motorvision+.de                | FIM Supermoto World and European Championship 2026
+202611022145 202611022215 Motorvision+.de                | FIM Enduro World Championship 2026
+202611022215 202611022315 Motorvision+.de                | FIM X-Trial World Championship 2025
+202611022315 202611022340 Motorvision+.de                | Crash
+202611022340 202611030030 Motorvision+.de                | IndyNXT 2026
+202611030030 202611030055 Motorvision+.de                | On Tour
+202611030055 202611030125 Motorvision+.de                | Classic
+202611030125 202611030150 Motorvision+.de                | Grüne Welle
+202611030150 202611030220 Motorvision+.de                | Made in....
+202611030220 202611030245 Motorvision+.de                | Abenteuer Allrad
+202611030245 202611030315 Motorvision+.de                | Perfect Ride
+202611030315 202611030340 Motorvision+.de                | 4x4 - Das Allrad Magazin
+202611030340 202611030410 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202611030410 202611030430 Motorvision+.de                | Top Speed Classic
+202611030430 202611030500 Motorvision+.de                | Car History
+202611030500 202611030550 Motorvision+.de                | Australian Drag Racing Championship 2024
+202611030550 202611030615 Motorvision+.de                | Crash
+202611030615 202611030640 Motorvision+.de                | Dumbest Stuff on Wheels
+202611030640 202611030730 Motorvision+.de                | IndyNXT 2026
+202611030730 202611030800 Motorvision+.de                | Classic Ride
+202611030800 202611030830 Motorvision+.de                | Top Speed Classic
+202611030830 202611030900 Motorvision+.de                | Stunt Heroes
+202611030900 202611030930 Motorvision+.de                | Biker Lifestyle
+202611030930 202611030955 Motorvision+.de                | On Tour
+202611030955 202611031020 Motorvision+.de                | Classic
+202611031020 202611031050 Motorvision+.de                | Grüne Welle
+202611031050 202611031120 Motorvision+.de                | Made in....
+202611031120 202611031145 Motorvision+.de                | Abenteuer Allrad
+202611031145 202611031220 Motorvision+.de                | Perfect Ride
+202611031220 202611031250 Motorvision+.de                | 4x4 - Das Allrad Magazin
+202611031250 202611031320 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202611031320 202611031350 Motorvision+.de                | Top Speed Classic
+202611031350 202611031415 Motorvision+.de                | Car History
+202611031415 202611031445 Motorvision+.de                | Super Cars
+202611031445 202611031540 Motorvision+.de                | NTT Indycar Series 2026
+202611031540 202611031610 Motorvision+.de                | FIM Superenduro World Championship 2024
+202611031610 202611031705 Motorvision+.de                | FIM Sidecarcross World Championship 2026
+202611031705 202611031735 Motorvision+.de                | FIM Supermoto World and European Championship 2026
+202611031735 202611031805 Motorvision+.de                | FIM Enduro World Championship 2026
+202611031805 202611031900 Motorvision+.de                | FIM X-Trial World Championship 2025
+202611031900 202611032005 Motorvision+.de                | IndyNXT 2026
+202611032005 202611032035 Motorvision+.de                | Going Pro 2026
+202611032035 202611032105 Motorvision+.de                | Fastzone 2026
+202611032105 202611032135 Motorvision+.de                | Perfect Ride
+202611032135 202611032205 Motorvision+.de                | Super Cars
+202611032205 202611032230 Motorvision+.de                | Grüne Welle
+202611032230 202611032255 Motorvision+.de                | On Tour
+202611032255 202611032325 Motorvision+.de                | MotorStories
+202611032325 202611040030 Motorvision+.de                | IndyNXT 2026
+202611040030 202611040055 Motorvision+.de                | On Tour
+202611040055 202611040120 Motorvision+.de                | Classic
+202611040120 202611040150 Motorvision+.de                | Grüne Welle
+202611040150 202611040215 Motorvision+.de                | Made in....
+202611040215 202611040240 Motorvision+.de                | Abenteuer Allrad
+202611040240 202611040310 Motorvision+.de                | Perfect Ride
+202611040310 202611040335 Motorvision+.de                | 4x4 - Das Allrad Magazin
+202611040335 202611040405 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202611040405 202611040435 Motorvision+.de                | Top Speed Classic
+202611040435 202611040505 Motorvision+.de                | Car History
+202611040505 202611040550 Motorvision+.de                | Australian Drag Racing Championship 2024
+202611040550 202611040615 Motorvision+.de                | Crash
+202611040615 202611040640 Motorvision+.de                | Dumbest Stuff on Wheels
+202611040640 202611040745 Motorvision+.de                | IndyNXT 2026
+202611040745 202611040815 Motorvision+.de                | Classic Ride
+202611040815 202611040840 Motorvision+.de                | Top Speed Classic
+202611040840 202611040910 Motorvision+.de                | Stunt Heroes
+202611040910 202611040935 Motorvision+.de                | Biker Lifestyle
+202611040935 202611041005 Motorvision+.de                | On Tour
+202611041005 202611041035 Motorvision+.de                | Classic
+202611041035 202611041105 Motorvision+.de                | Grüne Welle
+202611041105 202611041130 Motorvision+.de                | Made in....
+202611041130 202611041155 Motorvision+.de                | Abenteuer Allrad
+202611041155 202611041225 Motorvision+.de                | Perfect Ride
+202611041225 202611041300 Motorvision+.de                | 4x4 - Das Allrad Magazin
+202611041300 202611041325 Motorvision+.de                | Tuning - Tiefer geht`s nicht!
+202611041325 202611041355 Motorvision+.de                | Top Speed Classic
+202611041355 202611041425 Motorvision+.de                | Car History
+202611041425 202611041455 Motorvision+.de                | Super Cars
+202611041455 202611041545 Motorvision+.de                | NTT Indycar Series 2026
+202611041545 202611041615 Motorvision+.de                | Going Pro 2026
+202611041615 202611041645 Motorvision+.de                | Fastzone 2026
+202611041645 202611041710 Motorvision+.de                | Perfect Ride
+202611041710 202611041740 Motorvision+.de                | Super Cars
+202611041740 202611041810 Motorvision+.de                | Grüne Welle
+202611041810 202611041835 Motorvision+.de                | On Tour
+202611041835 202611041905 Motorvision+.de                | MotorStories
+202611041905 202611042005 Motorvision+.de                | IndyNXT 2026
+202611042005 202611042100 Motorvision+.de                | Australian Boat Racing 2026
+202611042100 202611042155 Motorvision+.de                | NZ Jetsprint Championship 2025
+202611042155 202611042220 Motorvision+.de                | UIM Aquabike World Championship 2026
+202611042220 202611042250 Motorvision+.de                | UIM F1H2O World Powerboat Championship 2026
+202611042250 202611042340 Motorvision+.de                | UIM E1 World Championship 2025
+202611042340 202611050040 Motorvision+.de                | IndyNXT 2026

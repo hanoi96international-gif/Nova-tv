@@ -1,0 +1,195 @@
+CHANNEL Sky.Serie.it (121) Sky Serie
+CHANNEL Sky.Serie.Maratone.it (0) Sky Serie Maratone
+CHANNEL Sky.Cinema.Uno.it (51) Sky Cinema Uno
+CHANNEL Sky.Cinema.Uno.+24.it (50) Sky Cinema Uno +24
+CHANNEL Sky.Cinema.Due.it (48) Sky Cinema Due
+CHANNEL Sky.Cinema.Due.+24.it (0) Sky Cinema Due +24
+CHANNEL Sky.Cinema.Collection.it (45) Sky Cinema Collection
+CHANNEL Sky.Cinema.Family.it (57) Sky Cinema Family
+CHANNEL Sky.Cinema.Action.it (44) Sky Cinema Action
+CHANNEL Sky.Cinema.Suspense.it (51) Sky Cinema Suspense
+CHANNEL Sky.Cinema.Romance.it (49) Sky Cinema Romance
+CHANNEL Sky.Cinema.Drama.it (48) Sky Cinema Drama
+CHANNEL Sky.Cinema.Comedy.it (58) Sky Cinema Comedy
+CHANNEL LA7D.it (64) LA7D
+CHANNEL LA7.CINEMA.it (64) LA7 CINEMA
+CHANNEL Real.Time.HD..160.it (0) Real Time HD  160
+CHANNEL DMAX.HD..170.it (0) DMAX HD  170
+CHANNEL Food.Network.HD..417.it (0) Food Network HD  417
+CHANNEL HGTV.HD..418.it (0) HGTV HD  418
+CHANNEL Motor.Trend.HD..419.it (0) Motor Trend HD  419
+CHANNEL Warner.TV.it (0) Warner TV
+CHANNEL Nove.it (92) Nove
+CHANNEL Giallo.TV.it (80) Giallo TV
+202610300000 202610300150 Nove.it                        | Comedy Match
+202610300150 202610300255 Nove.it                        | Nudi e crudi
+202610300255 202610300400 Nove.it                        | Nudi e crudi
+202610300400 202610300500 Nove.it                        | Nudi e crudi
+202610300500 202610300600 Nove.it                        | Nudi e crudi
+202610300600 202610300650 Nove.it                        | Delitto (im)perfetto
+202610300650 202610300720 Nove.it                        | Alta infedelta'
+202610300720 202610300750 Nove.it                        | Alta infedelta'
+202610300750 202610300820 Nove.it                        | Alta infedelta'
+202610300820 202610300850 Nove.it                        | Alta infedelta'
+202610300850 202610300920 Nove.it                        | Alta infedelta'
+202610300920 202610300955 Nove.it                        | Alta infedelta'
+202610300955 202610301030 Nove.it                        | Alta infedelta'
+202610301030 202610301105 Nove.it                        | Alta infedelta'
+202610301105 202610301220 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202610301220 202610301335 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202610301335 202610301440 Nove.it                        | The Cage - Prendi e scappa
+202610301440 202610301545 Nove.it                        | The Cage - Prendi e scappa
+202610301545 202610301745 Nove.it                        | Storie criminali - Il poliziotto assassino
+202610301745 202610301920 Nove.it                        | Little Big Italy
+202610301920 202610302035 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202610302035 202610302130 Nove.it                        | Cash or Trash - Chi offre di piu'? - 1^TV
+202610302130 202610302320 Nove.it                        | Fratelli di Crozza - 1^TV
+202610302320 202610310000 Nove.it                        | Il tavolo di Che tempo che fa
+202610310000 202610310140 Nove.it                        | Il tavolo di Che tempo che fa
+202610310140 202610310320 Nove.it                        | Fratelli di Crozza
+202610310320 202610310420 Nove.it                        | Nudi e crudi
+202610310420 202610310455 Nove.it                        | Come fanno gli animali
+202610310455 202610310530 Nove.it                        | Come fanno gli animali
+202610310530 202610310600 Nove.it                        | Come fanno gli animali
+202610310600 202610310700 Nove.it                        | Il pianeta blu
+202610310700 202610310800 Nove.it                        | Il pianeta blu
+202610310800 202610310900 Nove.it                        | Il pianeta blu
+202610310900 202610311005 Nove.it                        | Il pianeta blu
+202610311005 202610311110 Nove.it                        | Il pianeta blu
+202610311110 202610311215 Nove.it                        | Il pianeta blu
+202610311215 202610311330 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202610311330 202610311430 Nove.it                        | The Cage - Prendi e scappa
+202610311430 202610311655 Nove.it                        | Ex
+202610311655 202610311830 Nove.it                        | Little Big Italy
+202610311830 202610312000 Nove.it                        | Little Big Italy
+202610312000 202610312130 Nove.it                        | Fratelli di Crozza
+202610312130 202611010000 Nove.it                        | Accordi & disaccordi - 1^TV
+202611010000 202611010230 Nove.it                        | Accordi & disaccordi
+202611010230 202611010330 Nove.it                        | Nudi e crudi
+202611010330 202611010430 Nove.it                        | Nudi e crudi
+202611010430 202611010500 Nove.it                        | Come fanno gli animali
+202611010500 202611010530 Nove.it                        | Come fanno gli animali
+202611010530 202611010600 Nove.it                        | Come fanno gli animali
+202611010600 202611010635 Nove.it                        | Come fanno gli animali
+202611010635 202611010735 Nove.it                        | Gli alberi della vita
+202611010735 202611010840 Nove.it                        | Gli alberi della vita
+202611010840 202611010945 Nove.it                        | Baby Animals - Il primo anno sulla Terra
+202611010945 202611011050 Nove.it                        | Baby Animals - Il primo anno sulla Terra
+202611011050 202611011155 Nove.it                        | Baby Animals - Il primo anno sulla Terra
+202611011155 202611011310 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202611011310 202611011420 Nove.it                        | The Cage - Prendi e scappa
+202611011420 202611011620 Nove.it                        | Femmine contro maschi
+202611011620 202611011755 Nove.it                        | Little Big Italy
+202611011755 202611011930 Nove.it                        | Little Big Italy
+202611011930 202611012000 Nove.it                        | Che tempo che fara' - 1^TV
+202611012000 202611012305 Nove.it                        | Che tempo che fa - 1^TV
+202611012305 202611012350 Nove.it                        | Che fuori tempo che fa - 1^TV
+202611012350 202611020000 Nove.it                        | Fratelli di Crozza
+202611020000 202611020115 Nove.it                        | Fratelli di Crozza
+202611020115 202611020130 Nove.it                        | Motors
+202611020130 202611020230 Nove.it                        | Nudi e crudi
+202611020230 202611020330 Nove.it                        | Nudi e crudi
+202611020330 202611020430 Nove.it                        | Nudi e crudi
+202611020430 202611020500 Nove.it                        | Chi diavolo ho sposato?
+202611020500 202611020530 Nove.it                        | Chi diavolo ho sposato?
+202611020530 202611020600 Nove.it                        | Chi diavolo ho sposato?
+202611020600 202611020650 Nove.it                        | Delitto (im)perfetto
+202611020650 202611020720 Nove.it                        | Alta infedelta'
+202611020720 202611020750 Nove.it                        | Alta infedelta'
+202611020750 202611020825 Nove.it                        | Alta infedelta': nuovi modi di tradire
+202611020825 202611020900 Nove.it                        | Alta infedelta': nuovi modi di tradire
+202611020900 202611020930 Nove.it                        | Alta infedelta'
+202611020930 202611021000 Nove.it                        | Alta infedelta'
+202611021000 202611021030 Nove.it                        | Alta infedelta'
+202611021030 202611021105 Nove.it                        | Alta infedelta'
+202611021105 202611021220 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202611021220 202611021335 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202611021335 202611021440 Nove.it                        | The Cage - Prendi e scappa
+202611021440 202611021545 Nove.it                        | The Cage - Prendi e scappa
+202611021545 202611021645 Nove.it                        | Sangue del tuo sangue
+202611021645 202611021745 Nove.it                        | Sangue del tuo sangue
+202611021745 202611021920 Nove.it                        | Little Big Italy
+202611021920 202611022035 Nove.it                        | Cash or Trash - Chi offre di piu'?
+202611022035 202611022130 Nove.it                        | Cash or Trash - Chi offre di piu'? - 1^TV
+202611022130 202611022325 Nove.it                        | Little Big Italy
+202611022325 202611030000 Nove.it                        | Little Big Italy
+202610300000 202610300110 Giallo.TV.it                   | Vera
+202610300110 202610300305 Giallo.TV.it                   | L'ispettore Barnaby
+202610300305 202610300405 Giallo.TV.it                   | Il delitto della porta accanto
+202610300405 202610300505 Giallo.TV.it                   | Il delitto della porta accanto
+202610300505 202610300600 Giallo.TV.it                   | Il delitto della porta accanto
+202610300600 202610300630 Giallo.TV.it                   | So chi mi ha ucciso
+202610300630 202610300725 Giallo.TV.it                   | A Crime To Remember
+202610300725 202610300825 Giallo.TV.it                   | Murder Comes to Town
+202610300825 202610300920 Giallo.TV.it                   | Murder Comes to Town
+202610300920 202610301020 Giallo.TV.it                   | Soko Kitzbuhel - Misteri tra le montagne
+202610301020 202610301120 Giallo.TV.it                   | Soko Kitzbuhel - Misteri tra le montagne
+202610301120 202610301315 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202610301315 202610301510 Giallo.TV.it                   | L'ispettore Barnaby
+202610301510 202610301610 Giallo.TV.it                   | La stagista del crimine
+202610301610 202610301710 Giallo.TV.it                   | La stagista del crimine
+202610301710 202610301910 Giallo.TV.it                   | Vera
+202610301910 202610302110 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202610302110 202610302310 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202610302310 202610310000 Giallo.TV.it                   | L'ispettore Barnaby
+202610310000 202610310110 Giallo.TV.it                   | L'ispettore Barnaby
+202610310110 202610310305 Giallo.TV.it                   | L'ispettore Barnaby
+202610310305 202610310405 Giallo.TV.it                   | Il delitto della porta accanto
+202610310405 202610310505 Giallo.TV.it                   | Il delitto della porta accanto
+202610310505 202610310600 Giallo.TV.it                   | Il delitto della porta accanto
+202610310600 202610310630 Giallo.TV.it                   | So chi mi ha ucciso
+202610310630 202610310725 Giallo.TV.it                   | A Crime To Remember
+202610310725 202610310825 Giallo.TV.it                   | Murder Comes to Town
+202610310825 202610310925 Giallo.TV.it                   | Delitti di provincia
+202610310925 202610311025 Giallo.TV.it                   | La stagista del crimine
+202610311025 202610311125 Giallo.TV.it                   | La stagista del crimine
+202610311125 202610311320 Giallo.TV.it                   | L'ispettore Barnaby
+202610311320 202610311515 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202610311515 202610311710 Giallo.TV.it                   | Vera
+202610311710 202610311810 Giallo.TV.it                   | Death Valley - Un attore a caccia di indizi
+202610311810 202610311910 Giallo.TV.it                   | Death Valley - Un attore a caccia di indizi
+202610311910 202610312110 Giallo.TV.it                   | L'ispettore Barnaby
+202610312110 202610312210 Giallo.TV.it                   | I misteri di Whitstable Pearl
+202610312210 202610312310 Giallo.TV.it                   | I misteri di Whitstable Pearl
+202610312310 202611010000 Giallo.TV.it                   | Alexa: vita da detective
+202611010000 202611010010 Giallo.TV.it                   | Alexa: vita da detective
+202611010010 202611010110 Giallo.TV.it                   | Alexa: vita da detective
+202611010110 202611010310 Giallo.TV.it                   | L'ispettore Barnaby
+202611010310 202611010500 Giallo.TV.it                   | L'Ispettore Gently
+202611010500 202611010600 Giallo.TV.it                   | Il delitto della porta accanto
+202611010600 202611010630 Giallo.TV.it                   | L'investigatore Wolfe
+202611010630 202611010725 Giallo.TV.it                   | Il delitto della porta accanto
+202611010725 202611010820 Giallo.TV.it                   | Il delitto della porta accanto
+202611010820 202611010915 Giallo.TV.it                   | Il delitto della porta accanto
+202611010915 202611011015 Giallo.TV.it                   | La stagista del crimine
+202611011015 202611011115 Giallo.TV.it                   | La stagista del crimine
+202611011115 202611011215 Giallo.TV.it                   | I misteri di Whitstable Pearl
+202611011215 202611011315 Giallo.TV.it                   | I misteri di Whitstable Pearl
+202611011315 202611011415 Giallo.TV.it                   | Alexa: vita da detective
+202611011415 202611011515 Giallo.TV.it                   | Alexa: vita da detective
+202611011515 202611011615 Giallo.TV.it                   | Delitti e misteri a Gibsons
+202611011615 202611011715 Giallo.TV.it                   | Delitti e misteri a Gibsons
+202611011715 202611011910 Giallo.TV.it                   | Le indagini di Roy Grace
+202611011910 202611012110 Giallo.TV.it                   | L'ispettore Barnaby
+202611012110 202611012210 Giallo.TV.it                   | Death Valley - Un attore a caccia di indizi - 1^TV
+202611012210 202611012310 Giallo.TV.it                   | Death Valley - Un attore a caccia di indizi - 1^TV
+202611012310 202611020000 Giallo.TV.it                   | L'ispettore Barnaby
+202611020000 202611020110 Giallo.TV.it                   | L'ispettore Barnaby
+202611020110 202611020300 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202611020300 202611020400 Giallo.TV.it                   | Il delitto della porta accanto
+202611020400 202611020500 Giallo.TV.it                   | Il delitto della porta accanto
+202611020500 202611020600 Giallo.TV.it                   | Il delitto della porta accanto
+202611020600 202611020630 Giallo.TV.it                   | L'investigatore Wolfe
+202611020630 202611020725 Giallo.TV.it                   | Murder Comes to Town
+202611020725 202611020825 Giallo.TV.it                   | Murder Comes to Town
+202611020825 202611020920 Giallo.TV.it                   | Murder Comes to Town
+202611020920 202611021120 Giallo.TV.it                   | Tatort - Vienna
+202611021120 202611021315 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202611021315 202611021510 Giallo.TV.it                   | Capitaine Marleau
+202611021510 202611021610 Giallo.TV.it                   | La stagista del crimine
+202611021610 202611021710 Giallo.TV.it                   | La stagista del crimine
+202611021710 202611021910 Giallo.TV.it                   | Vera
+202611021910 202611022110 Giallo.TV.it                   | Jacobs: un veterinario per agente
+202611022110 202611022210 Giallo.TV.it                   | Delitti e misteri a Gibsons
+202611022210 202611022310 Giallo.TV.it                   | Delitti e misteri a Gibsons
+202611022310 202611030000 Giallo.TV.it                   | Le indagini di Roy Grace

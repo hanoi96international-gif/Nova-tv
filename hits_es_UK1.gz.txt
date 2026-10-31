@@ -1,0 +1,6 @@
+CHANNEL Zee.Cinema.uk (36) Zee Cinema
+CHANNEL Film4.HD.uk (42) Film4 HD
+CHANNEL Sky.Cinema.Comedy.uk (53) Sky Cinema Comedy
+CHANNEL Sky.Cinema.Select.uk (58) Sky Cinema Select
+CHANNEL Film4+1.uk (42) Film4+1
+CHANNEL Sky.Cinema.Hits.HD.uk (40) Sky Cinema Hits HD

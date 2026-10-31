@@ -1,0 +1,334 @@
+1-2-3.tv.de	58	1-2-3.tv.de
+13TH STREET (Sky).de	79	13TH STREET (Sky).de
+13TH STREET.de	79	13TH STREET.de
+3sat.de	90	3sat.de
+a.tv.de	101	a.tv.de
+Al Jazeera English.de	90	Al Jazeera English.de
+ALEX Berlin.de	76	ALEX Berlin.de
+allgäu.tv.de	140	allgäu.tv.de
+altenburg.tv.de	155	altenburg.tv.de
+Animal Planet.de	81	Animal Planet.de
+ANIXE HD Serie.de	124	ANIXE HD Serie.de
+ANIXE+.de	108	ANIXE+.de
+ARD-alpha.de	100	ARD-alpha.de
+ARTE.de	68	ARTE.de
+Asharq News.de	10	Asharq News.de
+auto motor und sport.de	151	auto motor und sport.de
+AXN Black.de	57	AXN Black.de
+AXN White.de	62	AXN White.de
+Baby TV.de	812	Baby TV.de
+Baden TV Süd.de	10	Baden TV Süd.de
+Baden TV.de	10	Baden TV.de
+Ballermann TV.de	29	Ballermann TV.de
+BBC News.de	118	BBC News.de
+Beate-Uhse.TV (Sky).de	29	Beate-Uhse.TV (Sky).de
+beIN iZ.de	193	beIN iZ.de
+beIN Movies Turk.de	33	beIN Movies Turk.de
+Bergblick.de	79	Bergblick.de
+Bibel TV.de	105	Bibel TV.de
+Blue Hustler.de	39	Blue Hustler.de
+BonGusto.de	128	BonGusto.de
+BR Fernsehen Nord.de	79	BR Fernsehen Nord.de
+BR Fernsehen Süd.de	79	BR Fernsehen Süd.de
+Cartoon Network (Sky).de	256	Cartoon Network (Sky).de
+Cartoon Network.de	256	Cartoon Network.de
+Cartoonito (Sky).de	295	Cartoonito (Sky).de
+Cartoonito.de	295	Cartoonito.de
+CHANNEL21.de	0	CHANNEL21.de
+Chemnitz Fernsehen.de	100	Chemnitz Fernsehen.de
+CNBC International.de	90	CNBC International.de
+CNN International.de	75	CNN International.de
+Comedy Central.de	139	Comedy Central.de
+Crime+Investigation (Sky).de	81	Crime+Investigation (Sky).de
+Crime+Investigation.de	81	Crime+Investigation.de
+Curiosity Channel.de	82	Curiosity Channel.de
+Das Erste.de	91	Das Erste.de
+DELUXE MUSIC.de	29	DELUXE MUSIC.de
+DF1.de	64	DF1.de
+Discovery Channel.de	77	Discovery Channel.de
+Disney Channel.de	98	Disney Channel.de
+DMAX.de	60	DMAX.de
+DMF.de	38	DMF.de
+Dresden Fernsehen.de	100	Dresden Fernsehen.de
+ems TV.de	20	ems TV.de
+ERT World.de	45	ERT World.de
+eSportsONE.de	10	eSportsONE.de
+Espreso.de	67	Espreso.de
+Euro D.de	27	Euro D.de
+Euronews Deutsch.de	241	Euronews Deutsch.de
+Euronews English.de	203	Euronews English.de
+Euronews Italiano.de	241	Euronews Italiano.de
+Euronews Russki.de	16	Euronews Russki.de
+Eurosport 1.de	35	Eurosport 1.de
+Eurosport 2.de	41	Eurosport 2.de
+Eurostar TV.de	29	Eurostar TV.de
+Fashion TV.de	117	Fashion TV.de
+FOLX MUSIC TELEVISION.de	64	FOLX MUSIC TELEVISION.de
+France 2.de	89	France 2.de
+France 24 english.de	288	France 24 english.de
+France 24 francais.de	229	France 24 francais.de
+France 3.de	127	France 3.de
+Franken Fernsehen.de	143	Franken Fernsehen.de
+FREEDOM.de	15	FREEDOM.de
+Friesischer Rundfunk.de	116	Friesischer Rundfunk.de
+GEO Television.de	69	GEO Television.de
+Habertürk TV.de	46	Habertürk TV.de
+Hamburg 1.de	93	Hamburg 1.de
+Heimatkanal (Sky).de	52	Heimatkanal (Sky).de
+Heimatkanal.de	52	Heimatkanal.de
+HGTV.de	97	HGTV.de
+hr-fernsehen.de	86	hr-fernsehen.de
+HSE.de	58	HSE.de
+HT SPOR.de	54	HT SPOR.de
+Imearth.de	10	Imearth.de
+iTVN.de	79	iTVN.de
+JenaTV.de	10	JenaTV.de
+Jukebox (Sky).de	19	Jukebox (Sky).de
+Jukebox.de	19	Jukebox.de
+Juwelo.de	11	Juwelo.de
+K-TV.de	97	K-TV.de
+Kabel Eins CLASSICS.de	34	Kabel Eins CLASSICS.de
+Kabel Eins Doku.de	84	Kabel Eins Doku.de
+Kabel Eins.de	59	Kabel Eins.de
+Kanal 7.de	34	Kanal 7.de
+KiKA.de	133	KiKA.de
+Kinomir.de	16	Kinomir.de
+KinoweltTV.de	35	KinoweltTV.de
+L-TV.de	84	L-TV.de
+LAUSITZWELLE.de	10	LAUSITZWELLE.de
+Leipzig Fernsehen.de	100	Leipzig Fernsehen.de
+Lokal-TV.de	0	Lokal-TV.de
+Lust pur.de	31	Lust pur.de
+Magenta Musik 1.de	10	Magenta Musik 1.de
+Magenta Musik 2.de	10	Magenta Musik 2.de
+MagentaSport.de	16	MagentaSport.de
+MagentaTV+.de	0	MagentaTV+.de
+Marco Polo TV.de	117	Marco Polo TV.de
+MDF.1 Fernsehen.de	10	MDF.1 Fernsehen.de
+MDR-Fernsehen Sachsen-Anhalt.de	84	MDR-Fernsehen Sachsen-Anhalt.de
+MDR-Fernsehen Sachsen.de	84	MDR-Fernsehen Sachsen.de
+MDR-Fernsehen Thüringen.de	84	MDR-Fernsehen Thüringen.de
+Meine Aufnahmen.de	0	Meine Aufnahmen.de
+MOMENTS.de	97	MOMENTS.de
+More Than Sports TV.de	38	More Than Sports TV.de
+Motorvision+.de	81	Motorvision+.de
+MS GOLF 1.de	23	MS GOLF 1.de
+MS GOLF 2.de	21	MS GOLF 2.de
+MS Sport.de	29	MS Sport.de
+MTV.de	100	MTV.de
+münchen.tv.de	132	münchen.tv.de
+N24 Doku.de	79	N24 Doku.de
+National Geographic (Sky).de	74	National Geographic (Sky).de
+National Geographic Wild (Sky).de	78	National Geographic Wild (Sky).de
+National Geographic Wild.de	78	National Geographic Wild.de
+National Geographic.de	74	National Geographic.de
+NDR Fernsehen Hamburg.de	85	NDR Fernsehen Hamburg.de
+NDR Fernsehen Mecklenburg-Vorpommern.de	85	NDR Fernsehen Mecklenburg-Vorpommern.de
+NDR Fernsehen Niedersachsen.de	85	NDR Fernsehen Niedersachsen.de
+NDR Fernsehen Schleswig-Holstein.de	85	NDR Fernsehen Schleswig-Holstein.de
+Nick Jr. (Sky).de	187	Nick Jr. (Sky).de
+Nick Jr..de	187	Nick Jr..de
+Nick/Comedy Central+1.de	142	Nick/Comedy Central+1.de
+Nicktoons (Sky).de	175	Nicktoons (Sky).de
+NIEDERBAYERN TV Deggendorf - Straubing.de	93	NIEDERBAYERN TV Deggendorf - Straubing.de
+NIEDERBAYERN TV Landshut.de	93	NIEDERBAYERN TV Landshut.de
+NIEDERBAYERN TV Passau.de	93	NIEDERBAYERN TV Passau.de
+NITRO.de	65	NITRO.de
+NRWision.de	165	NRWision.de
+ntv.de	107	ntv.de
+Oberpfalz TV.de	182	Oberpfalz TV.de
+OF-TV.de	0	OF-TV.de
+OK Weinstraße.de	65	OK Weinstraße.de
+OK:TV Mainz.de	177	OK:TV Mainz.de
+OK4.de	245	OK4.de
+OK54 Trier.de	40	OK54 Trier.de
+ONE MUSIC TELEVISION.de	17	ONE MUSIC TELEVISION.de
+ONE.de	67	ONE.de
+OstWest.de	16	OstWest.de
+OUTtv.de	88	OUTtv.de
+Penthouse Passion.de	18	Penthouse Passion.de
+phoenix.de	75	phoenix.de
+Playboy Europe.de	67	Playboy Europe.de
+ProSieben FUN.de	61	ProSieben FUN.de
+ProSieben MAXX.de	92	ProSieben MAXX.de
+ProSieben.de	70	ProSieben.de
+QVC ZWEI.de	58	QVC ZWEI.de
+QVC.de	58	QVC.de
+Radio Bremen TV.de	86	Radio Bremen TV.de
+Rai 1.de	87	Rai 1.de
+Rai 2.de	82	Rai 2.de
+Rai 3.de	78	Rai 3.de
+rbb fernsehen Berlin.de	82	rbb fernsehen Berlin.de
+rbb fernsehen Brandenburg.de	82	rbb fernsehen Brandenburg.de
+Red Bull TV Motorsport.de	121	Red Bull TV Motorsport.de
+Red Bull TV.de	76	Red Bull TV.de
+Regio TV.de	121	Regio TV.de
+Rennsteig.TV.de	20	Rennsteig.TV.de
+RFH Regionalfernsehen Harz.de	10	RFH Regionalfernsehen Harz.de
+RFO.de	268	RFO.de
+rheinlOKal.de	119	rheinlOKal.de
+RiC.de	87	RiC.de
+Romance TV (Sky).de	49	Romance TV (Sky).de
+Romance TV.de	49	Romance TV.de
+RTL Bayern.de	46	RTL Bayern.de
+RTL Bremen &amp; Niedersachsen.de	47	RTL Bremen & Niedersachsen.de
+RTL Crime.de	80	RTL Crime.de
+RTL Hamburg &amp; Schleswig-Holstein.de	47	RTL Hamburg & Schleswig-Holstein.de
+RTL Hessen.de	47	RTL Hessen.de
+RTL Living.de	65	RTL Living.de
+RTL Nordrhein-Westfalen.de	47	RTL Nordrhein-Westfalen.de
+RTL Passion.de	94	RTL Passion.de
+RTL Rhein-Neckar.de	47	RTL Rhein-Neckar.de
+RTL.de	47	RTL.de
+RTLup.de	74	RTLup.de
+RTLZWEI.de	51	RTLZWEI.de
+salve.tv.de	150	salve.tv.de
+SAT.1 Bayern.de	47	SAT.1 Bayern.de
+SAT.1 emotions.de	68	SAT.1 emotions.de
+SAT.1 GOLD.de	78	SAT.1 GOLD.de
+SAT.1 Hamburg und Schleswig-Holstein.de	47	SAT.1 Hamburg und Schleswig-Holstein.de
+SAT.1 Niedersachsen und Bremen.de	47	SAT.1 Niedersachsen und Bremen.de
+SAT.1 Nordrhein-Westfalen.de	47	SAT.1 Nordrhein-Westfalen.de
+SAT.1 Rheinland-Pfalz und Hessen.de	47	SAT.1 Rheinland-Pfalz und Hessen.de
+SAT.1.de	47	SAT.1.de
+SCHLAGER DELUXE.de	23	SCHLAGER DELUXE.de
+Schlagerparadies.TV.de	29	Schlagerparadies.TV.de
+Shop LC.de	57	Shop LC.de
+Show Max.de	23	Show Max.de
+Show Turk.de	27	Show Turk.de
+sixx.de	61	sixx.de
+Sky Atlantic.de	62	Sky Atlantic.de
+Sky Cinema Action.de	33	Sky Cinema Action.de
+Sky Cinema Classics.de	34	Sky Cinema Classics.de
+Sky Cinema Family.de	33	Sky Cinema Family.de
+Sky Cinema Highlights.de	31	Sky Cinema Highlights.de
+Sky Cinema Premiere.de	34	Sky Cinema Premiere.de
+Sky Crime.de	71	Sky Crime.de
+Sky Documentaries.de	67	Sky Documentaries.de
+Sky Krimi.de	63	Sky Krimi.de
+Sky Nature.de	73	Sky Nature.de
+Sky One.de	118	Sky One.de
+Sky Sci-Fi (Sky).de	70	Sky Sci-Fi (Sky).de
+Sky Sci-Fi.de	70	Sky Sci-Fi.de
+Sky Showcase.de	70	Sky Showcase.de
+Sky Sport 1.de	17	Sky Sport 1.de
+Sky Sport 10.de	4	Sky Sport 10.de
+Sky Sport 2.de	7	Sky Sport 2.de
+Sky Sport 3.de	7	Sky Sport 3.de
+Sky Sport 4.de	9	Sky Sport 4.de
+Sky Sport 5.de	7	Sky Sport 5.de
+Sky Sport 6.de	7	Sky Sport 6.de
+Sky Sport 7.de	4	Sky Sport 7.de
+Sky Sport 8.de	8	Sky Sport 8.de
+Sky Sport 9.de	7	Sky Sport 9.de
+Sky Sport Bundesliga 1.de	14	Sky Sport Bundesliga 1.de
+Sky Sport Bundesliga 10.de	4	Sky Sport Bundesliga 10.de
+Sky Sport Bundesliga 2.de	20	Sky Sport Bundesliga 2.de
+Sky Sport Bundesliga 3.de	14	Sky Sport Bundesliga 3.de
+Sky Sport Bundesliga 4.de	13	Sky Sport Bundesliga 4.de
+Sky Sport Bundesliga 5.de	12	Sky Sport Bundesliga 5.de
+Sky Sport Bundesliga 6.de	8	Sky Sport Bundesliga 6.de
+Sky Sport Bundesliga 7.de	8	Sky Sport Bundesliga 7.de
+Sky Sport Bundesliga 8.de	4	Sky Sport Bundesliga 8.de
+Sky Sport Bundesliga 9.de	4	Sky Sport Bundesliga 9.de
+Sky Sport Bundesliga.de	63	Sky Sport Bundesliga.de
+Sky Sport F1.de	55	Sky Sport F1.de
+Sky Sport Golf.de	46	Sky Sport Golf.de
+Sky Sport Kompakt 1.de	8	Sky Sport Kompakt 1.de
+Sky Sport Mix.de	55	Sky Sport Mix.de
+Sky Sport News.de	69	Sky Sport News.de
+Sky Sport Premier League.de	63	Sky Sport Premier League.de
+Sky Sport Tennis.de	36	Sky Sport Tennis.de
+Sky Sport Top Event.de	47	Sky Sport Top Event.de
+sonnenklar.TV.de	65	sonnenklar.TV.de
+Spiegel Geschichte.de	73	Spiegel Geschichte.de
+Sport 1 - myTeamTV.de	18	Sport 1 - myTeamTV.de
+Sport 10 - myTeamTV.de	18	Sport 10 - myTeamTV.de
+Sport 11 - myTeamTV.de	18	Sport 11 - myTeamTV.de
+Sport 12 - myTeamTV.de	18	Sport 12 - myTeamTV.de
+Sport 13 - myTeamTV.de	18	Sport 13 - myTeamTV.de
+Sport 14 - myTeamTV.de	18	Sport 14 - myTeamTV.de
+Sport 15 - myTeamTV.de	18	Sport 15 - myTeamTV.de
+Sport 16 - myTeamTV.de	18	Sport 16 - myTeamTV.de
+Sport 17 - myTeamTV.de	18	Sport 17 - myTeamTV.de
+Sport 18 - myTeamTV.de	18	Sport 18 - myTeamTV.de
+Sport 2 - myTeamTV.de	18	Sport 2 - myTeamTV.de
+Sport 3 - myTeamTV.de	18	Sport 3 - myTeamTV.de
+Sport 4 - myTeamTV.de	18	Sport 4 - myTeamTV.de
+Sport 5 - myTeamTV.de	18	Sport 5 - myTeamTV.de
+Sport 6 - myTeamTV.de	18	Sport 6 - myTeamTV.de
+Sport 7 - myTeamTV.de	18	Sport 7 - myTeamTV.de
+Sport 8 - myTeamTV.de	18	Sport 8 - myTeamTV.de
+Sport 9 - myTeamTV.de	18	Sport 9 - myTeamTV.de
+SPORT1.de	45	SPORT1.de
+SPORTDIGITAL FUSSBALL.de	32	SPORTDIGITAL FUSSBALL.de
+Sportdigital1+.de	32	Sportdigital1+.de
+SR Fernsehen.de	80	SR Fernsehen.de
+SRF.de	135	SRF.de
+Stingray Classica.de	65	Stingray Classica.de
+Stingray DJAZZ.de	78	Stingray DJAZZ.de
+Stingray iConcerts.de	52	Stingray iConcerts.de
+Studio 47.de	58	Studio 47.de
+Super RTL.de	153	Super RTL.de
+SWR Fernsehen BW.de	70	SWR Fernsehen BW.de
+SWR Fernsehen RP.de	71	SWR Fernsehen RP.de
+tagesschau24.de	100	tagesschau24.de
+TELE 5.de	60	TELE 5.de
+TeleBom/TeleDom.de	15	TeleBom/TeleDom.de
+Testkanal H01.de	0	Testkanal H01.de
+Testkanal I01.de	45	Testkanal I01.de
+Testkanal I03.de	10	Testkanal I03.de
+Testkanal L01.de	10	Testkanal L01.de
+Testkanal L02.de	78	Testkanal L02.de
+Testkanal L03.de	10	Testkanal L03.de
+Testkanal L04.de	10	Testkanal L04.de
+Testkanal L05.de	70	Testkanal L05.de
+Testkanal L06.de	10	Testkanal L06.de
+Testkanal L07.de	78	Testkanal L07.de
+The HISTORY Channel (Sky).de	72	The HISTORY Channel (Sky).de
+The HISTORY Channel.de	72	The HISTORY Channel.de
+TLC.de	91	TLC.de
+TOGGO plus.de	160	TOGGO plus.de
+TOP SERIEN.de	99	TOP SERIEN.de
+Travelxp.de	116	Travelxp.de
+TV Mainfranken.de	143	TV Mainfranken.de
+TV Mittelrhein.de	3	TV Mittelrhein.de
+TV Oberfranken.de	150	TV Oberfranken.de
+TV Westsachsen.de	20	TV Westsachsen.de
+tv.berlin.de	20	tv.berlin.de
+tv.ingolstadt.de	142	tv.ingolstadt.de
+TV5MONDE Europe.de	163	TV5MONDE Europe.de
+TV8 Int.de	29	TV8 Int.de
+TVA Ostbayern.de	164	TVA Ostbayern.de
+TVP Polonia.de	104	TVP Polonia.de
+ÜLKE TV.de	10	ÜLKE TV.de
+Universal TV (Sky).de	62	Universal TV (Sky).de
+Universal TV.de	62	Universal TV.de
+Volksmusik.TV.de	40	Volksmusik.TV.de
+VOX.de	64	VOX.de
+VOXup.de	69	VOXup.de
+Warner TV Comedy (Sky).de	137	Warner TV Comedy (Sky).de
+Warner TV Comedy.de	137	Warner TV Comedy.de
+Warner TV Film (Sky).de	32	Warner TV Film (Sky).de
+Warner TV Film.de	32	Warner TV Film.de
+Warner TV Serie (Sky).de	73	Warner TV Serie (Sky).de
+Warner TV Serie.de	73	Warner TV Serie.de
+WDR Fernsehen Aachen.de	84	WDR Fernsehen Aachen.de
+WDR Fernsehen Bielefeld.de	84	WDR Fernsehen Bielefeld.de
+WDR Fernsehen Bonn.de	84	WDR Fernsehen Bonn.de
+WDR Fernsehen Dortmund.de	84	WDR Fernsehen Dortmund.de
+WDR Fernsehen Duisburg.de	84	WDR Fernsehen Duisburg.de
+WDR Fernsehen Düsseldorf.de	84	WDR Fernsehen Düsseldorf.de
+WDR Fernsehen Essen.de	84	WDR Fernsehen Essen.de
+WDR Fernsehen Köln.de	84	WDR Fernsehen Köln.de
+WDR Fernsehen Münster.de	84	WDR Fernsehen Münster.de
+WDR Fernsehen Siegen.de	84	WDR Fernsehen Siegen.de
+WDR Fernsehen Wuppertal.de	84	WDR Fernsehen Wuppertal.de
+wedotv Movies.de	38	wedotv Movies.de
+Welt der Wunder.de	55	Welt der Wunder.de
+WELT.de	123	WELT.de
+wetter.com TV.de	484	wetter.com TV.de
+ZDF.de	78	ZDF.de
+ZDFinfo.de	86	ZDFinfo.de
+ZDFneo.de	77	ZDFneo.de
+ZWEI MUSIC TELEVISION.de	37	ZWEI MUSIC TELEVISION.de

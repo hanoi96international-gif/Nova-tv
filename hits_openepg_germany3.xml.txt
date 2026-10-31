@@ -1,0 +1,53 @@
+CHANNEL ANIXE HD Serie.de (124) ANIXE HD Serie.de
+CHANNEL Kinomir.de (16) Kinomir.de
+CHANNEL KinoweltTV.de (35) KinoweltTV.de
+CHANNEL Magenta Musik 1.de (10) Magenta Musik 1.de
+CHANNEL Magenta Musik 2.de (10) Magenta Musik 2.de
+CHANNEL MagentaSport.de (16) MagentaSport.de
+CHANNEL MagentaTV+.de (0) MagentaTV+.de
+CHANNEL Sky Cinema Action.de (33) Sky Cinema Action.de
+CHANNEL Sky Cinema Classics.de (34) Sky Cinema Classics.de
+CHANNEL Sky Cinema Family.de (33) Sky Cinema Family.de
+CHANNEL Sky Cinema Highlights.de (31) Sky Cinema Highlights.de
+CHANNEL Sky Cinema Premiere.de (34) Sky Cinema Premiere.de
+CHANNEL TOP SERIEN.de (99) TOP SERIEN.de
+CHANNEL Warner TV Film (Sky).de (32) Warner TV Film (Sky).de
+CHANNEL Warner TV Film.de (32) Warner TV Film.de
+CHANNEL Warner TV Serie (Sky).de (73) Warner TV Serie (Sky).de
+CHANNEL Warner TV Serie.de (73) Warner TV Serie.de
+202610302300 202610310500 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202610310500 202610311100 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202610311100 202610311700 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202610311700 202610312300 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202610312300 202611010500 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202611010500 202611011100 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202611011100 202611011700 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202611011700 202611012300 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202611012300 202611020500 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202611020500 202611021100 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202610302300 202610310500 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202610310500 202610311100 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202610311100 202610311700 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202610311700 202610312300 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202610312300 202611010500 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202611010500 202611011100 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202611011100 202611011700 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202611011700 202611012300 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202611012300 202611020500 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202611020500 202611021100 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202610302100 202610310100 MagentaSport.de                | MagentaSport Programmübersicht
+202610310100 202610310500 MagentaSport.de                | MagentaSport Programmübersicht
+202610310500 202610310900 MagentaSport.de                | MagentaSport Programmübersicht
+202610310900 202610311300 MagentaSport.de                | MagentaSport Programmübersicht
+202610311300 202610311700 MagentaSport.de                | MagentaSport Programmübersicht
+202610311700 202610312100 MagentaSport.de                | MagentaSport Programmübersicht
+202610312100 202611010100 MagentaSport.de                | MagentaSport Programmübersicht
+202611010100 202611010500 MagentaSport.de                | MagentaSport Programmübersicht
+202611010500 202611010900 MagentaSport.de                | MagentaSport Programmübersicht
+202611010900 202611011300 MagentaSport.de                | MagentaSport Programmübersicht
+202611011300 202611011700 MagentaSport.de                | MagentaSport Programmübersicht
+202611011700 202611012100 MagentaSport.de                | MagentaSport Programmübersicht
+202611012100 202611020100 MagentaSport.de                | MagentaSport Programmübersicht
+202611020100 202611020500 MagentaSport.de                | MagentaSport Programmübersicht
+202611020500 202611020900 MagentaSport.de                | MagentaSport Programmübersicht
+202611020900 202611021300 MagentaSport.de                | MagentaSport Programmübersicht

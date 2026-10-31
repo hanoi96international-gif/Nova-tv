@@ -1,0 +1,84 @@
+3+ Adrenalin.de	10	3+ Adrenalin.de
+3+ Focus.de	10	3+ Focus.de
+3+ Movies.de	10	3+ Movies.de
+3+ Series.de	10	3+ Series.de
+3+.de	10	3+.de
+3sat.de	10	3sat.de
+Anixe HD Serie.de	10	Anixe HD Serie.de
+Anixe+.de	10	Anixe+.de
+ARD alpha.de	10	ARD alpha.de
+Arte.de	10	Arte.de
+ATV.de	10	ATV.de
+ATV2.de	10	ATV2.de
+BBC News.de	10	BBC News.de
+Bibel TV.de	10	Bibel TV.de
+BR.de	10	BR.de
+CNBC Europe.de	10	CNBC Europe.de
+CNN.de	10	CNN.de
+Comedy Central.de	10	Comedy Central.de
+Das Erste.de	10	Das Erste.de
+Deluxe Music.de	10	Deluxe Music.de
+Disney Channel.de	10	Disney Channel.de
+DMF.de	10	DMF.de
+DR 1.de	10	DR 1.de
+DW English.de	10	DW English.de
+eSportsONE.de	6	eSportsONE.de
+Euronews.de	10	Euronews.de
+Eurosport 1.de	10	Eurosport 1.de
+France 2.de	10	France 2.de
+France 24.de	10	France 24.de
+France 3.de	10	France 3.de
+Franken Fernsehen.de	10	Franken Fernsehen.de
+Hamburg 1.de	10	Hamburg 1.de
+HR.de	10	HR.de
+HSE.de	10	HSE.de
+Kabel 1 Doku.de	10	Kabel 1 Doku.de
+Kabel Eins.de	10	Kabel Eins.de
+KiKA.de	10	KiKA.de
+MDR.de	10	MDR.de
+München TV.de	10	München TV.de
+n tv.de	0	n tv.de
+NDR.de	10	NDR.de
+Nickelodeon.de	10	Nickelodeon.de
+NITRO.de	10	NITRO.de
+One.de	10	One.de
+ORF 1.de	10	ORF 1.de
+ORF 2.de	10	ORF 2.de
+ORF 3.de	10	ORF 3.de
+ORF Sport +.de	10	ORF Sport +.de
+Phoenix.de	10	Phoenix.de
+ProSieben.de	10	ProSieben.de
+Puls 4.de	10	Puls 4.de
+QVC.de	10	QVC.de
+Radio Bremen TV.de	10	Radio Bremen TV.de
+RBB.de	10	RBB.de
+RiC.de	10	RiC.de
+RTL Zwei.de	10	RTL Zwei.de
+RTL.de	10	RTL.de
+Sat.1.de	10	Sat.1.de
+Schlager Deluxe.de	10	Schlager Deluxe.de
+Servus TV.de	10	Servus TV.de
+sixx.de	10	sixx.de
+sonnenklar.tv.de	10	sonnenklar.tv.de
+SPORT1.de	10	SPORT1.de
+Spreekanal.de	5	Spreekanal.de
+SR Fernsehen.de	10	SR Fernsehen.de
+SRF 1.de	10	SRF 1.de
+SRF info.de	10	SRF info.de
+SRF zwei.de	10	SRF zwei.de
+Star TV.de	10	Star TV.de
+Super RTL.de	10	Super RTL.de
+SWR.de	10	SWR.de
+tagesschau24.de	10	tagesschau24.de
+Tele 5.de	10	Tele 5.de
+Tide TV.de	10	Tide TV.de
+TRT Türk.de	10	TRT Türk.de
+TV 2.de	10	TV 2.de
+TV.Berlin.de	10	TV.Berlin.de
+TV5MONDE.de	10	TV5MONDE.de
+VOX.de	10	VOX.de
+WDR.de	10	WDR.de
+WELT.de	10	WELT.de
+ZDF.de	10	ZDF.de
+ZDFinfo.de	10	ZDFinfo.de
+ZDFneo.de	10	ZDFneo.de

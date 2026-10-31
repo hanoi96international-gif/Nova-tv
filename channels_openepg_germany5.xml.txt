@@ -1,0 +1,207 @@
+13th Street.de	80	13th Street.de
+24 TV.de	60	24 TV.de
+360 Tune Box.de	60	360 Tune Box.de
+360 TV.de	47	360 TV.de
+3sat.de	91	3sat.de
+A Haber.de	58	A Haber.de
+A News.de	58	A News.de
+A Spor.de	40	A Spor.de
+A2.de	29	A2.de
+Al Jazeera English.de	90	Al Jazeera English.de
+AlexiBexi.de	220	AlexiBexi.de
+Aquarium.de	38	Aquarium.de
+ARD-alpha.de	101	ARD-alpha.de
+ARTE.de	69	ARTE.de
+ATV Avrupa.de	31	ATV Avrupa.de
+AXN Black Catch-Up.de	69	AXN Black Catch-Up.de
+AXN Black.de	58	AXN Black.de
+AXN White Catch-Up.de	66	AXN White Catch-Up.de
+AXN White.de	63	AXN White.de
+Bauer sucht Frau.de	69	Bauer sucht Frau.de
+BBC Lifestyle.de	73	BBC Lifestyle.de
+BBC News.de	122	BBC News.de
+Best of Comedy.de	141	Best of Comedy.de
+Best of The Voice.de	94	Best of The Voice.de
+Beyaz TV.de	38	Beyaz TV.de
+Bibel TV.de	110	Bibel TV.de
+Big Brother Classics.de	78	Big Brother Classics.de
+BR Nord.de	80	BR Nord.de
+BR Süd.de	79	BR Süd.de
+BUNTE.de	117	BUNTE.de
+Car City &amp; Friends.de	99	Car City & Friends.de
+Channel21.de	15	Channel21.de
+CNBC Europe.de	93	CNBC Europe.de
+CNN Europe.de	77	CNN Europe.de
+CNN Türk.de	42	CNN Türk.de
+Cosmo &amp; Wanda.de	160	Cosmo & Wanda.de
+Das Erste.de	94	Das Erste.de
+DELUXE DANCE by Kontor.de	12	DELUXE DANCE by Kontor.de
+DELUXE LOUNGE.de	107	DELUXE LOUNGE.de
+DELUXE MUSIC.de	31	DELUXE MUSIC.de
+DELUXE RAP.de	10	DELUXE RAP.de
+DF1.de	64	DF1.de
+Disney Channel.de	100	Disney Channel.de
+Diyanet TV.de	103	Diyanet TV.de
+DMAX.de	61	DMAX.de
+DMF.de	43	DMF.de
+DOKUSAT.de	45	DOKUSAT.de
+EKİN TÜRK TV.de	34	EKİN TÜRK TV.de
+Euro D.de	30	Euro D.de
+Euro Star.de	32	Euro Star.de
+euronews.de	264	euronews.de
+Eurosport 1.de	35	Eurosport 1.de
+EWTN katholisches TV.de	99	EWTN katholisches TV.de
+EXATEST NewTV.de	15	EXATEST NewTV.de
+EXATEST15.de	296	EXATEST15.de
+EXATEST2.de	296	EXATEST2.de
+EXATEST4.de	296	EXATEST4.de
+EXATEST6.de	296	EXATEST6.de
+Fashion TV Secrets.de	104	Fashion TV Secrets.de
+Fashion TV.de	119	Fashion TV.de
+FashionBox.de	72	FashionBox.de
+Flash Haber.de	247	Flash Haber.de
+France 24 English.de	295	France 24 English.de
+GEO Television.de	71	GEO Television.de
+GoldStar TV.de	60	GoldStar TV.de
+Gute Laune TV.de	27	Gute Laune TV.de
+Gymondo.de	149	Gymondo.de
+HABERTURK.de	46	HABERTURK.de
+Handystar.tv.de	596	Handystar.tv.de
+Hey Aaron!!!.de	136	Hey Aaron!!!.de
+HISTORY.de	73	HISTORY.de
+Hope TV.de	129	Hope TV.de
+HOPPIPOLLA.de	86	HOPPIPOLLA.de
+hr-fernsehen.de	87	hr-fernsehen.de
+HSE.de	37	HSE.de
+Janoschs Traumstunde.de	186	Janoschs Traumstunde.de
+Jukebox.de	19	Jukebox.de
+Just Cooking.de	234	Just Cooking.de
+K-TV.de	99	K-TV.de
+Kabel Eins CLASSICS.de	35	Kabel Eins CLASSICS.de
+Kabel Eins Doku.de	85	Kabel Eins Doku.de
+Kabel Eins.de	60	Kabel Eins.de
+KalkTV.de	15	KalkTV.de
+Kaminfeuer.de	43	Kaminfeuer.de
+Kanal 7.de	33	Kanal 7.de
+KiKA.de	139	KiKA.de
+Ladykracher.de	148	Ladykracher.de
+LooLoo Kids TV.de	98	LooLoo Kids TV.de
+MDR Sachsen-Anhalt.de	85	MDR Sachsen-Anhalt.de
+MDR Sachsen.de	86	MDR Sachsen.de
+MDR Thüringen.de	86	MDR Thüringen.de
+Meister der Küche.de	57	Meister der Küche.de
+Melodie TV.de	28	Melodie TV.de
+Metal.Rocks.de	13	Metal.Rocks.de
+Michael Bully Herbig.de	15	Michael Bully Herbig.de
+Movie Music by Stingray.de	59	Movie Music by Stingray.de
+Music Box 00s.de	60	Music Box 00s.de
+Music Box 80s.de	60	Music Box 80s.de
+Music Box 90s.de	60	Music Box 90s.de
+Music Box Classic.de	60	Music Box Classic.de
+Music Box Dance.de	64	Music Box Dance.de
+Music Box Hits.de	60	Music Box Hits.de
+My Animation Kids.de	90	My Animation Kids.de
+MySpass TV.de	87	MySpass TV.de
+n-tv.de	112	n-tv.de
+N24 Doku.de	78	N24 Doku.de
+NDR Hamburg.de	87	NDR Hamburg.de
+NDR Mecklenburg-Vorpommern.de	87	NDR Mecklenburg-Vorpommern.de
+NDR Niedersachsen.de	87	NDR Niedersachsen.de
+NDR Schleswig-Holstein.de	87	NDR Schleswig-Holstein.de
+NHK WORLD-JAPAN.de	192	NHK WORLD-JAPAN.de
+Nickelodeon.de	144	Nickelodeon.de
+NOW.de	31	NOW.de
+ONE.de	69	ONE.de
+Pastewka.de	143	Pastewka.de
+phoenix.de	77	phoenix.de
+ProSieben FUN.de	63	ProSieben FUN.de
+ProSieben.de	72	ProSieben.de
+Qello Concerts by Stingray.de	34	Qello Concerts by Stingray.de
+QVC.de	60	QVC.de
+QWEST TV.de	59	QWEST TV.de
+Radio Bremen.de	88	Radio Bremen.de
+RBB Berlin.de	84	RBB Berlin.de
+RBB Brandenburg.de	84	RBB Brandenburg.de
+RiC.de	89	RiC.de
+Royalworld - Adel &amp; Dynastien.de	59	Royalworld - Adel & Dynastien.de
+RTL Crime.de	82	RTL Crime.de
+RTL Living.de	66	RTL Living.de
+RTL Passion.de	95	RTL Passion.de
+RTL.de	48	RTL.de
+RTLup.de	75	RTLup.de
+RTLZWEI Clips.de	66	RTLZWEI Clips.de
+RTLZWEI Families.de	74	RTLZWEI Families.de
+RTLZWEI.de	52	RTLZWEI.de
+Sallys Welt.de	147	Sallys Welt.de
+SAT.1 emotions.de	68	SAT.1 emotions.de
+SAT.1 GOLD.de	79	SAT.1 GOLD.de
+SAT.1.de	48	SAT.1.de
+SCHLAGER DELUXE.de	25	SCHLAGER DELUXE.de
+Shopping Queen.de	72	Shopping Queen.de
+Show Turk.de	28	Show Turk.de
+ShowMax.de	21	ShowMax.de
+sixx.de	62	sixx.de
+Sky Sci-Fi.de	71	Sky Sci-Fi.de
+sonnenklar.TV.de	61	sonnenklar.TV.de
+SPORT1.de	46	SPORT1.de
+SR.de	82	SR.de
+SRF 1.de	79	SRF 1.de
+SRF 2.de	54	SRF 2.de
+Stand-Up Comedy.de	56	Stand-Up Comedy.de
+Stingray Classica.de	44	Stingray Classica.de
+StoryZoo &amp; Friends.de	97	StoryZoo & Friends.de
+Stromberg.de	137	Stromberg.de
+SUPER RTL.de	156	SUPER RTL.de
+SWR Baden-Württemberg.de	72	SWR Baden-Württemberg.de
+SWR Rheinland-Pfalz.de	73	SWR Rheinland-Pfalz.de
+tagesschau24.de	100	tagesschau24.de
+teve2.de	35	teve2.de
+TGRT Belgesel.de	116	TGRT Belgesel.de
+TGRT EU.de	81	TGRT EU.de
+TGRT Haber.de	81	TGRT Haber.de
+time2Rlx.de	33	time2Rlx.de
+TLC.de	92	TLC.de
+TRT Arabi.de	107	TRT Arabi.de
+TRT Avaz.de	119	TRT Avaz.de
+TRT Belgesel.de	87	TRT Belgesel.de
+TRT Çocuk.de	168	TRT Çocuk.de
+TRT Haber.de	52	TRT Haber.de
+TRT Kurdî.de	62	TRT Kurdî.de
+TRT Müzik.de	81	TRT Müzik.de
+TRT Spor.de	52	TRT Spor.de
+TRT Türk.de	102	TRT Türk.de
+TRT World.de	124	TRT World.de
+TRT1.de	27	TRT1.de
+TV 4.de	81	TV 4.de
+TV Bayern Regional.de	121	TV Bayern Regional.de
+TV100.de	39	TV100.de
+TV5.de	37	TV5.de
+TV8 International.de	24	TV8 International.de
+Universal TV.de	63	Universal TV.de
+VOX.de	65	VOX.de
+VOXup.de	70	VOXup.de
+waipu.tv Highlights.de	93	waipu.tv Highlights.de
+waipu.tv Info.de	355	waipu.tv Info.de
+WARNER TV COMEDY.de	140	WARNER TV COMEDY.de
+WARNER TV FILM.de	33	WARNER TV FILM.de
+WARNER TV SERIE.de	74	WARNER TV SERIE.de
+WDR Aachen.de	85	WDR Aachen.de
+WDR Bielefeld.de	85	WDR Bielefeld.de
+WDR Bonn.de	85	WDR Bonn.de
+WDR Dortmund.de	85	WDR Dortmund.de
+WDR Duisburg.de	85	WDR Duisburg.de
+WDR Düsseldorf.de	85	WDR Düsseldorf.de
+WDR Essen.de	85	WDR Essen.de
+WDR Köln.de	85	WDR Köln.de
+WDR Münster.de	85	WDR Münster.de
+WDR Siegen.de	85	WDR Siegen.de
+WDR Wuppertal.de	85	WDR Wuppertal.de
+WELT.de	128	WELT.de
+wetter.com TV.de	11	wetter.com TV.de
+Wir24.tv - Der Haushalts Channel.de	60	Wir24.tv - Der Haushalts Channel.de
+XITE Hits.de	21	XITE Hits.de
+xite R&amp;B Classic Jams.de	22	xite R&B Classic Jams.de
+ZDF.de	80	ZDF.de
+ZDFinfo.de	88	ZDFinfo.de
+ZDFneo.de	78	ZDFneo.de
+Zender.de	115	Zender.de

@@ -1,0 +1,45 @@
+FanDuel.Sports..-.Tennessee.East.us	104	FanDuel Sports  - Tennessee East
+FanDuel.Sports.Indiana.us	105	FanDuel Sports Indiana
+FanDuel.Sports.Midwest.-.Kansas.City.us	95	FanDuel Sports Midwest - Kansas City
+FanDuel.Sports.Midwest.-.Kansas.State.us	95	FanDuel Sports Midwest - Kansas State
+FanDuel.Sports.Midwest.Extra.-.Iowa.us	0	FanDuel Sports Midwest Extra - Iowa
+FanDuel.Sports.Network.Detroit.Extra.us	104	FanDuel Sports Network Detroit Extra
+FanDuel.Sports.Network.Detroit.HD.us	104	FanDuel Sports Network Detroit HD
+FanDuel.Sports.Network.Florida.-.North.Florida.HD.us	104	FanDuel Sports Network Florida - North Florida HD
+FanDuel.Sports.Network.Florida.-.North.Florida.us	104	FanDuel Sports Network Florida - North Florida
+FanDuel.Sports.Network.Florida.2.us	104	FanDuel Sports Network Florida 2
+FanDuel.Sports.Network.Florida.us	104	FanDuel Sports Network Florida
+FanDuel.Sports.Network.Great.Lakes.us	0	FanDuel Sports Network Great Lakes
+FanDuel.Sports.Network.Midwest.St..Louis.us	106	FanDuel Sports Network Midwest St. Louis
+FanDuel.Sports.Network.North.Extra.us	0	FanDuel Sports Network North Extra
+FanDuel.Sports.Network.North.us	110	FanDuel Sports Network North
+FanDuel.Sports.Network.Ohio.-.Cincinnati.us	104	FanDuel Sports Network Ohio - Cincinnati
+FanDuel.Sports.Network.Ohio.-.Cleveland.us	104	FanDuel Sports Network Ohio - Cleveland
+FanDuel.Sports.Network.Oklahoma.us	104	FanDuel Sports Network Oklahoma
+FanDuel.Sports.Network.San.Diego.us	110	FanDuel Sports Network San Diego
+FanDuel.Sports.Network.SoCal.us	110	FanDuel Sports Network SoCal
+FanDuel.Sports.Network.South-.Carolinas.us	101	FanDuel Sports Network South- Carolinas
+FanDuel.Sports.Network.South-.Tennessee.(USA).us	101	FanDuel Sports Network South- Tennessee (USA)
+FanDuel.Sports.Network.South.us	101	FanDuel Sports Network South
+FanDuel.Sports.Network.Southeast.-.Tennessee.us	12	FanDuel Sports Network Southeast - Tennessee
+FanDuel.Sports.Network.Southeast.us	104	FanDuel Sports Network Southeast
+FanDuel.Sports.Network.Southwest-.OK2.us	104	FanDuel Sports Network Southwest- OK2
+FanDuel.Sports.Network.Southwest.-.San.Antonio.us	104	FanDuel Sports Network Southwest - San Antonio
+FanDuel.Sports.Network.Southwest.HD.OK2.HD.us	104	FanDuel Sports Network Southwest HD OK2 HD
+FanDuel.Sports.Network.Southwest.us	104	FanDuel Sports Network Southwest
+FanDuel.Sports.Network.West.us	121	FanDuel Sports Network West
+FanDuel.Sports.Network.Wisconsin.us	107	FanDuel Sports Network Wisconsin
+FanDuel.Sports.Network.us	106	FanDuel Sports Network
+FanDuel.Sports.New.Orleans.us	104	FanDuel Sports New Orleans
+FanDuel.Sports.Ohio.-.Cincinnati.HD.us	104	FanDuel Sports Ohio - Cincinnati HD
+FanDuel.Sports.Ohio.-.Cleveland.HD.us	104	FanDuel Sports Ohio - Cleveland HD
+FanDuel.Sports.Southeast.-.Georgia.us	104	FanDuel Sports Southeast - Georgia
+FanDuel.Sports.Southeast.-.North.Carolina.us	104	FanDuel Sports Southeast - North Carolina
+FanDuel.Sports.Southeast.-.South.Carolina.us	104	FanDuel Sports Southeast - South Carolina
+FanDuel.Sports.Southeast.-.Tennessee.Nashville.us	104	FanDuel Sports Southeast - Tennessee Nashville
+FanDuel.Sports.Southwest.-.Houston.us	104	FanDuel Sports Southwest - Houston
+FanDuel.TV.us	19	FanDuel TV
+Fanduel.Racing.us	21	Fanduel Racing
+Fanduel.Sports.Sun.Alt.3.us	106	Fanduel Sports Sun Alt 3
+Fanduel.Sports.Sun.HD.us	106	Fanduel Sports Sun HD
+Fanduel.Sports.Sun.us	106	Fanduel Sports Sun

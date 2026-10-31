@@ -1,0 +1,298 @@
+MILB-InlandEmpire66ers.us	658	MILB - Inland Empire 66ers
+MILB-RenoAces.us	630	MILB - Reno Aces
+MILB-EverettAquaSox.us	657	MILB - Everett AquaSox
+MILB-LasVegasAviators.us	630	MILB - Las Vegas Aviators
+MILB-BirminghamBarons.us	658	MILB - Birmingham Barons
+MILB-LouisvilleBats.us	629	MILB - Louisville Bats
+MILB-ChesapeakeBaysox.us	658	MILB - Chesapeake Baysox
+MILB-SaltLakeBees.us	630	MILB - Salt Lake Bees
+MILB-MontgomeryBiscuits.us	658	MILB - Montgomery Biscuits
+MILB-BuffaloBisons.us	629	MILB - Buffalo Bisons
+MILB-DunedinBlueJays.us	658	MILB - Dunedin Blue Jays
+MILB-WilmingtonBlueRocks.us	658	MILB - Wilmington Blue Rocks
+MILB-PensacolaBlueWahoos.us	658	MILB - Pensacola Blue Wahoos
+MILB-JerseyShoreBlueClaws.us	658	MILB - Jersey Shore BlueClaws
+MILB-DurhamBulls.us	630	MILB - Durham Bulls
+MILB-VancouverCanadians.us	658	MILB - Vancouver Canadians
+MILB-KannapolisCannonBallers.us	658	MILB - Kannapolis Cannon Ballers
+MILB-LakeCountyCaptains.us	658	MILB - Lake County Captains
+MILB-SpringfieldCardinals.us	658	MILB - Springfield Cardinals
+MILB-PalmBeachCardinals.us	658	MILB - Palm Beach Cardinals
+MILB-PeoriaChiefs.us	658	MILB - Peoria Chiefs
+MILB-ElPasoChihuahuas.us	630	MILB - El Paso Chihuahuas
+MILB-ColumbusClingstones.us	658	MILB - Columbus Clingstones
+MILB-ColumbusClippers.us	629	MILB - Columbus Clippers
+MILB-OklahomaCityComets.us	630	MILB - Oklahoma City Comets
+MILB-HickoryCrawdads.us	658	MILB - Hickory Crawdads
+MILB-IowaCubs.us	630	MILB - Iowa Cubs
+MILB-SouthBendCubs.us	658	MILB - South Bend Cubs
+MILB-AltoonaCurve.us	657	MILB - Altoona Curve
+MILB-BrooklynCyclones.us	658	MILB - Brooklyn Cyclones
+MILB-Winston-SalemDash.us	658	MILB - Winston-Salem Dash
+MILB-DaytonDragons.us	658	MILB - Dayton Dragons
+MILB-TulsaDrillers.us	658	MILB - Tulsa Drillers
+MILB-GreenvilleDrive.us	658	MILB - Greenville Drive
+MILB-Tri-CityDustDevils.us	658	MILB - Tri-City Dust Devils
+MILB-EugeneEmeralds.us	658	MILB - Eugene Emeralds
+MILB-RomeEmperors.us	658	MILB - Rome Emperors
+MILB-RoundRockExpress.us	630	MILB - Round Rock Express
+MILB-ReadingFightinPhils.us	658	MILB - Reading Fightin Phils
+MILB-ColumbiaFireflies.us	658	MILB - Columbia Fireflies
+MILB-NewHampshireFisherCats.us	658	MILB - New Hampshire Fisher Cats
+MILB-RichmondFlyingSquirrels.us	658	MILB - Richmond Flying Squirrels
+MILB-LakelandFlyingTigers.us	658	MILB - Lakeland Flying Tigers
+MILB-SanJoseGiants.us	657	MILB - San Jose Giants
+MILB-GreensboroGrasshoppers.us	658	MILB - Greensboro Grasshoppers
+MILB-AugustaGreenJackets.us	657	MILB - Augusta GreenJackets
+MILB-FresnoGrizzlies.us	658	MILB - Fresno Grizzlies
+MILB-JupiterHammerheads.us	658	MILB - Jupiter Hammerheads
+MILB-CorpusChristiHooks.us	658	MILB - Corpus Christi Hooks
+MILB-HillsboroHops.us	658	MILB - Hillsboro Hops
+MILB-BowlingGreenHotRods.us	658	MILB - Bowling Green Hot Rods
+MILB-HillCityHowlers.us	658	MILB - Hill City Howlers
+MILB-IndianapolisIndians.us	629	MILB - Indianapolis Indians
+MILB-SpokaneIndians.us	657	MILB - Spokane Indians
+MILB-LehighValleyIronPigs.us	630	MILB - Lehigh Valley IronPigs
+MILB-AlbuquerqueIsotopes.us	630	MILB - Albuquerque Isotopes
+MILB-JacksonvilleJumboShrimp.us	630	MILB - Jacksonville Jumbo Shrimp
+MILB-CedarRapidsKernels.us	658	MILB - Cedar Rapids Kernels
+MILB-FrederickKeys.us	658	MILB - Frederick Keys
+MILB-CharlotteKnights.us	630	MILB - Charlotte Knights
+MILB-ChattanoogaLookouts.us	658	MILB - Chattanooga Lookouts
+MILB-GreatLakesLoons.us	658	MILB - Great Lakes Loons
+MILB-LansingLugnuts.us	658	MILB - Lansing Lugnuts
+MILB-BradentonMarauders.us	658	MILB - Bradenton Marauders
+MILB-SyracuseMets.us	629	MILB - Syracuse Mets
+MILB-St.LucieMets.us	658	MILB - St. Lucie Mets
+MILB-FortMyersMightyMussels.us	658	MILB - Fort Myers Mighty Mussels
+MILB-SanAntonioMissions.us	658	MILB - San Antonio Missions
+MILB-ToledoMudHens.us	629	MILB - Toledo Mud Hens
+MILB-FredericksburgNationals.us	658	MILB - Fredericksburg Nationals
+MILB-NorthwestArkansasNaturals.us	658	MILB - Northwest Arkansas Naturals
+MILB-SomersetPatriots.us	658	MILB - Somerset Patriots
+MILB-MyrtleBeachPelicans.us	658	MILB - Myrtle Beach Pelicans
+MILB-StocktonPorts.us	657	MILB - Stockton Ports
+MILB-RanchoCucamongaQuakes.us	658	MILB - Rancho Cucamonga Quakes
+MILB-Scranton/Wilkes-BarreRailRiders.us	628	MILB - Scranton/Wilkes-Barre RailRiders
+MILB-TacomaRainiers.us	630	MILB - Tacoma Rainiers
+MILB-VisaliaRawhide.us	658	MILB - Visalia Rawhide
+MILB-WorcesterRedSox.us	629	MILB - Worcester Red Sox
+MILB-RochesterRedWings.us	630	MILB - Rochester Red Wings
+MILB-MemphisRedbirds.us	630	MILB - Memphis Redbirds
+MILB-HudsonValleyRenegades.us	658	MILB - Hudson Valley Renegades
+MILB-SalemRidgeYaks.us	657	MILB - Salem RidgeYaks
+MILB-QuadCitiesRiverBandits.us	658	MILB - Quad Cities River Bandits
+MILB-SacramentoRiverCats.us	626	MILB - Sacramento River Cats
+MILB-CharlestonRiverDogs.us	658	MILB - Charleston RiverDogs
+MILB-MidlandRockHounds.us	658	MILB - Midland RockHounds
+MILB-FriscoRoughRiders.us	658	MILB - Frisco RoughRiders
+MILB-AkronRubberDucks.us	658	MILB - Akron RubberDucks
+MILB-BinghamtonRumblePonies.us	657	MILB - Binghamton Rumble Ponies
+MILB-St.PaulSaints.us	626	MILB - St. Paul Saints
+MILB-PortlandSeaDogs.us	657	MILB - Portland Sea Dogs
+MILB-ErieSeaWolves.us	658	MILB - Erie SeaWolves
+MILB-HarrisburgSenators.us	658	MILB - Harrisburg Senators
+MILB-DelmarvaShorebirds.us	657	MILB - Delmarva Shorebirds
+MILB-BiloxiShuckers.us	658	MILB - Biloxi Shuckers
+MILB-BeloitSkyCarp.us	658	MILB - Beloit Sky Carp
+MILB-KnoxvilleSmokies.us	658	MILB - Knoxville Smokies
+MILB-AmarilloSodPoodles.us	658	MILB - Amarillo Sod Poodles
+MILB-NashvilleSounds.us	630	MILB - Nashville Sounds
+MILB-SugarLandSpaceCowboys.us	621	MILB - Sugar Land Space Cowboys
+MILB-HubCitySpartanburgers.us	658	MILB - Hub City Spartanburgers
+MILB-LakeElsinoreStorm.us	658	MILB - Lake Elsinore Storm
+MILB-OmahaStormChasers.us	630	MILB - Omaha Storm Chasers
+MILB-GwinnettStripers.us	630	MILB - Gwinnett Stripers
+MILB-TampaTarpons.us	658	MILB - Tampa Tarpons
+MILB-ClearwaterThreshers.us	658	MILB - Clearwater Threshers
+MILB-NorfolkTides.us	630	MILB - Norfolk Tides
+MILB-WisconsinTimberRattlers.us	658	MILB - Wisconsin Timber Rattlers
+MILB-FortWayneTinCaps.us	658	MILB - Fort Wayne TinCaps
+MILB-DaytonaTortugas.us	658	MILB - Daytona Tortugas
+MILB-AshevilleTourists.us	658	MILB - Asheville Tourists
+MILB-OntarioTowerBuzzers.us	658	MILB - Ontario Tower Buzzers
+MILB-RocketCityTrashPandas.us	658	MILB - Rocket City Trash Pandas
+MILB-ArkansasTravelers.us	658	MILB - Arkansas Travelers
+MILB-WilsonWarbirds.us	658	MILB - Wilson Warbirds
+MILB-WestMichiganWhitecaps.us	658	MILB - West Michigan Whitecaps
+MILB-WichitaWindSurge.us	658	MILB - Wichita Wind Surge
+MILB-FayettevilleWoodpeckers.us	657	MILB - Fayetteville Woodpeckers
+MILB-HartfordYardGoats.us	658	MILB - Hartford Yard Goats
+MLB-LosAngelesAngels.us	28	MLB - Los Angeles Angels
+MLB-HoustonAstros.us	28	MLB - Houston Astros
+MLB-Athletics.us	28	MLB - Athletics
+MLB-TorontoBlueJays.us	28	MLB - Toronto Blue Jays
+MLB-AtlantaBraves.us	28	MLB - Atlanta Braves
+MLB-MilwaukeeBrewers.us	34	MLB - Milwaukee Brewers
+MLB-St.LouisCardinals.us	28	MLB - St. Louis Cardinals
+MLB-ChicagoCubs.us	28	MLB - Chicago Cubs
+MLB-ArizonaDiamondbacks.us	28	MLB - Arizona Diamondbacks
+MLB-LosAngelesDodgers.us	28	MLB - Los Angeles Dodgers
+MLB-SanFranciscoGiants.us	28	MLB - San Francisco Giants
+MLB-ClevelandGuardians.us	28	MLB - Cleveland Guardians
+MLB-SeattleMariners.us	28	MLB - Seattle Mariners
+MLB-MiamiMarlins.us	28	MLB - Miami Marlins
+MLB-NewYorkMets.us	28	MLB - New York Mets
+MLB-WashingtonNationals.us	28	MLB - Washington Nationals
+MLB-BaltimoreOrioles.us	28	MLB - Baltimore Orioles
+MLB-SanDiegoPadres.us	28	MLB - San Diego Padres
+MLB-PhiladelphiaPhillies.us	28	MLB - Philadelphia Phillies
+MLB-PittsburghPirates.us	28	MLB - Pittsburgh Pirates
+MLB-TexasRangers.us	28	MLB - Texas Rangers
+MLB-TampaBayRays.us	34	MLB - Tampa Bay Rays
+MLB-BostonRedSox.us	28	MLB - Boston Red Sox
+MLB-CincinnatiReds.us	28	MLB - Cincinnati Reds
+MLB-ColoradoRockies.us	28	MLB - Colorado Rockies
+MLB-KansasCityRoyals.us	28	MLB - Kansas City Royals
+MLB-DetroitTigers.us	28	MLB - Detroit Tigers
+MLB-MinnesotaTwins.us	28	MLB - Minnesota Twins
+MLB-ChicagoWhiteSox.us	28	MLB - Chicago White Sox
+MLB-NewYorkYankees.us	28	MLB - New York Yankees
+MLS-AtlantaUnitedFC.us	606	MLS - Atlanta United FC
+MLS-AustinFC.us	606	MLS - Austin FC
+MLS-CFMontréal.us	632	MLS - CF Montréal
+MLS-CharlotteFC.us	634	MLS - Charlotte FC
+MLS-ChicagoFireFC.us	634	MLS - Chicago Fire FC
+MLS-ColoradoRapids.us	606	MLS - Colorado Rapids
+MLS-ColumbusCrew.us	622	MLS - Columbus Crew
+MLS-D.C.United.us	606	MLS - D.C. United
+MLS-FCCincinnati.us	605	MLS - FC Cincinnati
+MLS-FCDallas.us	606	MLS - FC Dallas
+MLS-HoustonDynamoFC.us	633	MLS - Houston Dynamo FC
+MLS-InterMiamiCF.us	605	MLS - Inter Miami CF
+MLS-LAGalaxy.us	605	MLS - LA Galaxy
+MLS-LAFC.us	632	MLS - LAFC
+MLS-MinnesotaUnitedFC.us	634	MLS - Minnesota United FC
+MLS-NashvilleSC.us	606	MLS - Nashville SC
+MLS-NewEnglandRevolution.us	605	MLS - New England Revolution
+MLS-NewYorkCityFC.us	622	MLS - New York City FC
+MLS-OrlandoCitySC.us	606	MLS - Orlando City SC
+MLS-PhiladelphiaUnion.us	605	MLS - Philadelphia Union
+MLS-PortlandTimbers.us	633	MLS - Portland Timbers
+MLS-RealSaltLake.us	634	MLS - Real Salt Lake
+MLS-RedBullNewYork.us	634	MLS - Red Bull New York
+MLS-SanDiegoFC.us	605	MLS - San Diego FC
+MLS-SanJoseEarthquakes.us	633	MLS - San Jose Earthquakes
+MLS-SeattleSoundersFC.us	605	MLS - Seattle Sounders FC
+MLS-SportingKansasCity.us	605	MLS - Sporting Kansas City
+MLS-St.LouisCITYSC.us	622	MLS - St. Louis CITY SC
+MLS-TorontoFC.us	634	MLS - Toronto FC
+MLS-VancouverWhitecaps.us	606	MLS - Vancouver Whitecaps
+NBA-Philadelphia76ers.us	65	NBA - Philadelphia 76ers
+NBA-MilwaukeeBucks.us	62	NBA - Milwaukee Bucks
+NBA-ChicagoBulls.us	82	NBA - Chicago Bulls
+NBA-ClevelandCavaliers.us	62	NBA - Cleveland Cavaliers
+NBA-BostonCeltics.us	62	NBA - Boston Celtics
+NBA-LAClippers.us	77	NBA - LA Clippers
+NBA-MemphisGrizzlies.us	70	NBA - Memphis Grizzlies
+NBA-AtlantaHawks.us	70	NBA - Atlanta Hawks
+NBA-MiamiHeat.us	74	NBA - Miami Heat
+NBA-CharlotteHornets.us	76	NBA - Charlotte Hornets
+NBA-UtahJazz.us	62	NBA - Utah Jazz
+NBA-SacramentoKings.us	70	NBA - Sacramento Kings
+NBA-NewYorkKnicks.us	78	NBA - New York Knicks
+NBA-LosAngelesLakers.us	61	NBA - Los Angeles Lakers
+NBA-OrlandoMagic.us	69	NBA - Orlando Magic
+NBA-DallasMavericks.us	74	NBA - Dallas Mavericks
+NBA-BrooklynNets.us	73	NBA - Brooklyn Nets
+NBA-DenverNuggets.us	81	NBA - Denver Nuggets
+NBA-IndianaPacers.us	68	NBA - Indiana Pacers
+NBA-NewOrleansPelicans.us	61	NBA - New Orleans Pelicans
+NBA-DetroitPistons.us	86	NBA - Detroit Pistons
+NBA-TorontoRaptors.us	66	NBA - Toronto Raptors
+NBA-HoustonRockets.us	70	NBA - Houston Rockets
+NBA-SanAntonioSpurs.us	62	NBA - San Antonio Spurs
+NBA-PhoenixSuns.us	66	NBA - Phoenix Suns
+NBA-OklahomaCityThunder.us	62	NBA - Oklahoma City Thunder
+NBA-MinnesotaTimberwolves.us	74	NBA - Minnesota Timberwolves
+NBA-PortlandTrailBlazers.us	62	NBA - Portland Trail Blazers
+NBA-GoldenStateWarriors.us	70	NBA - Golden State Warriors
+NBA-WashingtonWizards.us	66	NBA - Washington Wizards
+NFL-SanFrancisco49ers.us	205	NFL - San Francisco 49ers
+NFL-ChicagoBears.us	214	NFL - Chicago Bears
+NFL-CincinnatiBengals.us	189	NFL - Cincinnati Bengals
+NFL-BuffaloBills.us	190	NFL - Buffalo Bills
+NFL-DenverBroncos.us	215	NFL - Denver Broncos
+NFL-ClevelandBrowns.us	217	NFL - Cleveland Browns
+NFL-TampaBayBuccaneers.us	217	NFL - Tampa Bay Buccaneers
+NFL-ArizonaCardinals.us	216	NFL - Arizona Cardinals
+NFL-LosAngelesChargers.us	189	NFL - Los Angeles Chargers
+NFL-KansasCityChiefs.us	188	NFL - Kansas City Chiefs
+NFL-IndianapolisColts.us	217	NFL - Indianapolis Colts
+NFL-WashingtonCommanders.us	188	NFL - Washington Commanders
+NFL-DallasCowboys.us	215	NFL - Dallas Cowboys
+NFL-MiamiDolphins.us	187	NFL - Miami Dolphins
+NFL-PhiladelphiaEagles.us	212	NFL - Philadelphia Eagles
+NFL-AtlantaFalcons.us	216	NFL - Atlanta Falcons
+NFL-NewYorkGiants.us	216	NFL - New York Giants
+NFL-JacksonvilleJaguars.us	193	NFL - Jacksonville Jaguars
+NFL-NewYorkJets.us	216	NFL - New York Jets
+NFL-DetroitLions.us	188	NFL - Detroit Lions
+NFL-GreenBayPackers.us	236	NFL - Green Bay Packers
+NFL-CarolinaPanthers.us	216	NFL - Carolina Panthers
+NFL-NewEnglandPatriots.us	222	NFL - New England Patriots
+NFL-LasVegasRaiders.us	216	NFL - Las Vegas Raiders
+NFL-LosAngelesRams.us	215	NFL - Los Angeles Rams
+NFL-BaltimoreRavens.us	217	NFL - Baltimore Ravens
+NFL-NewOrleansSaints.us	217	NFL - New Orleans Saints
+NFL-SeattleSeahawks.us	213	NFL - Seattle Seahawks
+NFL-PittsburghSteelers.us	217	NFL - Pittsburgh Steelers
+NFL-HoustonTexans.us	216	NFL - Houston Texans
+NFL-TennesseeTitans.us	216	NFL - Tennessee Titans
+NFL-MinnesotaVikings.us	178	NFL - Minnesota Vikings
+NHL-ColoradoAvalanche.us	66	NHL - Colorado Avalanche
+NHL-ChicagoBlackhawks.us	73	NHL - Chicago Blackhawks
+NHL-ColumbusBlueJackets.us	74	NHL - Columbus Blue Jackets
+NHL-St.LouisBlues.us	74	NHL - St. Louis Blues
+NHL-BostonBruins.us	86	NHL - Boston Bruins
+NHL-MontrealCanadiens.us	74	NHL - Montreal Canadiens
+NHL-VancouverCanucks.us	78	NHL - Vancouver Canucks
+NHL-WashingtonCapitals.us	85	NHL - Washington Capitals
+NHL-NewJerseyDevils.us	74	NHL - New Jersey Devils
+NHL-AnaheimDucks.us	74	NHL - Anaheim Ducks
+NHL-CalgaryFlames.us	74	NHL - Calgary Flames
+NHL-PhiladelphiaFlyers.us	73	NHL - Philadelphia Flyers
+NHL-VegasGoldenKnights.us	78	NHL - Vegas Golden Knights
+NHL-CarolinaHurricanes.us	94	NHL - Carolina Hurricanes
+NHL-NewYorkIslanders.us	85	NHL - New York Islanders
+NHL-WinnipegJets.us	73	NHL - Winnipeg Jets
+NHL-LosAngelesKings.us	85	NHL - Los Angeles Kings
+NHL-SeattleKraken.us	109	NHL - Seattle Kraken
+NHL-TampaBayLightning.us	66	NHL - Tampa Bay Lightning
+NHL-UtahMammoth.us	73	NHL - Utah Mammoth
+NHL-TorontoMapleLeafs.us	74	NHL - Toronto Maple Leafs
+NHL-EdmontonOilers.us	62	NHL - Edmonton Oilers
+NHL-FloridaPanthers.us	74	NHL - Florida Panthers
+NHL-PittsburghPenguins.us	73	NHL - Pittsburgh Penguins
+NHL-NashvillePredators.us	69	NHL - Nashville Predators
+NHL-NewYorkRangers.us	69	NHL - New York Rangers
+NHL-DetroitRedWings.us	66	NHL - Detroit Red Wings
+NHL-BuffaloSabres.us	73	NHL - Buffalo Sabres
+NHL-OttawaSenators.us	74	NHL - Ottawa Senators
+NHL-SanJoseSharks.us	62	NHL - San Jose Sharks
+NHL-DallasStars.us	78	NHL - Dallas Stars
+NHL-MinnesotaWild.us	73	NHL - Minnesota Wild
+MMA-UFC.us	205	UFC - Ultimate Fighting Championship
+UFL-ColumbusAviators.us	28	UFL - Columbus Aviators
+UFL-St.LouisBattlehawks.us	28	UFL - St. Louis Battlehawks
+UFL-DCDEFENDERS.us	28	UFL - DC DEFENDERS
+UFL-HoustonGamblers.us	28	UFL - Houston Gamblers
+UFL-LouisvilleKings.us	28	UFL - Louisville Kings
+UFL-DallasRenegades.us	28	UFL - Dallas Renegades
+UFL-BirminghamStallions.us	28	UFL - Birmingham Stallions
+UFL-OrlandoStorm.us	28	UFL - Orlando Storm
+WNBA-LasVegasAces.us	28	WNBA - Las Vegas Aces
+WNBA-AtlantaDream.us	34	WNBA - Atlanta Dream
+WNBA-IndianaFever.us	28	WNBA - Indiana Fever
+WNBA-PortlandFire.us	28	WNBA - Portland Fire
+WNBA-NewYorkLiberty.us	28	WNBA - New York Liberty
+WNBA-MinnesotaLynx.us	28	WNBA - Minnesota Lynx
+WNBA-PhoenixMercury.us	28	WNBA - Phoenix Mercury
+WNBA-WashingtonMystics.us	28	WNBA - Washington Mystics
+WNBA-ChicagoSky.us	28	WNBA - Chicago Sky
+WNBA-LosAngelesSparks.us	28	WNBA - Los Angeles Sparks
+WNBA-SeattleStorm.us	28	WNBA - Seattle Storm
+WNBA-ConnecticutSun.us	28	WNBA - Connecticut Sun
+WNBA-TorontoTempo.us	28	WNBA - Toronto Tempo
+WNBA-GoldenStateValkyries.us	34	WNBA - Golden State Valkyries
+WNBA-DallasWings.us	28	WNBA - Dallas Wings

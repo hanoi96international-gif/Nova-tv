@@ -1,0 +1,7 @@
+CHANNEL MagentaHD.at Magenta HD
+CHANNEL MagentaMusik1.de Magenta Musik 1
+CHANNEL MagentaMusik2.de Magenta Musik 2
+CHANNEL MagentaMusik360.de MagentaMusik 360
+CHANNEL MagentaSport.de Magenta Sport
+   GUIDE web.magentatv.de 5075 de
+CHANNEL VodafoneTV.de Vodafone TV

@@ -1,0 +1,195 @@
+Sky.Uno.it	94	Sky Uno
+Sky.Uno.+.it	94	Sky Uno +
+Sky.Uno.+..it	76	Sky Uno + 
+Sky.Atlantic.it	104	Sky Atlantic
+Sky.Atlantic.Maratone.it	0	Sky Atlantic Maratone
+Sky.Serie.it	121	Sky Serie
+Sky.Serie.Maratone.it	0	Sky Serie Maratone
+Sky.Investigation.it	108	Sky Investigation
+Sky.Investigation.+1.HD.it	0	Sky Investigation +1 HD
+Sky.Crime.it	116	Sky Crime
+Sky.Arte.it	110	Sky Arte
+Sky.Arte.+1.it	0	Sky Arte +1
+Sky.Documentaries.it	104	Sky Documentaries
+Sky.Documentaries.+1.it	104	Sky Documentaries +1
+Sky.Nature.it	108	Sky Nature
+TV8.HD.it	106	TV8 HD
+Comedy.Central.it	223	Comedy Central
+Comedy.+1.it	0	Comedy +1
+MTV.HD.it	150	MTV HD
+MTV.Music.it	0	MTV Music
+Gambero.Rosso.HD.it	200	Gambero Rosso HD
+Classica.HD.it	89	Classica HD
+cielo.it	110	cielo
+Explorer.HD.Channel.it	0	Explorer HD Channel
+Sky.Cinema.Uno.it	51	Sky Cinema Uno
+Sky.Cinema.Uno.+24.it	50	Sky Cinema Uno +24
+Sky.Cinema.Due.it	48	Sky Cinema Due
+Sky.Cinema.Due.+24.it	0	Sky Cinema Due +24
+Sky.Cinema.Collection.it	45	Sky Cinema Collection
+Sky.Cinema.Family.it	57	Sky Cinema Family
+Sky.Cinema.Action.it	44	Sky Cinema Action
+Sky.Cinema.Suspense.it	51	Sky Cinema Suspense
+Sky.Cinema.Romance.it	49	Sky Cinema Romance
+Sky.Cinema.Drama.it	48	Sky Cinema Drama
+Sky.Cinema.Comedy.it	58	Sky Cinema Comedy
+Sky.Sport.Uno.it	98	Sky Sport Uno
+Sky.Sport.Calcio.it	86	Sky Sport Calcio
+Sky.Sport.Tennis.it	43	Sky Sport Tennis
+Sky.Sport.Golf.it	49	Sky Sport Golf
+Sky.Sport.F1.it	131	Sky Sport F1
+Sky.Sport.MotoGP.it	137	Sky Sport MotoGP
+Sky.Sport.NBA.it	61	Sky Sport NBA
+Sky.Sport.Max.it	77	Sky Sport Max
+Sky.Sport.Arena.it	85	Sky Sport Arena
+Sky.Adventure.it	118	Sky Adventure
+Sky.Sport.Mix.it	78	Sky Sport Mix
+Sky.Sport.Legend.it	81	Sky Sport Legend
+Sky.Sport..251.it	6	Sky Sport  251
+Sky.Sport..252.it	6	Sky Sport  252
+Sky.Sport..253.it	5	Sky Sport  253
+Sky.Sport..254.it	4	Sky Sport  254
+Sky.Sport..255.it	3	Sky Sport  255
+Sky.Sport..256.it	3	Sky Sport  256
+Sky.Sport..257.it	2	Sky Sport  257
+Sky.Sport..258.it	1	Sky Sport  258
+Sky.Sport..259.it	0	Sky Sport  259
+Sky.Calcio.10..260.it	0	Sky Calcio 10  260
+Sky.Calcio.11..261.it	0	Sky Calcio 11  261
+SuperTennis.HD.it	54	SuperTennis HD
+Sky.Sport.4K.it	77	Sky Sport 4K
+DAZN4.it	0	DAZN4
+DAZN5.it	0	DAZN5
+EQUtv.it	41	EQUtv
+Horse.TV.HD.it	117	Horse TV HD
+BIKE.it	0	BIKE
+ACI.Sport.Tv.it	70	ACI Sport Tv
+Milan.TV.it	27	Milan TV
+Inter.TV.it	125	Inter TV
+CACCIA.e.Pesca.it	175	CACCIA e Pesca
+Caccia.e.PESCA.it	174	Caccia e PESCA
+Discovery.+1.it	0	Discovery +1
+History.it	108	History
+History.+1.it	0	History +1
+QVC.it	0	QVC
+Fashion.TV.it	0	Fashion TV
+VALUE.24.TV.it	73	VALUE 24 TV
+Sky.TG24.it	240	Sky TG24
+Sky.Meteo24.it	0	Sky Meteo24
+TG24PrimoPiano.it	0	TG24PrimoPiano
+Class.CNBC.it	124	Class CNBC
+TG.NORBA.24.it	0	TG NORBA 24
+Emilia.Romagna.24.it	0	Emilia Romagna 24
+TRM.h24.it	242	TRM h24
+San.Marino.RTV.it	110	San Marino RTV
+Euronews.it	307	Euronews
+Sky.News.it	161	Sky News
+Fox.News.it	66	Fox News
+CNN.Intl..it	122	CNN Intl.
+Fox.Business.it	127	Fox Business
+CNBC.HD.it	159	CNBC HD
+Bloomberg.it	103	Bloomberg
+BBC.World.News.it	0	BBC World News
+France.24.English.HD.it	475	France 24 English HD
+Al.Jazeera.Intl..HD.it	141	Al Jazeera Intl. HD
+NHK.World.TV.HD.it	283	NHK World TV HD
+France.24.Francais.HD.it	388	France 24 Francais HD
+DeAKids.it	411	DeAKids
+DeAKids.+1.it	0	DeAKids +1
+Nick.Jr.it	226	Nick Jr
+Nick.Jr..+1.it	0	Nick Jr. +1
+Nickelodeon.it	329	Nickelodeon
+Nickelodeon.+1.it	0	Nickelodeon +1
+Cartoon.Network.it	415	Cartoon Network
+CN.Lego.days.it	0	CN Lego days
+Boomerang.it	459	Boomerang
+Boomerang.+1.it	0	Boomerang +1
+DeAJunior.it	608	DeAJunior
+Deejay.TV.it	39	Deejay TV
+Radio.Italia.TV.HD.it	37	Radio Italia TV HD
+Radio.Italia.Trend.Tv.HD.it	7	Radio Italia Trend Tv HD
+RADIONORBA.TV.it	83	RADIONORBA TV
+RTL.102.5.HD.it	43	RTL 102.5 HD
+RADIOFRECCIA.HD.it	27	RADIOFRECCIA HD
+LA7.HD.it	131	LA7 HD
+LA7D.it	64	LA7D
+LA7.CINEMA.it	64	LA7 CINEMA
+Top.Crime.it	103	Top Crime
+TGCom.it	161	TGCom
+Rete.4.it	86	Rete 4
+Mediaset.Extra.it	36	Mediaset Extra
+La.5.it	98	La 5
+Italia.2.it	177	Italia 2
+Italia.1.it	132	Italia 1
+Iris.it	52	Iris
+Canale.5.it	127	Canale 5
+27.Twentyseven.it	95	27 Twentyseven
+Mediaset.Italia.-.Europa.e.Africa.it	113	Mediaset Italia - Europa e Africa
+Mediaset.Italia.-.America.it	111	Mediaset Italia - America
+Mediaset.Italia.-.Australia.e.Asia.it	110	Mediaset Italia - Australia e Asia
+Radio.105.it	0	Radio 105
+Cine34.it	60	Cine34
+RMC.it	15	RMC
+GF.VIP.-.Un’ora.fa.it	15	GF VIP - Un’ora fa
+GF.VIP.-.Regia.2.it	15	GF VIP - Regia 2
+GF.VIP.-.Regia.1.it	15	GF VIP - Regia 1
+R101tv.it	525	R101tv
+Cartoonito.it	469	Cartoonito
+Boing.it	363	Boing
+Virgin.Radio.it	449	Virgin Radio
+Focus.it	106	Focus
+20.it	107	20
+Rai.1.HD..101.it	131	Rai 1 HD  101
+Rai.2.HD..102.it	139	Rai 2 HD  102
+Rai.3.HD..103.it	142	Rai 3 HD  103
+Rai.4..5021.it	106	Rai 4  5021
+Rai.5..5023.it	112	Rai 5  5023
+Rai.Movie..5024.it	51	Rai Movie  5024
+Rai.Premium..5025.it	97	Rai Premium  5025
+Rai.Storia..5054.it	134	Rai Storia  5054
+Rai.Gulp..5042.it	326	Rai Gulp  5042
+Rai.Yoyo..5043.it	598	Rai Yoyo  5043
+RAI.Sport...227.it	64	RAI Sport   227
+Rai.News.24..508.it	311	Rai News 24  508
+Rai1.it	127	Rai1
+Rai2.it	140	Rai2
+Rai3.it	139	Rai3
+Rai4.it	113	Rai4
+Rai5.it	110	Rai5
+RaiMovie.it	56	RaiMovie
+RaiPremium.it	103	RaiPremium
+RaiGulp.it	362	RaiGulp
+RaiYoyo.it	684	RaiYoyo
+RaiStoria.it	141	RaiStoria
+RaiScuola.it	0	RaiScuola
+RaiNews24.it	335	RaiNews24
+RaiSport.it	61	RaiSport
+RaiRadio2.it	84	RaiRadio2
+NOVE.HD..149.it	0	NOVE HD  149
+Real.Time.HD..160.it	0	Real Time HD  160
+GIALLO.HD..167.it	0	GIALLO HD  167
+TOPcrime.HD..168.it	105	TOPcrime HD  168
+DMAX.HD..170.it	0	DMAX HD  170
+Food.Network.HD..417.it	0	Food Network HD  417
+HGTV.HD..418.it	0	HGTV HD  418
+Motor.Trend.HD..419.it	0	Motor Trend HD  419
+Warner.TV.it	0	Warner TV
+Nove.it	92	Nove
+DMAX.it	107	DMAX
+Giallo.TV.it	80	Giallo TV
+Real.Time.it	92	Real Time
+HGTV.it	115	HGTV
+Food.Network.it	165	Food Network
+Motor.Trend.it	104	Motor Trend
+Discovery.Channel.it	101	Discovery Channel
+Solocalcio.it.it	82	Solocalcio
+DAZN.1.it.it	54	DAZN 1
+DAZN.2.it.it	17	DAZN 2
+Eurosport.Italia.it	68	Eurosport Italia
+Eurosport.2.Italia.it	63	Eurosport 2 Italia
+K2.it	0	K2
+Frisbee.it	0	Frisbee
+Sky.Sport.24.it	138	Sky Sport 24
+Super!.it	210	Super!
+Sky.Collection.it	151	Sky Collection
+Sportitalia.HD.it	77	Sportitalia HD

@@ -1,0 +1,693 @@
+plex.tv.CW.Forever.plex	114	CW Forever
+plex.tv.Stories.by.AMC.plex	113	Stories by AMC
+plex.tv.Miramax.Movie.Channel.plex	45	Miramax Movie Channel
+plex.tv.ION.plex	97	ION
+plex.tv.BET.x.Tyler.Perry.Drama.plex	128	BET x Tyler Perry Drama
+plex.tv.Hallmark.Movies.&amp;.More.plex	52	Hallmark Movies & More
+plex.tv.NFL.Channel.plex	62	NFL Channel
+plex.tv.Ion.Mystery.plex	94	Ion Mystery
+plex.tv.The.Walking.Dead.Universe.plex	99	The Walking Dead Universe
+plex.tv.National.Lampoon.plex	54	National Lampoon
+plex.tv.The.Wicked.Tuna.Channel.plex	106	The Wicked Tuna Channel
+plex.tv.The.Conners.plex	225	The Conners
+plex.tv.CW.Gold.plex	115	CW Gold
+plex.tv.BET.x.Tyler.Perry.Comedy.plex	221	BET x Tyler Perry Comedy
+plex.tv.GET.Comedy.plex	197	GET Comedy
+plex.tv.Crunchyroll.plex	189	Crunchyroll
+plex.tv.50.Cent.Action.plex	48	50 Cent Action
+plex.tv.Teen.Wolf.by.MGM.plex	117	Teen Wolf by MGM
+plex.tv.ION.Plus.plex	89	ION Plus
+plex.tv.Acorn.TV.Mysteries.plex	99	Acorn TV Mysteries
+plex.tv.SNL.Vault.plex	101	SNL Vault
+plex.tv.Anger.Management.plex	225	Anger Management
+plex.tv.Modern.Marvels.by.History.plex	107	Modern Marvels by History
+plex.tv.Ghost.Hunters.Channel.plex	108	Ghost Hunters Channel
+plex.tv.BritBox.Mysteries.plex	93	BritBox Mysteries
+plex.tv.Dateline.plex	82	Dateline
+plex.tv.MythBusters.plex	114	MythBusters
+plex.tv.The.Repair.Shop.plex	112	The Repair Shop
+plex.tv.The.First.48.by.A&amp;E.plex	107	The First 48 by A&E
+plex.tv.Midsomer.Murders.plex	49	Midsomer Murders
+plex.tv.Stargate.by.MGM.plex	109	Stargate by MGM
+plex.tv.Corner.Gas.plex	199	Corner Gas
+plex.tv.Hit.Sitcoms.plex	210	Hit Sitcoms
+plex.tv.The.Outer.Limits.plex	102	The Outer Limits
+plex.tv.BBC.Sci-Fi.plex	170	BBC Sci-Fi
+plex.tv.The.Librarians.plex	113	The Librarians
+plex.tv.Z.Nation.plex	214	Z Nation
+plex.tv.Scares.by.Shudder.plex	55	Scares by Shudder
+plex.tv.Weeds.&amp;.Nurse.Jackie.plex	192	Weeds & Nurse Jackie
+plex.tv.Nikita.plex	116	Nikita
+plex.tv.Nash.Bridges.plex	106	Nash Bridges
+plex.tv.Heartland.plex	116	Heartland
+plex.tv.Bloomberg.TV.plex	72	Bloomberg TV
+plex.tv.Property.Brothers.Channel.plex	104	Property Brothers Channel
+plex.tv.Real.Housewives.Vault.plex	114	Real Housewives Vault
+plex.tv.Murdoch.Mysteries.plex	103	Murdoch Mysteries
+plex.tv.FilmRise.British.TV.plex	99	FilmRise British TV
+plex.tv.Generation.Drama.plex	115	Generation Drama
+plex.tv.Nip/Tuck.plex	108	Nip/Tuck
+plex.tv.HerSphere.by.Lionsgate.plex	92	HerSphere by Lionsgate
+plex.tv.Nashville.plex	113	Nashville
+plex.tv.Electric.Now.plex	92	Electric Now
+plex.tv.Bravo.Vault.plex	111	Bravo Vault
+plex.tv.MOVIESPHERE.plex	50	MOVIESPHERE
+plex.tv.Ebony.TV.by.Lionsgate.plex	106	Ebony TV by Lionsgate
+plex.tv.Lifetime.Movie.Favorites.plex	56	Lifetime Movie Favorites
+plex.tv.America’s.Funniest.Home.Videos.plex	140	America’s Funniest Home Videos
+plex.tv.Laff.More.plex	183	Laff More
+plex.tv.BBC.Comedy.plex	176	BBC Comedy
+plex.tv.Portlandia.plex	218	Portlandia
+plex.tv.Kim`s.Convenience.plex	203	Kim`s Convenience
+plex.tv.Are.We.There.Yet?.plex	236	Are We There Yet?
+plex.tv.Designated.Survivor.plex	112	Designated Survivor
+plex.tv.Crime.ThrillHer.plex	68	Crime ThrillHer
+plex.tv.Silent.Witness-New.Tricks.plex	95	Silent Witness-New Tricks
+plex.tv.The.Doctor.Blake.Mysteries.plex	83	The Doctor Blake Mysteries
+plex.tv.TV.One.Crime.&amp;.Justice.plex	94	TV One Crime & Justice
+plex.tv.Lawless.plex	61	Lawless
+plex.tv.The.Graham.Norton.Show.plex	131	The Graham Norton Show
+plex.tv.Western.Bound.plex	92	Western Bound
+plex.tv.Circle.Country.plex	102	Circle Country
+plex.tv.MGM.Presents:.Action.plex	47	MGM Presents: Action
+plex.tv.Plex24.plex	39	Plex24
+plex.tv.MGM.Presents:.Westerns.plex	47	MGM Presents: Westerns
+plex.tv.CINEVAULT:.Westerns.plex	58	CINEVAULT: Westerns
+plex.tv.On.Patrol:.Live.plex	35	On Patrol: Live
+plex.tv.A&amp;E.Crime.360.plex	136	A&E Crime 360
+plex.tv.Forensic.Files.plex	199	Forensic Files
+plex.tv.At.the.Movies.plex	46	At the Movies
+plex.tv.Cold.Case.Files.by.A&amp;E.plex	109	Cold Case Files by A&E
+plex.tv.Unsolved.Mysteries.plex	94	Unsolved Mysteries
+plex.tv.FilmRise.Drama.plex	56	FilmRise Drama
+plex.tv.MST3K.plex	46	MST3K
+plex.tv.ALLBLK.Gems.plex	124	ALLBLK Gems
+plex.tv.Game.Show.Central.plex	208	Game Show Central
+plex.tv.The.Price.is.Right.plex	122	The Price is Right
+plex.tv.Primetime.Soaps.plex	105	Primetime Soaps
+plex.tv.REELZ.Famous.&amp;.Infamous.plex	61	REELZ Famous & Infamous
+plex.tv.Dr..Phil.plex	123	Dr. Phil
+plex.tv.Nosey.plex	124	Nosey
+plex.tv.Ancient.Aliens.plex	105	Ancient Aliens
+plex.tv.MGM.Presents.plex	49	MGM Presents
+plex.tv.CINEVAULT.plex	44	CINEVAULT
+plex.tv.Christmas.Plus.plex	45	Christmas Plus
+plex.tv.BBC.Earth.plex	97	BBC Earth
+plex.tv.Beyond.Belief.plex	103	Beyond Belief
+plex.tv.A.Touch.of.Frost.plex	54	A Touch of Frost
+plex.tv.Farscape.plex	105	Farscape
+plex.tv.JAIL.plex	227	JAIL
+plex.tv.Oxygen.True.Crime.Archives.plex	112	Oxygen True Crime Archives
+plex.tv.Living.With.Evil.plex	115	Living With Evil
+plex.tv.AMC.Thrillers.plex	51	AMC Thrillers
+plex.tv.El.Rey.Rebel.plex	57	El Rey Rebel
+plex.tv.Prime.Suspect.plex	50	Prime Suspect
+plex.tv.Mysterious.Worlds.plex	111	Mysterious Worlds
+plex.tv.Mythical.24/7.plex	213	Mythical 24/7
+plex.tv.Fluffy.TV.plex	77	Fluffy TV
+plex.tv.The.Kids.in.the.Hall.plex	197	The Kids in the Hall
+plex.tv.Women.Behind.Bars.plex	104	Women Behind Bars
+plex.tv.Modern.Innovations.by.History.plex	103	Modern Innovations by History
+plex.tv.Deal.Zone.Presented.By.History.plex	178	Deal Zone Presented By History
+plex.tv.Top.Gear.plex	84	Top Gear
+plex.tv.Love.After.Lockup.We.TV.plex	92	Love After Lockup We TV
+plex.tv.Survive.or.Die.plex	110	Survive or Die
+plex.tv.Say.Yes.to.the.Dress.plex	205	Say Yes to the Dress
+plex.tv.E!.Keeping.Up.plex	130	E! Keeping Up
+plex.tv.PBS.Nature.plex	44	PBS Nature
+plex.tv.Ghosts.Are.Real.plex	116	Ghosts Are Real
+plex.tv.Space.&amp;.Beyond.plex	111	Space & Beyond
+plex.tv.BBC.Travel.plex	105	BBC Travel
+plex.tv.Curiosity.NOW.plex	50	Curiosity NOW
+plex.tv.Duck.Dynasty.by.A&amp;E.plex	200	Duck Dynasty by A&E
+plex.tv.MyTime.Movie.Network.plex	61	MyTime Movie Network
+plex.tv.Storage.Wars.by.A&amp;E.plex	200	Storage Wars by A&E
+plex.tv.Xtreme.Outdoor.by.HISTORY.plex	104	Xtreme Outdoor by HISTORY
+plex.tv.Hell`s.Kitchen.&amp;.Kitchen.Nightmares.plex	102	Hell`s Kitchen & Kitchen Nightmares
+plex.tv.The.Osbournes.plex	155	The Osbournes
+plex.tv.Bachelor.Nation.plex	78	Bachelor Nation
+plex.tv.World.of.Love.Island.plex	92	World of Love Island
+plex.tv.UnXplained.Zone.plex	102	UnXplained Zone
+plex.tv.True.History.plex	189	True History
+plex.tv.I.Shouldn`t.Be.Alive.plex	98	I Shouldn`t Be Alive
+plex.tv.Bondi.Rescue.plex	191	Bondi Rescue
+plex.tv.All.Reality.We.TV.plex	110	All Reality We TV
+plex.tv.Million.Dollar.Listing.Vault.plex	107	Million Dollar Listing Vault
+plex.tv.CineLife.plex	51	CineLife
+plex.tv.Lifetime.Movies.Love.&amp;.Drama.plex	62	Lifetime Movies Love & Drama
+plex.tv.Shout!.Movies.plex	48	Shout! Movies
+plex.tv.Untold.Stories.of.the.ER.plex	105	Untold Stories of the ER
+plex.tv.Love.&amp;.Marriage.plex	153	Love & Marriage
+plex.tv.Unidentified.plex	84	Unidentified
+plex.tv.Startalk.TV.plex	103	Startalk TV
+plex.tv.MI-5.plex	92	MI-5
+plex.tv.History.Hit.plex	92	History Hit
+plex.tv.Spark.TV.Light.&amp;.Love.plex	54	Spark TV Light & Love
+plex.tv.The.Prof.G.Channel.plex	111	The Prof G Channel
+plex.tv.Popular.Science.plex	132	Popular Science
+plex.tv.Mayday:.Air.Disaster.plex	103	Mayday: Air Disaster
+plex.tv.Medical.Incredible.plex	125	Medical Incredible
+plex.tv.Highway.Thru.Hell.plex	103	Highway Thru Hell
+plex.tv.Bloodline.Detectives.Hosted.by.Nancy.Grace.plex	111	Bloodline Detectives Hosted by Nancy Grace
+plex.tv.Monsters.are.Real.plex	113	Monsters are Real
+plex.tv.Alien.Nation.by.DUST.plex	80	Alien Nation by DUST
+plex.tv.Beyond.Paranormal.plex	142	Beyond Paranormal
+plex.tv.Dove.plex	61	Dove
+plex.tv.Always.Funny.plex	188	Always Funny
+plex.tv.Slightly.Off.IFC.plex	122	Slightly Off IFC
+plex.tv.Military.Heroes.Presented.By.History.plex	109	Military Heroes Presented By History
+plex.tv.RCM.plex	42	RCM
+plex.tv.History.&amp;.Warfare.plex	87	History & Warfare
+plex.tv.No.Reservations.plex	115	No Reservations
+plex.tv.How.To.plex	221	How To
+plex.tv.PBS.Antiques.Roadshow.plex	92	PBS Antiques Roadshow
+plex.tv.Bizarre.Foods.with.Andrew.Zimmern.plex	130	Bizarre Foods with Andrew Zimmern
+plex.tv.Ice.Road.Truckers.plex	107	Ice Road Truckers
+plex.tv.IFC.Films.Picks.plex	89	IFC Films Picks
+plex.tv.Maverick.Black.Cinema.plex	53	Maverick Black Cinema
+plex.tv.CINEVAULT:.Classics.plex	45	CINEVAULT: Classics
+plex.tv.Classic.Cinema.plex	44	Classic Cinema
+plex.tv.Get.Factual.plex	84	Get.Factual
+plex.tv.Combat.War.Channel.plex	80	Combat War Channel
+plex.tv.UFC.plex	118	UFC
+plex.tv.Tribeca.Channel.plex	43	Tribeca Channel
+plex.tv.CW.Presents.WWE.NXT.plex	57	CW Presents WWE NXT
+plex.tv.DAZN.Ringside.plex	95	DAZN Ringside
+plex.tv.HBO.Boxing.plex	75	HBO Boxing
+plex.tv.NBC.Sports.NOW.plex	98	NBC Sports NOW
+plex.tv.FOX.Sports.plex	131	FOX Sports
+plex.tv.TNA.Wrestling.Channel.plex	54	TNA Wrestling Channel
+plex.tv.Cosmic.Frontiers.plex	111	Cosmic Frontiers
+plex.tv.Paranormal.Files.plex	119	Paranormal Files
+plex.tv.F1.Channel.plex	80	F1 Channel
+plex.tv.FIFA+.plex	68	FIFA+
+plex.tv.Scripps.Sports.Network.plex	58	Scripps Sports Network
+plex.tv.The.Jim.Rome.Show.plex	52	The Jim Rome Show
+plex.tv.Fubo.Sports.Network.plex	72	Fubo Sports Network
+plex.tv.Tennis.Channel.2.plex	23	Tennis Channel 2
+plex.tv.The.World.Poker.Tour.plex	168	The World Poker Tour
+plex.tv.Victory+.plex	0	Victory+
+plex.tv.This.Old.House.plex	191	This Old House
+plex.tv.Garden.with.Monty.Don.plex	92	Garden with Monty Don
+plex.tv.Law.&amp;.Crime.plex	130	Law & Crime
+plex.tv.The.FBI.Files.plex	91	The FBI Files
+plex.tv.Dr..G:.Medical.Examiner.plex	108	Dr. G: Medical Examiner
+plex.tv.Ax.Men.by.History.plex	110	Ax Men by History
+plex.tv.FilmRise.Free.Movies.plex	53	FilmRise Free Movies
+plex.tv.Dance.Moms.by.Lifetime.plex	102	Dance Moms by Lifetime
+plex.tv.All.Weddings.We.TV.plex	103	All Weddings We TV
+plex.tv.Matched.Married.Meet.plex	74	Matched Married Meet
+plex.tv.Jade.Fever.plex	167	Jade Fever
+plex.tv.Extreme.Jobs.plex	107	Extreme Jobs
+plex.tv.Rig.TV.plex	123	Rig TV
+plex.tv.Ice.Pilots.NWT.plex	103	Ice Pilots NWT
+plex.tv.Sheriffs:.El.Dorado.County.plex	218	Sheriffs: El Dorado County
+plex.tv.GET.plex	117	GET
+plex.tv.In.The.Heat.Of.The.Night.by.MGM.plex	102	In The Heat Of The Night by MGM
+plex.tv.Welcome.Home.plex	119	Welcome Home
+plex.tv.FilmRise.True.Crime.plex	99	FilmRise True Crime
+plex.tv.Dog.the.Bounty.Hunter.plex	217	Dog the Bounty Hunter
+plex.tv.Sweet.Escapes.plex	111	Sweet Escapes
+plex.tv.Chef.vs.Chef.plex	111	Chef vs Chef
+plex.tv.CraftsyTV.plex	156	CraftsyTV
+plex.tv.Operation.Repo.plex	166	Operation Repo
+plex.tv.Tiny.House.Nation.plex	134	Tiny House Nation
+plex.tv.Chip.&amp;.Jo:.Feels.Like.Home.plex	161	Chip & Jo: Feels Like Home
+plex.tv.The.Martha.Stewart.Channel.plex	158	The Martha Stewart Channel
+plex.tv.PGA.TOUR.plex	68	PGA TOUR
+plex.tv.Billiard.TV.plex	55	Billiard TV
+plex.tv.PokerGO.plex	53	PokerGO
+plex.tv.Poker.Night.TV.plex	117	Poker Night TV
+plex.tv.Cricket.Gold.plex	77	Cricket Gold
+plex.tv.SportsGrid.plex	64	SportsGrid
+plex.tv.World`s.Most.Evil.Killers.plex	105	World`s Most Evil Killers
+plex.tv.Strongman.Champions.plex	95	Strongman Champions
+plex.tv.Family.Unscripted.plex	156	Family Unscripted
+plex.tv.Crime.&amp;.Justice.plex	131	Crime & Justice
+plex.tv.Grit.Xtra.plex	91	Grit Xtra
+plex.tv.Hunter.plex	97	Hunter
+plex.tv.Green.Acres.plex	193	Green Acres
+plex.tv.Places.&amp;.Spaces.plex	112	Places & Spaces
+plex.tv.Home.Cooking.plex	234	Home Cooking
+plex.tv.Discovery.Turbo.TV.plex	184	Discovery Turbo TV
+plex.tv.SPEEDVISION.plex	168	SPEEDVISION
+plex.tv.Torque.Presented.By.History.plex	118	Torque Presented By History
+plex.tv.Classic.Car.Auctions.plex	63	Classic Car Auctions
+plex.tv.The.Jamie.Oliver.Channel.plex	169	The Jamie Oliver Channel
+plex.tv.Come.Dine.With.Me.plex	143	Come Dine With Me
+plex.tv.BBC.Food.plex	108	BBC Food
+plex.tv.Million.Dollar.Dream.Home.plex	204	Million Dollar Dream Home
+plex.tv.Home.Made.Nation.plex	122	Home.Made.Nation
+plex.tv.Iron.Chef.plex	111	Iron Chef
+plex.tv.The.Great.British.Baking.Channel.plex	89	The Great British Baking Channel
+plex.tv.Antiques.Roadshow.UK.plex	95	Antiques Roadshow UK
+plex.tv.Antiques.Road.Trip.plex	105	Antiques Road Trip
+plex.tv.BBC.Home.&amp;.Garden.plex	104	BBC Home & Garden
+plex.tv.PBS.Food.plex	113	PBS Food
+plex.tv.Tastemade.plex	109	Tastemade
+plex.tv.Stingray.Naturescape.plex	91	Stingray Naturescape
+plex.tv.Paws.&amp;.Claws.plex	112	Paws & Claws
+plex.tv.Love.Pets.plex	168	Love Pets
+plex.tv.The.Pet.Collective.plex	181	The Pet Collective
+plex.tv.INWONDER.plex	151	INWONDER
+plex.tv.PickleTV.plex	92	PickleTV
+plex.tv.Highway.to.Heaven.plex	95	Highway to Heaven
+plex.tv.Baywatch.plex	117	Baywatch
+plex.tv.Tennis+.plex	47	Tennis+
+plex.tv.Real.Crime.plex	94	Real Crime
+plex.tv.Great.British.Menu.plex	155	Great British Menu
+plex.tv.Trailer.Park.Boys:.The.SwearNet.Show.plex	209	Trailer Park Boys: The SwearNet Show
+plex.tv.LOL!.Network.plex	79	LOL! Network
+plex.tv.Comedy.Dynamics.plex	92	Comedy Dynamics
+plex.tv.Love.Thy.Neighbor.plex	229	Love Thy Neighbor
+plex.tv.Robot.Wars.by.Mech+.plex	109	Robot Wars by Mech+
+plex.tv.GLORY.Kickboxing.plex	15	GLORY Kickboxing
+plex.tv.Monster.Jam.plex	112	Monster Jam
+plex.tv.Bassmaster.plex	453	Bassmaster
+plex.tv.PickleballTV.plex	26	PickleballTV
+plex.tv.Family.Feud.plex	115	Family Feud
+plex.tv.BUZZR.plex	158	BUZZR
+plex.tv.TMZ.plex	125	TMZ
+plex.tv.Penn.&amp;.Teller:.Fool.Us.plex	113	Penn & Teller: Fool Us
+plex.tv.Bounce.XL.plex	121	Bounce XL
+plex.tv.TVOne.Stars.&amp;.Stories.plex	92	TVOne Stars & Stories
+plex.tv.Supermarket.Sweep.plex	218	Supermarket Sweep
+plex.tv.Fear.Factor.plex	94	Fear Factor
+plex.tv.BBC.Game.Shows.plex	109	BBC Game Shows
+plex.tv.Deal.Or.No.Deal.plex	154	Deal Or No Deal
+plex.tv.Tony.Robbins.Network.plex	72	Tony Robbins Network
+plex.tv.MrBeast.plex	116	MrBeast
+plex.tv.Paternity.Court.plex	241	Paternity Court
+plex.tv.Confess.by.Nosey.plex	122	Confess by Nosey
+plex.tv.Judge.Nosey.plex	181	Judge Nosey
+plex.tv.The.Bold.and.the.Beautiful.plex	211	The Bold and the Beautiful
+plex.tv.Impossible.-.Quiz.Show.plex	112	Impossible - Quiz Show
+plex.tv.American.Gladiators.by.MGM.plex	109	American Gladiators by MGM
+plex.tv.Family.Feud.Classic.plex	216	Family Feud Classic
+plex.tv.GameTVGO.plex	194	GameTVGO
+plex.tv.The.Sherlock.Holmes.Channel.plex	120	The Sherlock Holmes Channel
+plex.tv.NESN.NATION.plex	66	NESN NATION
+plex.tv.So....Real.plex	102	So... Real
+plex.tv.MotoGP.Channel.plex	65	MotoGP Channel
+plex.tv.Speed.Sport.1.plex	50	Speed Sport 1
+plex.tv.NHRA.TV.plex	38	NHRA TV
+plex.tv.Sports.Illustrated.TV.plex	86	Sports Illustrated TV
+plex.tv.ANIME.x.HIDIVE.plex	191	ANIME x HIDIVE
+plex.tv.NEW.K.MOVIES.plex	44	NEW K.MOVIES
+plex.tv.MHz.Now.plex	66	MHz Now
+plex.tv.FanDuel.TV.Extra.plex	23	FanDuel TV Extra
+plex.tv.DP.World.Tour.plex	29	DP World Tour
+plex.tv.Rakuten.Viki.plex	79	Rakuten Viki
+plex.tv.Surf.Cinema.plex	115	Surf Cinema
+plex.tv.The.Addams.Family.plex	191	The Addams Family
+plex.tv.Mr..Bean.Live.Action.plex	188	Mr. Bean Live Action
+plex.tv.Entertains.plex	177	Entertains
+plex.tv.FilmRise.Comedy.plex	148	FilmRise Comedy
+plex.tv.Lone.Star.plex	93	Lone Star
+plex.tv.Hard.Knocks.plex	132	Hard Knocks
+plex.tv.Stadium.plex	41	Stadium
+plex.tv.A&amp;E.Live.PD.Greatest.Shifts.plex	108	A&E Live PD Greatest Shifts
+plex.tv.Live.PD.Presents.plex	211	Live PD Presents
+plex.tv.A&amp;E.Alaska.State.Troopers.plex	98	A&E Alaska State Troopers
+plex.tv.Dick.Van.Dyke.plex	183	Dick Van Dyke
+plex.tv.Pam.Grier`s.Soul.Flix.plex	61	Pam Grier`s Soul Flix
+plex.tv.21.Jump.Street.plex	102	21 Jump Street
+plex.tv.FilmRise.Mysteries.plex	90	FilmRise Mysteries
+plex.tv.MSG.SportsZone.plex	130	MSG SportsZone
+plex.tv.WildEarth.plex	33	WildEarth
+plex.tv.Triton.Poker.plex	87	Triton Poker
+plex.tv.Wired2Fish.plex	177	Wired2Fish
+plex.tv.Grjngo.-.Western.Movies.plex	55	Grjngo - Western Movies
+plex.tv.Movieitaly.Channel.plex	47	Movieitaly Channel
+plex.tv.Cheaters.plex	220	Cheaters
+plex.tv.Asian.Drama.plex	119	Asian Drama
+plex.tv.The.Carol.Burnett.Show.plex	135	The Carol Burnett Show
+plex.tv.NBC.News.NOW.plex	86	NBC News NOW
+plex.tv.CBS.News.24/7.plex	109	CBS News 24/7
+plex.tv.LiveNOW.from.FOX.plex	25	LiveNOW from FOX
+plex.tv.CNN.Headlines.plex	88	CNN Headlines
+plex.tv.BBC.News.(North.America).plex	141	BBC News (North America)
+plex.tv.Nolly.Africa.HD.plex	48	Nolly Africa HD
+plex.tv.Shemaroo.Bollywood.plex	107	Shemaroo Bollywood
+plex.tv.Victory+.plex	0	Victory+
+plex.tv.The.Design.Network.plex	186	The Design Network
+plex.tv.The.Emeril.Lagasse.Channel.plex	170	The Emeril Lagasse Channel
+plex.tv.Made.It.Myself.TV.plex	0	Made It Myself TV
+plex.tv.5-Minute.Crafts.plex	94	5-Minute Crafts
+plex.tv.SLVR.Sports.and.Entertainment.(SLVR).plex	76	SLVR Sports and Entertainment (SLVR)
+plex.tv.World.Billiards.TV.plex	54	World Billiards TV
+plex.tv.Gravitas.Movies.plex	50	Gravitas Movies
+plex.tv.AfroLandTV.plex	51	AfroLandTV
+plex.tv.Johnny.Carson.TV.plex	88	Johnny Carson TV
+plex.tv.Non-Stop.`90s.plex	51	Non-Stop `90s
+plex.tv.The.FBI.plex	98	The FBI
+plex.tv.Outside.plex	118	Outside
+plex.tv.PBS.Genealogy.plex	81	PBS Genealogy
+plex.tv.80`s.Sitcom.Flashback.plex	199	80`s Sitcom Flashback
+plex.tv.Pink.Panther.plex	214	Pink Panther
+plex.tv.ONE.Championship.TV.plex	88	ONE Championship TV
+plex.tv.GUSTOTV.plex	150	GUSTOTV
+plex.tv.PFL.MMA.plex	64	PFL MMA
+plex.tv.RACER.Select.plex	130	RACER Select
+plex.tv.Motorvision.TV.plex	220	Motorvision TV
+plex.tv.Racing.America.plex	121	Racing America
+plex.tv.World.Surf.League.24/7.plex	60	World Surf League 24/7
+plex.tv.FilmRise.Classic.TV.plex	158	FilmRise Classic TV
+plex.tv.McLeods.Daughters.plex	110	McLeods Daughters
+plex.tv.Bonanza-Billies.TV.plex	137	Bonanza-Billies TV
+plex.tv.Four.in.a.Bed.plex	213	Four in a Bed
+plex.tv.Don`t.Tell.The.Bride.plex	96	Don`t Tell The Bride
+plex.tv.Chaos.on.Cam.by.A&amp;E.plex	212	Chaos on Cam by A&E
+plex.tv.Preston.&amp;.Brianna.plex	194	Preston & Brianna
+plex.tv.FilmRise.Creators.plex	198	FilmRise Creators
+plex.tv.ALF.plex	196	ALF
+plex.tv.Hasbro.Legends.plex	234	Hasbro Legends
+plex.tv.Crime.Beat.TV.plex	72	Crime Beat TV
+plex.tv.Outlaw.plex	117	Outlaw
+plex.tv.Wild.West.TV.plex	93	Wild West TV
+plex.tv.The.Rifleman.plex	179	The Rifleman
+plex.tv.Wanted:.Dead.or.Alive.plex	192	Wanted: Dead or Alive
+plex.tv.Death.Valley.Days.plex	181	Death Valley Days
+plex.tv.FilmRise.Western.plex	179	FilmRise Western
+plex.tv.PursuitUP.plex	183	PursuitUP
+plex.tv.Game.&amp;.Fish.TV.plex	175	Game & Fish TV
+plex.tv.FTF.Sports.plex	46	FTF Sports
+plex.tv.INTER.24/7.plex	116	INTER 24/7
+plex.tv.beIN.SPORTS.XTRA.plex	106	beIN SPORTS XTRA
+plex.tv.The.Bob.Ross.Channel.plex	161	The Bob Ross Channel
+plex.tv.GolfPass.plex	165	GolfPass
+plex.tv.Yahoo!.Sports.Network.plex	60	Yahoo! Sports Network
+plex.tv.Classic.Doctor.Who.plex	202	Classic Doctor Who
+plex.tv.Cowboy+.Sports.plex	47	Cowboy+ Sports
+plex.tv.Cirque.du.Soleil.plex	42	Cirque du Soleil
+plex.tv.CNN.Originals.plex	135	CNN Originals
+plex.tv.Unspeakable.plex	193	Unspeakable
+plex.tv.Judge.Faith.plex	275	Judge Faith
+plex.tv.Wendy.Williams.plex	114	Wendy Williams
+plex.tv.365BLK.[FAST].plex	69	365BLK [FAST]
+plex.tv.Legacy.plex	114	Legacy
+plex.tv.WipeoutXtra.plex	82	WipeoutXtra
+plex.tv.The.Biggest.Loser.plex	85	The Biggest Loser
+plex.tv.Celebrity.Name.Game.plex	237	Celebrity Name Game
+plex.tv.VICE.plex	72	VICE
+plex.tv.TVB.Pearl.Drama.plex	111	TVB Pearl Drama
+plex.tv.Hot.Ones.plex	210	Hot Ones
+plex.tv.JoySauce.plex	130	JoySauce
+plex.tv.Amasian.TV.plex	43	Amasian TV
+plex.tv.Powernation.plex	221	Powernation
+plex.tv.That.Girl.plex	177	That Girl
+plex.tv.Fifth.Gear.(UK).plex	181	Fifth Gear (UK)
+plex.tv.The.Ed.Sullivan.Show.plex	164	The Ed Sullivan Show
+plex.tv.Degrassi.plex	215	Degrassi
+plex.tv.Shout!.TV.plex	145	Shout! TV
+plex.tv.Dog.Whisperer.plex	94	Dog Whisperer
+plex.tv.TODAY.All.Day.plex	163	TODAY All Day
+plex.tv.RetroCrush.plex	189	RetroCrush
+plex.tv.Yu-Gi-Oh!.plex	190	Yu-Gi-Oh!
+plex.tv.Beyblade.plex	257	Beyblade
+plex.tv.Anime.24/7.plex	121	Anime 24/7
+plex.tv.Sonic.The.Hedgehog.plex	213	Sonic The Hedgehog
+plex.tv.Animation+.plex	156	Animation+
+plex.tv.FilmRise.Anime.plex	135	FilmRise Anime
+plex.tv.AsianCrush.plex	72	AsianCrush
+plex.tv.ROMCOM.K-Drama.plex	75	ROMCOM K-Drama
+plex.tv.Dungeons.&amp;.Dragons.Adventures.plex	65	Dungeons & Dragons Adventures
+plex.tv.Jubao.plex	131	Jubao
+plex.tv.FashionTV.plex	188	FashionTV
+plex.tv.Surfer.TV.plex	98	Surfer TV
+plex.tv.Aliwko.plex	146	Aliwko
+plex.tv.ACL.Cornhole.TV.plex	25	ACL Cornhole TV
+plex.tv.Bowling.TV.plex	86	Bowling TV
+plex.tv.Perform.by.Lifetime.plex	100	Perform by Lifetime
+plex.tv.Azteca.Internacional.plex	86	Azteca Internacional
+plex.tv.Z.Nation.plex	214	Z Nation
+plex.tv.The.Black.Effect.plex	12	The Black Effect
+plex.tv.FilmRise.Black.TV.plex	62	FilmRise Black TV
+plex.tv.Shades.of.Black.plex	50	Shades of Black
+plex.tv.Documentary+.plex	81	Documentary+
+plex.tv.Bizaar.plex	186	Bizaar
+plex.tv.FailArmy.plex	182	FailArmy
+plex.tv.Dude.Perfect.plex	0	Dude Perfect
+plex.tv.Mr..Bean.plex	32	Mr. Bean
+plex.tv.Just.For.Laughs.Gags.plex	186	Just For Laughs Gags
+plex.tv.Creator.Television.plex	157	Creator Television
+plex.tv.The.Walking.Dead.Espanol.plex	99	The Walking Dead Espanol
+plex.tv.PBS.Travel.plex	112	PBS Travel
+plex.tv.AMC.en.Español.plex	98	AMC en Español
+plex.tv.Wu.Tang.Collection.plex	70	Wu Tang Collection
+plex.tv.Hi-YAH!.plex	44	Hi-YAH!
+plex.tv.MagellanTV.Wildest.plex	117	MagellanTV Wildest
+plex.tv.Cesar`s.Pack.Leader.TV.plex	100	Cesar`s Pack Leader TV
+plex.tv.RCN.Más.plex	95	RCN Más
+plex.tv.Unique.Lives.plex	121	Unique Lives
+plex.tv.Caso.Cerrado.plex	113	Caso Cerrado
+plex.tv.Telemundo.al.Dia.plex	145	Telemundo al Dia
+plex.tv.Telemundo.Texas.plex	185	Telemundo Texas
+plex.tv.24.Hour.Free.Movies.plex	68	24 Hour Free Movies
+plex.tv.Love.Nature.plex	113	Love Nature
+plex.tv.Scream.Factory.TV.plex	53	Scream Factory TV
+plex.tv.Real.Wild.plex	104	Real Wild
+plex.tv.Journy.plex	206	Journy
+plex.tv.Estrella.News.plex	150	Estrella News
+plex.tv.ADN.NOTICIAS.plex	144	ADN NOTICIAS
+plex.tv.Canela.TV.Clásicos.plex	51	Canela.TV Clásicos
+plex.tv.GoUSA.TV.plex	72	GoUSA TV
+plex.tv.BlackPix.plex	66	BlackPix
+plex.tv.Canela.TV.Novelas.y.Dramas.plex	89	Canela.TV Novelas y Dramas
+plex.tv.4UV.plex	64	4UV
+plex.tv.The.Asylum.plex	63	The Asylum
+plex.tv.BOOT.plex	217	BOOT
+plex.tv.FilmRise.Action.plex	54	FilmRise Action
+plex.tv.OUTFLIX.MOVIES.plex	53	OUTFLIX MOVIES
+plex.tv.CBS.News.Texas.plex	162	CBS News Texas
+plex.tv.NBC.5.Dallas.Fort.Worth.News.plex	174	NBC 5 Dallas Fort Worth News
+plex.tv.Free.Movies.Plus.plex	24	Free Movies Plus
+plex.tv.The.Doctors.plex	122	The Doctors
+plex.tv.At.Home.with.Family.Handyman.plex	121	At Home with Family Handyman
+plex.tv.SLOPES.plex	72	SLOPES
+plex.tv.Travel.Escapes.plex	166	Travel Escapes
+plex.tv.Horror.Stories.plex	91	Horror Stories
+plex.tv.The.Outpost.plex	111	The Outpost
+plex.tv.Continuum.plex	102	Continuum
+plex.tv.Anger.Management.en.español.plex	0	Anger Management en español
+plex.tv.Crime.Scenes.plex	115	Crime Scenes
+plex.tv.LX.Home.Streaming.plex	225	LX Home Streaming
+plex.tv.Hong.Kong.Fight.Club.plex	45	Hong Kong Fight Club
+plex.tv.The.World.Poker.Tour.plex	168	The World Poker Tour
+plex.tv.Action.Hollywood.Movies.plex	46	Action Hollywood Movies
+plex.tv.Novelisima.plex	91	Novelisima
+plex.tv.Runtime.Español.plex	75	Runtime Español
+plex.tv.NEW.KFOOD.plex	107	NEW KFOOD
+plex.tv.Geraldo.Rivera.plex	72	Geraldo Rivera
+plex.tv.The.Grio.plex	78	The Grio
+plex.tv.Autopista.al.Cielo.plex	99	Autopista al Cielo
+plex.tv.GoTraveler.plex	163	GoTraveler
+plex.tv.Go.Wild.plex	112	Go Wild
+plex.tv.Overtime.plex	43	Overtime
+plex.tv.Caught.in.Providence.plex	253	Caught in Providence
+plex.tv.Wonder.plex	102	Wonder
+plex.tv.FUEL.TV.plex	156	FUEL TV
+plex.tv.Los.Asesinatos.de.Midsomer.plex	55	Los Asesinatos de Midsomer
+plex.tv.FilmRise.Concursos.de.Cocina.plex	105	FilmRise Concursos de Cocina
+plex.tv.FilmRise.Series.Gratis.plex	92	FilmRise Series Gratis
+plex.tv.People.are.Awesome.plex	180	People are Awesome
+plex.tv.Corazón.plex	98	Corazón
+plex.tv.Estrella.TV.plex	86	Estrella TV
+plex.tv.True.Crime.Now.plex	72	True Crime Now
+plex.tv.PBS.Retro.plex	192	PBS Retro
+plex.tv.Transformers.plex	191	Transformers
+plex.tv.Sonic.TV.plex	72	Sonic TV
+plex.tv.Power.Rangers.plex	231	Power Rangers
+plex.tv.WeatherSpy.plex	142	WeatherSpy
+plex.tv.El.Señor.de.los.Cielos.plex	111	El Señor de los Cielos
+plex.tv.Midnight.Pulp.plex	53	Midnight Pulp
+plex.tv.OuterSphere.by.Lionsgate.plex	50	OuterSphere by Lionsgate
+plex.tv.FilmRise.Sci-Fi.plex	52	FilmRise Sci-Fi
+plex.tv.Novelas.de.Siempre.plex	109	Novelas de Siempre
+plex.tv.Caracol.Mix.plex	72	Caracol Mix
+plex.tv.ElectricNOW.en.Español.plex	92	ElectricNOW en Español
+plex.tv.Delito.plex	130	Delito
+plex.tv.Azteca.Deportes.Network.plex	301	Azteca Deportes Network
+plex.tv.EarthXtra.plex	102	EarthXtra
+plex.tv.My.Little.Pony.plex	72	My Little Pony
+plex.tv.Stingray.Holidayscapes.plex	46	Stingray Holidayscapes
+plex.tv.Estrella.Games.plex	95	Estrella Games
+plex.tv.Iron.Chef.en.español.plex	111	Iron Chef en español
+plex.tv.Fight.Network.plex	71	Fight Network
+plex.tv.Vive.Kanal.D.Drama.plex	62	Vive Kanal D Drama
+plex.tv.RCN.Noticias.plex	96	RCN Noticias
+plex.tv.FilmRise.Crímenes.Verdaderos.plex	152	FilmRise Crímenes Verdaderos
+plex.tv.FilmRise.Películas.Gratis.plex	61	FilmRise Películas Gratis
+plex.tv.Western.Bound.Español.plex	106	Western Bound Español
+plex.tv.Mera.Mera.TV.plex	117	Mera Mera TV
+plex.tv.Crime.Scene.TV.plex	99	Crime Scene TV
+plex.tv.ITV.Deportes.plex	67	ITV Deportes
+plex.tv.Billboard.Español.TV.plex	115	Billboard Español TV
+plex.tv.Teleonce.America.plex	130	Teleonce America
+plex.tv.WAPA+.plex	80	WAPA+
+plex.tv.Cops.en.Español.plex	72	Cops en Español
+plex.tv.Gata.Salvaje.plex	95	Gata Salvaje
+plex.tv.Clic.plex	173	Clic
+plex.tv.Spark.TV.Luz.y.Amor.plex	55	Spark TV Luz y Amor
+plex.tv.Grjngo.-.Películas.Del.Oeste.plex	54	Grjngo - Películas Del Oeste
+plex.tv.Cheaters.en.Español.plex	111	Cheaters en Español
+plex.tv.Crimes.Cults.Killers.plex	112	Crimes Cults Killers
+plex.tv.Misterios.sin.Resolver.plex	95	Misterios sin Resolver
+plex.tv.FreeTV.Clásico.plex	59	FreeTV Clásico
+plex.tv.Lucha.Plus.plex	55	Lucha Plus
+plex.tv.Teletubbies.plex	187	Teletubbies
+plex.tv.Baby.Einstein.plex	163	Baby Einstein
+plex.tv.The.Wiggles.plex	203	The Wiggles
+plex.tv.beIN.Sports.Xtra.en.Español.plex	87	beIN Sports Xtra en Español
+plex.tv.Historias.de.Corazón.plex	92	Historias de Corazón
+plex.tv.Strawberry.Shortcake.plex	185	Strawberry Shortcake
+plex.tv.Canela.TV.Hollywood.y.Más.plex	49	Canela.TV Hollywood y Más
+plex.tv.Ninja.Kidz.TV.plex	72	Ninja Kidz TV
+plex.tv.PLL.Network.plex	0	PLL Network
+plex.tv.Swerve.Women`s.Sports.plex	69	Swerve Women`s Sports
+plex.tv.The.New.Detectives.plex	89	The New Detectives
+plex.tv.Made.In.Hollywood.plex	189	Made In Hollywood
+plex.tv.Cine.en.Español.plex	45	Cine en Español
+plex.tv.Cine.EstrellaTV.plex	48	Cine EstrellaTV
+plex.tv.Nosey.Escándalos.plex	118	Nosey Escándalos
+plex.tv.Zona.Investigación.plex	84	Zona Investigación
+plex.tv.Willow.Sports.plex	99	Willow Sports
+plex.tv.Cine.Romántico.plex	60	Cine Romántico
+plex.tv.Todo.Drama.plex	81	Todo Drama
+plex.tv.FilmRise.Kids.plex	199	FilmRise Kids
+plex.tv.Newsmax2.plex	96	Newsmax2
+plex.tv.The.Reuters.60.plex	72	The Reuters 60
+plex.tv.FOX.Weather.plex	51	FOX Weather
+plex.tv.AccuWeather.NOW.plex	19	AccuWeather NOW
+plex.tv.USA.TODAY.plex	153	USA TODAY
+plex.tv.Yahoo.Finance.plex	180	Yahoo Finance
+plex.tv.Scripps.News.plex	131	Scripps News
+plex.tv.ACCDN.plex	50	ACCDN
+plex.tv.Noticias.Telemundo.AHORA.plex	170	Noticias Telemundo AHORA
+plex.tv.HBCUGO.SPORTS.plex	86	HBCUGO SPORTS
+plex.tv.ZenLIFE.by.Stingray.plex	72	ZenLIFE by Stingray
+plex.tv.Waypoint.TV.plex	207	Waypoint TV
+plex.tv.Horror.by.ALTER.plex	75	Horror by ALTER
+plex.tv.American.Crimes.plex	115	American Crimes
+plex.tv.Swerve.Combat.plex	62	Swerve Combat
+plex.tv.Toon.Goggles.plex	243	Toon Goggles
+plex.tv.FilmRise.Horror.plex	54	FilmRise Horror
+plex.tv.TG.Junior.plex	383	TG Junior
+plex.tv.Screambox.TV.plex	72	Screambox TV
+plex.tv.Mysteria.plex	131	Mysteria
+plex.tv.Wedotv.Amor.Piel.Salvaje.plex	101	Wedotv Amor Piel Salvaje
+plex.tv.Unbeaten.plex	43	Unbeaten
+plex.tv.Euronews.plex	304	Euronews
+plex.tv.FRANCE.24.plex	315	FRANCE 24
+plex.tv.Ryan.and.Friends.plex	112	Ryan and Friends
+plex.tv.Court.TV.plex	106	Court TV
+plex.tv.Bloomberg.Originals.plex	39	Bloomberg Originals
+plex.tv.Cheddar.plex	142	Cheddar
+plex.tv.News.12.New.York.plex	191	News 12 New York
+plex.tv.CBC.News.plex	30	CBC News
+plex.tv.pocket.watch.Game-On.plex	95	pocket.watch Game-On
+plex.tv.TruBlu.plex	211	TruBlu
+plex.tv.Todo.Novelas,.más.Pasiones.plex	95	Todo Novelas, más Pasiones
+plex.tv.FreeTV.Drama.plex	90	FreeTV Drama
+plex.tv.FreeTV.Estelar.plex	97	FreeTV Estelar
+plex.tv.Court.TV.Legendary.Trials.plex	93	Court TV Legendary Trials
+plex.tv.FreeTV.Acción.plex	97	FreeTV Acción
+plex.tv.FreeTV.Horror.plex	66	FreeTV Horror
+plex.tv.AddictaTV.plex	60	AddictaTV
+plex.tv.Emoción.Atres.plex	113	Emoción Atres
+plex.tv.So.Yummy.plex	137	So Yummy
+plex.tv.FreeTV.Sureño.plex	51	FreeTV Sureño
+plex.tv.BABY.SHARK.TV.plex	184	BABY SHARK TV
+plex.tv.Todo.Cine.plex	52	Todo Cine
+plex.tv.Canela.TV.Deportes.plex	55	Canela.TV Deportes
+plex.tv.Cine.de.Horror.plex	50	Cine de Horror
+plex.tv.LATV.plex	173	LATV
+plex.tv.Complex.TV.plex	65	Complex TV
+plex.tv.Revry.plex	89	Revry
+plex.tv.More.U.plex	108	More U
+plex.tv.Glewed.TV.plex	46	Glewed TV
+plex.tv.Kidoodle.TV.plex	0	Kidoodle TV
+plex.tv.Dark.Matter.TV.plex	48	Dark Matter TV
+plex.tv.DREAD.TV.plex	61	DREAD TV
+plex.tv.FrightFlix.plex	72	FrightFlix
+plex.tv.Watch.it.SCREAM.plex	72	Watch it SCREAM
+plex.tv.Naturaleza.Salvaje.plex	126	Naturaleza Salvaje
+plex.tv.Trailers.From.Hell.plex	113	Trailers From Hell
+plex.tv.123GO!.plex	204	123GO!
+plex.tv.Local.Now.San.Antonio.plex	95	Local Now San Antonio
+plex.tv.Brat.TV.plex	129	Brat TV
+plex.tv.PeliMex.plex	58	PeliMex
+plex.tv.Camp.Spoopy.plex	71	Camp Spoopy
+plex.tv.NEW.K-POP.plex	64	NEW K-POP
+plex.tv.KidsFlix.plex	80	KidsFlix
+plex.tv.SKWAD.plex	161	SKWAD
+plex.tv.Eddie`s.Wonderland.plex	36	Eddie`s Wonderland
+plex.tv.Qello.Concerts.plex	61	Qello Concerts
+plex.tv.ÚN.TV.plex	140	ÚN TV
+plex.tv.Revry.Latinx.plex	99	Revry Latinx
+plex.tv.Qwest.TV.plex	36	Qwest TV
+plex.tv.Movie.Music.by.Stingray.plex	72	Movie Music by Stingray
+plex.tv.Stingray.Greatest.Hits.plex	22	Stingray Greatest Hits
+plex.tv.Today`s.K-Pop.plex	72	Today`s K-Pop
+plex.tv.CombaTV.plex	56	CombaTV
+plex.tv.FreeTV.Familia.plex	81	FreeTV Familia
+plex.tv.XITE.80s.Flashback.plex	35	XITE 80s Flashback
+plex.tv.XITE.Rock.x.Metal.plex	35	XITE Rock x Metal
+plex.tv.XITE.90s.Throwback.plex	35	XITE 90s Throwback
+plex.tv.Mi.Casa.plex	123	Mi Casa
+plex.tv.Classic.Rock.plex	72	Classic Rock
+plex.tv.Smooth.Jazz.plex	72	Smooth Jazz
+plex.tv.Buen.Viaje.plex	99	Buen Viaje
+plex.tv.Alternative.plex	72	Alternative
+plex.tv.Flashback.70s.plex	72	Flashback 70s
+plex.tv.Remember.the.‘80s.plex	72	Remember the ‘80s
+plex.tv.FilmRise.Music.plex	98	FilmRise Music
+plex.tv.Nothin`.But.90s.plex	72	Nothin` But 90s
+plex.tv.SPIN.plex	72	SPIN
+plex.tv.XITE.Country.Today.plex	35	XITE Country Today
+plex.tv.XITE.Classic.Country.plex	35	XITE Classic Country
+plex.tv.The.Spa.plex	72	The Spa
+plex.tv.XITE.60s.&amp;.70s.Groove.plex	15	XITE 60s & 70s Groove
+plex.tv.Hit.List.plex	72	Hit List
+plex.tv.Hip-Hop/R&amp;B.plex	72	Hip-Hop/R&B
+plex.tv.Stingray.Hot.Country.plex	72	Stingray Hot Country
+plex.tv.XITE.Hits.plex	31	XITE Hits
+plex.tv.XITE.R&amp;B.Feels.plex	31	XITE R&B Feels
+plex.tv.Euro.Hits.plex	72	Euro Hits
+plex.tv.Metal.Rocks.plex	20	Metal.Rocks
+plex.tv.Stingray.Classica.Stream.plex	70	Stingray Classica Stream
+plex.tv.XITE.R&amp;B.Classic.Jams.plex	35	XITE R&B Classic Jams
+plex.tv.TRACE.Urban.plex	43	TRACE Urban
+plex.tv.Tarima.TV.plex	114	Tarima TV
+plex.tv.XITE.Rap.Game.plex	15	XITE Rap Game
+plex.tv.XITE.Hip-Hop.Evolution.plex	15	XITE Hip-Hop Evolution
+plex.tv.XITE.Gospel.plex	35	XITE Gospel
+plex.tv.Easy.Listening.plex	72	Easy Listening
+plex.tv.TRACE.Latina.plex	69	TRACE Latina
+plex.tv.XITE.Just.Chill.plex	35	XITE Just Chill
+plex.tv.XITE.Celebrates.plex	31	XITE Celebrates
+plex.tv.FreeTV.Live.plex	101	FreeTV Live
+plex.tv.FreeTV.Banda.plex	23	FreeTV Banda
+plex.tv.Pop.Adult.plex	72	Pop Adult
+plex.tv.Stingray.DJAZZ.plex	72	Stingray DJAZZ
+plex.tv.XITE.Siempre.Latino.plex	39	XITE Siempre Latino
+plex.tv.XITE.Nuevo.Latino.plex	35	XITE Nuevo Latino
+plex.tv.Todo.Crimen.plex	95	Todo Crimen
+plex.tv.La.Fiebre.del.Jade.plex	181	La Fiebre del Jade
+plex.tv.Ice.Pilots.NWT.(en.español).plex	104	Ice Pilots NWT (en español)
+plex.tv.Stingray.Soul.Storm.plex	72	Stingray Soul Storm
+plex.tv.XITE.Christian.Hits.plex	31	XITE Christian Hits
+plex.tv.XITE.Reggae.Vibes.plex	31	XITE Reggae Vibes
+plex.tv.Stingray.Karaoke.plex	93	Stingray Karaoke
+plex.tv.C4.en.Alerta.plex	469	C4 en Alerta
+plex.tv.El.Conflicto.TV.plex	72	El Conflicto TV
+plex.tv.FreeTV.Hits.plex	23	FreeTV Hits
+plex.tv.TRACE.Brazuca.plex	65	TRACE Brazuca
+plex.tv.Éxitos.del.Momento.plex	72	Éxitos del Momento
+plex.tv.Pac-12.Insider.plex	56	Pac-12 Insider
+plex.tv.Y2K.plex	72	Y2K
+plex.tv.VR+.plex	72	VR+
+plex.tv.Naturaleza.plex	115	Naturaleza
+plex.tv.Ideas.En.5.Minutos.plex	237	Ideas En 5 Minutos
+plex.tv.Women`s.Sports.Network.plex	69	Women`s Sports Network
+plex.tv.Pitufo.TV.plex	307	Pitufo TV

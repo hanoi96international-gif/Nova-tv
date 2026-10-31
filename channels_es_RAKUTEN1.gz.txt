@@ -1,0 +1,1640 @@
+IT:.Hell`s.Kitchen.be	101	IT: Hell`s Kitchen
+DK:.The.Boat.Show.be	336	DK: The Boat Show
+UK:.Crime.Beat.TV.be	0	UK: Crime Beat TV
+NO:.Sony.Faves.be	144	NO: Sony Faves
+NO:.The.Osbournes.be	161	NO: The Osbournes
+ES:.Pocoyó.be	94	ES: Pocoyó
+SE:.Tennis.TV.be	44	SE: Tennis TV
+FR:.Man.City.24/7.be	131	FR: Man City 24/7
+ES:.CGTN.Documentary.be	105	ES: CGTN Documentary
+UK:.Sports.First.TV.be	94	UK: Sports First TV
+NO:.60.Days.in.Jail.be	106	NO: 60 Days in Jail
+FI:.Bionic.Woman.be	96	FI: Bionic Woman
+FI:.CGTN.Documentary.be	105	FI: CGTN Documentary
+ES:.Cine.Western.be	0	ES: Cine Western
+FR:.Films.Romantiques.-.Rakuten.TV.be	52	FR: Films Romantiques - Rakuten TV
+IT:.Motoretrò.be	245	IT: Motoretrò
+UK:.Mythbusters.be	96	UK: Mythbusters
+UK:.Inside.Outside.be	0	UK: Inside Outside
+NO:.Garden.Rescue.be	113	NO: Garden Rescue
+NL:.Highway.to.Heaven.be	78	NL: Highway to Heaven
+FI:.MyTime.Movie.Network.be	65	FI: MyTime Movie Network
+NO:.Real.Crime.be	101	NO: Real Crime
+ES:.MyTime.Movie.Network.be	57	ES: MyTime Movie Network
+DK:.Hunter.be	98	DK: Hunter
+SE:.China.Travel.be	416	SE: China Travel
+DK:.The.New.Detectives.be	90	DK: The New Detectives
+NL:.Monster.Jam.be	112	NL: Monster Jam
+SE:.Women.Behind.Bars.be	85	SE: Women Behind Bars
+SE:.Wicked.Tuna.be	107	SE: Wicked Tuna
+NL:.Aftershock.Homicide.Hunter.be	92	NL: Aftershock Homicide Hunter
+ES:.La.fiebre.del.jade.be	145	ES: La fiebre del jade
+DE:.Will.&amp;.Grace.be	205	DE: Will & Grace
+UK:.Hell`s.Kitchen.be	112	UK: Hell`s Kitchen
+UK:.World.of.Freesports.be	149	UK: World of Freesports
+DK:.RugbyPass.TV.be	38	DK: RugbyPass TV
+NO:.InTravel.be	134	NO: InTravel
+UK:.talkSPORT.be	94	UK: talkSPORT
+NL:.Fifth.Gear.be	143	NL: Fifth Gear
+FI:.Jade.Fever.be	218	FI: Jade Fever
+DE:.Crime.Serien.-.Rakuten.TV.be	104	DE: Crime Serien - Rakuten TV
+NL:.Cosmic.Frontiers.be	188	NL: Cosmic Frontiers
+SE:.Don’t.Tell.The.Bride.be	98	SE: Don’t Tell The Bride
+NO:.Homes.Under.the.Hammer.be	84	NO: Homes Under the Hammer
+DE:.Nature.Time.be	116	DE: Nature Time
+NO:.Farscape.be	106	NO: Farscape
+UK:.Revry.be	34	UK: Revry
+IT:.Pingu.be	293	IT: Pingu
+NO:.Bloomberg.Originals.be	48	NO: Bloomberg Originals
+DK:.Million.Dollar.Dream.Home.be	203	DK: Million Dollar Dream Home
+NO:.Mr..Bean.-.Live.Action.be	190	NO: Mr. Bean - Live Action
+NL:.That`s.70s.be	51	NL: That`s 70s
+DK:.Don’t.Tell.The.Bride.be	97	DK: Don’t Tell The Bride
+NL:.American.Crime.Channel.be	101	NL: American Crime Channel
+IT:.Revry.be	34	IT: Revry
+FI:.Tattoo.Fixers.be	105	FI: Tattoo Fixers
+FI:.DAZN.Ringside.be	97	FI: DAZN Ringside
+DE:.Stingray.`80s.&amp;.`90s.Pop.Germany.be	48	DE: Stingray `80s & `90s Pop Germany
+NL:.Jail.be	0	NL: Jail
+DE:.Xplore.Reisen.be	93	DE: Xplore Reisen
+NL:.Your.80`s.be	49	NL: Your 80`s
+DE:.Winx.Club.TV.be	186	DE: Winx Club TV
+FI:.Weather.Spy.be	145	FI: Weather Spy
+DE:.Vevo.Schlager.Pop.be	94	DE: Vevo Schlager Pop
+ES:.Weather.Spy.be	140	ES: Weather Spy
+SE:.800.Pound.Gorilla.be	73	SE: 800 Pound Gorilla
+SE:.The.Bold.and.The.Beautiful.be	0	SE: The Bold and The Beautiful
+IT:.Moda.TV.be	302	IT: Moda TV
+DK:.Bloomberg.Originals.be	48	DK: Bloomberg Originals
+UK:.Haunt.TV.be	118	UK: Haunt TV
+DE:.Man.City.24/7.be	131	DE: Man City 24/7
+NL:.Fashion.TV.be	143	NL: Fashion TV
+UK:.The.Bold.and.The.Beautiful.be	0	UK: The Bold and The Beautiful
+NL:.Rakuten.VIKI.be	80	NL: Rakuten VIKI
+SE:.Operation.Repo.be	94	SE: Operation Repo
+DK:.Farscape.be	106	DK: Farscape
+UK:.American.Crime.Channel.be	0	UK: American Crime Channel
+UK:.The.Reuters.60.be	52	UK: The Reuters 60
+FI:.Ice.Pilots.be	103	FI: Ice Pilots
+UK:.Bloomberg.TV+.be	94	UK: Bloomberg TV+
+DE:.Krimi.be	102	DE: Krimi
+NL:.Highway.Thru.Hell.be	104	NL: Highway Thru Hell
+NO:.RugbyPass.TV.be	38	NO: RugbyPass TV
+DK:.InTravel.be	133	DK: InTravel
+SE:.Crime.360.be	110	SE: Crime 360
+UK:.COPS.be	0	UK: COPS
+ES:.World.Billiards.TV.be	57	ES: World Billiards TV
+FI:.Graham.Norton.be	0	FI: Graham Norton
+IT:.Bloomberg.TV+.be	94	IT: Bloomberg TV+
+IT:.The.Reuters.60.be	52	IT: The Reuters 60
+ES:.Pilotos.del.Ártico.be	84	ES: Pilotos del Ártico
+FI:.World.Billiards.TV.be	55	FI: World Billiards TV
+NL:.Dog.The.Bounty.Hunter.be	209	NL: Dog The Bounty Hunter
+PL:.Operation.Repo.be	94	PL: Operation Repo
+PL:.Room.to.Improve.be	137	PL: Room to Improve
+DK:.60.Days.in.Jail.be	106	DK: 60 Days in Jail
+IT:.Deluxe.Lounge.HD.be	101	IT: Deluxe Lounge HD
+NL:.Qwest.TV.be	94	NL: Qwest TV
+SE:.World.Surf.League.24/7.be	82	SE: World Surf League 24/7
+NL:.Red.Bull.TV.be	0	NL: Red Bull TV
+DK:.Sports.Illustrated.TV.be	0	DK: Sports Illustrated TV
+NL:.Hardcore.Pawn.be	231	NL: Hardcore Pawn
+DK:.The.Osbournes.be	161	DK: The Osbournes
+DK:.Sony.Faves.be	144	DK: Sony Faves
+SE:.Baby.Shark.TV.be	190	SE: Baby Shark TV
+NO:.The.Boat.Show.be	333	NO: The Boat Show
+IT:.FUEL.TV.be	71	IT: FUEL TV
+SE:.Afterwork.TV.be	173	SE: Afterwork TV
+FR:.Nature.Time.be	116	FR: Nature Time
+FI:.Don’t.Tell.The.Bride.be	97	FI: Don’t Tell The Bride
+FI:.Merhaba.Arabic.Drama.be	124	FI: Merhaba Arabic Drama
+NL:.World.Surf.League.24/7.be	82	NL: World Surf League 24/7
+NL:.True.Crime.Now.be	122	NL: True Crime Now
+PL:.Baby.Shark.TV.be	189	PL: Baby Shark TV
+UK:.FUEL.TV.be	153	UK: FUEL TV
+FI:.Forensic.Files.be	198	FI: Forensic Files
+NO:.Hunter.be	98	NO: Hunter
+UK:.Motor.Racing.be	90	UK: Motor Racing
+NO:.The.New.Detectives.be	90	NO: The New Detectives
+SE:.Room.to.Improve.be	112	SE: Room to Improve
+DE:.Focus.TV.be	87	DE: Focus TV
+DK:.Garden.Rescue.be	113	DK: Garden Rescue
+UK:.Terra.Mater.WILD.be	0	UK: Terra Mater WILD
+DK:.Real.Crime.be	101	DK: Real Crime
+DK:.Operation.Repo.be	94	DK: Operation Repo
+DE:.The.Real.Housewives.be	103	DE: The Real Housewives
+IT:.INTER.24/7.be	130	IT: INTER 24/7
+SE:.Farscape.be	105	SE: Farscape
+DE:.Komödien.-.Rakuten.TV.be	56	DE: Komödien - Rakuten TV
+UK:.Yu-Gi-Oh!.be	221	UK: Yu-Gi-Oh!
+DK:.Hercules:.The.Legendary.Journeys.be	108	DK: Hercules: The Legendary Journeys
+FR:.Le.Meilleur.d`Arthur.be	50	FR: Le Meilleur d`Arthur
+SE:.Bloomberg.Originals.be	48	SE: Bloomberg Originals
+IT:.Film.Top.-.Rakuten.TV.be	50	IT: Film Top - Rakuten TV
+IT:.The.Design.Network.be	186	IT: The Design Network
+ES:.RACER.International.be	150	ES: RACER International
+FR:.FilmRise.Binge.Watch.be	82	FR: FilmRise Binge Watch
+DK:.Crime.360.be	110	DK: Crime 360
+SE:.InTravel.be	138	SE: InTravel
+NL:.PFL.MMA.be	77	NL: PFL MMA
+FI:.RACER.International.be	126	FI: RACER International
+DE:.Profiling.Paris.be	93	DE: Profiling Paris
+DE:.Top.Serien.be	0	DE: Top Serien
+IT:.Stingray.Naturescape.be	92	IT: Stingray Naturescape
+UK:.A.Haunting.be	83	UK: A Haunting
+UK:.Stingray.Naturescape.be	75	UK: Stingray Naturescape
+DE:.NASCAR.be	48	DE: NASCAR
+NO:.800.Pound.Gorilla.be	80	NO: 800 Pound Gorilla
+UK:.The.Design.Network.be	0	UK: The Design Network
+FR:.Stingray:.Remember.the.80’s.be	24	FR: Stingray: Remember the 80’s
+DE:.Deutsches.Kino.-.Rakuten.TV.be	57	DE: Deutsches Kino - Rakuten TV
+IT:.Yu-Gi-Oh!.be	232	IT: Yu-Gi-Oh!
+UK:.Comedy.Movies.-.Rakuten.TV.be	55	UK: Comedy Movies - Rakuten TV
+PL:.Bloomberg.Originals.be	48	PL: Bloomberg Originals
+DE:.Andromeda.be	120	DE: Andromeda
+IT:.Dramma.-.Rakuten.TV.be	0	IT: Dramma - Rakuten TV
+UK:.INTER.24/7.be	118	UK: INTER 24/7
+PL:.Garden.Rescue.be	112	PL: Garden Rescue
+IT:.Qello.Concerts.by.Stingray.be	95	IT: Qello Concerts by Stingray
+ES:.Vevo.Latino.be	97	ES: Vevo Latino
+UK:.That`s.80s.be	52	UK: That`s 80s
+IT:.Daystar.Español.be	171	IT: Daystar Español
+SE:.60.Days.in.Jail.be	104	SE: 60 Days in Jail
+UK:.Flipping.Nation.be	126	UK: Flipping Nation
+FR:.Ciné.Western.be	0	FR: Ciné Western
+ES:.Dark.Matter.be	55	ES: Dark Matter
+NO:.Tennis.TV.be	38	NO: Tennis TV
+UK:.World.Surf.League.24/7.be	82	UK: World Surf League 24/7
+DK:.Baby.Shark.TV.be	192	DK: Baby Shark TV
+DE:.Tempora.be	91	DE: Tempora
+SE:.The.Osbournes.be	168	SE: The Osbournes
+UK:.Untold.Stories.Of.The.ER.be	87	UK: Untold Stories Of The ER
+NO:.Actionfilmer.-.Rakuten.TV.be	54	NO: Actionfilmer - Rakuten TV
+SE:.Sony.Faves.be	166	SE: Sony Faves
+ES:.Crimen.-.Rakuten.TV.be	0	ES: Crimen - Rakuten TV
+DE:.Rally.TV.FAST+.be	48	DE: Rally.TV FAST+
+NO:.China.Travel.be	410	NO: China Travel
+NL:.The.Cube.be	112	NL: The Cube
+ES:.Grjngo.be	0	ES: Grjngo
+IT:.Stingray:.Hitlist.be	0	IT: Stingray: Hitlist
+IT:.FilmRise.Sci-Fi.be	105	IT: FilmRise Sci-Fi
+UK:.Tennis.Channel.be	40	UK: Tennis Channel
+NO:.Wicked.Tuna.be	106	NO: Wicked Tuna
+PL:.American.Crime.Channel.be	124	PL: American Crime Channel
+NO:.Women.Behind.Bars.be	104	NO: Women Behind Bars
+FR:.FIFA+.be	68	FR: FIFA+
+IT:.That`s.80s.be	52	IT: That`s 80s
+SE:.Real.Crime.be	100	SE: Real Crime
+UK:.Daystar.Español.be	130	UK: Daystar Español
+DE:.Netzkino.be	82	DE: Netzkino
+SE:.Garden.Rescue.be	112	SE: Garden Rescue
+DK:.Stingray:.Remember.the.80’s.be	24	DK: Stingray: Remember the 80’s
+ES:.Pelis.Top.-.Rakuten.TV.be	49	ES: Pelis Top - Rakuten TV
+UK:.Tiny.Pop.be	506	UK: Tiny Pop
+NL:.Studio100.HITS.be	167	NL: Studio100 HITS
+DK:.Room.to.Improve.be	137	DK: Room to Improve
+ES:.Top.Gear.en.español.be	94	ES: Top Gear en español
+NO:.Baby.Shark.TV.be	192	NO: Baby Shark TV
+NL:.Real.Wild.be	105	NL: Real Wild
+DK:.Tennis.TV.be	38	DK: Tennis TV
+IT:.Daystar.TV.be	88	IT: Daystar TV
+FI:.Trace.Urban.be	44	FI: Trace Urban
+ES:.K-Drama+.be	74	ES: K-Drama+
+SE:.The.Boat.Show.be	329	SE: The Boat Show
+FI:.BuzzFeed.Unsolved.be	161	FI: BuzzFeed Unsolved
+UK:.TOP.Barça.be	93	UK: TOP Barça
+IT:.The.Pet.Collective.be	181	IT: The Pet Collective
+UK:.River.Monsters.be	104	UK: River Monsters
+FI:.Euronews.LIVE.be	189	FI: Euronews LIVE
+DE:.21.Jump.Street.be	114	DE: 21 Jump Street
+NL:.Romantiek.-.Rakuten.TV.be	50	NL: Romantiek - Rakuten TV
+NO:.Room.to.Improve.be	137	NO: Room to Improve
+FI:.Unsolved.Mysteries.be	98	FI: Unsolved Mysteries
+UK:.The.Pet.Collective.be	181	UK: The Pet Collective
+IT:.TOP.Barça.be	93	IT: TOP Barça
+FI:.Dr..G:.Medical.Examiner.be	111	FI: Dr. G: Medical Examiner
+DK:.Women.Behind.Bars.be	104	DK: Women Behind Bars
+DE:.CNA.Originals.be	86	DE: CNA Originals
+UK:.Hoarders.be	102	UK: Hoarders
+DK:.Wicked.Tuna.be	106	DK: Wicked Tuna
+FR:.NASCAR.be	0	FR: NASCAR
+UK:.Daystar.TV.be	177	UK: Daystar TV
+SE:.The.New.Detectives.be	72	SE: The New Detectives
+IT:.Il.Sole.24.Ore.TV.be	193	IT: Il Sole 24 Ore TV
+UK:.Kim`s.Convenience.be	162	UK: Kim`s Convenience
+DK:.China.Travel.be	413	DK: China Travel
+SE:.Hunter.be	100	SE: Hunter
+PL:.Red.Carpet.TV.International.be	94	PL: Red Carpet TV International
+NO:.Crime.360.be	110	NO: Crime 360
+SE:.RugbyPass.TV.be	37	SE: RugbyPass TV
+FR:.Merhaba.Séries.Arabes.be	123	FR: Merhaba Séries Arabes
+FI:.Curiosity.Now.be	113	FI: Curiosity Now
+NO:.Operation.Repo.be	94	NO: Operation Repo
+FI:.I.Survived.be	110	FI: I Survived
+NO:.Aftershock.Homicide.Hunter.be	89	NO: Aftershock Homicide Hunter
+DK:.800.Pound.Gorilla.be	80	DK: 800 Pound Gorilla
+NO:.Strongman.Champions.League.be	98	NO: Strongman Champions League
+DE:.FIFA+.be	62	DE: FIFA+
+FR:.Mayday:.Catastrophe.Aérienne.be	108	FR: Mayday: Catastrophe Aérienne
+NO:.American.Crime.Channel.be	125	NO: American Crime Channel
+FI:.CNA.Originals.be	98	FI: CNA Originals
+DK:.INTER.24/7.be	116	DK: INTER 24/7
+PL:.TNA.Wrestling.Channel.be	66	PL: TNA Wrestling Channel
+PL:.Bloomberg.TV+.be	94	PL: Bloomberg TV+
+ES:.Stingray:.Remember.the.80’s.be	20	ES: Stingray: Remember the 80’s
+SE:.Actionfilmer.-.Rakuten.TV.be	51	SE: Actionfilmer - Rakuten TV
+FR:.Drames.-.Rakuten.TV.be	50	FR: Drames - Rakuten TV
+PL:.The.Reuters.60.be	52	PL: The Reuters 60
+DK:.The.Design.Network.be	185	DK: The Design Network
+PL:.COPS.be	0	PL: COPS
+DK:.Stingray.Naturescape.be	92	DK: Stingray Naturescape
+SE:.Bloomberg.TV+.be	94	SE: Bloomberg TV+
+DE:.Stingray.Schlager.be	48	DE: Stingray Schlager
+FI:.Crime.Scene.Solvers.be	84	FI: Crime Scene Solvers
+DK:.A.Haunting.be	100	DK: A Haunting
+SE:.The.Reuters.60.be	52	SE: The Reuters 60
+NO:.Don’t.Tell.The.Bride.be	97	NO: Don’t Tell The Bride
+ES:.Águila.Roja.be	63	ES: Águila Roja
+SE:.COPS.be	0	SE: COPS
+DE:.Euronews.LIVE.be	189	DE: Euronews LIVE
+NL:.Stingray:.Piraten.Hits.be	39	NL: Stingray: Piraten Hits
+IT:.Mayday:.Disastro.Aereo.be	104	IT: Mayday: Disastro Aereo
+UK:.British.Screen.Classics.be	59	UK: British Screen Classics
+DE:.XITE.be	35	DE: XITE
+FR:.RACER.International.be	0	FR: RACER International
+DK:.Yu-Gi-Oh!.be	223	DK: Yu-Gi-Oh!
+SE:.Deluxe.Lounge.HD.be	101	SE: Deluxe Lounge HD
+ES:.FIFA+.be	55	ES: FIFA+
+DK:.Daystar.Español.be	171	DK: Daystar Español
+FI:.FIFA+.be	67	FI: FIFA+
+NO:.The.Pet.Collective.be	180	NO: The Pet Collective
+SE:.FUEL.TV.be	71	SE: FUEL TV
+NO:.Daystar.TV.be	177	NO: Daystar TV
+FI:.Tipping.Point.be	109	FI: Tipping Point
+SE:.Motor.Racing.be	0	SE: Motor Racing
+IT:.Baby.Shark.TV.be	190	IT: Baby Shark TV
+UK:.Baby.Shark.TV.be	189	UK: Baby Shark TV
+PL:.FUEL.TV.be	71	PL: FUEL TV
+ES:.World.Surf.League.24/7.be	82	ES: World Surf League 24/7
+DK:.FilmRise.Sci-Fi.be	105	DK: FilmRise Sci-Fi
+DK:.Stingray:.Hitlist.be	24	DK: Stingray: Hitlist
+NO:.World.Cruise.Channel.be	0	NO: World Cruise Channel
+NO:.TOP.Barça.be	80	NO: TOP Barça
+PL:.Deluxe.Lounge.HD.be	101	PL: Deluxe Lounge HD
+DK:.That`s.80s.be	52	DK: That`s 80s
+FI:.Wonder.be	0	FI: Wonder
+DE:.Curiosity.Now.be	123	DE: Curiosity Now
+UK:.Obsessive.Compulsive.Cleaners.be	108	UK: Obsessive Compulsive Cleaners
+DK:.Daystar.TV.be	177	DK: Daystar TV
+NL:.Rookie.Blue.be	120	NL: Rookie Blue
+PL:.1+1.News.be	94	PL: 1+1 News
+UK:.China.Travel.be	419	UK: China Travel
+SE:.World.of.Freesports.be	149	SE: World of Freesports
+SE:.Hell`s.Kitchen.be	112	SE: Hell`s Kitchen
+FI:.Andromeda.be	107	FI: Andromeda
+UK:.Wicked.Tuna.be	107	UK: Wicked Tuna
+NL:.Documentaires.-.Rakuten.TV.be	64	NL: Documentaires - Rakuten TV
+FR:.Un.si.grand.soleil.be	202	FR: Un si grand soleil
+FI:.NASCAR.be	45	FI: NASCAR
+NO:.Daystar.Español.be	171	NO: Daystar Español
+DK:.The.Pet.Collective.be	180	DK: The Pet Collective
+ES:.NASCAR.be	48	ES: NASCAR
+SE:.Sports.First.TV.be	94	SE: Sports First TV
+DE:.Sports.Illustrated.TV.be	0	DE: Sports Illustrated TV
+SE:.Mythbusters.be	96	SE: Mythbusters
+DE:.RACER.International.be	150	DE: RACER International
+DK:.TOP.Barça.be	80	DK: TOP Barça
+DK:.World.Cruise.Channel.be	0	DK: World Cruise Channel
+NO:.That`s.80s.be	52	NO: That`s 80s
+SE:.Crime.Beat.TV.be	0	SE: Crime Beat TV
+ES:.Todo.Novelas.be	112	ES: Todo Novelas
+NO:.Stingray:.Hitlist.be	24	NO: Stingray: Hitlist
+FI:.Xena:.Warrior.Princess.be	107	FI: Xena: Warrior Princess
+NO:.FilmRise.Sci-Fi.be	105	NO: FilmRise Sci-Fi
+PL:.World.of.Freesports.be	149	PL: World of Freesports
+UK:.Tennis.TV.be	44	UK: Tennis TV
+IT:..be	0	IT: 
+DE:.Abschnitt.40.be	109	DE: Abschnitt 40
+NO:.Stingray.Naturescape.be	92	NO: Stingray Naturescape
+DE:.France.24.FAST.English.be	307	DE: France 24 FAST English
+NO:.The.Design.Network.be	185	NO: The Design Network
+NL:.Free.Movies.+.be	0	NL: Free Movies +
+UK:.800.Pound.Gorilla.be	73	UK: 800 Pound Gorilla
+IT:.Cinema.Italiano.be	57	IT: Cinema Italiano
+IT:.Serie.Crime.-.Rakuten.TV.be	108	IT: Serie Crime - Rakuten TV
+DE:.Ax.Men.-.Die.Holzfäller.be	111	DE: Ax Men - Die Holzfäller
+SE:.Aftershock.Homicide.Hunter.be	92	SE: Aftershock Homicide Hunter
+ES:.Rally.TV.FAST+.be	48	ES: Rally.TV FAST+
+DE:.Höhenrausch.be	89	DE: Höhenrausch
+DE:.Grjngo.be	85	DE: Grjngo
+NO:.INTER.24/7.be	116	NO: INTER 24/7
+PL:.Revry.be	34	PL: Revry
+UK:.Filmrise.Medical.Detectives.be	166	UK: Filmrise Medical Detectives
+NO:.Yu-Gi-Oh!.be	224	NO: Yu-Gi-Oh!
+FI:.Ice.Road.Truckers.be	110	FI: Ice Road Truckers
+FI:.Love.Pets.be	170	FI: Love Pets
+SE:.Revry.be	57	SE: Revry
+NO:.Komediefilmer.-.Rakuten.TV.be	52	NO: Komediefilmer - Rakuten TV
+SE:.5-Minute.Crafts.be	155	SE: 5-Minute Crafts
+DE:.FilmGold.be	75	DE: FilmGold
+PL:.Mr..Bean.-.Live.Action.be	190	PL: Mr. Bean - Live Action
+NO:.Toppfilmer.-.Rakuten.TV.be	49	NO: Toppfilmer - Rakuten TV
+SE:.Dog.The.Bounty.Hunter.be	209	SE: Dog The Bounty Hunter
+NO:.A.Haunting.be	100	NO: A Haunting
+FR:.MyTime.Movie.Network.be	56	FR: MyTime Movie Network
+DK:.World.of.Freesports.be	148	DK: World of Freesports
+IT:.The.Boat.Show.be	428	IT: The Boat Show
+NO:.FUEL.TV.be	156	NO: FUEL TV
+DK:.Hell`s.Kitchen.be	112	DK: Hell`s Kitchen
+UK:.Hunter.be	100	UK: Hunter
+NO:.Motor.Racing.be	76	NO: Motor Racing
+SE:.Daystar.TV.be	88	SE: Daystar TV
+UK:.The.New.Detectives.be	72	UK: The New Detectives
+FR:.Ardivision.be	94	FR: Ardivision
+NO:.Deluxe.Lounge.HD.be	102	NO: Deluxe Lounge HD
+PL:.TOP.Barça.be	93	PL: TOP Barça
+PL:.World.Cruise.Channel.be	0	PL: World Cruise Channel
+ES:.AnimeVisión.be	94	ES: AnimeVisión
+NL:.Waterbear.be	153	NL: Waterbear
+SE:.The.Pet.Collective.be	181	SE: The Pet Collective
+DE:.World.Billiards.TV.be	57	DE: World Billiards TV
+DE:.Crimify.be	92	DE: Crimify
+DE:.Artflix.be	85	DE: Artflix
+IT:.Azione.-.Rakuten.TV.be	54	IT: Azione - Rakuten TV
+DK:.Mythbusters.be	97	DK: Mythbusters
+NO:.Stingray:.Remember.the.80’s.be	24	NO: Stingray: Remember the 80’s
+SE:.TOP.Barça.be	93	SE: TOP Barça
+SE:.World.Cruise.Channel.be	0	SE: World Cruise Channel
+UK:.Dragons`.Den.Sony.be	88	UK: Dragons` Den Sony
+NL:.Fail.Army.be	183	NL: Fail Army
+PL:.The.Pet.Collective.be	181	PL: The Pet Collective
+DK:.Sports.First.TV.be	94	DK: Sports First TV
+NL:.GLORY.Kickboxing.be	18	NL: GLORY Kickboxing
+FI:.Man.City.24/7.be	124	FI: Man City 24/7
+UK:.The.Boat.Show.be	0	UK: The Boat Show
+FR:.CGTN.Documentary.be	105	FR: CGTN Documentary
+PL:.Daystar.TV.be	133	PL: Daystar TV
+ES:.Man.City.24/7.be	130	ES: Man City 24/7
+DK:.Crime.Beat.TV.be	0	DK: Crime Beat TV
+PL:.Dr..G:.Medical.Examiner.be	111	PL: Dr. G: Medical Examiner
+FI:.Sports.Illustrated.TV.be	0	FI: Sports Illustrated TV
+FR:.Weather.Spy.be	140	FR: Weather Spy
+NL:.Duck.Dynasty.be	0	NL: Duck Dynasty
+NL:.CGTN.be	143	NL: CGTN
+DK:.Revry.be	88	DK: Revry
+FI:.Romantiikka.-.Rakuten.TV.be	52	FI: Romantiikka - Rakuten TV
+NO:.The.Reuters.60.be	52	NO: The Reuters 60
+FI:.The.Bold.and.The.Beautiful.be	0	FI: The Bold and The Beautiful
+NO:.Bloomberg.TV+.be	94	NO: Bloomberg TV+
+SE:.Sports.Illustrated.TV.be	0	SE: Sports Illustrated TV
+DE:.DDR.TV-Archiv.be	90	DE: DDR TV-Archiv
+UK:.RugbyPass.TV.be	37	UK: RugbyPass TV
+DK:.5-Minute.Crafts.be	145	DK: 5-Minute Crafts
+NO:.COPS.be	0	NO: COPS
+IT:.Bloomberg.Originals.be	48	IT: Bloomberg Originals
+FI:.Aftershock.Homicide.Hunter.be	89	FI: Aftershock Homicide Hunter
+DK:.Topfilm.-.Rakuten.TV.be	48	DK: Topfilm - Rakuten TV
+UK:.Million.Dollar.Dream.Home.be	203	UK: Million Dollar Dream Home
+SE:.INTER.24/7.be	118	SE: INTER 24/7
+FI:.Wrestling.Legends.TV.be	77	FI: Wrestling Legends TV
+FR:.World.Billiards.TV.be	57	FR: World Billiards TV
+SE:.Stingray:.Remember.the.80’s.be	0	SE: Stingray: Remember the 80’s
+NL:.Come.Dine.With.Me.be	126	NL: Come Dine With Me
+SE:.Stingray.Naturescape.be	75	SE: Stingray Naturescape
+DE:.MyTime.Movie.Network.be	55	DE: MyTime Movie Network
+SE:.The.Design.Network.be	186	SE: The Design Network
+SE:.Homes.Under.the.Hammer.be	84	SE: Homes Under the Hammer
+PL:.Stingray.Naturescape.be	92	PL: Stingray Naturescape
+DK:.COPS.be	0	DK: COPS
+NL:.Ax.Men.be	110	NL: Ax Men
+NO:.5-Minute.Crafts.be	145	NO: 5-Minute Crafts
+SE:.A.Haunting.be	82	SE: A Haunting
+DE:.Bionic.Woman.be	99	DE: Bionic Woman
+DK:.The.Reuters.60.be	52	DK: The Reuters 60
+DE:.CGTN.Documentary.be	105	DE: CGTN Documentary
+DE:.Naruto.be	214	DE: Naruto
+PL:.The.Design.Network.be	186	PL: The Design Network
+DK:.Bloomberg.TV+.be	94	DK: Bloomberg TV+
+SE:.Yu-Gi-Oh!.be	222	SE: Yu-Gi-Oh!
+FR:.Génération.Sitcoms.be	0	FR: Génération Sitcoms
+UK:.Farscape.be	105	UK: Farscape
+FI:.Lone.Star.be	93	FI: Lone Star
+NO:.Revry.be	34	NO: Revry
+PL:.INTER.24/7.be	118	PL: INTER 24/7
+UK:.Bloomberg.Originals.be	48	UK: Bloomberg Originals
+NL:.VI.TV.be	119	NL: VI TV
+IT:.Soap.Latino.be	109	IT: Soap Latino
+FI:.Winx.Club.TV.be	94	FI: Winx Club TV
+UK:.Garden.Rescue.be	112	UK: Garden Rescue
+DE:.Weather.Spy.be	139	DE: Weather Spy
+SE:.Daystar.Español.be	171	SE: Daystar Español
+NL:.Sports.Illustrated.TV.be	0	NL: Sports Illustrated TV
+UK:.Real.Crime.be	98	UK: Real Crime
+NL:.CGTN.Global.Biz.be	351	NL: CGTN Global Biz
+PL:.That`s.80s.be	52	PL: That`s 80s
+NL:.INFAST.be	146	NL: INFAST
+DK:.Deluxe.Lounge.HD.be	102	DK: Deluxe Lounge HD
+DE:.Tierwelt.be	101	DE: Tierwelt
+DK:.Motor.Racing.be	77	DK: Motor Racing
+SE:.Xena:.Warrior.Princess.be	87	SE: Xena: Warrior Princess
+PL:.Stingray:.Hitlist.be	0	PL: Stingray: Hitlist
+FR:.Les.Détectives.be	71	FR: Les Détectives
+NO:.Hell`s.Kitchen.be	112	NO: Hell`s Kitchen
+DK:.FUEL.TV.be	156	DK: FUEL TV
+NO:.World.of.Freesports.be	148	NO: World of Freesports
+SE:.FilmRise.Sci-Fi.be	85	SE: FilmRise Sci-Fi
+SE:.Stingray:.Hitlist.be	0	SE: Stingray: Hitlist
+NO:.Crime.Beat.TV.be	0	NO: Crime Beat TV
+UK:.Sony.Faves.be	179	UK: Sony Faves
+UK:.The.Osbournes.be	168	UK: The Osbournes
+FR:.Mr..Bean.-.Live.Action.be	190	FR: Mr. Bean - Live Action
+ES:.Nature.Time.be	116	ES: Nature Time
+PL:.Daystar.Español.be	171	PL: Daystar Español
+NO:.Sports.First.TV.be	94	NO: Sports First TV
+UK:.60.Days.in.Jail.be	0	UK: 60 Days in Jail
+FI:.Nature.Time.be	116	FI: Nature Time
+SE:.That`s.80s.be	52	SE: That`s 80s
+NO:.Mythbusters.be	97	NO: Mythbusters
+ES:.Pingu.be	298	ES: Pingu
+UK:.DAZN.Ringside.be	92	UK: DAZN Ringside
+NO:.Wrestling.Legends.TV.be	77	NO: Wrestling Legends TV
+UK:.Tattoo.Fixers.be	105	UK: Tattoo Fixers
+DE:.Crime.Scene.TV.be	94	DE: Crime Scene TV
+DE:.Fantasja.be	84	DE: Fantasja
+NL:.Deal.or.No.Deal.be	168	NL: Deal or No Deal
+FI:.Stingray:.Remember.the.80’s.be	24	FI: Stingray: Remember the 80’s
+DE:.Zee.TV.be	0	DE: Zee TV
+UK:.Weather.Spy.be	139	UK: Weather Spy
+NL:.Strongman.Champions.League.be	95	NL: Strongman Champions League
+DK:.Grjngo.-.Western.Films.be	56	DK: Grjngo - Western Films
+IT:.Weather.Spy.be	140	IT: Weather Spy
+UK:.POP.be	376	UK: POP
+FI:.5-Minute.Crafts.be	145	FI: 5-Minute Crafts
+UK:.Jade.Fever.be	0	UK: Jade Fever
+IT:.Inazuma.Eleven.Collection.be	228	IT: Inazuma Eleven Collection
+SE:.Love.Pets.be	164	SE: Love Pets
+FI:.Revry.be	34	FI: Revry
+DE:.Sony.Faves.be	196	DE: Sony Faves
+IT:.Stingray.Greatest.Hits.be	23	IT: Stingray Greatest Hits
+NO:.Lone.Star.be	93	NO: Lone Star
+UK:.Stingray:.Remember.the.80’s.be	20	UK: Stingray: Remember the 80’s
+ES:.Revry.be	34	ES: Revry
+SE:.Ice.Road.Truckers.be	110	SE: Ice Road Truckers
+SE:.NASCAR.be	48	SE: NASCAR
+UK:.MyTime.Movie.Network.be	66	UK: MyTime Movie Network
+IT:.CGTN.Documentary.be	105	IT: CGTN Documentary
+NO:.Winx.Club.TV.be	94	NO: Winx Club TV
+FI:.Hell`s.Kitchen.be	112	FI: Hell`s Kitchen
+FI:.World.of.Freesports.be	148	FI: World of Freesports
+SE:.Andromeda.be	87	SE: Andromeda
+FR:.Les.Anges.be	32	FR: Les Anges
+DE:.Bloomberg.Originals.be	48	DE: Bloomberg Originals
+DK:.Man.City.24/7.be	125	DK: Man City 24/7
+FI:.Obsessive.Compulsive.Cleaners.be	109	FI: Obsessive Compulsive Cleaners
+ES:.France.24.FAST.English.be	307	ES: France 24 FAST English
+FI:.Crime.Beat.TV.be	0	FI: Crime Beat TV
+DE:.Spooks.be	0	DE: Spooks
+FI:.Mythbusters.be	97	FI: Mythbusters
+FR:.Les.Routes.du.Paradis.be	97	FR: Les Routes du Paradis
+UK:.Bionic.Woman.be	77	UK: Bionic Woman
+NO:.Nature.Time.be	116	NO: Nature Time
+UK:.CGTN.Documentary.be	105	UK: CGTN Documentary
+PL:.NASCAR.be	48	PL: NASCAR
+FI:.Sports.First.TV.be	94	FI: Sports First TV
+ES:.Shark.Tank.be	110	ES: Shark Tank
+SE:.Dr..G:.Medical.Examiner.be	90	SE: Dr. G: Medical Examiner
+SE:.Tipping.Point.be	106	SE: Tipping Point
+ES:.FUEL.TV.be	71	ES: FUEL TV
+FI:.Motor.Racing.be	95	FI: Motor Racing
+FI:.FUEL.TV.be	156	FI: FUEL TV
+UK:.Merhaba.Arabic.Drama.be	123	UK: Merhaba Arabic Drama
+SE:.FIFA+.be	68	SE: FIFA+
+ES:.Deluxe.Lounge.HD.be	101	ES: Deluxe Lounge HD
+DK:.Winx.Club.TV.be	94	DK: Winx Club TV
+FI:.Deluxe.Lounge.HD.be	102	FI: Deluxe Lounge HD
+FR:.Crime.Scene.TV.be	111	FR: Crime Scene TV
+PL:.FIFA+.be	68	PL: FIFA+
+SE:.Wonder.be	0	SE: Wonder
+UK:.Mayday:.Air.Disaster.be	98	UK: Mayday: Air Disaster
+FR:.La.Maison.France.5.be	83	FR: La Maison France 5
+DK:.Nature.Time.be	116	DK: Nature Time
+DE:.Filmrise.Unsolved.Mysteries.be	101	DE: Filmrise Unsolved Mysteries
+UK:.Xena:.Warrior.Princess.be	87	UK: Xena: Warrior Princess
+IT:.Relic.Hunter.be	103	IT: Relic Hunter
+IT:.Forensic.Files.be	204	IT: Forensic Files
+SE:.Qello.Concerts.by.Stingray.be	77	SE: Qello Concerts by Stingray
+NO:.Man.City.24/7.be	124	NO: Man City 24/7
+UK:.Graham.Norton.be	130	UK: Graham Norton
+SE:.TNA.Wrestling.Channel.be	54	SE: TNA Wrestling Channel
+NL:.Soap.be	111	NL: Soap
+UK:.Inside.Crime.be	104	UK: Inside Crime
+FR:.Televisa:.Les.riches.pleurent.aussi.be	113	FR: Televisa: Les riches pleurent aussi
+UK:.Aftershock.My.Strange.Addiction/My.Crazy.Obsession.be	194	UK: Aftershock My Strange Addiction/My Crazy Obsession
+NL:.Travelxp.be	191	NL: Travelxp
+DK:.Wrestling.Legends.TV.be	77	DK: Wrestling Legends TV
+SE:.CNA.Originals.be	86	SE: CNA Originals
+DK:.Lone.Star.be	93	DK: Lone Star
+NL:.People.Are.Awesome.be	180	NL: People Are Awesome
+FI:.Pohjois.elokuvat.-.Rakuten.TV.be	57	FI: Pohjois elokuvat - Rakuten TV
+FI:.COPS.be	0	FI: COPS
+ES:.Bloomberg.TV+.be	94	ES: Bloomberg TV+
+ES:.The.Reuters.60.be	52	ES: The Reuters 60
+FR:.Bloomberg.Originals.be	48	FR: Bloomberg Originals
+IT:.Squadra.Speciale.Cobra.11.be	107	IT: Squadra Speciale Cobra 11
+NO:.Grjngo.-.Western.Films.be	56	NO: Grjngo - Western Films
+FI:.Bloomberg.TV+.be	94	FI: Bloomberg TV+
+FI:.The.Reuters.60.be	52	FI: The Reuters 60
+ES:.Cops.En.Español.be	0	ES: Cops En Español
+UK:.Ice.Pilots.be	0	UK: Ice Pilots
+SE:.Crime.Scene.Solvers.be	68	SE: Crime Scene Solvers
+IT:.World.Billiards.TV.be	57	IT: World Billiards TV
+NO:.Andromeda.be	107	NO: Andromeda
+FR:.Les.Secrets.de.Nos.Régions.be	200	FR: Les Secrets de Nos Régions
+IT:.Dark.Matter.be	52	IT: Dark Matter
+DK:.Tipping.Point.be	109	DK: Tipping Point
+PL:.Qello.Concerts.by.Stingray.be	95	PL: Qello Concerts by Stingray
+NL:.Gone.Fishing.be	107	NL: Gone Fishing
+ES:.Daystar.Español.be	171	ES: Daystar Español
+UK:.Tiny.House.Nation.be	0	UK: Tiny House Nation
+SE:.Winx.Club.TV.be	94	SE: Winx Club TV
+UK:.Sci-fi.-.Rakuten.TV.be	57	UK: Sci-fi - Rakuten TV
+DK:.FIFA+.be	67	DK: FIFA+
+FI:.Daystar.Español.be	40	FI: Daystar Español
+NO:.NASCAR.be	45	NO: NASCAR
+FI:.That`s.80s.be	52	FI: That`s 80s
+SE:.Nature.Time.be	116	SE: Nature Time
+ES:.wedotv.Amor.be	109	ES: wedotv Amor
+ES:.That`s.80s.be	52	ES: That`s 80s
+FR:.Baby.Shark.TV.be	189	FR: Baby Shark TV
+DK:.Wonder.be	0	DK: Wonder
+NL:.Dr..G:.Medical.Examiner.be	90	NL: Dr. G: Medical Examiner
+SE:.Stingray.`80s.&amp;.`90s.Pop.Sweden.be	39	SE: Stingray `80s & `90s Pop Sweden
+ES:.Historia.y.Vida.be	103	ES: Historia y Vida
+ES:.Stingray:.Hitlist.be	0	ES: Stingray: Hitlist
+ES:.FilmRise.Sci-Fi.be	90	ES: FilmRise Sci-Fi
+IT:.Autostop.per.il.Cielo.be	99	IT: Autostop per il Cielo
+FI:.Stingray:.Hitlist.be	24	FI: Stingray: Hitlist
+DE:.Herzfrequenz.be	83	DE: Herzfrequenz
+FI:.FilmRise.Sci-Fi.be	107	FI: FilmRise Sci-Fi
+FR:.Thrillers.-.Rakuten.TV.be	56	FR: Thrillers - Rakuten TV
+SE:.Grjngo.-.Western.Films.be	57	SE: Grjngo - Western Films
+FI:.The.Design.Network.be	185	FI: The Design Network
+ES:.Stingray.Naturescape.be	0	ES: Stingray Naturescape
+IT:.RACER.International.be	150	IT: RACER International
+ES:.The.Design.Network.be	186	ES: The Design Network
+FI:.Stingray.Naturescape.be	92	FI: Stingray Naturescape
+NL:.Tennis+.be	50	NL: Tennis+
+SE:.Wrestling.Legends.TV.be	80	SE: Wrestling Legends TV
+DK:.CNA.Originals.be	97	DK: CNA Originals
+FR:.100%.Comedy.be	60	FR: 100% Comedy
+FI:.INTER.24/7.be	116	FI: INTER 24/7
+DE:.Wicked.Tuna.be	105	DE: Wicked Tuna
+ES:.INTER.24/7.be	118	ES: INTER 24/7
+FR:.Un.Village.Français.be	93	FR: Un Village Français
+NO:.Rally.TV.FAST+.be	48	NO: Rally.TV FAST+
+UK:.Qello.Concerts.by.Stingray.be	77	UK: Qello Concerts by Stingray
+DE:..be	0	DE: 
+PL:.Lone.Star.be	82	PL: Lone Star
+NO:.Xena:.Warrior.Princess.be	107	NO: Xena: Warrior Princess
+ES:.Yu-Gi-Oh!.be	232	ES: Yu-Gi-Oh!
+NO:.Love.Pets.be	170	NO: Love Pets
+FI:.Yu-Gi-Oh!.be	224	FI: Yu-Gi-Oh!
+NO:.Ice.Road.Truckers.be	110	NO: Ice Road Truckers
+NO:.Obsessive.Compulsive.Cleaners.be	109	NO: Obsessive Compulsive Cleaners
+FR:.Fréquence.Novelas.be	112	FR: Fréquence Novelas
+SE:.Lone.Star.be	82	SE: Lone Star
+DK:.Dr..G:.Medical.Examiner.be	111	DK: Dr. G: Medical Examiner
+DK:.Crime.Scene.Solvers.be	84	DK: Crime Scene Solvers
+FI:.A.Haunting.be	101	FI: A Haunting
+UK:.RACER.International.be	150	UK: RACER International
+ES:.Stingray.Greatest.Hits.be	19	ES: Stingray Greatest Hits
+DE:.Auto.Motor.und.Sport.be	116	DE: Auto Motor und Sport
+UK:.I.Survived.be	110	UK: I Survived
+DK:.Rally.TV.FAST+.be	48	DK: Rally.TV FAST+
+NO:.CNA.Originals.be	97	NO: CNA Originals
+FR:.Emotion`L.be	53	FR: Emotion`L
+NL:.Adventure.Earth.be	99	NL: Adventure Earth
+UK:.Curiosity.Now.be	132	UK: Curiosity Now
+PL:.Stingray.Greatest.Hits.be	23	PL: Stingray Greatest Hits
+NL:.Euro.Crime.Channel.be	72	NL: Euro Crime Channel
+NO:.Crime.Scene.Solvers.be	84	NO: Crime Scene Solvers
+ES:.Actualidad.360.be	96	ES: Actualidad 360
+DK:.Ice.Road.Truckers.be	110	DK: Ice Road Truckers
+FI:.Stingray.Greatest.Hits.be	23	FI: Stingray Greatest Hits
+DE:.Baby.Shark.TV.be	190	DE: Baby Shark TV
+DK:.Love.Pets.be	170	DK: Love Pets
+FI:.The.Pet.Collective.be	180	FI: The Pet Collective
+DK:.NASCAR.be	45	DK: NASCAR
+SE:.Nordiska.Filmer.-.Rakuten.TV.be	0	SE: Nordiska Filmer - Rakuten TV
+NO:.FIFA+.be	67	NO: FIFA+
+UK:.Unsolved.Mysteries.be	79	UK: Unsolved Mysteries
+ES:.The.Pet.Collective.be	181	ES: The Pet Collective
+FR:.Ciné.Nanar.be	49	FR: Ciné Nanar
+FR:..be	0	FR: 
+IT:.Trace.Urban.be	44	IT: Trace Urban
+FI:.Daystar.TV.be	177	FI: Daystar TV
+NO:.Tipping.Point.be	109	NO: Tipping Point
+DK:.Andromeda.be	107	DK: Andromeda
+ES:.Estilo.y.Vida.-.Rakuten.TV.be	136	ES: Estilo y Vida - Rakuten TV
+PL:.Man.City.24/7.be	131	PL: Man City 24/7
+ES:.Daystar.TV.be	88	ES: Daystar TV
+DE:.Swamp.People.-.Überleben.im.Sumpf.be	97	DE: Swamp People - Überleben im Sumpf
+PL:.World.Surf.League.24/7.be	82	PL: World Surf League 24/7
+NL:.Four.in.a.Bed.be	212	NL: Four in a Bed
+DE:.DEFA.TV.be	81	DE: DEFA TV
+SE:.Man.City.24/7.be	131	SE: Man City 24/7
+PL:.Movie.Music.By.Stingray.be	95	PL: Movie Music By Stingray
+ES:.TOP.Barça.be	117	ES: TOP Barça
+UK:.&amp;TV.be	143	UK: &TV
+NO:.Wonder.be	0	NO: Wonder
+UK:.Euronews.LIVE.be	189	UK: Euronews LIVE
+FI:.TOP.Barça.be	80	FI: TOP Barça
+NL:.Westerns.+.be	0	NL: Westerns +
+UK:.BuzzFeed.Unsolved.be	131	UK: BuzzFeed Unsolved
+FI:.World.Cruise.Channel.be	0	FI: World Cruise Channel
+NL:.Africanews.be	189	NL: Africanews
+FR:.That`s.80s.be	52	FR: That`s 80s
+ES:.Baby.Shark.TV.be	190	ES: Baby Shark TV
+NO:.Trace.Urban.be	44	NO: Trace Urban
+NO:.Romantikk.-.Rakuten.TV.be	0	NO: Romantikk - Rakuten TV
+FI:.Baby.Shark.TV.be	192	FI: Baby Shark TV
+IT:.Radio.Italia.Live.be	16	IT: Radio Italia Live
+NL:.Naruto.Channel.be	214	NL: Naruto Channel
+NL:.History.Hit.be	95	NL: History Hit
+NL:.Homeful.be	145	NL: Homeful
+ES:.Cine.Friki.be	51	ES: Cine Friki
+UK:.Wonder.be	0	UK: Wonder
+NO:.Euronews.LIVE.be	189	NO: Euronews LIVE
+IT:.FIFA+.be	60	IT: FIFA+
+FR:.Stingray:.Hitlist.be	0	FR: Stingray: Hitlist
+NL:.Mr..Bean.be	31	NL: Mr. Bean
+NO:.BuzzFeed.Unsolved.be	161	NO: BuzzFeed Unsolved
+UK:.FIFA+.be	94	UK: FIFA+
+FI:.Room.to.Improve.be	137	FI: Room to Improve
+NO:.Unsolved.Mysteries.be	98	NO: Unsolved Mysteries
+FI:.Mr..Bean.-.Live.Action.be	190	FI: Mr. Bean - Live Action
+UK:.Tipping.Point.be	106	UK: Tipping Point
+NL:.Gusto.TV.be	152	NL: Gusto TV
+FR:.Daystar.Español.be	87	FR: Daystar Español
+SE:.Merhaba.Arabic.Drama.be	123	SE: Merhaba Arabic Drama
+SE:.Familj.-.Rakuten.TV.be	0	SE: Familj - Rakuten TV
+SE:.Forensic.Files.be	159	SE: Forensic Files
+NL:.Med.TV.be	245	NL: Med.TV
+FI:.Crime.360.be	110	FI: Crime 360
+NO:.Curiosity.Now.be	113	NO: Curiosity Now
+NL:.The.FBI.Files.be	74	NL: The FBI Files
+PL:.World.Billiards.TV.be	57	PL: World Billiards TV
+DE:.Strongman.Champions.League.be	97	DE: Strongman Champions League
+NL:.That`s.ROCK.be	49	NL: That`s ROCK
+NL:.That`s.90s00s.be	50	NL: That`s 90s00s
+UK:.Crime.Scene.Solvers.be	68	UK: Crime Scene Solvers
+SE:.Ice.Pilots.be	84	SE: Ice Pilots
+DE:.TOP.Barça.be	93	DE: TOP Barça
+FR:.Yu-Gi-Oh!.be	233	FR: Yu-Gi-Oh!
+DK:.RACER.International.be	126	DK: RACER International
+FR:.INA.70s.be	94	FR: INA 70s
+DE:.Nachrichten.360.be	191	DE: Nachrichten 360
+FI:.Operation.Repo.be	94	FI: Operation Repo
+FR:.Sony.Favoris.be	0	FR: Sony Favoris
+NO:.I.Survived.be	110	NO: I Survived
+DE:.Daystar.TV.be	177	DE: Daystar TV
+FR:.The.Design.Network.be	186	FR: The Design Network
+UK:.CNA.Originals.be	86	UK: CNA Originals
+DE:.LooLoo.Kids.TV.be	48	DE: LooLoo Kids TV
+FR:.Stingray.Naturescape.be	92	FR: Stingray Naturescape
+IT:.Sports.Illustrated.TV.be	0	IT: Sports Illustrated TV
+DE:.The.Pet.Collective.be	181	DE: The Pet Collective
+SE:.Graham.Norton.be	0	SE: Graham Norton
+ES:.Todo.Drama.be	79	ES: Todo Drama
+SE:.World.Billiards.TV.be	57	SE: World Billiards TV
+FR:.INTER.24/7.be	118	FR: INTER 24/7
+ES:.Los.asesinatos.de.Midsomer.be	51	ES: Los asesinatos de Midsomer
+IT:.Rally.TV.FAST+.be	48	IT: Rally.TV FAST+
+PL:.DAZN.Ringside.be	92	PL: DAZN Ringside
+DE:.FilmRise.True.Crime.be	103	DE: FilmRise True Crime
+SE:.Toppfilmer.-.Rakuten.TV.be	50	SE: Toppfilmer - Rakuten TV
+UK:.Ice.Road.Truckers.be	110	UK: Ice Road Truckers
+DE:.That`s.80s.be	52	DE: That`s 80s
+NO:.RACER.International.be	126	NO: RACER International
+DK:.Curiosity.Now.be	113	DK: Curiosity Now
+PL:.Weather.Spy.be	140	PL: Weather Spy
+SE:.Jade.Fever.be	168	SE: Jade Fever
+DE:.Deluxe.Deutschpop.be	96	DE: Deluxe Deutschpop
+FI:.800.Pound.Gorilla.be	80	FI: 800 Pound Gorilla
+ES:.Blacklist.TV.Sony.be	111	ES: Blacklist TV Sony
+UK:.Aftershock.Real.Crime.be	111	UK: Aftershock Real Crime
+SE:.Weather.Spy.be	139	SE: Weather Spy
+NL:.World.Poker.Tour.be	58	NL: World Poker Tour
+NO:.Nordiske.Filmer.-.Rakuten.TV.be	58	NO: Nordiske Filmer - Rakuten TV
+DE:.Daystar.Español.be	87	DE: Daystar Español
+SE:.DAZN.Ringside.be	0	SE: DAZN Ringside
+NL:.Stingray.Greatest.Hits.be	19	NL: Stingray Greatest Hits
+IT:.Brindiamo!.be	183	IT: Brindiamo!
+DE:.Tennis.Channel.be	40	DE: Tennis Channel
+UK:.Rally.TV.FAST+.be	48	UK: Rally.TV FAST+
+SE:.Tattoo.Fixers.be	105	SE: Tattoo Fixers
+DE:.Just.Fishing.be	108	DE: Just Fishing
+DK:.I.Survived.be	110	DK: I Survived
+SE:.CGTN.Documentary.be	105	SE: CGTN Documentary
+IT:.NASCAR.be	48	IT: NASCAR
+SE:.Bionic.Woman.be	77	SE: Bionic Woman
+ES:.Películas.de.Drama.-.Rakuten.TV.be	49	ES: Películas de Drama - Rakuten TV
+NL:.Great.British.Menu.be	153	NL: Great British Menu
+NL:.The.Bold.and.The.Beautiful.be	0	NL: The Bold and The Beautiful
+DK:.BuzzFeed.Unsolved.be	161	DK: BuzzFeed Unsolved
+NL:.NewsWorld.be	96	NL: NewsWorld
+DK:.Euronews.LIVE.be	189	DK: Euronews LIVE
+FI:.TNA.Wrestling.Channel.be	66	FI: TNA Wrestling Channel
+DK:.Trace.Urban.be	44	DK: Trace Urban
+FI:.Tennis.TV.be	38	FI: Tennis TV
+FR:.TOP.Barça.be	93	FR: TOP Barça
+DE:.Yu-Gi-Oh!.be	222	DE: Yu-Gi-Oh!
+IT:.Andromeda.be	107	IT: Andromeda
+UK:.The.Real.Housewives.be	85	UK: The Real Housewives
+UK:.Andromeda.be	87	UK: Andromeda
+FI:.Women.Behind.Bars.be	104	FI: Women Behind Bars
+DE:.INTER.24/7.be	118	DE: INTER 24/7
+FR:.The.Pet.Collective.be	181	FR: The Pet Collective
+ES:..be	0	ES: 
+FI:.China.Travel.be	413	FI: China Travel
+PL:.Royalworld.-.Arystokracja.&amp;.Dynastie.be	96	PL: Royalworld - Arystokracja & Dynastie
+FR:.Daystar.TV.be	177	FR: Daystar TV
+DE:.The.Design.Network.be	186	DE: The Design Network
+PL:.CGTN.Documentary.be	105	PL: CGTN Documentary
+DK:.Unsolved.Mysteries.be	98	DK: Unsolved Mysteries
+NL:.Metal.Rocks.be	22	NL: Metal.Rocks
+NL:.Barbie.&amp;.Friends.be	189	NL: Barbie & Friends
+DE:.Stingray.Naturescape.be	92	DE: Stingray Naturescape
+SE:.MyTime.Movie.Network.be	0	SE: MyTime Movie Network
+UK:.NASCAR.be	0	UK: NASCAR
+NL:.Bright.TV.be	72	NL: Bright TV
+FR:.France.24.FAST.English.be	307	FR: France 24 FAST English
+IT:.Guardia.Costiera.be	113	IT: Guardia Costiera
+NL:.Z.Nation.be	87	NL: Z Nation
+ES:.Ideas.en.5.minutos.be	0	ES: Ideas en 5 minutos
+NL:.Dance.Moms.be	107	NL: Dance Moms
+PL:.Moconomy.-.Gospodarka.i.Finanse.be	67	PL: Moconomy - Gospodarka i Finanse
+DE:.Cop.Stories./.Schnell.ermittelt.be	100	DE: Cop Stories / Schnell ermittelt
+FR:.Revry.be	82	FR: Revry
+SE:.Curiosity.Now.be	132	SE: Curiosity Now
+DK:.Jade.Fever.be	201	DK: Jade Fever
+FI:.RugbyPass.TV.be	38	FI: RugbyPass TV
+NO:.Ice.Pilots.be	103	NO: Ice Pilots
+NO:.World.Billiards.TV.be	55	NO: World Billiards TV
+DK:.Weather.Spy.be	144	DK: Weather Spy
+NO:.Graham.Norton.be	0	NO: Graham Norton
+DE:.Terra.Mater.WILD.be	98	DE: Terra Mater WILD
+DE:.Deluxe.Lounge.HD.be	101	DE: Deluxe Lounge HD
+NL:.Car.City.Adventures.be	113	NL: Car City Adventures
+FR:.Pingu.be	292	FR: Pingu
+NL:.Stingray:.Remember.the.80’s.be	20	NL: Stingray: Remember the 80’s
+PL:.CTV-Serial.be	94	PL: CTV-Serial
+DK:.Tattoo.Fixers.be	105	DK: Tattoo Fixers
+UK:.Hotel.Inspector.be	118	UK: Hotel Inspector
+NL:.Grjngo.-.Western.Films.be	56	NL: Grjngo - Western Films
+SE:.I.Survived.be	110	SE: I Survived
+DE:.FUEL.TV.be	153	DE: FUEL TV
+FI:.Hercules:.The.Legendary.Journeys.be	108	FI: Hercules: The Legendary Journeys
+DE:.Täterjagd.be	111	DE: Täterjagd
+UK:.Most.Haunted.Channel.be	103	UK: Most Haunted Channel
+DK:.DAZN.Ringside.be	97	DK: DAZN Ringside
+SE:.Euronews.LIVE.be	189	SE: Euronews LIVE
+DK:.Mr..Bean.-.Live.Action.be	190	DK: Mr. Bean - Live Action
+SE:.BuzzFeed.Unsolved.be	131	SE: BuzzFeed Unsolved
+DE:.Bloomberg.TV+.be	94	DE: Bloomberg TV+
+DK:.CGTN.Documentary.be	105	DK: CGTN Documentary
+DE:.The.Reuters.60.be	52	DE: The Reuters 60
+DK:.Bionic.Woman.be	96	DK: Bionic Woman
+ES:.El.País.be	94	ES: El País
+NL:.Cartoon.Classics.be	0	NL: Cartoon Classics
+FI:.The.Boat.Show.be	336	FI: The Boat Show
+UK:.Man.City.24/7.be	130	UK: Man City 24/7
+SE:.Trace.Urban.be	44	SE: Trace Urban
+FI:.The.New.Detectives.be	90	FI: The New Detectives
+FI:.Hunter.be	98	FI: Hunter
+IT:.Man.City.24/7.be	131	IT: Man City 24/7
+NO:.Forensic.Files.be	197	NO: Forensic Files
+NO:.Merhaba.Arabic.Drama.be	124	NO: Merhaba Arabic Drama
+PL:.Trace.Urban.be	44	PL: Trace Urban
+PL:.Euronews.LIVE.be	189	PL: Euronews LIVE
+DK:.MyTime.Movie.Network.be	65	DK: MyTime Movie Network
+NL:.Proef.Njam!.be	177	NL: Proef Njam!
+PL:.BuzzFeed.Unsolved.be	161	PL: BuzzFeed Unsolved
+SE:.Unsolved.Mysteries.be	79	SE: Unsolved Mysteries
+UK:.Super.Bowl.Champions.be	73	UK: Super Bowl Champions
+DE:.Revry.be	82	DE: Revry
+NL:.Nolly.Africa.HD.be	48	NL: Nolly Africa HD
+FI:.Sony.Faves.be	144	FI: Sony Faves
+FI:.The.Osbournes.be	160	FI: The Osbournes
+UK:.Drama.Movies.-.Rakuten.TV.be	49	UK: Drama Movies - Rakuten TV
+NO:.Million.Dollar.Dream.Home.be	204	NO: Million Dollar Dream Home
+NO:.Bionic.Woman.be	96	NO: Bionic Woman
+FI:.60.Days.in.Jail.be	106	FI: 60 Days in Jail
+NO:.CGTN.Documentary.be	105	NO: CGTN Documentary
+UK:.Nature.Time.be	116	UK: Nature Time
+FR:.Y.A.Que.La.Vérité.Qui.Compte.La.Chaîne.be	52	FR: Y A Que La Vérité Qui Compte La Chaîne
+SE:.Stingray.Total.Hits.Sweden.be	39	SE: Stingray Total Hits Sweden
+FR:.Motor.Racing.be	100	FR: Motor Racing
+NO:.MyTime.Movie.Network.be	65	NO: MyTime Movie Network
+NL:.Z.One.be	159	NL: Z One
+IT:.Nature.Time.be	116	IT: Nature Time
+FI:.Real.Crime.be	101	FI: Real Crime
+UK:.Winx.Club.TV.be	94	UK: Winx Club TV
+FR:.FUEL.TV.be	71	FR: FUEL TV
+FI:.Garden.Rescue.be	113	FI: Garden Rescue
+DK:.Forensic.Files.be	197	DK: Forensic Files
+DE:.Telenovela.ZDF.be	121	DE: Telenovela ZDF
+DE:.Ladykracher.powered.by.myspass.be	203	DE: Ladykracher powered by myspass
+DK:.Merhaba.Arabic.Drama.be	124	DK: Merhaba Arabic Drama
+DE:.Pingu.be	291	DE: Pingu
+FR:.Deluxe.Lounge.HD.be	101	FR: Deluxe Lounge HD
+UK:.Grjngo.-.Western.Films.be	57	UK: Grjngo - Western Films
+IT:.Per.Caso.TV.be	137	IT: Per Caso TV
+DE:.X-Factor.be	107	DE: X-Factor
+SE:.RACER.International.be	150	SE: RACER International
+DK:.Ice.Pilots.be	103	DK: Ice Pilots
+UK:.Stingray.Total.Hits.UK.be	39	UK: Stingray Total Hits UK
+NO:.France.24.FAST.English.be	317	NO: France 24 FAST English
+NL:.TNA.Wrestling.Channel.be	54	NL: TNA Wrestling Channel
+FI:.InTravel.be	133	FI: InTravel
+NO:.Jade.Fever.be	202	NO: Jade Fever
+NL:.Familie.-.Rakuten.TV.be	0	NL: Familie - Rakuten TV
+FI:.Bloomberg.Originals.be	48	FI: Bloomberg Originals
+ES:.Bloomberg.Originals.be	48	ES: Bloomberg Originals
+FR:.The.Reuters.60.be	52	FR: The Reuters 60
+UK:.Lone.Star.be	82	UK: Lone Star
+FI:.Farscape.be	106	FI: Farscape
+FR:.Bloomberg.TV+.be	94	FR: Bloomberg TV+
+DE:.Hell`s.Kitchen.be	113	DE: Hell`s Kitchen
+DE:.World.of.Freesports.be	149	DE: World of Freesports
+IT:.World.Surf.League.24/7.be	82	IT: World Surf League 24/7
+NO:.DAZN.Ringside.be	97	NO: DAZN Ringside
+UK:.Wrestling.Legends.TV.be	80	UK: Wrestling Legends TV
+NO:.Tattoo.Fixers.be	105	NO: Tattoo Fixers
+UK:.Homes.Under.the.Hammer.be	84	UK: Homes Under the Hammer
+SE:.France.24.FAST.English.be	307	SE: France 24 FAST English
+PL:.RACER.International.be	150	PL: RACER International
+FR:.Crime.-.Rakuten.TV.be	0	FR: Crime - Rakuten TV
+UK:.Heartland.be	0	UK: Heartland
+DK:.World.Billiards.TV.be	55	DK: World Billiards TV
+IT:.Euronews.IN.DIRETTA.be	189	IT: Euronews IN DIRETTA
+NO:.The.Bold.and.The.Beautiful.be	0	NO: The Bold and The Beautiful
+DK:.Graham.Norton.be	0	DK: Graham Norton
+NO:.Stingray.Greatest.Hits.be	23	NO: Stingray Greatest Hits
+NO:.Weather.Spy.be	144	NO: Weather Spy
+ES:.NewsWorld.be	96	ES: NewsWorld
+FI:.Great.British.Menu.be	152	FI: Great British Menu
+IT:.Soap.Turco.be	105	IT: Soap Turco
+FI:.NewsWorld.be	96	FI: NewsWorld
+FR:.Shark.TV.be	70	FR: Shark TV
+DK:.Real.Wild.be	104	DK: Real Wild
+NL:.Tennis.TV.be	44	NL: Tennis TV
+PL:.Monster.Jam.be	112	PL: Monster Jam
+FI:.FloHockey.24/7.be	57	FI: FloHockey 24/7
+IT:.Stingray.Italo.Disco.be	48	IT: Stingray Italo Disco
+NL:.Wicked.Tuna.be	107	NL: Wicked Tuna
+NL:.Women.Behind.Bars.be	85	NL: Women Behind Bars
+UK:.Rookie.Blue.be	0	UK: Rookie Blue
+UK:.NTD.News.be	189	UK: NTD News
+SE:.Monster.Jam.be	112	SE: Monster Jam
+NO:.The.Cube.be	111	NO: The Cube
+NL:.China.Travel.be	416	NL: China Travel
+DE:.Stingray:.Remember.the.80’s.be	0	DE: Stingray: Remember the 80’s
+DE:.Royalworld.-.Adel.&amp;.Dynastien.be	81	DE: Royalworld - Adel & Dynastien
+DE:.Family.-.Rakuten.TV.be	0	DE: Family - Rakuten TV
+FI:.Komediaelokuvat.-.Rakuten.TV.be	52	FI: Komediaelokuvat - Rakuten TV
+UK:.A.New.Life.in.The.Sun.be	107	UK: A New Life in The Sun
+NL:.Top.Films.-.Rakuten.TV.be	50	NL: Top Films - Rakuten TV
+FI:.Metal.Rocks.be	21	FI: Metal.Rocks
+ES:.¡HOLA!.Play.be	205	ES: ¡HOLA! Play
+DE:.Tennis+.be	50	DE: Tennis+
+SE:.Highway.to.Heaven.be	78	SE: Highway to Heaven
+ES:.Metal.Rocks.be	22	ES: Metal.Rocks
+FI:.World.Surf.League.24/7.be	91	FI: World Surf League 24/7
+PL:.Jail.be	0	PL: Jail
+SE:.Ghost.be	110	SE: Ghost
+PL:.That`s.70s.be	51	PL: That`s 70s
+SE:.Cosmic.Frontiers.be	188	SE: Cosmic Frontiers
+FR:.Qello.Concerts.by.Stingray.be	95	FR: Qello Concerts by Stingray
+DE:.Amasia.-.The.Finest.Art.of.Asian.Movies.be	48	DE: Amasia - The Finest Art of Asian Movies
+NO:.PFL.MMA.be	62	NO: PFL MMA
+SE:.Fifth.Gear.be	143	SE: Fifth Gear
+UK:.Free.Movies.+.be	56	UK: Free Movies +
+NL:.TMF.be	46	NL: TMF
+NL:.800.Pound.Gorilla.be	74	NL: 800 Pound Gorilla
+FR:.Top.Gear.be	94	FR: Top Gear
+SE:.Strongman.Champions.League.be	95	SE: Strongman Champions League
+FI:.World.Poker.Tour.be	73	FI: World Poker Tour
+DE:.Just.Cooking.be	120	DE: Just Cooking
+SE:.Jail.be	0	SE: Jail
+SE:.That`s.70s.be	51	SE: That`s 70s
+ES:.La.abeja.Maya.be	94	ES: La abeja Maya
+FI:.That`s.ROCK.be	49	FI: That`s ROCK
+FI:.The.FBI.Files.be	92	FI: The FBI Files
+SE:.Highway.Thru.Hell.be	104	SE: Highway Thru Hell
+DK:.PFL.MMA.be	62	DK: PFL MMA
+ES:.That`s.90s00s.be	50	ES: That`s 90s00s
+IT:.Urania.News.be	172	IT: Urania News
+ES:.That`s.ROCK.be	49	ES: That`s ROCK
+DE:.Lindenstrasse.be	173	DE: Lindenstrasse
+FI:.That`s.90s00s.be	50	FI: That`s 90s00s
+NL:.Operation.Repo.be	94	NL: Operation Repo
+SE:.Rakuten.VIKI.be	80	SE: Rakuten VIKI
+UK:.History.Hunters.be	98	UK: History Hunters
+SE:.Fashion.TV.be	96	SE: Fashion TV
+PL:.Rakuten.VIKI.be	80	PL: Rakuten VIKI
+UK:.Aftershock.Homicide.Hunter.be	92	UK: Aftershock Homicide Hunter
+PL:.Fashion.TV.be	143	PL: Fashion TV
+FR:.Films.d`Action.-.Rakuten.TV.be	52	FR: Films d`Action - Rakuten TV
+FR:.Tennis+.be	0	FR: Tennis+
+DE:.Top.Filme.-.Rakuten.TV.be	54	DE: Top Filme - Rakuten TV
+ES:.Todo.Crimen.be	73	ES: Todo Crimen
+FR:.Grjngo.-.Films.de.Western.be	0	FR: Grjngo - Films de Western
+FR:.Ça.Chauffe.en.Cuisine.be	173	FR: Ça Chauffe en Cuisine
+FR:.Sci-Fi.-.Rakuten.TV.be	55	FR: Sci-Fi - Rakuten TV
+SE:.Obsessive.Compulsive.Cleaners.be	108	SE: Obsessive Compulsive Cleaners
+UK:.Stingray.Greatest.Hits.be	0	UK: Stingray Greatest Hits
+FI:.Africanews.be	189	FI: Africanews
+NO:.Real.Wild.be	104	NO: Real Wild
+NL:.Baby.Shark.TV.be	190	NL: Baby Shark TV
+SE:.Hardcore.Pawn.be	231	SE: Hardcore Pawn
+ES:.Africanews.be	189	ES: Africanews
+ES:.Mr..Bean.be	31	ES: Mr. Bean
+FI:.Homeful.be	141	FI: Homeful
+SE:.Red.Bull.TV.be	147	SE: Red Bull TV
+SE:.Qwest.TV.be	94	SE: Qwest TV
+FI:.History.Hit.be	92	FI: History Hit
+FI:.Mr..Bean.be	39	FI: Mr. Bean
+DE:.Comedy.TV.Sony.be	204	DE: Comedy TV Sony
+DE:.Stromberg.powered.by.myspass.be	166	DE: Stromberg powered by myspass
+ES:.Comedia.-.Rakuten.TV.be	53	ES: Comedia - Rakuten TV
+PL:.Red.Bull.TV.be	147	PL: Red Bull TV
+PL:.Qwest.TV.be	94	PL: Qwest TV
+NL:.FilmRise.Free.Series.be	109	NL: FilmRise Free Series
+NL:.Room.to.Improve.be	112	NL: Room to Improve
+ES:.Med.TV.be	245	ES: Med.TV
+ES:.Gusto.TV.be	153	ES: Gusto TV
+DK:.The.Cube.be	111	DK: The Cube
+DK:.Homes.Under.the.Hammer.be	84	DK: Homes Under the Hammer
+SE:.True.Crime.Now.be	122	SE: True Crime Now
+FI:.Med.TV.be	248	FI: Med.TV
+DE:.Moviedome.be	54	DE: Moviedome
+DE:.Top.Gear.be	99	DE: Top Gear
+NL:.Comedy.Station.be	56	NL: Comedy Station
+FI:.Gusto.TV.be	148	FI: Gusto TV
+DE:.SPIEGEL.TV.action.+.crime.be	112	DE: SPIEGEL TV action + crime
+IT:.Beauty.Channel.-.Il.tocco.del.chirurgo.be	198	IT: Beauty Channel - Il tocco del chirurgo
+NL:.Homes.Under.the.Hammer.be	84	NL: Homes Under the Hammer
+DK:.Highway.Thru.Hell.be	104	DK: Highway Thru Hell
+NO:.Fifth.Gear.be	185	NO: Fifth Gear
+SE:.PFL.MMA.be	77	SE: PFL MMA
+NL:.InTravel.be	138	NL: InTravel
+DE:.Qello.Concerts.by.Stingray.be	95	DE: Qello Concerts by Stingray
+FR:.People.Are.Awesome.be	180	FR: People Are Awesome
+NO:.Cosmic.Frontiers.be	179	NO: Cosmic Frontiers
+UK:.Ax.Men.be	110	UK: Ax Men
+NL:.Bloomberg.Originals.be	48	NL: Bloomberg Originals
+DK:.Rakuten.VIKI.be	80	DK: Rakuten VIKI
+DK:.Fashion.TV.be	191	DK: Fashion TV
+NL:.Farscape.be	105	NL: Farscape
+NO:.Ghost.be	110	NO: Ghost
+NO:.Jail.be	0	NO: Jail
+DK:.American.Crime.Channel.be	125	DK: American Crime Channel
+UK:.Top.Movies.-.Rakuten.TV.be	52	UK: Top Movies - Rakuten TV
+NO:.That`s.70s.be	50	NO: That`s 70s
+FR:.Soap.be	112	FR: Soap
+DK:.Stingray.Greatest.Hits.be	23	DK: Stingray Greatest Hits
+PL:.Bigtime.-.Darmowe.Filmy.be	55	PL: Bigtime - Darmowe Filmy
+PL:.PFL.MMA.be	77	PL: PFL MMA
+FR:.Travelxp.be	191	FR: Travelxp
+NL:.The.Osbournes.be	168	NL: The Osbournes
+DK:.Hardcore.Pawn.be	231	DK: Hardcore Pawn
+FI:.Nolly.Africa.HD.be	49	FI: Nolly Africa HD
+ES:.Feel.Good.TV.be	0	ES: Feel Good TV
+DE:.Vevo.Pop.be	94	DE: Vevo Pop
+NL:.60.Days.in.Jail.be	104	NL: 60 Days in Jail
+IT:.Class.CNBC.be	55	IT: Class CNBC
+NL:.Actiefilms.-.Rakuten.TV.be	51	NL: Actiefilms - Rakuten TV
+DK:.Red.Bull.TV.be	148	DK: Red Bull TV
+DK:.Qwest.TV.be	94	DK: Qwest TV
+ES:.BBC.Series.be	97	ES: BBC Series
+DK:.TNA.Wrestling.Channel.be	66	DK: TNA Wrestling Channel
+IT:.CG.Grandi.Film.be	51	IT: CG Grandi Film
+NL:.Garden.Rescue.be	112	NL: Garden Rescue
+UK:.CGTN.Global.Biz.be	349	UK: CGTN Global Biz
+NL:.Real.Crime.be	100	NL: Real Crime
+NO:.Highway.to.Heaven.be	96	NO: Highway to Heaven
+FI:.Z.One.be	159	FI: Z One
+DK:.True.Crime.Now.be	120	DK: True Crime Now
+ES:.Royalworld.-.Nobleza.y.dinastías.be	92	ES: Royalworld - Nobleza y dinastías
+SE:.The.Cube.be	112	SE: The Cube
+NO:.Monster.Jam.be	110	NO: Monster Jam
+NO:.Qwest.TV.be	94	NO: Qwest TV
+UK:.Fail.Army.be	183	UK: Fail Army
+NO:.Red.Bull.TV.be	148	NO: Red Bull TV
+NO:.Qello.Concerts.by.Stingray.be	95	NO: Qello Concerts by Stingray
+SE:.Dramafilmer.-.Rakuten.TV.be	0	SE: Dramafilmer - Rakuten TV
+NL:.The.Boat.Show.be	329	NL: The Boat Show
+FI:.Cartoon.Classics.be	0	FI: Cartoon Classics
+DE:.People.Are.Awesome.be	180	DE: People Are Awesome
+NO:.Hardcore.Pawn.be	231	NO: Hardcore Pawn
+SE:.Real.Wild.be	105	SE: Real Wild
+UK:.GLORY.Kickboxing.be	18	UK: GLORY Kickboxing
+FI:.France.24.FAST.English.be	317	FI: France 24 FAST English
+NL:.Hunter.be	100	NL: Hunter
+IT:.GLORY.Kickboxing.be	18	IT: GLORY Kickboxing
+NL:.The.New.Detectives.be	72	NL: The New Detectives
+DK:.Monster.Jam.be	110	DK: Monster Jam
+DE:.Travelxp.be	191	DE: Travelxp
+NO:.True.Crime.Now.be	120	NO: True Crime Now
+UK:.Waterbear.be	153	UK: Waterbear
+DK:.Highway.to.Heaven.be	96	DK: Highway to Heaven
+SE:.Mr..Bean.-.Live.Action.be	190	SE: Mr. Bean - Live Action
+IT:.Fail.Army.be	183	IT: Fail Army
+NO:.Fashion.TV.be	191	NO: Fashion TV
+NO:.Rakuten.VIKI.be	80	NO: Rakuten VIKI
+DK:.Ghost.be	110	DK: Ghost
+FR:.Vevo.Pop.be	95	FR: Vevo Pop
+FI:.Dance.Moms.be	101	FI: Dance Moms
+SE:.Romantik.-.Rakuten.TV.be	0	SE: Romantik - Rakuten TV
+ES:.Qello.Concerts.by.Stingray.be	77	ES: Qello Concerts by Stingray
+IT:.CGTN.be	143	IT: CGTN
+FR:.Sports.Illustrated.TV.be	0	FR: Sports Illustrated TV
+NO:.Dramafilmer.-.Rakuten.TV.be	0	NO: Dramafilmer - Rakuten TV
+FR:.Les.Filles.d`a.Coté.be	0	FR: Les Filles d`a Coté
+DK:.Fifth.Gear.be	185	DK: Fifth Gear
+NO:.Highway.Thru.Hell.be	104	NO: Highway Thru Hell
+DE:.Kultkrimi.be	93	DE: Kultkrimi
+DK:.Cosmic.Frontiers.be	179	DK: Cosmic Frontiers
+FR:.Wasabi.be	194	FR: Wasabi
+UK:.CGTN.be	143	UK: CGTN
+UK:.Duck.Dynasty.be	0	UK: Duck Dynasty
+DK:.That`s.70s.be	50	DK: That`s 70s
+FR:.Stingray.Total.Hits.France.be	48	FR: Stingray Total Hits France
+FI:.Live.PD.Presents.be	200	FI: Live PD Presents
+DK:.Jail.be	0	DK: Jail
+NL:.Komedie.-.Rakuten.TV.be	51	NL: Komedie - Rakuten TV
+UK:.Thriller.TV.Sony.be	102	UK: Thriller TV Sony
+DK:.Come.Dine.With.Me.be	126	DK: Come Dine With Me
+DK:.Obsessive.Compulsive.Cleaners.be	109	DK: Obsessive Compulsive Cleaners
+IT:.Fantascienza.-.Rakuten.TV.be	54	IT: Fantascienza - Rakuten TV
+DK:.Actionfilm.-.Rakuten.TV.be	54	DK: Actionfilm - Rakuten TV
+UK:.Mystery.TV.be	119	UK: Mystery TV
+DE:.Pastewka.powered.by.myspass.be	187	DE: Pastewka powered by myspass
+IT:.Shark.Zone.be	0	IT: Shark Zone
+SE:.Celeb.Reality.be	176	SE: Celeb Reality
+FI:.Soap.be	113	FI: Soap
+NO:.Duck.Dynasty.be	0	NO: Duck Dynasty
+NL:.Don’t.Tell.The.Bride.be	98	NL: Don’t Tell The Bride
+NO:.CGTN.be	144	NO: CGTN
+ES:.Travelxp.be	191	ES: Travelxp
+ES:.LOL.España.be	107	ES: LOL España
+FR:.Adrenaline.Spica.Life.be	94	FR: Adrenaline Spica Life
+FI:.Travelxp.be	191	FI: Travelxp
+IT:.Fashion.TV.be	96	IT: Fashion TV
+IT:.Rakuten.VIKI.be	80	IT: Rakuten VIKI
+UK:.Rakuten.VIKI.be	80	UK: Rakuten VIKI
+ES:.People.Are.Awesome.be	180	ES: People Are Awesome
+UK:.Fashion.TV.be	0	UK: Fashion TV
+FI:.People.Are.Awesome.be	179	FI: People Are Awesome
+FR:.Alerte.à.Malibu.TV.be	0	FR: Alerte à Malibu TV
+DE:.Sportdigital.Free.be	77	DE: Sportdigital Free
+UK:.Highway.Thru.Hell.be	104	UK: Highway Thru Hell
+NL:.COPS.be	0	NL: COPS
+UK:.GB.News.be	44	UK: GB News
+NL:.The.Reuters.60.be	52	NL: The Reuters 60
+NL:.Bloomberg.TV+.be	94	NL: Bloomberg TV+
+DE:.Dating.hinter.Gittern.be	127	DE: Dating hinter Gittern
+NL:.Motor.Racing.be	87	NL: Motor Racing
+FI:.American.Crime.Channel.be	126	FI: American Crime Channel
+IT:.Mr..Bean.-.Live.Action.be	190	IT: Mr. Bean - Live Action
+DE:.Moviedome.Family.be	51	DE: Moviedome Family
+DE:.Wheels.&amp;.Steel.be	102	DE: Wheels & Steel
+FR:.Z.One.be	114	FR: Z One
+NL:.FUEL.TV.be	71	NL: FUEL TV
+NO:.Waterbear.be	155	NO: Waterbear
+PL:.wedotv.Auta.be	201	PL: wedotv Auta
+DK:.CGTN.Global.Biz.be	343	DK: CGTN Global Biz
+DK:.INFAST.be	142	DK: INFAST
+IT:.Qwest.TV.be	94	IT: Qwest TV
+IT:.Red.Bull.TV.be	147	IT: Red Bull TV
+DE:.Car.City.Adventures.be	115	DE: Car City Adventures
+NL:.Deluxe.Lounge.HD.be	101	NL: Deluxe Lounge HD
+NO:.Fail.Army.be	182	NO: Fail Army
+UK:.Red.Bull.TV.be	131	UK: Red Bull TV
+ES:.Sports.Illustrated.TV.be	0	ES: Sports Illustrated TV
+UK:.Hardcore.Pawn.be	231	UK: Hardcore Pawn
+NO:.GLORY.Kickboxing.be	18	NO: GLORY Kickboxing
+SE:.World.of.Love.Island.be	0	SE: World of Love Island
+NO:.INFAST.be	142	NO: INFAST
+DE:.SPIEGEL.TV.be	130	DE: SPIEGEL TV
+DK:.Waterbear.be	155	DK: Waterbear
+NO:.CGTN.Global.Biz.be	343	NO: CGTN Global Biz
+PL:.Sports.Illustrated.TV.be	0	PL: Sports Illustrated TV
+DE:.SpiegelTV.Konflikte.be	105	DE: SpiegelTV Konflikte
+UK:.Highway.to.Heaven.be	78	UK: Highway to Heaven
+UK:.Criminal.Confessions.be	108	UK: Criminal Confessions
+NL:.World.of.Freesports.be	149	NL: World of Freesports
+NL:.Hell`s.Kitchen.be	112	NL: Hell`s Kitchen
+FR:.Degrassi.:.La.Nouvelle.Génération.be	205	FR: Degrassi : La Nouvelle Génération
+SE:.NTD.News.be	189	SE: NTD News
+SE:.Rookie.Blue.be	120	SE: Rookie Blue
+DK:.GLORY.Kickboxing.be	18	DK: GLORY Kickboxing
+UK:.Hercules:.The.Legendary.Journeys.be	88	UK: Hercules: The Legendary Journeys
+NL:.Crime.Beat.TV.be	0	NL: Crime Beat TV
+NL:.Mythbusters.be	96	NL: Mythbusters
+DK:.Fail.Army.be	182	DK: Fail Army
+NL:.Sports.First.TV.be	94	NL: Sports First TV
+UK:.Jail.be	0	UK: Jail
+DE:.Romantische.Filme.-.Rakuten.TV.be	56	DE: Romantische Filme - Rakuten TV
+NL:.Obsessive.Compulsive.Cleaners.be	108	NL: Obsessive Compulsive Cleaners
+DK:.Duck.Dynasty.be	0	DK: Duck Dynasty
+DK:.CGTN.be	144	DK: CGTN
+UK:.That`s.70s.be	51	UK: That`s 70s
+PL:.Stingray:.Remember.the.80’s.be	24	PL: Stingray: Remember the 80’s
+SE:.American.Crime.Channel.be	101	SE: American Crime Channel
+SE:.Free.Movies.+.be	56	SE: Free Movies +
+FI:.Deal.or.No.Deal.be	159	FI: Deal or No Deal
+NO:.Come.Dine.With.Me.be	126	NO: Come Dine With Me
+DE:.Z.One.be	146	DE: Z One
+FR:.Z.Nation.be	94	FR: Z Nation
+DK:.Qello.Concerts.by.Stingray.be	95	DK: Qello Concerts by Stingray
+ES:.Vevo.Pop.be	96	ES: Vevo Pop
+UK:.Fifth.Gear.be	143	UK: Fifth Gear
+FR:.Vevo.Hip-Hop.&amp;.R&amp;B.be	94	FR: Vevo Hip-Hop & R&B
+FR:.World.Surf.League.24/7.be	82	FR: World Surf League 24/7
+UK:.Cosmic.Frontiers.be	120	UK: Cosmic Frontiers
+NL:.Revry.be	82	NL: Revry
+IT:.That`s.70s.be	51	IT: That`s 70s
+DK:.World.Surf.League.24/7.be	91	DK: World Surf League 24/7
+NL:.The.Pet.Collective.be	181	NL: The Pet Collective
+SE:.Waterbear.be	153	SE: Waterbear
+PL:.Fail.Army.be	183	PL: Fail Army
+NL:.PR1DE.free.be	93	NL: PR1DE free
+DK:.World.of.Love.Island.be	0	DK: World of Love Island
+DK:.NTD.News.be	189	DK: NTD News
+FR:.Metal.Rocks.be	22	FR: Metal.Rocks
+DK:.Rookie.Blue.be	119	DK: Rookie Blue
+PL:.Grjngo.-.Westerny.be	55	PL: Grjngo - Westerny
+NL:.Daystar.TV.be	177	NL: Daystar TV
+DE:.TOP.SCI-FI.be	127	DE: TOP SCI-FI
+PL:.GLORY.Kickboxing.be	18	PL: GLORY Kickboxing
+IT:.Grjngo.-.Film.Western.be	57	IT: Grjngo - Film Western
+DE:.Moconomy.be	90	DE: Moconomy
+FI:.Homes.Under.the.Hammer.be	84	FI: Homes Under the Hammer
+NO:.World.Surf.League.24/7.be	91	NO: World Surf League 24/7
+FR:.Drive.TV.be	121	FR: Drive TV
+SE:.GLORY.Kickboxing.be	18	SE: GLORY Kickboxing
+UK:.Real.Wild.be	105	UK: Real Wild
+FR:.NewsWorld.be	96	FR: NewsWorld
+DE:.That`s.ROCK.be	49	DE: That`s ROCK
+SE:.Fail.Army.be	183	SE: Fail Army
+NL:.World.Cruise.Channel.be	0	NL: World Cruise Channel
+FI:.Westerns.+.be	65	FI: Westerns +
+UK:.Action.Movies.-.Rakuten.TV.be	54	UK: Action Movies - Rakuten TV
+NL:.TOP.Barça.be	93	NL: TOP Barça
+DE:.Bronco.be	68	DE: Bronco
+DE:.That`s.90s00s.be	50	DE: That`s 90s00s
+FI:.Toiminta.-.Rakuten.TV.be	0	FI: Toiminta - Rakuten TV
+FR:.The.Blacklist.Sony.be	0	FR: The Blacklist Sony
+DK:.Xena:.Warrior.Princess.be	107	DK: Xena: Warrior Princess
+SE:.CGTN.be	143	SE: CGTN
+SE:.Duck.Dynasty.be	0	SE: Duck Dynasty
+UK:.France.24.FAST.English.be	307	UK: France 24 FAST English
+FI:.Top.Gear.be	94	FI: Top Gear
+FI:.Cheaters.be	210	FI: Cheaters
+FR:.World.Poker.Tour.be	71	FR: World Poker Tour
+UK:.AMC.Cupid.be	0	UK: AMC Cupid
+DE:.Gusto.TV.be	152	DE: Gusto TV
+NO:.Celeb.Reality.be	176	NO: Celeb Reality
+NL:.Your.70`s.be	50	NL: Your 70`s
+DK:.Free.Movies.+.be	69	DK: Free Movies +
+NL:.Mr..Bean.-.Live.Action.be	190	NL: Mr. Bean - Live Action
+FI:.Euro.Crime.Channel.be	88	FI: Euro Crime Channel
+FI:.Adventure.Earth.be	101	FI: Adventure Earth
+IT:.Romance.-.Rakuten.TV.be	0	IT: Romance - Rakuten TV
+FI:.Comedy.TV.Sony.be	197	FI: Comedy TV Sony
+DK:.The.Bold.and.The.Beautiful.be	0	DK: The Bold and The Beautiful
+PL:.CGTN.be	143	PL: CGTN
+DE:.Africanews.be	189	DE: Africanews
+IT:.PFL.MMA.be	77	IT: PFL MMA
+DK:.Celeb.Reality.be	176	DK: Celeb Reality
+ES:.Tennis+.be	50	ES: Tennis+
+DE:.Barbie.&amp;.Friends.be	244	DE: Barbie & Friends
+DE:.Metal.Rocks.be	22	DE: Metal.Rocks
+NL:.The.Design.Network.be	186	NL: The Design Network
+NO:.Free.Movies.+.be	69	NO: Free Movies +
+NL:.Stingray.Naturescape.be	75	NL: Stingray Naturescape
+FI:.Tennis+.be	49	FI: Tennis+
+DK:.Dramafilm.-.Rakuten.TV.be	0	DK: Dramafilm - Rakuten TV
+SE:.Come.Dine.With.Me.be	126	SE: Come Dine With Me
+ES:.Sci-Fi.-.Rakuten.TV.be	52	ES: Sci-Fi - Rakuten TV
+SE:.Million.Dollar.Dream.Home.be	203	SE: Million Dollar Dream Home
+NL:.INTER.24/7.be	118	NL: INTER 24/7
+NL:.Dramafilms.-.Rakuten.TV.be	46	NL: Dramafilms - Rakuten TV
+FR:.That`s.ROCK.be	49	FR: That`s ROCK
+DE:.Fabella.be	60	DE: Fabella
+FR:.That`s.90s00s.be	50	FR: That`s 90s00s
+IT:.Bernard.L`Orso.be	94	IT: Bernard L`Orso
+NL:.Yu-Gi-Oh!.be	222	NL: Yu-Gi-Oh!
+NL:.A.Haunting.be	83	NL: A Haunting
+DE:.Mr..Bean.-.Live.Action.be	190	DE: Mr. Bean - Live Action
+DE:.NewsWorld.be	191	DE: NewsWorld
+DE:.Merhaba.Arabische.Serien.be	123	DE: Merhaba Arabische Serien
+UK:.PFL.MMA.be	77	UK: PFL MMA
+NO:.Hercules:.The.Legendary.Journeys.be	108	NO: Hercules: The Legendary Journeys
+DE:.One.Terra.be	96	DE: One Terra
+NO:.Rookie.Blue.be	119	NO: Rookie Blue
+NO:.NTD.News.be	189	NO: NTD News
+UK:.The.Cube.be	112	UK: The Cube
+ES:.Thrillers.-.Rakuten.TV.be	57	ES: Thrillers - Rakuten TV
+SE:.INFAST.be	146	SE: INFAST
+NO:.World.of.Love.Island.be	0	NO: World of Love Island
+NL:.Daystar.Español.be	130	NL: Daystar Español
+SE:.CGTN.Global.Biz.be	349	SE: CGTN Global Biz
+FR:.Gusto.TV.be	152	FR: Gusto TV
+FR:.Med.TV.be	245	FR: Med.TV
+DE:.Merhaba.Türkische.Filme.be	39	DE: Merhaba Türkische Filme
+DE:.World.Poker.Tour.be	71	DE: World Poker Tour
+FI:.Million.Dollar.Dream.Home.be	203	FI: Million Dollar Dream Home
+FR:.Africanews.be	189	FR: Africanews
+NL:.That`s.80s.be	52	NL: That`s 80s
+DE:.Fluss-Monster.be	106	DE: Fluss-Monster
+FR:.Enquêtes.de.Choc.be	51	FR: Enquêtes de Choc
+NL:.Stingray:.Hitlist.be	20	NL: Stingray: Hitlist
+ES:.Las.tres.mellizas.be	147	ES: Las tres mellizas
+FR:.Mr..Bean.be	31	FR: Mr. Bean
+UK:.World.Poker.Tour.be	58	UK: World Poker Tour
+NO:.Tennis+.be	49	NO: Tennis+
+ES:.Crímenes.Reales.be	107	ES: Crímenes Reales
+FI:.Free.Movies.+.be	69	FI: Free Movies +
+SE:.Deal.or.No.Deal.be	168	SE: Deal or No Deal
+UK:.Mr..Bean.-.Live.Action.be	190	UK: Mr. Bean - Live Action
+NL:.France.24.FAST.English.be	307	NL: France 24 FAST English
+NL:.Rally.TV.FAST+.be	48	NL: Rally.TV FAST+
+DK:.Cheaters.be	209	DK: Cheaters
+DK:.Top.Gear.be	94	DK: Top Gear
+NL:.Ice.Road.Truckers.be	110	NL: Ice Road Truckers
+NL:.Love.Pets.be	164	NL: Love Pets
+DK:.Adventure.Earth.be	101	DK: Adventure Earth
+DK:.Euro.Crime.Channel.be	88	DK: Euro Crime Channel
+UK:.Talk.be	48	UK: Talk
+DK:.Comedy.TV.Sony.be	196	DK: Comedy TV Sony
+IT:.World.Poker.Tour.be	71	IT: World Poker Tour
+FR:.Stingray.Chansons.be	48	FR: Stingray Chansons
+FI:.Rookie.Blue.be	119	FI: Rookie Blue
+FI:.NTD.News.be	189	FI: NTD News
+NL:.Andromeda.be	87	NL: Andromeda
+ES:.Rookie.Blue.be	120	ES: Rookie Blue
+FR:.Stingray.Greatest.Hits.be	23	FR: Stingray Greatest Hits
+ES:.El.Conquistador.be	31	ES: El Conquistador
+ES:.Beyblade.be	231	ES: Beyblade
+NL:.NASCAR.be	48	NL: NASCAR
+UK:.Metal.Rocks.be	22	UK: Metal.Rocks
+FR:.Into.Crime.be	94	FR: Into Crime
+FI:.World.of.Love.Island.be	0	FI: World of Love Island
+IT:.NewsWorld.be	96	IT: NewsWorld
+UK:.Barbie.&amp;.Friends.be	263	UK: Barbie & Friends
+IT:.Metal.Rocks.be	22	IT: Metal.Rocks
+UK:.NewsWorld.be	96	UK: NewsWorld
+NO:.Auto.Motor.og.Sport.be	94	NO: Auto Motor og Sport
+FI:.Perhe.-.Rakuten.TV.be	0	FI: Perhe - Rakuten TV
+DK:.Westerns.+.be	65	DK: Westerns +
+UK:.Great.British.Menu.be	153	UK: Great British Menu
+FR:.FilmRise.Séries.be	67	FR: FilmRise Séries
+IT:.Alberto.Sordi.&amp;.Co.be	51	IT: Alberto Sordi & Co
+UK:.Sports.Illustrated.TV.be	0	UK: Sports Illustrated TV
+IT:.Mr..Bean.be	31	IT: Mr. Bean
+NL:.FIFA+.be	68	NL: FIFA+
+UK:.Strongman.Champions.League.be	95	UK: Strongman Champions League
+UK:.Gusto.TV.be	152	UK: Gusto TV
+UK:.Med.TV.be	245	UK: Med.TV
+IT:.Africanews.be	189	IT: Africanews
+NL:.Tipping.Point.be	106	NL: Tipping Point
+FI:.Draamaelokuvat.-.Rakuten.TV.be	52	FI: Draamaelokuvat - Rakuten TV
+UK:.Dog.The.Bounty.Hunter.be	209	UK: Dog The Bounty Hunter
+DE:.Akiba.Anime.be	188	DE: Akiba Anime
+IT:.Med.TV.be	245	IT: Med.TV
+UK:.Africanews.be	189	UK: Africanews
+IT:.Gusto.TV.be	153	IT: Gusto TV
+NL:.Stingray.Soft.Hits.Netherlands.be	39	NL: Stingray Soft Hits Netherlands
+UK:.Mr..Bean.be	31	UK: Mr. Bean
+NO:.Westerns.+.be	65	NO: Westerns +
+UK:.Antiques.Road.Trip.be	95	UK: Antiques Road Trip
+UK:.History.Hit.be	95	UK: History Hit
+NL:.Wonder.be	0	NL: Wonder
+ES:.AnimeVisión.Classics.be	94	ES: AnimeVisión Classics
+FR:.Top.Films.-.Rakuten.TV.be	50	FR: Top Films - Rakuten TV
+SE:.Travelxp.be	191	SE: Travelxp
+PL:.People.Are.Awesome.be	180	PL: People Are Awesome
+NL:.CNA.Originals.be	87	NL: CNA Originals
+NO:.Top.Gear.be	94	NO: Top Gear
+IT:.Stingray.Total.Hits.Italy.be	48	IT: Stingray Total Hits Italy
+NO:.Cheaters.be	209	NO: Cheaters
+PL:.France.24.FAST.English.be	307	PL: France 24 FAST English
+IT:.That`s.ROCK.be	49	IT: That`s ROCK
+ES:.Verdi.TV.be	94	ES: Verdi TV
+SE:.Soap.be	111	SE: Soap
+FI:.Celeb.Reality.be	176	FI: Celeb Reality
+PL:.Stingray.Total.Hits.Poland.be	48	PL: Stingray Total Hits Poland
+IT:.That`s.90s00s.be	50	IT: That`s 90s00s
+NO:.TNA.Wrestling.Channel.be	66	NO: TNA Wrestling Channel
+DK:.Tennis+.be	49	DK: Tennis+
+NO:.Comedy.TV.Sony.be	197	NO: Comedy TV Sony
+UK:.That`s.90s00s.be	50	UK: That`s 90s00s
+NL:.Crime.Scene.Solvers.be	68	NL: Crime Scene Solvers
+NO:.Adventure.Earth.be	101	NO: Adventure Earth
+NO:.Euro.Crime.Channel.be	88	NO: Euro Crime Channel
+NO:.Dr..G:.Medical.Examiner.be	111	NO: Dr. G: Medical Examiner
+DK:.Komediefilm.-.Rakuten.TV.be	0	DK: Komediefilm - Rakuten TV
+UK:.That`s.ROCK.be	49	UK: That`s ROCK
+UK:.The.FBI.Files.be	74	UK: The FBI Files
+PL:.Travelxp.be	191	PL: Travelxp
+SE:.People.Are.Awesome.be	180	SE: People Are Awesome
+FR:.PFL.MMA.be	77	FR: PFL MMA
+NL:.Studio100.TV.be	201	NL: Studio100 TV
+FI:.CGTN.Global.Biz.be	345	FI: CGTN Global Biz
+UK:.Z.One.be	159	UK: Z One
+NL:.Winx.Club.TV.be	186	NL: Winx Club TV
+FI:.INFAST.be	142	FI: INFAST
+SE:.Stingray.Greatest.Hits.be	19	SE: Stingray Greatest Hits
+UK:.Who.Wants.to.Be.a.Millionaire.be	108	UK: Who Wants to Be a Millionaire
+DE:.That`s.70s.be	51	DE: That`s 70s
+PL:.Strongman.Champions.League.be	95	PL: Strongman Champions League
+FR:.Alerte.Cobra.be	0	FR: Alerte Cobra
+NL:.TelegraafTV.be	196	NL: TelegraafTV
+FR:.Qwest.TV.be	94	FR: Qwest TV
+FR:.Red.Bull.TV.be	0	FR: Red Bull TV
+UK:.Nolly.Africa.HD.be	48	UK: Nolly Africa HD
+NL:.Million.Dollar.Dream.Home.be	203	NL: Million Dollar Dream Home
+IT:.BBC.Series.be	97	IT: BBC Series
+NL:.Nature.Time.be	116	NL: Nature Time
+DK:.Travelxp.be	191	DK: Travelxp
+FR:.Euronews.EN.DIRECT.be	189	FR: Euronews EN DIRECT
+SE:.Tennis+.be	50	SE: Tennis+
+FI:.Come.Dine.With.Me.be	126	FI: Come Dine With Me
+DK:.Soap.be	113	DK: Soap
+NO:.Deal.or.No.Deal.be	160	NO: Deal or No Deal
+IT:.Commedia.-.Rakuten.TV.be	54	IT: Commedia - Rakuten TV
+NL:.Heartland.be	116	NL: Heartland
+FR:.Top.Sci-Fi.be	0	FR: Top Sci-Fi
+IT:.Automoto.be	261	IT: Automoto
+PL:.Tennis+.be	50	PL: Tennis+
+ES:.Planeta.Salvaje.be	91	ES: Planeta Salvaje
+DK:.France.24.FAST.English.be	317	DK: France 24 FAST English
+FR:.Fashion.TV.be	191	FR: Fashion TV
+DE:.Big.Brother.Classics.be	94	DE: Big Brother Classics
+FR:.Rakuten.VIKI.be	80	FR: Rakuten VIKI
+NL:.Lone.Star.be	82	NL: Lone Star
+DK:.People.Are.Awesome.be	179	DK: People Are Awesome
+UK:.Reality.-.Rakuten.TV.be	171	UK: Reality - Rakuten TV
+DK:.Deal.or.No.Deal.be	160	DK: Deal or No Deal
+NO:.Soap.be	113	NO: Soap
+FR:.That`s.70s.be	51	FR: That`s 70s
+SE:.Cheaters.be	168	SE: Cheaters
+SE:.Top.Gear.be	94	SE: Top Gear
+ES:.Vivir.con.perros.be	0	ES: Vivir con perros
+ES:.CGTN.be	143	ES: CGTN
+UK:.Wheels.&amp;.Steel.be	97	UK: Wheels & Steel
+UK:.Live.PD.Presents.be	215	UK: Live PD Presents
+NO:.Travelxp.be	191	NO: Travelxp
+UK:.BritAsia.TV.be	48	UK: BritAsia TV
+FI:.Duck.Dynasty.be	0	FI: Duck Dynasty
+FI:.CGTN.be	144	FI: CGTN
+SE:.Hercules:.The.Legendary.Journeys.be	88	SE: Hercules: The Legendary Journeys
+FR:.Famille.-.Rakuten.TV.be	68	FR: Famille - Rakuten TV
+NL:.MojiTV.be	492	NL: MojiTV
+ES:.Archivos.Forenses.be	147	ES: Archivos Forenses
+FR:.ScreamIN.be	52	FR: ScreamIN
+UK:.Vevo.Hip-Hop.&amp;.R&amp;B.be	96	UK: Vevo Hip-Hop & R&B
+NO:.People.Are.Awesome.be	179	NO: People Are Awesome
+ES:.Los.Gipsy.Kings.-.Rakuten.TV.be	64	ES: Los Gipsy Kings - Rakuten TV
+SE:.Comedy.TV.Sony.be	198	SE: Comedy TV Sony
+NO:.Sports.Illustrated.TV.be	0	NO: Sports Illustrated TV
+SE:.Euro.Crime.Channel.be	72	SE: Euro Crime Channel
+IT:.Car.City.Adventures.be	101	IT: Car City Adventures
+DE:.Red.Bull.TV.be	121	DE: Red Bull TV
+SE:.Adventure.Earth.be	99	SE: Adventure Earth
+IT:.Inuyasha.be	96	IT: Inuyasha
+FI:.Grjngo.-.Western.Films.be	56	FI: Grjngo - Western Films
+ES:.Películas.de.Acción.-.Rakuten.TV.be	54	ES: Películas de Acción - Rakuten TV
+IT:.Golf.Television.be	358	IT: Golf Television
+DE:.Thriller.TV.Sony.be	105	DE: Thriller TV Sony
+FI:.Waterbear.be	155	FI: Waterbear
+ES:.Mr..Bean.-.Live.Action.be	190	ES: Mr. Bean - Live Action
+SE:.Westerns.+.be	51	SE: Westerns +
+ES:.Fail.Army.be	183	ES: Fail Army
+ES:.Películas.Románticas.-.Rakuten.TV.be	52	ES: Películas Románticas - Rakuten TV
+IT:.Gambero.Rosso.be	202	IT: Gambero Rosso
+FI:.Fail.Army.be	182	FI: Fail Army
+UK:.AMC.Reality.be	115	UK: AMC Reality
+NL:.Man.City.24/7.be	130	NL: Man City 24/7
+FI:.GLORY.Kickboxing.be	18	FI: GLORY Kickboxing
+ES:.A.bocados.be	88	ES: A bocados
+UK:.Cartoon.Classics.be	0	UK: Cartoon Classics
+ES:.GLORY.Kickboxing.be	18	ES: GLORY Kickboxing
+DE:.Rakuten.VIKI.be	80	DE: Rakuten VIKI
+DE:.Fashion.TV.be	191	DE: Fashion TV
+SE:.Mr..Bean.be	31	SE: Mr. Bean
+ES:.Red.Bull.TV.be	83	ES: Red Bull TV
+ES:.Qwest.TV.be	94	ES: Qwest TV
+DE:.World.Surf.League.24/7.be	82	DE: World Surf League 24/7
+FR:.Dragon.TV.be	65	FR: Dragon TV
+FI:.Red.Bull.TV.be	148	FI: Red Bull TV
+FI:.Qwest.TV.be	94	FI: Qwest TV
+SE:.History.Hit.be	95	SE: History Hit
+SE:.Homeful.be	145	SE: Homeful
+IT:.Cine.Peplum.be	53	IT: Cine Peplum
+PL:.Gusto.TV.be	153	PL: Gusto TV
+FR:.Homicide,.La.chaine.du.fait.divers.be	81	FR: Homicide, La chaine du fait divers
+DK:.Nolly.Africa.HD.be	49	DK: Nolly Africa HD
+FI:.Hardcore.Pawn.be	232	FI: Hardcore Pawn
+NO:.Cartoon.Classics.be	0	NO: Cartoon Classics
+SE:.Africanews.be	189	SE: Africanews
+NL:.Forensic.Files.be	159	NL: Forensic Files
+FI:.True.Crime.Now.be	120	FI: True Crime Now
+IT:.Juventus.Play.be	158	IT: Juventus Play
+SE:.Med.TV.be	245	SE: Med.TV
+SE:.Gusto.TV.be	153	SE: Gusto TV
+NL:.Merhaba.Arabic.Drama.be	123	NL: Merhaba Arabic Drama
+DE:.CGTN.be	143	DE: CGTN
+PL:.Africanews.be	189	PL: Africanews
+ES:.Euronews.EN.DIRECTO.be	189	ES: Euronews EN DIRECTO
+FR:.Jodha.Akbar.be	106	FR: Jodha Akbar
+ES:.Oficios.Perdidos.be	94	ES: Oficios Perdidos
+IT:.Film.Asiatici.-.Rakuten.TV.be	51	IT: Film Asiatici - Rakuten TV
+FI:.Dog.The.Bounty.Hunter.be	217	FI: Dog The Bounty Hunter
+FR:.Motus.La.Chaîne.be	200	FR: Motus La Chaîne
+DK:.Z.One.be	159	DK: Z One
+ES:.Misterios.sin.resolver.be	78	ES: Misterios sin resolver
+DK:.Familie.-.Rakuten.TV.be	0	DK: Familie - Rakuten TV
+DE:.GLORY.Kickboxing.be	18	DE: GLORY Kickboxing
+ES:.Rakuten.VIKI.be	75	ES: Rakuten VIKI
+UK:.People.Are.Awesome.be	180	UK: People Are Awesome
+IT:.Vevo.`90s.&amp;.`00s.be	96	IT: Vevo `90s & `00s
+ES:.Fashion.TV.be	96	ES: Fashion TV
+NO:.Dance.Moms.be	101	NO: Dance Moms
+IT:.Travelxp.be	191	IT: Travelxp
+FI:.Rakuten.VIKI.be	80	FI: Rakuten VIKI
+FI:.Fashion.TV.be	191	FI: Fashion TV
+SE:.That`s.90s00s.be	50	SE: That`s 90s00s
+NL:.Ice.Pilots.be	84	NL: Ice Pilots
+SE:.That`s.ROCK.be	49	SE: That`s ROCK
+SE:.The.FBI.Files.be	74	SE: The FBI Files
+DE:.Fail.Army.be	183	DE: Fail Army
+FI:.Highway.Thru.Hell.be	104	FI: Highway Thru Hell
+DK:.Romantik.-.Rakuten.TV.be	52	DK: Romantik - Rakuten TV
+UK:.Soap.be	111	UK: Soap
+FR:.Comédies.-.Rakuten.TV.be	54	FR: Comédies - Rakuten TV
+PL:.That`s.90s00s.be	50	PL: That`s 90s00s
+ES:.En.Familia.-.Rakuten.TV.be	64	ES: En Familia - Rakuten TV
+PL:.That`s.ROCK.be	49	PL: That`s ROCK
+DE:.Thriller.-.Rakuten.TV.be	56	DE: Thriller - Rakuten TV
+NL:.World.Billiards.TV.be	57	NL: World Billiards TV
+NL:.Graham.Norton.be	0	NL: Graham Norton
+NO:.Live.PD.Presents.be	199	NO: Live PD Presents
+UK:.Travelxp.be	191	UK: Travelxp
+ES:.Alerta.Cobra.-.Brigada.especial.de.carreteras.be	0	ES: Alerta Cobra - Brigada especial de carreteras
+IT:.People.Are.Awesome.be	180	IT: People Are Awesome
+FI:.Strongman.Champions.League.be	98	FI: Strongman Champions League
+FI:.Cosmic.Frontiers.be	180	FI: Cosmic Frontiers
+PL:.World.Poker.Tour.be	71	PL: World Poker Tour
+NL:.Jade.Fever.be	0	NL: Jade Fever
+FI:.Fifth.Gear.be	185	FI: Fifth Gear
+IT:.Vita.da.Strega.be	190	IT: Vita da Strega
+FI:.Qello.Concerts.by.Stingray.be	95	FI: Qello Concerts by Stingray
+UK:.Vevo.Pop.be	97	UK: Vevo Pop
+IT:.France.24.FAST.English.be	307	IT: France 24 FAST English
+FI:.Ghost.be	110	FI: Ghost
+DK:.Nordiske.Film.-.Rakuten.TV.be	58	DK: Nordiske Film - Rakuten TV
+NL:.Autoblog.TV.be	94	NL: Autoblog TV
+NO:.Familie.-.Rakuten.TV.be	0	NO: Familie - Rakuten TV
+NL:.Hercules:.The.Legendary.Journeys.be	88	NL: Hercules: The Legendary Journeys
+DK:.Dance.Moms.be	101	DK: Dance Moms
+DE:.Quantum.Leap.be	107	DE: Quantum Leap
+NL:.Tattoo.Fixers.be	105	NL: Tattoo Fixers
+IT:.Squadra.Speciale.Lipsia.be	112	IT: Squadra Speciale Lipsia
+FI:.That`s.70s.be	50	FI: That`s 70s
+FR:.Le.meilleur.de.la.TV.Réalité.be	125	FR: Le meilleur de la TV Réalité
+ES:.Vivir.con.gatos.be	94	ES: Vivir con gatos
+FI:.Jail.be	0	FI: Jail
+ES:.That`s.70s.be	51	ES: That`s 70s
+DK:.Live.PD.Presents.be	199	DK: Live PD Presents
+NL:.DAZN.Ringside.be	92	NL: DAZN Ringside
+IT:.Vevo.Pop.be	95	IT: Vevo Pop
+SE:.World.Poker.Tour.be	58	SE: World Poker Tour
+NL:.Weather.Spy.be	139	NL: Weather Spy
+ES:.1+1.Travel.be	94	ES: 1+1 Travel
+FR:.CGTN.be	143	FR: CGTN
+UK:.Deal.or.No.Deal.be	168	UK: Deal or No Deal
+UK:.DP.World.Tour.be	29	UK: DP World Tour
+DE:.Aftershock.My.Strange.Addiction/My.Crazy.obsession.be	191	DE: Aftershock My Strange Addiction/My Crazy obsession
+DK:.Cartoon.Classics.be	0	DK: Cartoon Classics
+SE:.FloHockey.24/7.be	64	SE: FloHockey 24/7
+UK:.TNA.Wrestling.Channel.be	54	UK: TNA Wrestling Channel
+FR:.Fail.Army.be	183	FR: Fail Army
+NO:.Nolly.Africa.HD.be	49	NO: Nolly Africa HD
+SE:.NewsWorld.be	191	SE: NewsWorld
+DE:.Ein.Engel.auf.Erden.be	81	DE: Ein Engel auf Erden
+FR:.GLORY.Kickboxing.be	18	FR: GLORY Kickboxing
+NL:.Your.60`s.be	49	NL: Your 60`s
+SE:.Great.British.Menu.be	153	SE: Great British Menu
+NL:.CGTN.Documentary.be	105	NL: CGTN Documentary
+PL:.Metal.Rocks.be	22	PL: Metal.Rocks
+NL:.Bionic.Woman.be	77	NL: Bionic Woman
+PL:.NewsWorld.be	191	PL: NewsWorld
+NO:.Z.One.be	159	NO: Z One
+FI:.Highway.to.Heaven.be	96	FI: Highway to Heaven
+SE:.Metal.Rocks.be	22	SE: Metal.Rocks
+NO:.Dog.The.Bounty.Hunter.be	216	NO: Dog The Bounty Hunter
+FI:.Monster.Jam.be	110	FI: Monster Jam
+DE:.Merhaba.Türkische.Serien.be	44	DE: Merhaba Türkische Serien
+UK:.Stingray.Greatest.Hits.UK.be	39	UK: Stingray Greatest Hits UK
+UK:.Comedy.TV.Sony.be	210	UK: Comedy TV Sony
+NO:.That`s.90s00s.be	50	NO: That`s 90s00s
+PL:.Car.City.Adventures.be	154	PL: Car City Adventures
+NL:.Curiosity.Now.be	132	NL: Curiosity Now
+UK:.Adventure.Earth.be	99	UK: Adventure Earth
+NO:.The.FBI.Files.be	92	NO: The FBI Files
+NO:.That`s.ROCK.be	49	NO: That`s ROCK
+SE:.Dance.Moms.be	107	SE: Dance Moms
+UK:.Crime.&amp;.Justice.be	143	UK: Crime & Justice
+IT:.Top.Gear.be	94	IT: Top Gear
+UK:.Thrillers.-.Rakuten.TV.be	57	UK: Thrillers - Rakuten TV
+SE:.Live.PD.Presents.be	215	SE: Live PD Presents
+UK:.Cheaters.be	169	UK: Cheaters
+PL:.Z.Nation.be	107	PL: Z Nation
+UK:.Chaos.on.Cam.be	209	UK: Chaos on Cam
+FR:.C-Drama.Now.be	117	FR: C-Drama Now
+IT:.Stingray:.Remember.the.80’s.be	24	IT: Stingray: Remember the 80’s
+SE:.Car.City.Adventures.be	125	SE: Car City Adventures
+DK:.World.Poker.Tour.be	73	DK: World Poker Tour
+FI:.Real.Wild.be	104	FI: Real Wild
+FR:.Qui.Veut.Gagner.des.Millions?.be	84	FR: Qui Veut Gagner des Millions?
+NO:.Africanews.be	189	NO: Africanews
+DK:.FloHockey.24/7.be	57	DK: FloHockey 24/7
+SE:.Cartoon.Classics.be	0	SE: Cartoon Classics
+PL:.Top.Movies.Polska.-.Rakuten.TV.be	53	PL: Top Movies Polska - Rakuten TV
+DK:.Great.British.Menu.be	152	DK: Great British Menu
+UK:.Great!.Mystery.be	66	UK: Great! Mystery
+NL:.BuzzFeed.Unsolved.be	131	NL: BuzzFeed Unsolved
+UK:.Westerns.+.be	51	UK: Westerns +
+NO:.Mr..Bean.be	39	NO: Mr. Bean
+NO:.Homeful.be	141	NO: Homeful
+DE:.AMC.Stories.be	0	DE: AMC Stories
+NO:.History.Hit.be	92	NO: History Hit
+UK:.Dr..G:.Medical.Examiner.be	90	UK: Dr. G: Medical Examiner
+DK:.NewsWorld.be	191	DK: NewsWorld
+NL:.Euronews.LIVE.be	189	NL: Euronews LIVE
+FR:.Rookie.Blue.be	119	FR: Rookie Blue
+DK:.Metal.Rocks.be	21	DK: Metal.Rocks
+NL:.Unsolved.Mysteries.be	79	NL: Unsolved Mysteries
+UK:.Demand.Drama.be	0	UK: Demand Drama
+PL:.Obsessive.Compulsive.Cleaners.be	108	PL: Obsessive Compulsive Cleaners
+NO:.Gusto.TV.be	148	NO: Gusto TV
+NO:.Med.TV.be	248	NO: Med.TV
+IT:.wedo.Big.Stories.be	141	IT: wedo Big Stories
+FR:.Beyblade.be	231	FR: Beyblade
+PL:.Cartoon.Classics.be	0	PL: Cartoon Classics
+DK:.History.Hit.be	92	DK: History Hit
+DE:.Drama.Filme.-.Rakuten.TV.be	47	DE: Drama Filme - Rakuten TV
+DK:.Homeful.be	141	DK: Homeful
+DE:.Stingray.Greatest.Hits.be	23	DE: Stingray Greatest Hits
+DE:.Meet,.Marry,.Murder.Tödliche.Ehe.be	109	DE: Meet, Marry, Murder Tödliche Ehe
+NO:.NewsWorld.be	191	NO: NewsWorld
+FI:.Huippuelokuvat.-.Rakuten.TV.be	0	FI: Huippuelokuvat - Rakuten TV
+DK:.Mr..Bean.be	39	DK: Mr. Bean
+NO:.Great.British.Menu.be	152	NO: Great British Menu
+DK:.Africanews.be	189	DK: Africanews
+NO:.FloHockey.24/7.be	57	NO: FloHockey 24/7
+SE:.Nolly.Africa.HD.be	48	SE: Nolly Africa HD
+DK:.Strongman.Champions.League.be	98	DK: Strongman Champions League
+FI:.The.Cube.be	111	FI: The Cube
+NL:.Qello.Concerts.by.Stingray.be	77	NL: Qello Concerts by Stingray
+ES:.Aftershock.Mi.Extraña.Obsesión/Loca.Compulsión.be	197	ES: Aftershock Mi Extraña Obsesión/Loca Compulsión
+ES:.MyPadel.TV.be	94	ES: MyPadel TV
+SE:.Komedifilmer.-.Rakuten.TV.be	54	SE: Komedifilmer - Rakuten TV
+DK:.Gusto.TV.be	148	DK: Gusto TV
+ES:.Cine.Español.-.Rakuten.TV.be	56	ES: Cine Español - Rakuten TV
+DE:.Actionfilme.-.Rakuten.TV.be	56	DE: Actionfilme - Rakuten TV
+DK:.Med.TV.be	248	DK: Med.TV
+SE:.Z.One.be	159	SE: Z One
+NO:.Metal.Rocks.be	21	NO: Metal.Rocks
+ES:.Surf.Channel.be	94	ES: Surf Channel
+UK:.World.War.TV.be	99	UK: World War TV
+UK:.Cash.in.The.Attic.be	126	UK: Cash in The Attic
+IT:.Family.-.Rakuten.TV.be	83	IT: Family - Rakuten TV
+FI:.PFL.MMA.be	62	FI: PFL MMA
+DK:.That`s.ROCK.be	49	DK: That`s ROCK
+DK:.The.FBI.Files.be	92	DK: The FBI Files
+DK:.Aftershock.Homicide.Hunter.be	89	DK: Aftershock Homicide Hunter
+ES:.PFL.MMA.be	77	ES: PFL MMA
+IT:.Tennis+.be	50	IT: Tennis+
+DK:.That`s.90s00s.be	50	DK: That`s 90s00s
+UK:.Romance.Movies.-.Rakuten.TV.be	57	UK: Romance Movies - Rakuten TV
+NL:.RACER.International.be	150	NL: RACER International
+PL:.Viasat.Explore.Classic.be	97	PL: Viasat Explore Classic
+NO:.World.Poker.Tour.be	73	NO: World Poker Tour
+DK:.Dog.The.Bounty.Hunter.be	216	DK: Dog The Bounty Hunter
+UK:.Tennis+.be	50	UK: Tennis+
+UK:.Family.-.Rakuten.TV.be	0	UK: Family - Rakuten TV

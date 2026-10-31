@@ -1,0 +1,266 @@
+Das.Erste.de	147	Das Erste
+ZDF.de	121	ZDF
+RTL.de	80	RTL
+SAT.1.de	81	SAT.1
+ProSieben.de	129	ProSieben
+kabel.eins.de	88	kabel eins
+RTLZWEI.de	85	RTLZWEI
+VOX.de	98	VOX
+3sat.de	146	3sat
+ARTE.de	104	ARTE
+DF1.de	101	DF1
+Dokusat.de	65	Dokusat
+Servus.TV.Österreich.de	131	Servus TV Österreich
+Tele.5.de	84	Tele 5
+DMAX.de	108	DMAX
+sixx.de	103	sixx
+NITRO.de	115	NITRO
+RTLup.de	112	RTLup
+SAT.1.Gold.de	117	SAT.1 Gold
+ProSieben.MAXX.de	144	ProSieben MAXX
+Comedy.Central.de	223	Comedy Central
+WDR.de	137	WDR
+NDR.de	150	NDR
+BR.de	133	BR
+SWR/SR.de	134	SWR/SR
+HR.de	143	HR
+MDR.de	137	MDR
+RBB.de	129	RBB
+SPORT1.de	80	SPORT1
+SPORT1+.de	51	SPORT1+
+SportDigital1+.de	51	SportDigital1+
+eSports1.de	18	eSports1
+eSportsONE.de	18	eSportsONE
+Eurosport.1.de	47	Eurosport 1
+Eurosport.2.de	66	Eurosport 2
+EXTREME.SPORTS.de	87	EXTREME SPORTS
+sportdigital.Fussball.de	58	sportdigital Fussball
+DAZN.de	50	DAZN
+Auto.Motor.Sport.de	247	Auto Motor Sport
+KIKA.de	156	KIKA
+SUPER.RTL.de	247	SUPER RTL
+TOGGO.plus.de	260	TOGGO plus
+RiC.de	137	RiC
+nick.de	182	nick
+Fix.&amp;.Foxi.de	266	Fix & Foxi
+Nick.Jr..de	313	Nick Jr.
+Nicktoons.de	281	Nicktoons
+Disney.Channel.de	181	Disney Channel
+PHOENIX.de	120	PHOENIX
+ARD.alpha.de	166	ARD alpha
+ONE.de	108	ONE
+ZDFneo.de	121	ZDFneo
+ZDFinfo.de	135	ZDFinfo
+ANIXE.de	147	ANIXE
+Bibel.TV.de	188	Bibel TV
+K-TV.de	157	K-TV
+TLC.de	138	TLC
+Welt.der.Wunder.TV.de	85	Welt der Wunder TV
+More.than.Sports.TV.de	64	More than Sports TV
+Bon.Gusto.de	204	Bon Gusto
+Goldstar.TV.de	89	Goldstar TV
+Home.&amp;.Garden.TV.de	148	Home & Garden TV
+Marco.Polo.TV.de	188	Marco Polo TV
+travelxp.4K.de	182	travelxp 4K
+Rocket.Beans.TV.de	47	Rocket Beans TV
+UHD1.de	73	UHD1
+VOXup.de	104	VOXup
+tagesschau24.de	135	tagesschau24
+ntv.de	195	ntv
+WELT.de	236	WELT
+N24.DOKU.de	120	N24 DOKU
+kabel.eins.Doku.de	133	kabel eins Doku
+Prime.HD.de	0	Prime HD
+BBC.World.News.de	208	BBC World News
+BBC.News.de	191	BBC News
+Bloomberg.Europe.TV.de	96	Bloomberg Europe TV
+CNBC.de	158	CNBC
+CNN.International.de	113	CNN International
+CNN.Türk.de	40	CNN Türk
+euronews.(ger).de	416	euronews (ger)
+Al.Jazeera.de	137	Al Jazeera
+France.24.(engl.).de	465	France 24 (engl.)
+France.24.(franz.).de	383	France 24 (franz.)
+NHK.World.TV.de	335	NHK World TV
+DELUXE.MUSIC.de	49	DELUXE MUSIC
+DMF.de	69	DMF
+MTV.de	148	MTV
+MTV.Live.HD.de	0	MTV Live HD
+MTV.80s.de	0	MTV 80s
+QVC.de	92	QVC
+QVC2.de	92	QVC2
+HSE.de	92	HSE
+HSE.Extra.de	92	HSE Extra
+Channel21.de	0	Channel21
+123.tv.de	92	123.tv
+Sonnenklar.TV.de	125	Sonnenklar.TV
+Hamburg.1.de	196	Hamburg 1
+münchen.tv.de	230	münchen.tv
+tv.berlin.de	154	tv.berlin
+LEIPZIG.FERNSEHEN.de	199	LEIPZIG FERNSEHEN
+Rhein-Neckar.Fernsehen.de	0	Rhein-Neckar Fernsehen
+ATV.de	87	ATV
+ATV.II.de	109	ATV II
+BBC.One.de	106	BBC One
+BBC.Two.de	99	BBC Two
+BBC.four.de	40	BBC four
+Canal+.de	103	Canal+
+Canal+.Cinéma.de	65	Canal+ Cinéma
+Canal+.Sport.de	66	Canal+ Sport
+Canale.5.de	126	Canale 5
+ORF.1.de	152	ORF 1
+ORF.2.de	176	ORF 2
+ORF.III.de	99	ORF III
+ORF.SPORT.+.de	109	ORF SPORT +
+oe24.TV.de	95	oe24.TV
+PULS.4.de	97	PULS 4
+SRF.1.de	147	SRF 1
+SRF.zwei.de	92	SRF zwei
+3+.de	58	3+
+PULS.acht.de	120	PULS acht
+STAR.TV.de	66	STAR TV
+DR1.de	99	DR1
+DR2.de	43	DR2
+Belgien.1.de	181	Belgien 1
+TV2.de	82	TV2
+TV5.Monde.de	232	TV5 Monde
+Show.Turk.de	41	Show Turk
+Turkmax.Gurme.de	127	Turkmax Gurme
+Kanal.7.Int.de	51	Kanal 7 Int
+Euro.D.de	46	Euro D
+Euro.Star.de	45	Euro Star
+France.2.de	147	France 2
+France.3.de	194	France 3
+France.4.de	325	France 4
+France.5.de	255	France 5
+Sky.Cinema.Premiere.HD.de	54	Sky Cinema Premiere HD
+Sky.Cinema.Family.HD.de	52	Sky Cinema Family HD
+Sky.Cinema.Highlights.HD.de	47	Sky Cinema Highlights HD
+Sky.Cinema.Action.HD.de	51	Sky Cinema Action HD
+Sky.Cinema.Classics.HD.de	51	Sky Cinema Classics HD
+Sky.Crime.de	115	Sky Crime
+Sky.Documentaries.de	102	Sky Documentaries
+Sky.Nature.de	111	Sky Nature
+Warner.TV.Film.de	51	Warner TV Film
+KinoweltTV.de	53	KinoweltTV
+Sky.Sport.Bundesliga.de	98	Sky Sport Bundesliga
+Sky.Sport.News.de	100	Sky Sport News
+Sky.Sport.F1.de	82	Sky Sport F1
+Sky.Sport.Premier.League.de	123	Sky Sport Premier League
+Sky.Sport.Golf.de	49	Sky Sport Golf
+Sky.Sport.Mix.de	86	Sky Sport Mix
+Sky.Sport.Tennis.de	44	Sky Sport Tennis
+Sky.Sport.Top.Event.de	63	Sky Sport Top Event
+Sky.Sport.Austria.de	104	Sky Sport Austria
+Sky.One.de	161	Sky One
+Sky.Atlantic.HD.de	101	Sky Atlantic HD
+Sky.Krimi.de	102	Sky Krimi
+sky.replay.de	0	sky replay
+sky.showcase.de	112	sky showcase
+Universal.Channel.HD.de	83	Universal Channel HD
+The.HISTORY.Channel.de	117	The HISTORY Channel
+Spiegel.Geschichte.de	124	Spiegel Geschichte
+Motorvision.TV.de	142	Motorvision TV
+Discovery.HD.de	126	Discovery HD
+Nat.Geo.HD.de	122	Nat Geo HD
+NAT.GEO.WILD.de	124	NAT GEO WILD
+13th.Street.Universal.de	125	13th Street Universal
+SyFy.de	113	SyFy
+Warner.TV.Serie.de	116	Warner TV Serie
+Warner.TV.Comedy.de	220	Warner TV Comedy
+CRIME.+.INVESTIGATION.de	131	CRIME + INVESTIGATION
+Romance.TV.de	76	Romance TV
+Heimatkanal.de	85	Heimatkanal
+Cartoon.Network.de	425	Cartoon Network
+Classica.de	105	Classica
+Beate-Uhse.TV.de	44	Beate-Uhse.TV
+Adult.Channel.de	78	Adult Channel
+Animal.Planet.de	128	Animal Planet
+AXN.Black.de	103	AXN Black
+Bergblick.de	126	Bergblick
+Fashion.TV.de	184	Fashion TV
+GEO.Television.de	100	GEO Television
+Gute.Laune.TV.de	40	Gute Laune TV
+Jukebox.de	32	Jukebox
+LUST.PUR.de	47	LUST PUR
+Mezzo.de	71	Mezzo
+MTV.Base.de	0	MTV Base
+Club.MTV.de	0	Club MTV
+MTV.Hits.de	0	MTV Hits
+MTV.Brand.New.de	0	MTV Brand New
+Nautical.Channel.de	174	Nautical Channel
+Playboy.TV.de	275	Playboy TV
+kabel.eins.classics.de	58	kabel eins classics
+SAT.1.emotions.de	117	SAT.1 emotions
+ProSieben.Fun.de	142	ProSieben Fun
+NOW.US.de	24	NOW US
+RTL.Crime.de	124	RTL Crime
+RTL.Living.de	102	RTL Living
+RTL.Passion.de	154	RTL Passion
+Silverline.de	56	Silverline
+AXN.White.de	99	AXN White
+Curiosity.Channel.de	125	Curiosity Channel
+Trace.TV.de	44	Trace TV
+Cartoonito.de	487	Cartoonito
+DAZN.1.de	62	DAZN 1
+DAZN.2.de	58	DAZN 2
+Motorvision+.de	193	Motorvision+
+Sky.Replay.HD.de	24	Sky Replay HD
+Sky.Showcase.HD.de	117	Sky Showcase HD
+Sky.Sport.UHD.de	47	Sky Sport UHD
+Sky.Sport.Austria.1.HD.de	104	Sky Sport Austria 1 HD
+Sky.Sport.Austria.2.HD.de	33	Sky Sport Austria 2 HD
+Sky.Sport.Austria.3.HD.de	25	Sky Sport Austria 3 HD
+Sky.Sport.Austria.4.HD.de	16	Sky Sport Austria 4 HD
+Sky.Sport.Austria.5.HD.de	29	Sky Sport Austria 5 HD
+Sky.Sport.Austria.6.HD.de	26	Sky Sport Austria 6 HD
+Sky.Sport.Austria.7.HD.de	26	Sky Sport Austria 7 HD
+Sky.Sport.Bundesliga.UHD.de	36	Sky Sport Bundesliga UHD
+Sky.Sport.Bundesliga.1.de	20	Sky Sport Bundesliga 1
+Sky.Sport.Bundesliga.2.de	29	Sky Sport Bundesliga 2
+Sky.Sport.Bundesliga.3.de	30	Sky Sport Bundesliga 3
+Sky.Sport.Bundesliga.4.de	30	Sky Sport Bundesliga 4
+Sky.Sport.Bundesliga.5.de	29	Sky Sport Bundesliga 5
+Sky.Sport.Bundesliga.6.de	26	Sky Sport Bundesliga 6
+Sky.Sport.Bundesliga.7.de	27	Sky Sport Bundesliga 7
+Sky.Sport.Bundesliga.8.de	24	Sky Sport Bundesliga 8
+Sky.Sport.Bundesliga.9.de	24	Sky Sport Bundesliga 9
+Sky.Sport.Bundesliga.10.de	24	Sky Sport Bundesliga 10
+Sky.Sport.1.de	17	Sky Sport 1
+Sky.Sport.2.de	26	Sky Sport 2
+Sky.Sport.3.de	14	Sky Sport 3
+Sky.Sport.4.de	28	Sky Sport 4
+Sky.Sport.5.de	26	Sky Sport 5
+Sky.Sport.6.de	26	Sky Sport 6
+Sky.Sport.7.de	24	Sky Sport 7
+Sky.Sport.8.de	26	Sky Sport 8
+Sky.Sport.9.de	26	Sky Sport 9
+Sky.Sport.10.de	24	Sky Sport 10
+eoTV.de	0	eoTV
+FUSSBALL.TV.1.de	0	FUSSBALL.TV 1
+FUSSBALL.TV.2.de	0	FUSSBALL.TV 2
+FUSSBALL.TV.3.de	0	FUSSBALL.TV 3
+DOKUSAT.de	72	DOKUSAT
+Top.Serien.de	157	Top Serien
+tv-media.PULS.24.de	6	PULS 24
+DFB.Play.de	59	DFB Play
+Prime.de	0	Prime
+Sport.1.-.myTeamTV.de	29	Sport 1 - myTeamTV
+Sport.2.-.myTeamTV.de	28	Sport 2 - myTeamTV
+Sport.3.-.myTeamTV.de	28	Sport 3 - myTeamTV
+Sport.4.-.myTeamTV.de	28	Sport 4 - myTeamTV
+Sport.5.-.myTeamTV.de	28	Sport 5 - myTeamTV
+Sport.6.-.myTeamTV.de	28	Sport 6 - myTeamTV
+Sport.7.-.myTeamTV.de	28	Sport 7 - myTeamTV
+Sport.8.-.myTeamTV.de	28	Sport 8 - myTeamTV
+Sport.9.-.myTeamTV.de	28	Sport 9 - myTeamTV
+Sport.10.-.myTeamTV.de	28	Sport 10 - myTeamTV
+Sport.11.-.myTeamTV.de	28	Sport 11 - myTeamTV
+Sport.12.-.myTeamTV.de	28	Sport 12 - myTeamTV
+Sport.13.-.myTeamTV.de	28	Sport 13 - myTeamTV
+Sport.14.-.myTeamTV.de	28	Sport 14 - myTeamTV
+Sport.15.-.myTeamTV.de	28	Sport 15 - myTeamTV
+Sport.16.-.myTeamTV.de	28	Sport 16 - myTeamTV
+Sport.17.-.myTeamTV.de	28	Sport 17 - myTeamTV
+Sport.18.-.myTeamTV.de	30	Sport 18 - myTeamTV
+MS.Sport.de	40	MS Sport

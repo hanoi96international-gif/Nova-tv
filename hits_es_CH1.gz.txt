@@ -1,0 +1,18 @@
+CHANNEL Warner.TV.Serie.ch (121) Warner TV Serie
+CHANNEL Sky.Cinema.(Logo.VOD).ch (26) Sky Cinema (Logo VOD)
+CHANNEL Amazon.Prime.Video.ch (26) Amazon Prime Video
+CHANNEL CANAL+.Series.ch (0) CANAL+ Series
+CHANNEL Pink.Film.ch (57) Pink Film
+CHANNEL Atreseries.ch (64) Atreseries
+CHANNEL Enter-Film.ch (25) Enter-Film
+CHANNEL Film.Four.ch (43) Film Four
+CHANNEL Paramount+.ch (26) Paramount+
+CHANNEL Kinowelt.ch (56) Kinowelt
+CHANNEL Kinomir.ch (25) Kinomir
+CHANNEL Warner.TV.Film.ch (53) Warner TV Film
+CHANNEL CANAL+.Cinema(s).ch (59) CANAL+ Cinema(s)
+CHANNEL Sky.Cinema.D.ch (56) Sky Cinema D
+CHANNEL Paramount.F.ch (0) Paramount F
+CHANNEL Anixe.Serie.ch (152) Anixe Serie
+CHANNEL The.Filmclub.ch (26) The Filmclub
+CHANNEL TF1.Séries.Films.ch (125) TF1 Séries Films

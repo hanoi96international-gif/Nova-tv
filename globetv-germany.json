@@ -1,0 +1,130 @@
+[
+  {
+    "name": "germany1.xml",
+    "path": "Germany/germany1.xml",
+    "sha": "d52d100049802dd0a82a478fb52f1c2381035969",
+    "size": 7840762,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany1.xml?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany1.xml",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/d52d100049802dd0a82a478fb52f1c2381035969",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany1.xml",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany1.xml?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/d52d100049802dd0a82a478fb52f1c2381035969",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany1.xml"
+    }
+  },
+  {
+    "name": "germany1.xml.gz",
+    "path": "Germany/germany1.xml.gz",
+    "sha": "2988b82933651f59ced14bdcbfaf70ab31a595e6",
+    "size": 1320820,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany1.xml.gz?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany1.xml.gz",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/2988b82933651f59ced14bdcbfaf70ab31a595e6",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany1.xml.gz",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany1.xml.gz?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/2988b82933651f59ced14bdcbfaf70ab31a595e6",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany1.xml.gz"
+    }
+  },
+  {
+    "name": "germany2.xml",
+    "path": "Germany/germany2.xml",
+    "sha": "b4a8f06947d176ead8a49165ec24ed0e2c77f11d",
+    "size": 30248,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany2.xml?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany2.xml",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/b4a8f06947d176ead8a49165ec24ed0e2c77f11d",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany2.xml",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany2.xml?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/b4a8f06947d176ead8a49165ec24ed0e2c77f11d",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany2.xml"
+    }
+  },
+  {
+    "name": "germany2.xml.gz",
+    "path": "Germany/germany2.xml.gz",
+    "sha": "e791a0fa55c1e06e10cbf1d746ca4ba0d80b5553",
+    "size": 2790,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany2.xml.gz?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany2.xml.gz",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/e791a0fa55c1e06e10cbf1d746ca4ba0d80b5553",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany2.xml.gz",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany2.xml.gz?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/e791a0fa55c1e06e10cbf1d746ca4ba0d80b5553",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany2.xml.gz"
+    }
+  },
+  {
+    "name": "germany3.xml",
+    "path": "Germany/germany3.xml",
+    "sha": "e32d991d4841e067f42f9ad0fdb8f1bc11f072f4",
+    "size": 4389500,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany3.xml?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany3.xml",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/e32d991d4841e067f42f9ad0fdb8f1bc11f072f4",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany3.xml",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany3.xml?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/e32d991d4841e067f42f9ad0fdb8f1bc11f072f4",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany3.xml"
+    }
+  },
+  {
+    "name": "germany3.xml.gz",
+    "path": "Germany/germany3.xml.gz",
+    "sha": "469c18e00120bb239182a25bd54cab136291a968",
+    "size": 497902,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany3.xml.gz?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany3.xml.gz",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/469c18e00120bb239182a25bd54cab136291a968",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany3.xml.gz",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany3.xml.gz?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/469c18e00120bb239182a25bd54cab136291a968",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany3.xml.gz"
+    }
+  },
+  {
+    "name": "germany4.xml",
+    "path": "Germany/germany4.xml",
+    "sha": "5726cebe075546a7839fe0f0aec037b1c97e4abe",
+    "size": 4509914,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany4.xml?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany4.xml",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/5726cebe075546a7839fe0f0aec037b1c97e4abe",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany4.xml",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany4.xml?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/5726cebe075546a7839fe0f0aec037b1c97e4abe",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany4.xml"
+    }
+  },
+  {
+    "name": "germany4.xml.gz",
+    "path": "Germany/germany4.xml.gz",
+    "sha": "c692e765e63d9e6ee1f2469527570ea262f002db",
+    "size": 483973,
+    "url": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany4.xml.gz?ref=main",
+    "html_url": "https://github.com/globetvapp/epg/blob/main/Germany/germany4.xml.gz",
+    "git_url": "https://api.github.com/repos/globetvapp/epg/git/blobs/c692e765e63d9e6ee1f2469527570ea262f002db",
+    "download_url": "https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany4.xml.gz",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/globetvapp/epg/contents/Germany/germany4.xml.gz?ref=main",
+      "git": "https://api.github.com/repos/globetvapp/epg/git/blobs/c692e765e63d9e6ee1f2469527570ea262f002db",
+      "html": "https://github.com/globetvapp/epg/blob/main/Germany/germany4.xml.gz"
+    }
+  }
+]

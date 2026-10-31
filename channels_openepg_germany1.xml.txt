@@ -1,0 +1,181 @@
+13TH Street.de	0	13TH Street.de
+3+.de	0	3+.de
+3sat.de	30	3sat.de
+4+.de	0	4+.de
+Animal Planet.de	0	Animal Planet.de
+Anixe HD Serie.de	0	Anixe HD Serie.de
+ANIXE+.de	0	ANIXE+.de
+ARD alpha.de	0	ARD alpha.de
+ARTE.de	31	ARTE.de
+ATV 2.de	0	ATV 2.de
+ATV.de	0	ATV.de
+Auto Motor And Sport TV.de	0	Auto Motor And Sport TV.de
+AXN black.de	0	AXN black.de
+AXN white.de	0	AXN white.de
+BBC World News (Engl).de	30	BBC World News (Engl).de
+Beate Uhse.TV.de	0	Beate Uhse.TV.de
+Bergblick.de	0	Bergblick.de
+Bibel TV.de	0	Bibel TV.de
+Bloomberg TV (Engl).de	0	Bloomberg TV (Engl).de
+Boomerang.de	0	Boomerang.de
+BR Nord.de	2	BR Nord.de
+BR Süd.de	0	BR Süd.de
+Cartoon Network.de	0	Cartoon Network.de
+Classica TV.de	0	Classica TV.de
+CNN.de	0	CNN.de
+Comedy Central.de	0	Comedy Central.de
+Crime + Investigation.de	0	Crime + Investigation.de
+Curiosity Channel.de	0	Curiosity Channel.de
+Das Erste.de	28	Das Erste.de
+DAZN.de	0	DAZN.de
+Deluxe Music.de	0	Deluxe Music.de
+Deutsche Welle (Engl).de	0	Deutsche Welle (Engl).de
+DF1.de	0	DF1.de
+Discovery Channel.de	0	Discovery Channel.de
+Disney Channel.de	0	Disney Channel.de
+DMAX.de	0	DMAX.de
+DMF.de	0	DMF.de
+DOKUSAT.de	0	DOKUSAT.de
+eSportsONE.de	0	eSportsONE.de
+Euronews (Engl).de	0	Euronews (Engl).de
+Euronews (Fran).de	0	Euronews (Fran).de
+Eurosport 1.de	0	Eurosport 1.de
+Eurosport 2.de	0	Eurosport 2.de
+fight24.de	0	fight24.de
+Folx TV.de	0	Folx TV.de
+France 2 (Fran).de	0	France 2 (Fran).de
+France 24 (Engl).de	0	France 24 (Engl).de
+France 24 (Fran).de	0	France 24 (Fran).de
+France 3 (Fran).de	0	France 3 (Fran).de
+France 4 (Fran).de	0	France 4 (Fran).de
+France 5 (Fran).de	0	France 5 (Fran).de
+God TV (Engl).de	0	God TV (Engl).de
+Goldstar TV.de	0	Goldstar TV.de
+Heimatkanal.de	0	Heimatkanal.de
+HGTV.de	0	HGTV.de
+History.de	0	History.de
+HR Fernsehen.de	0	HR Fernsehen.de
+HSE.de	0	HSE.de
+Jukebox.de	0	Jukebox.de
+K TV.de	0	K TV.de
+Kabel eins Classics.de	0	Kabel eins Classics.de
+Kabel Eins Doku.de	0	Kabel Eins Doku.de
+Kabel eins.de	29	Kabel eins.de
+KiKA.de	21	KiKA.de
+Kinowelt TV.de	0	Kinowelt TV.de
+Lilo TV.de	0	Lilo TV.de
+MDR Sachsen Anhalt.de	0	MDR Sachsen Anhalt.de
+MDR Sachsen.de	1	MDR Sachsen.de
+MDR Thüringen.de	0	MDR Thüringen.de
+More Than Sports TV.de	0	More Than Sports TV.de
+Motorvision+.de	0	Motorvision+.de
+MTV.de	0	MTV.de
+München TV.de	0	München TV.de
+N TV.de	0	N TV.de
+N24 Doku.de	0	N24 Doku.de
+Nat Geo Wild.de	0	Nat Geo Wild.de
+National Geographic Channel.de	0	National Geographic Channel.de
+NDR Hamburg.de	0	NDR Hamburg.de
+NDR Mecklenburg Vorpommern.de	0	NDR Mecklenburg Vorpommern.de
+NDR Niedersachsen.de	1	NDR Niedersachsen.de
+NDR Schleswig Holstein.de	0	NDR Schleswig Holstein.de
+NHK World Japan (Engl.).de	0	NHK World Japan (Engl.).de
+Nick Junior.de	0	Nick Junior.de
+Nick.de	0	Nick.de
+NickToons.de	0	NickToons.de
+NITRO.de	1	NITRO.de
+ONE.de	32	ONE.de
+ORF 1.de	0	ORF 1.de
+ORF 2 Europe.de	0	ORF 2 Europe.de
+ORF 2.de	0	ORF 2.de
+ORF III.de	0	ORF III.de
+ORF SPORT+.de	0	ORF SPORT+.de
+Phoenix.de	27	Phoenix.de
+ProSieben Fun.de	0	ProSieben Fun.de
+ProSieben MAXX.de	0	ProSieben MAXX.de
+ProSieben.de	28	ProSieben.de
+Puls 4.de	0	Puls 4.de
+PULS acht.de	0	PULS acht.de
+QVC Style.de	0	QVC Style.de
+QVC Zwei.de	0	QVC Zwei.de
+QVC.de	0	QVC.de
+Radio Bremen.de	0	Radio Bremen.de
+rbb Berlin.de	0	rbb Berlin.de
+rbb Brandenburg.de	0	rbb Brandenburg.de
+Red Bull TV.de	0	Red Bull TV.de
+RiC.de	0	RiC.de
+Romance TV.de	0	Romance TV.de
+RTL Crime.de	0	RTL Crime.de
+RTL Living.de	0	RTL Living.de
+RTL Passion.de	0	RTL Passion.de
+RTL ZWEI.de	30	RTL ZWEI.de
+RTL.de	26	RTL.de
+RTLup.de	0	RTLup.de
+Sat.1 Emotions.de	0	Sat.1 Emotions.de
+Sat.1 Gold.de	0	Sat.1 Gold.de
+Sat.1.de	26	Sat.1.de
+Schlager Deluxe.de	0	Schlager Deluxe.de
+Servus TV Austria.de	0	Servus TV Austria.de
+Silverline.de	0	Silverline.de
+Sixx.de	1	Sixx.de
+Sky Atlantic HD.de	0	Sky Atlantic HD.de
+Sky Bundesliga.de	0	Sky Bundesliga.de
+Sky Cinema Action.de	0	Sky Cinema Action.de
+Sky Cinema Family.de	0	Sky Cinema Family.de
+Sky Cinema Premieren.de	0	Sky Cinema Premieren.de
+Sky Crime.de	0	Sky Crime.de
+Sky Documentaries HD.de	0	Sky Documentaries HD.de
+Sky Krimi.de	0	Sky Krimi.de
+Sky Nature HD.de	0	Sky Nature HD.de
+Sky News.de	0	Sky News.de
+Sky Nostalgie.de	0	Sky Nostalgie.de
+Sky One.de	0	Sky One.de
+Sky Sport News HD.de	0	Sky Sport News HD.de
+Sonlife (Engl).de	0	Sonlife (Engl).de
+Sonnenklar.TV.de	0	Sonnenklar.TV.de
+SPIEGEL GESCHICHTE.de	0	SPIEGEL GESCHICHTE.de
+Sport1.de	0	Sport1.de
+Sport1+.de	0	Sport1+.de
+Sportdigital Fussball.de	0	Sportdigital Fussball.de
+SR.de	0	SR.de
+SRF info.de	0	SRF info.de
+SRF1.de	0	SRF1.de
+SRF2.de	0	SRF2.de
+Super RTL.de	27	Super RTL.de
+SWR Baden Württemberg.de	0	SWR Baden Württemberg.de
+SWR Rheinland Pfalz.de	0	SWR Rheinland Pfalz.de
+Syfy.de	0	Syfy.de
+Tagesschau24.de	28	Tagesschau24.de
+Tele 5.de	0	Tele 5.de
+Telegold.de	0	Telegold.de
+Time2RLX.de	0	Time2RLX.de
+TLC.de	0	TLC.de
+TOGGO plus.de	0	TOGGO plus.de
+TV5 Monde Europe (Fran).de	0	TV5 Monde Europe (Fran).de
+Universal TV.de	0	Universal TV.de
+Volksmusik.TV.de	0	Volksmusik.TV.de
+VOX.de	30	VOX.de
+VOXup.de	0	VOXup.de
+Warner TV Comedy.de	0	Warner TV Comedy.de
+Warner TV Film.de	0	Warner TV Film.de
+Warner TV Serie.de	0	Warner TV Serie.de
+WDR Aachen.de	0	WDR Aachen.de
+WDR Bielefeld.de	0	WDR Bielefeld.de
+WDR Bonn.de	0	WDR Bonn.de
+WDR Dortmund.de	0	WDR Dortmund.de
+WDR Duisburg.de	0	WDR Duisburg.de
+WDR Düsseldorf.de	0	WDR Düsseldorf.de
+WDR Essen.de	0	WDR Essen.de
+WDR Köln.de	29	WDR Köln.de
+WDR Münster.de	0	WDR Münster.de
+WDR Siegen.de	0	WDR Siegen.de
+WDR Wuppertal.de	0	WDR Wuppertal.de
+Wedo Movies.de	0	Wedo Movies.de
+wedotv Big Stories.de	0	wedotv Big Stories.de
+wedotv Sports.de	0	wedotv Sports.de
+wedotv True Stories.de	0	wedotv True Stories.de
+Welt der Wunder TV.de	0	Welt der Wunder TV.de
+WELT.de	29	WELT.de
+ZDF.de	28	ZDF.de
+ZDFinfo.de	30	ZDFinfo.de
+ZDFneo.de	31	ZDFneo.de

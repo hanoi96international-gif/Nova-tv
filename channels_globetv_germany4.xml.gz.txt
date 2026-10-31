@@ -1,0 +1,371 @@
+13th Street.de	71	13th Street.de
+24 TV.de	36	24 TV.de
+360 Tune Box.de	53	360 Tune Box.de
+360 TV.de	32	360 TV.de
+3sat.de	86	3sat.de
+A Haber.de	62	A Haber.de
+A News.de	62	A News.de
+A Spor.de	28	A Spor.de
+A2.de	24	A2.de
+Abenteuer Wissen.de	77	Abenteuer Wissen.de
+ADAC TV.de	146	ADAC TV.de
+Adventure Channel.de	58	Adventure Channel.de
+Al Jazeera.de	88	Al Jazeera.de
+AlexiBexi.de	198	AlexiBexi.de
+alleskino.de	35	alleskino.de
+Animal Planet.de	74	Animal Planet.de
+Aquarium.de	34	Aquarium.de
+ARD Plus Krimiklassiker.de	50	ARD Plus Krimiklassiker.de
+ARD-alpha.de	100	ARD-alpha.de
+ARTE.de	66	ARTE.de
+ARTFLIX - Filmklassiker.de	36	ARTFLIX - Filmklassiker.de
+ATV Avrupa.de	32	ATV Avrupa.de
+auto motor sport channel.de	127	auto motor sport channel.de
+auto motor sport tv.de	86	auto motor sport tv.de
+AXN Black.de	70	AXN Black.de
+AXN White.de	61	AXN White.de
+Bachlauf im Fruhling - Ambient.de	103	Bachlauf im Fruhling - Ambient.de
+Bauforum24.de	158	Bauforum24.de
+BBC Food.de	77	BBC Food.de
+BBC History.de	65	BBC History.de
+BBC News.de	125	BBC News.de
+BBC Top Gear.de	63	BBC Top Gear.de
+BBC Travel.de	59	BBC Travel.de
+Bergblick.de	69	Bergblick.de
+Best of Comedy.de	141	Best of Comedy.de
+Best of The Voice.de	88	Best of The Voice.de
+Beyaz TV.de	28	Beyaz TV.de
+Bibel TV.de	124	Bibel TV.de
+Big Brother Classics.de	60	Big Brother Classics.de
+Bloody Movies.de	36	Bloody Movies.de
+BR Nord.de	76	BR Nord.de
+BR Sud.de	76	BR Sud.de
+Breaking Lab.de	209	Breaking Lab.de
+BUNTE.de	99	BUNTE.de
+Car City and Friends.de	90	Car City and Friends.de
+Cinema of Hearts.de	32	Cinema of Hearts.de
+CiNENET.de	37	CiNENET.de
+Cirkus Krimi.de	56	Cirkus Krimi.de
+CNBC Europe.de	103	CNBC Europe.de
+CNMA Arthouse.de	31	CNMA Arthouse.de
+CNN Europe.de	63	CNN Europe.de
+CNN Turk.de	34	CNN Turk.de
+Comedy and Shows.de	75	Comedy and Shows.de
+Comedy Central.de	127	Comedy Central.de
+Cosmo and Wanda.de	135	Cosmo and Wanda.de
+Craction TV.de	78	Craction TV.de
+Crime + Investigation Clips.de	212	Crime + Investigation Clips.de
+Crime + Investigation.de	65	Crime + Investigation.de
+CRIME TIME.de	55	CRIME TIME.de
+Curiosity Channel.de	87	Curiosity Channel.de
+Curiosity Now.de	72	Curiosity Now.de
+Daniel Abt.de	170	Daniel Abt.de
+Das Erste.de	81	Das Erste.de
+DAZN 1.de	34	DAZN 1.de
+DAZN 2.de	25	DAZN 2.de
+DAZN FAST.de	44	DAZN FAST.de
+DAZN RISE.de	49	DAZN RISE.de
+DDR TV-Archiv.de	47	DDR TV-Archiv.de
+DELUXE DANCE by Kontor.de	10	DELUXE DANCE by Kontor.de
+DELUXE LOUNGE.de	95	DELUXE LOUNGE.de
+DELUXE MUSIC.de	29	DELUXE MUSIC.de
+DELUXE RAP.de	9	DELUXE RAP.de
+Der Filmkanal.de	13	Der Filmkanal.de
+Der Rheinfall - Ambient.de	103	Der Rheinfall - Ambient.de
+DER SPIEGEL.de	126	DER SPIEGEL.de
+DF1.de	54	DF1.de
+Die Erde von oben.de	86	Die Erde von oben.de
+Die Tierarzte.de	83	Die Tierarzte.de
+Discovery Channel.de	69	Discovery Channel.de
+Disney Channel.de	111	Disney Channel.de
+Diyanet TV.de	74	Diyanet TV.de
+DMAX.de	71	DMAX.de
+DMF.de	39	DMF.de
+Do it yourself.de	87	Do it yourself.de
+DocuBox.de	89	DocuBox.de
+DOKU.de	73	DOKU.de
+DOKUSAT.de	33	DOKUSAT.de
+Domtendo.de	95	Domtendo.de
+Einsatz am Limit.de	75	Einsatz am Limit.de
+Einsatz and Ordnung.de	87	Einsatz and Ordnung.de
+EKİN TÜRK TV.de	28	EKİN TÜRK TV.de
+eSportsONE.de	9	eSportsONE.de
+Euro D.de	28	Euro D.de
+Euro Star.de	23	Euro Star.de
+euronews.de	175	euronews.de
+Eurosport 1.de	32	Eurosport 1.de
+Eurosport 2.de	44	Eurosport 2.de
+EWTN katholisches TV.de	86	EWTN katholisches TV.de
+EXATEST NewTV.de	13	EXATEST NewTV.de
+EXATEST15.de	261	EXATEST15.de
+EXATEST2.de	261	EXATEST2.de
+EXATEST6.de	261	EXATEST6.de
+Fairly OddParents.de	68	Fairly OddParents.de
+Fashion TV.de	105	Fashion TV.de
+FashionBox.de	69	FashionBox.de
+Fast and FunBox.de	103	Fast and FunBox.de
+Fernsehen mit Herz.de	52	Fernsehen mit Herz.de
+Fernsehschatze.de	75	Fernsehschatze.de
+Fight24.de	53	Fight24.de
+FightBox.de	26	FightBox.de
+Film Total.de	36	Film Total.de
+Filmbox Arthouse.de	38	Filmbox Arthouse.de
+Filmlegenden.de	32	Filmlegenden.de
+Filmpalast.de	37	Filmpalast.de
+FilmRise Serien.de	70	FilmRise Serien.de
+FILMTASTIC.de	31	FILMTASTIC.de
+Fix and Foxi.de	129	Fix and Foxi.de
+Flash Haber.de	36	Flash Haber.de
+FOCUS TV Reportage.de	107	FOCUS TV Reportage.de
+Foodies Paradise.de	66	Foodies Paradise.de
+France 24 EN.de	256	France 24 EN.de
+Galileo.de	47	Galileo.de
+Gametoon.de	74	Gametoon.de
+GEO Television.de	62	GEO Television.de
+Geschichten aus Fuxholzen.de	70	Geschichten aus Fuxholzen.de
+GoldStar TV.de	53	GoldStar TV.de
+GRJNGO.de	36	GRJNGO.de
+Gronkh.de	90	Gronkh.de
+Gute Laune TV.de	24	Gute Laune TV.de
+HABERTURK.de	32	HABERTURK.de
+Hakunan.de	36	Hakunan.de
+Handystar.tv.de	358	Handystar.tv.de
+Heimatkanal.de	49	Heimatkanal.de
+Herzfrequenz.de	72	Herzfrequenz.de
+Hey Aaron!!!.de	173	Hey Aaron!!!.de
+Historama.de	45	Historama.de
+HISTORY CLIPS.de	238	HISTORY CLIPS.de
+HISTORY.de	68	HISTORY.de
+Home and Garden TV.de	75	Home and Garden TV.de
+Home of Horror.de	36	Home of Horror.de
+Hope TV.de	95	Hope TV.de
+HOPPIPOLLA.de	77	HOPPIPOLLA.de
+Hot Passion.de	40	Hot Passion.de
+hr-fernsehen.de	89	hr-fernsehen.de
+HSE.de	32	HSE.de
+INPLUS.de	75	INPLUS.de
+Janoschs Traumstunde.de	190	Janoschs Traumstunde.de
+JP Performance.de	93	JP Performance.de
+Jukebox.de	21	Jukebox.de
+Just Cooking.de	154	Just Cooking.de
+Kabel Eins CLASSICS.de	35	Kabel Eins CLASSICS.de
+Kabel Eins Doku.de	70	Kabel Eins Doku.de
+Kabel Eins.de	53	Kabel Eins.de
+KalkTV.de	78	KalkTV.de
+Kaminfeuer.de	35	Kaminfeuer.de
+Kanal 7.de	32	Kanal 7.de
+Kartoon Channel.de	73	Kartoon Channel.de
+kicker tv.de	13	kicker tv.de
+Kiddinx Kids.de	61	Kiddinx Kids.de
+KiKA.de	150	KiKA.de
+KinoweltTV Catch-Up.de	32	KinoweltTV Catch-Up.de
+KinoweltTV.de	30	KinoweltTV.de
+KrimiKollegen.de	42	KrimiKollegen.de
+K-TV.de	62	K-TV.de
+KultKrimi.de	54	KultKrimi.de
+Ladykracher.de	128	Ladykracher.de
+Lagerfeuer - Ambient.de	105	Lagerfeuer - Ambient.de
+Landlust TV.de	56	Landlust TV.de
+LooLooKids TV.de	87	LooLooKids TV.de
+Lounge Deluxe.de	85	Lounge Deluxe.de
+Love and Passion.de	36	Love and Passion.de
+Marco Polo.de	121	Marco Polo.de
+MDR Sachsen.de	85	MDR Sachsen.de
+MDR Sachsen-Anhalt.de	85	MDR Sachsen-Anhalt.de
+MDR Thuringen.de	85	MDR Thuringen.de
+Meister der Kuche.de	51	Meister der Kuche.de
+Melodie TV.de	27	Melodie TV.de
+Midnite Haute.de	89	Midnite Haute.de
+Miniaturwunderland.de	146	Miniaturwunderland.de
+Moconomy.de	51	Moconomy.de
+More Than Sports TV Highlights.de	68	More Than Sports TV Highlights.de
+More Than Sports TV.de	33	More Than Sports TV.de
+MOTORVISION CLASSIC.de	131	MOTORVISION CLASSIC.de
+MOTORVISION.de	139	MOTORVISION.de
+MOTORVISION+.de	96	MOTORVISION+.de
+Moviedome.de	34	Moviedome.de
+Moviesphere.de	36	Moviesphere.de
+MTV 00s.de	19	MTV 00s.de
+MTV 80s.de	22	MTV 80s.de
+MTV 90s.de	22	MTV 90s.de
+MTV Hits.de	20	MTV Hits.de
+MTV Live.de	55	MTV Live.de
+MTV.de	36	MTV.de
+My Animation Kids.de	74	My Animation Kids.de
+myMOVIE.de	36	myMOVIE.de
+MySpass TV.de	83	MySpass TV.de
+mySTORY.de	104	mySTORY.de
+N24 Doku.de	66	N24 Doku.de
+nanoki.de	39	nanoki.de
+NARUTO.de	120	NARUTO.de
+National Geographic WILD.de	71	National Geographic WILD.de
+National Geographic.de	68	National Geographic.de
+NDR Hamburg.de	90	NDR Hamburg.de
+NDR Mecklenburg-Vorpommern.de	90	NDR Mecklenburg-Vorpommern.de
+NDR Niedersachsen.de	90	NDR Niedersachsen.de
+NDR Schleswig-Holstein.de	90	NDR Schleswig-Holstein.de
+Netzkino.de	33	Netzkino.de
+NHK WORLD-JAPAN.de	131	NHK WORLD-JAPAN.de
+Nick Jr..de	206	Nick Jr..de
+Nickelodeon.de	135	Nickelodeon.de
+NITRO.de	63	NITRO.de
+NOW.de	28	NOW.de
+n-tv.de	144	n-tv.de
+ObsessionTV.de	38	ObsessionTV.de
+One Terra.de	66	One Terra.de
+ONE.de	64	ONE.de
+phoenix.de	49	phoenix.de
+Planet Movies.de	36	Planet Movies.de
+PRIDEtv.de	88	PRIDEtv.de
+ProSieben FUN.de	112	ProSieben FUN.de
+ProSieben MAXX.de	87	ProSieben MAXX.de
+ProSieben.de	80	ProSieben.de
+QVC.de	53	QVC.de
+QWEST TV.de	45	QWEST TV.de
+Radio Bremen.de	96	Radio Bremen.de
+RBB Berlin.de	72	RBB Berlin.de
+RBB Brandenburg.de	72	RBB Brandenburg.de
+Real Crime Deutschland.de	66	Real Crime Deutschland.de
+Real Stories Deutschland.de	94	Real Stories Deutschland.de
+Recht and Gerechtigkeit.de	49	Recht and Gerechtigkeit.de
+Red Bull TV Explore.de	94	Red Bull TV Explore.de
+Red Bull TV.de	60	Red Bull TV.de
+RiC.de	76	RiC.de
+Riskante Routen.de	63	Riskante Routen.de
+Rocket Beans TV.de	25	Rocket Beans TV.de
+Romance TV Catch-Up.de	48	Romance TV Catch-Up.de
+Romance TV.de	46	Romance TV.de
+Romantischer Abend am Kamin - Ambient.de	105	Romantischer Abend am Kamin - Ambient.de
+Royalworld - Adel and Dynastien.de	55	Royalworld - Adel and Dynastien.de
+RTL Crime.de	70	RTL Crime.de
+RTL Living.de	67	RTL Living.de
+RTL Passion.de	83	RTL Passion.de
+RTL.de	65	RTL.de
+RTLup.de	58	RTLup.de
+RTLZWEI Clips.de	86	RTLZWEI Clips.de
+RTLZWEI Families.de	87	RTLZWEI Families.de
+RTLZWEI.de	48	RTLZWEI.de
+Sallys Welt.de	143	Sallys Welt.de
+SAT.1 emotions.de	74	SAT.1 emotions.de
+SAT.1 GOLD.de	67	SAT.1 GOLD.de
+SAT.1.de	38	SAT.1.de
+SCHLAGER DELUXE.de	23	SCHLAGER DELUXE.de
+Screamtime.de	36	Screamtime.de
+Show Turk.de	23	Show Turk.de
+ShowMax.de	20	ShowMax.de
+Silverline Catch-Up.de	35	Silverline Catch-Up.de
+Silverline.de	33	Silverline.de
+sixx.de	65	sixx.de
+Sky Sport Bundesliga 1.de	14	Sky Sport Bundesliga 1.de
+Sky Sport Bundesliga 10.de	14	Sky Sport Bundesliga 10.de
+Sky Sport Bundesliga 2.de	14	Sky Sport Bundesliga 2.de
+Sky Sport Bundesliga 3.de	14	Sky Sport Bundesliga 3.de
+Sky Sport Bundesliga 4.de	14	Sky Sport Bundesliga 4.de
+Sky Sport Bundesliga 5.de	14	Sky Sport Bundesliga 5.de
+Sky Sport Bundesliga 6.de	14	Sky Sport Bundesliga 6.de
+Sky Sport Bundesliga 7.de	14	Sky Sport Bundesliga 7.de
+Sky Sport Bundesliga 8.de	14	Sky Sport Bundesliga 8.de
+Sky Sport Bundesliga 9.de	14	Sky Sport Bundesliga 9.de
+Sky Sport Bundesliga.de	58	Sky Sport Bundesliga.de
+Spannung and Emotionen.de	13	Spannung and Emotionen.de
+SPIEGEL Geschichte.de	66	SPIEGEL Geschichte.de
+SPIEGEL TV Konflikte.de	70	SPIEGEL TV Konflikte.de
+Spiel mit!.de	174	Spiel mit!.de
+SPORT1.de	49	SPORT1.de
+Sportdigital EDGE.de	58	Sportdigital EDGE.de
+SPORTDIGITAL FUSSBALL.de	39	SPORTDIGITAL FUSSBALL.de
+SPORTDIGITAL1+.de	35	SPORTDIGITAL1+.de
+SR.de	81	SR.de
+SRF 1.de	87	SRF 1.de
+SRF 2.de	54	SRF 2.de
+Stand-Up Comedy.de	45	Stand-Up Comedy.de
+Starke Frauen.de	13	Starke Frauen.de
+StoryZoo and Friends.de	85	StoryZoo and Friends.de
+SUPER RTL.de	137	SUPER RTL.de
+SWR Baden-Wurttemberg.de	74	SWR Baden-Wurttemberg.de
+SWR Rheinland-Pfalz.de	74	SWR Rheinland-Pfalz.de
+SYFY.de	73	SYFY.de
+taff.de	210	taff.de
+tagesschau24.de	64	tagesschau24.de
+Team Harrison.de	208	Team Harrison.de
+TELE 5.de	48	TELE 5.de
+Tempora.de	62	Tempora.de
+Terra Mater WILD.de	71	Terra Mater WILD.de
+teve2.de	29	teve2.de
+TGRT Belgesel.de	74	TGRT Belgesel.de
+TGRT EU.de	63	TGRT EU.de
+TGRT Haber.de	63	TGRT Haber.de
+The Christmas Channel.de	38	The Christmas Channel.de
+TIERWELT Live.de	68	TIERWELT Live.de
+Timeline Deutschland.de	65	Timeline Deutschland.de
+TLC.de	78	TLC.de
+TOGGO plus.de	139	TOGGO plus.de
+Top Filme.de	33	Top Filme.de
+TOP SCI-FI.de	71	TOP SCI-FI.de
+TOP TRUE CRIME.de	68	TOP TRUE CRIME.de
+travelxp.de	103	travelxp.de
+TRT Arabi.de	93	TRT Arabi.de
+TRT Avaz.de	94	TRT Avaz.de
+TRT Belgesel.de	74	TRT Belgesel.de
+TRT Çocuk.de	140	TRT Çocuk.de
+TRT Haber.de	61	TRT Haber.de
+TRT Kurdî.de	64	TRT Kurdî.de
+TRT Muzik.de	65	TRT Muzik.de
+TRT Spor.de	54	TRT Spor.de
+TRT Turk.de	89	TRT Turk.de
+TRT World.de	101	TRT World.de
+TRT1.de	28	TRT1.de
+TV 4.de	65	TV 4.de
+TV Bayern Regional.de	105	TV Bayern Regional.de
+TV100.de	28	TV100.de
+TV5.de	102	TV5.de
+TV8 International.de	19	TV8 International.de
+TV-Klassiker.de	81	TV-Klassiker.de
+Universal TV.de	71	Universal TV.de
+Utopja.de	48	Utopja.de
+Von der Leine auf den Tisch.de	82	Von der Leine auf den Tisch.de
+VOX.de	58	VOX.de
+VOXup.de	44	VOXup.de
+Waidwerk.de	91	Waidwerk.de
+waipu.tv Highlights.de	103	waipu.tv Highlights.de
+waipu.tv Infochannel.de	100	waipu.tv Infochannel.de
+Waldbaden - Ambient.de	91	Waldbaden - Ambient.de
+WARNER TV COMEDY.de	142	WARNER TV COMEDY.de
+WARNER TV FILM.de	30	WARNER TV FILM.de
+WARNER TV SERIE.de	67	WARNER TV SERIE.de
+Watch Dokus.de	66	Watch Dokus.de
+WatchMoviesNow.de	36	WatchMoviesNow.de
+WDR Aachen.de	85	WDR Aachen.de
+WDR Bielefeld.de	85	WDR Bielefeld.de
+WDR Bonn.de	85	WDR Bonn.de
+WDR Dortmund.de	85	WDR Dortmund.de
+WDR Duisburg.de	85	WDR Duisburg.de
+WDR Dusseldorf.de	85	WDR Dusseldorf.de
+WDR Essen.de	85	WDR Essen.de
+WDR Koln.de	85	WDR Koln.de
+WDR Munster.de	85	WDR Munster.de
+WDR Siegen.de	85	WDR Siegen.de
+WDR Wuppertal.de	85	WDR Wuppertal.de
+wedo movies.de	37	wedo movies.de
+wedo sports.de	82	wedo sports.de
+wedotv true stories.de	70	wedotv true stories.de
+Weihnachtskino.de	37	Weihnachtskino.de
+Welt der Wunder.de	42	Welt der Wunder.de
+WELT.de	154	WELT.de
+wetter.com TV.de	10	wetter.com TV.de
+Wir Angeln.de	129	Wir Angeln.de
+Wir24.tv - Der Haushalts Channel.de	61	Wir24.tv - Der Haushalts Channel.de
+WORLD OF FREESPORTS.de	38	WORLD OF FREESPORTS.de
+XITE Hits.de	22	XITE Hits.de
+XITE Rock x Metal.de	13	XITE Rock x Metal.de
+xplore Stadtetrip.de	70	xplore Stadtetrip.de
+XPLORE.de	106	XPLORE.de
+Yu-Gi-Oh!.de	143	Yu-Gi-Oh!.de
+ZDF Krimi.de	48	ZDF Krimi.de
+ZDF Telenovela.de	75	ZDF Telenovela.de
+ZDF.de	68	ZDF.de
+ZDFinfo.de	85	ZDFinfo.de
+ZDFneo.de	69	ZDFneo.de
+Zender Relax.de	13	Zender Relax.de
+Zender.de	123	Zender.de
+Zombieworld.de	37	Zombieworld.de

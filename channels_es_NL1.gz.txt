@@ -1,0 +1,159 @@
+100%.NL.TV.nl	28	100% NL TV
+192TV.nl	0	192TV
+24Kitchen.nl	175	24Kitchen
+2M.nl	151	2M
+ARD.nl	153	ARD
+AT5.nl	481	AT5
+ATV.Avrupa.nl	57	ATV Avrupa
+Aljazeera.English.nl	141	Aljazeera English
+Animal.Planet.nl	113	Animal Planet
+Arte.nl	107	Arte
+BBC.NL.nl	87	BBC NL
+BBC.News.nl	215	BBC News
+BBC.One.nl	146	BBC One
+BBC.Two.nl	103	BBC Two
+BabyTV.nl	1412	BabyTV
+Brazzers.TV.nl	254	Brazzers TV
+CNBC.Europe.nl	161	CNBC Europe
+CNN.nl	116	CNN
+Canal+.Action.nl	70	Canal+ Action
+Cartoon.Network.nl	442	Cartoon Network
+Cartoonito.nl	480	Cartoonito
+Colors.TV.nl	141	Colors TV
+Comedy.Central.nl	188	Comedy Central
+Crime+Investigation.nl	121	Crime+Investigation
+Curiosity.Channel.nl	163	Curiosity Channel
+DanceTelevision.nl	85	DanceTelevision
+Discovery.Science.nl	158	Discovery Science
+Discovery.nl	116	Discovery
+Disney.Channel.nl	253	Disney Channel
+Dorcel.TV.nl	98	Dorcel TV
+Dreamworks.nl	228	Dreamworks
+E!.nl	107	E!
+ESPN.2.nl	157	ESPN 2
+ESPN.3.nl	132	ESPN 3
+ESPN.4.nl	122	ESPN 4
+ESPN.Premium.nl	24	ESPN Premium
+ESPN.nl	119	ESPN
+Euro.D.nl	47	Euro D
+Euronews.nl	392	Euronews
+Eurosport.1.nl	64	Eurosport 1
+Eurosport.2.nl	67	Eurosport 2
+Eurostar.nl	42	Eurostar
+Family7.nl	177	Family7
+Fashion.TV.HD.nl	191	Fashion TV HD
+Film1.Action.nl	63	Film1 Action
+Film1.Drama.nl	55	Film1 Drama
+Film1.Family.nl	62	Film1 Family
+Film1.Pakket.nl	24	Film1 Pakket
+Film1.Premiere.nl	56	Film1 Premiere
+FilmBox.nl	53	FilmBox
+HGTV.nl	178	HGTV
+HISTORY.nl	132	HISTORY
+Habertürk.nl	70	Habertürk
+Hindi.Pakket.nl	24	Hindi Pakket
+Horse.&amp;.Country.TV.nl	81	Horse & Country TV
+ID.nl	109	ID
+Ketnet.nl	340	Ketnet
+L1.TV.nl	129	L1 TV
+Love.Nature.nl	95	Love Nature
+MTV.nl	149	MTV
+Mediaset.Italia.nl	113	Mediaset Italia
+Meiden.van.Holland.Hard.nl	228	Meiden van Holland Hard
+Mezzo.nl	73	Mezzo
+Moonbug.nl	195	Moonbug
+MyZen.TV.nl	142	MyZen TV
+NDR.nl	147	NDR
+NH.nl	313	NH
+NPO.1.Extra.nl	126	NPO 1 Extra
+NPO.1.nl	172	NPO 1
+NPO.2.Extra.nl	127	NPO 2 Extra
+NPO.2.nl	144	NPO 2
+NPO.3.nl	321	NPO 3
+NPO.Politiek.en.Nieuws.nl	32	NPO Politiek en Nieuws
+NPO.Soul.&amp;.Jazz.nl	0	NPO Soul & Jazz
+National.Geographic.WILD.nl	127	National Geographic WILD
+National.Geographic.nl	118	National Geographic
+Net5.nl	96	Net5
+Nick.Jr..nl	324	Nick Jr.
+Nickelodeon.Ukraine.nl	210	Nickelodeon Ukraine
+Nickelodeon.nl	253	Nickelodeon
+Nicktoons.nl	292	Nicktoons
+ONS.nl	122	ONS
+OUTTV.nl	86	OUTTV
+Omroep.Brabant.nl	231	Omroep Brabant
+Omroep.Flevoland.nl	433	Omroep Flevoland
+Omroep.Gelderland.nl	113	Omroep Gelderland
+Omroep.Zeeland.nl	201	Omroep Zeeland
+Omrop.Fryslân.nl	151	Omrop Fryslân
+Oost.nl	149	Oost
+Paramount.Network.nl	104	Paramount Network
+PassieXXX.nl	183	PassieXXX
+Penthouse.Gold.nl	138	Penthouse Gold
+Playboy.TV.Europe.nl	286	Playboy TV Europe
+RTL.4.nl	206	RTL 4
+RTL.5.nl	63	RTL 5
+RTL.7.nl	99	RTL 7
+RTL.8.nl	42	RTL 8
+RTL.Crime.nl	98	RTL Crime
+RTL.Lounge.nl	132	RTL Lounge
+RTL.Telekids.nl	376	RTL Telekids
+RTL.Z.nl	226	RTL Z
+RTL.nl	83	RTL
+RTV.Drenthe.nl	311	RTV Drenthe
+RTV.Noord.nl	296	RTV Noord
+RTV.Rijnmond.nl	129	RTV Rijnmond
+RTV.Utrecht.nl	385	RTV Utrecht
+RTV.West.nl	219	RTV West
+RTV7.nl	66	RTV7
+SBS6.nl	148	SBS6
+SBS9.nl	57	SBS9
+SLAM!TV.nl	28	SLAM!TV
+STAR.Channel.nl	138	STAR Channel
+Sat..1.nl	83	Sat. 1
+Secret.Circle.nl	280	Secret Circle
+Shorts.TV.nl	95	Shorts TV
+ShowTürk.nl	43	ShowTürk
+Sony.Max.nl	47	Sony Max
+Sony.TV.Asia.nl	96	Sony TV Asia
+Stingray.Classica.nl	101	Stingray Classica
+Stingray.DJAZZ.nl	124	Stingray DJAZZ
+Stingray.Lite.TV.nl	0	Stingray Lite TV
+Stingray.LiteTV.nl	22	Stingray LiteTV
+TLC.nl	116	TLC
+TOP40.TV.nl	34	TOP40 TV
+TRT.Müzik.nl	34	TRT Müzik
+TRT.Türk.nl	142	TRT Türk
+TRT.Çocuk.nl	205	TRT Çocuk
+TV.Oranje.nl	51	TV Oranje
+TV538.nl	39	TV538
+TV5Monde.nl	236	TV5Monde
+TV8.Int..nl	40	TV8 Int.
+TVE.nl	94	TVE
+Turks.Pakket.nl	24	Turks Pakket
+Utsav.Gold.nl	31	Utsav Gold
+Utsav.Plus.nl	170	Utsav Plus
+VRT.1.nl	178	VRT 1
+VRT.CANVAS.nl	63	VRT CANVAS
+Veronica./.Disney.Jr..nl	259	Veronica / Disney Jr.
+Viaplay.TV+.nl	95	Viaplay TV+
+Viaplay.TV.nl	85	Viaplay TV
+Viaplay.nl	24	Viaplay
+WDR.nl	142	WDR
+X-MO.nl	98	X-MO
+XITE.nl	37	XITE
+ZDF.nl	124	ZDF
+Zee.Cinema.nl	34	Zee Cinema
+Zee.TV.nl	145	Zee TV
+Ziggo.Sport.1.nl	101	Ziggo Sport 1
+Ziggo.Sport.2.nl	129	Ziggo Sport 2
+Ziggo.Sport.3.nl	91	Ziggo Sport 3
+Ziggo.Sport.4.nl	63	Ziggo Sport 4
+Ziggo.Sport.5.nl	236	Ziggo Sport 5
+Ziggo.Sport.6.nl	54	Ziggo Sport 6
+Ziggo.Sport.Extra.nl	28	Ziggo Sport Extra
+Ziggo.Sport.Totaal.nl	24	Ziggo Sport Totaal
+Ziggo.TV.nl	59	Ziggo TV
+Zing.nl	94	Zing
+ducktv.nl	164	ducktv
+njam!.nl	147	njam!

@@ -1,0 +1,786 @@
+Shades.of.Black.us2	39	Shades of Black
+FYI.Channel.HD.us2	158	FYI Channel HD
+QVC2.us2	64	QVC2
+Spectrum.News.1.(Carolinas).-.Mountain.STVA.us2	109	Spectrum News 1 (Carolinas) - Mountain STVA
+USA.Network.HD.us2	86	USA Network HD
+Nat.Geo.Mundo.us2	103	Nat Geo Mundo
+3ABN.us2	150	3ABN
+RetroPlex.HD.us2	68	RetroPlex HD
+DraftKings.Network.us2	80	DraftKings Network
+HITN.us2	107	HITN
+CANAL.22.INTERNACIONAL.us2	192	CANAL 22 INTERNACIONAL
+MLB.Network.HD.us2	70	MLB Network HD
+Discovery.Familia.En.Español.us2	144	Discovery Familia En Español
+GOL.TV.us2	76	GOL TV
+Cine.Latino.US.us2	58	Cine Latino US
+Newsmax.TV.HD.us2	92	Newsmax TV HD
+CINEVAULT.Westerns.us2	0	CINEVAULT Westerns
+Disney.Junior.HD.us2	216	Disney Junior HD
+Vevo.Rock.us2	91	Vevo Rock
+Big.12.Studios.us2	59	Big 12 Studios
+NBC.Sports.Philadelphia.HD.us2	78	NBC Sports Philadelphia HD
+MTV.-.Music.Television.HD.us2	123	MTV - Music Television HD
+Science.Channel.HD.us2	102	Science Channel HD
+Game.Show.Network.HD.us2	170	Game Show Network HD
+Gulf.Coast.Sports.and.Entertainment.Network.us2	137	Gulf Coast Sports and Entertainment Network
+mtv-U.us2	49	mtv-U
+MeTV.Toons.us2	141	MeTV Toons
+BUZZR.Stream.us2	164	BUZZR Stream
+Cine.Nostalgia.us2	48	Cine Nostalgia
+Oprah.Winfrey.Network.(Pacific.A.Feed).us2	115	Oprah Winfrey Network (Pacific A Feed)
+Home.and.Garden.Television.HD.us2	162	Home and Garden Television HD
+HLN.HD.us2	179	HLN HD
+History.HD.us2	98	History HD
+Chasing.Criminals.us2	148	Chasing Criminals
+Spectrum.News.-.Hudson.Valley.STVA.us2	98	Spectrum News - Hudson Valley STVA
+RevN.us2	160	RevN
+GOD.TV.us2	192	GOD TV
+CHSN.Plus.us2	125	CHSN Plus
+Tastemade.Travel.us2	54	Tastemade Travel
+DirecTV.Celebrity.Shopping.Network.us2	103	DirecTV Celebrity Shopping Network
+Pasiones.TV.US.us2	97	Pasiones TV US
+CBS.West.us2	105	CBS West
+Investigation.Discovery.HD.(Pacific).us2	97	Investigation Discovery HD (Pacific)
+Vevo.Hip-Hop.us2	85	Vevo Hip-Hop
+Tastemade.us2	153	Tastemade
+Tennis.Channel.HD.us2	27	Tennis Channel HD
+Family.Entertainment.Television.us2	137	Family Entertainment Television
+NBC.Comedy.Vault.us2	183	NBC Comedy Vault
+Outdoor.Channel.HD.us2	170	Outdoor Channel HD
+BBC.Dinos.24/7.us2	119	BBC Dinos 24/7
+Nuestra.Tele.Internacional.us2	100	Nuestra Tele Internacional
+American.Crimes.us2	118	American Crimes
+Eternal.Word.Television.Network.us2	147	Eternal Word Television Network
+National.Geographic.Wild.HD.us2	113	National Geographic Wild HD
+Mediaset.Italia.us2	115	Mediaset Italia
+Starz.HD.(Pacific).us2	78	Starz HD (Pacific)
+Nick.Music.us2	96	Nick Music
+Spectrum.News.-.Michigan.STVA.us2	99	Spectrum News - Michigan STVA
+PBS.Kids.Stream.us2	178	PBS Kids Stream
+Zona.Futbol.us2	25	Zona Futbol
+CNN.International.us2	119	CNN International
+Phoenix.Satellite.TV.us2	171	Phoenix Satellite TV
+Logo.us2	122	Logo
+AdultSwim.com.Cartoon.Network.us2	104	AdultSwim com Cartoon Network
+iCable.Finance.Info.News.Channel.us2	173	iCable Finance Info News Channel
+Discovery.Life.Channel.us2	76	Discovery Life Channel
+Flix.us2	49	Flix
+3ABN.Dare.to.Dream.Network.us2	177	3ABN Dare to Dream Network
+Nosey.us2	25	Nosey
+Bloomberg.Business.Television.us2	103	Bloomberg Business Television
+ReelzChannel.HD.us2	98	ReelzChannel HD
+BBC.America.HD.us2	66	BBC America HD
+CHSN.Chicago.Sports.Network.us2	123	CHSN Chicago Sports Network
+CNBC.World.us2	133	CNBC World
+Spectrum.News.1.-.Milwaukee.-.STVA.us2	61	Spectrum News 1 - Milwaukee - STVA
+Horror.Machine.us2	82	Horror Machine
+Antenna.TV.us2	186	Antenna TV
+National.Geographic.HD.us2	108	National Geographic HD
+NBA.League.Pass.5.us2	34	NBA League Pass 5
+AMC+.us2	120	AMC+
+ATN.Cricket.Plus.us2	60	ATN Cricket Plus
+BET.GOSPEL.us2	99	BET GOSPEL
+Univision.TL.Novelas.us2	111	Univision TL Novelas
+Starz.in.Black.HD.us2	56	Starz in Black HD
+MASN.-.Mid.Atlantic.Sports.Network.us2	102	MASN - Mid Atlantic Sports Network
+TVE.us2	113	TVE
+QVC.HD.us2	67	QVC HD
+NBA.League.Pass.8.us2	34	NBA League Pass 8
+ESPN2.(Alternate).us2	14	ESPN2 (Alternate)
+Oxygen.True.Crime.HD.us2	91	Oxygen True Crime HD
+FlixFling.Now.us2	61	FlixFling Now
+Fear.Zone.us2	118	Fear Zone
+Spectrum.News.1.-.(Kentucky).Lexington.us2	51	Spectrum News 1 - (Kentucky) Lexington
+Rewind.TV.us2	190	Rewind TV
+Great.Entertainment.Television.us2	115	Great Entertainment Television
+Cartoon.Network.(Pacific).us2	262	Cartoon Network (Pacific)
+MSG.Zone.3.HD.us2	108	MSG Zone 3 HD
+Starz.Encore.(Pacific).us2	55	Starz Encore (Pacific)
+Shorts.TV.us2	95	Shorts TV
+ScreenPix.Voices.us2	59	ScreenPix Voices
+UniMas.HD.(Pacific).us2	108	UniMas HD (Pacific)
+Fuse.HD.us2	135	Fuse HD
+Vice.HD.us2	106	Vice HD
+SUMtv.Latino.us2	124	SUMtv Latino
+Starz.Encore.Black.us2	58	Starz Encore Black
+China.Global.Television.Network.us2	178	China Global Television Network
+STELLAR.TV.us2	137	STELLAR TV
+ESPNU.HD.us2	62	ESPNU HD
+World.Harvest.Television.us2	170	World Harvest Television
+Fox.Sports.4K.us2	29	Fox Sports 4K
+Vevo.R.andB.us2	81	Vevo R and B
+EWTN.-.Eternal.Word.Television.Network.HD.us2	147	EWTN - Eternal Word Television Network HD
+DirecTV.VALU.us2	38	DirecTV VALU
+The.Weather.Channel.HD.us2	94	The Weather Channel HD
+ION.Mystery.us2	71	ION Mystery
+Cinemax.Hits.us2	54	Cinemax Hits
+NBA.League.Pass.4.us2	32	NBA League Pass 4
+Salem.News.Channel.us2	47	Salem News Channel
+3ABN.Praise.Him.Music.us2	194	3ABN Praise Him Music
+HBO.Hits.us2	67	HBO Hits
+Destination.America.HD.us2	168	Destination America HD
+Spectrum.News.1.-.(MA).Springfield.-.STVA.us2	101	Spectrum News 1 - (MA) Springfield - STVA
+The.Africa.Channel.us2	165	The Africa Channel
+Real.Americas.Voice.us2	75	Real Americas Voice
+Paramount+.with.Showtime.HD.us2	59	Paramount+ with Showtime HD
+NBC.Sports.California.SAT.us2	118	NBC Sports California HD
+VH1.HD.us2	139	VH1 HD
+NBA.League.Pass.6.HD.us2	34	NBA League Pass 6 HD
+88.TV.us2	109	88 TV
+AFN.Satellite.us2	0	AFN Satellite
+WAPA.America.us2	101	WAPA America
+HBO.East.us2	84	HBO East
+3ABN.Kids.Network.us2	276	3ABN Kids Network
+Starz.Cinema.HD.us2	60	Starz Cinema HD
+TBS.HD.us2	145	TBS HD
+Paramount+.with.Showtime.HD.(Pacific).us2	57	Paramount+ with Showtime HD (Pacific)
+RETRO.us2	68	RETRO
+Court.TV.us2	107	Court TV
+Hogar.HD.us2	153	Hogar HD
+Spectrum.News.1.-.Green.Bay/Appleton.-.STVA.us2	55	Spectrum News 1 - Green Bay/Appleton - STVA
+HBO2.HD.(Pacific).us2	66	HBO2 HD (Pacific)
+Pets.TV.HD.us2	190	Pets TV HD
+CNBC.HD.us2	97	CNBC HD
+Ecuavisa.International.us2	89	Ecuavisa International
+ACE.TV.us2	105	ACE TV
+beIN.Sports.En.Español.HD.us2	101	beIN Sports En Español HD
+Barvanna.Network.us2	48	Barvanna Network
+Universal.Action.us2	105	Universal Action
+CBS.Streaming.SD.East.feed.us2	114	CBS Streaming SD East feed
+Defy.TV.us2	133	Defy TV
+365BLK.us2	74	365BLK
+CINEVAULT.us2	34	CINEVAULT
+ION.Television.HD.us2	112	ION Television HD
+NBC.Sports.HD.3.us2	24	NBC Sports HD 3
+Newsy.us2	133	Newsy
+INFAST.US.us2	161	INFAST US
+Animal.Planet.HD.us2	96	Animal Planet HD
+Laff.us2	190	Laff
+My.Network.us2	149	My Network
+KBS.World.24.us2	135	KBS World 24
+MTV2:.Music.Television.HD.us2	127	MTV2: Music Television HD
+AWE.A.Wealth.of.Entertainment.HD.us2	168	AWE A Wealth of Entertainment HD
+SNY.SportsNet.New.York.HD.us2	135	SNY SportsNet New York HD
+NBA.League.Pass.3.us2	33	NBA League Pass 3
+HBO.Comedy.HD.us2	87	HBO Comedy HD
+News.12.Westchester.us2	192	News 12 Westchester
+Universal.Monsters.us2	63	Universal Monsters
+Anheuser.Busch.Private.Network.us2	69	Anheuser Busch Private Network
+Shop.LC.us2	95	Shop LC
+Hallmark.Family.us2	82	Hallmark Family
+TV.Chile.us2	77	TV Chile
+Altitude.Sports.2.HD.us2	101	Altitude Sports 2 HD
+Vevo.Íconos.Latinos.us2	53	Vevo Íconos Latinos
+BINGE-TV.us2	129	BINGE-TV
+Positiv.TV.us2	89	Positiv TV
+ABC.News.Live.us2	134	ABC News Live
+So.Yummy.us2	141	So Yummy
+MASN2.-.Mid.Atlantic.Sports.Network.2.HD.us2	25	MASN2 - Mid Atlantic Sports Network 2 HD
+LifeS.us2	101	LifeS
+Starz.Edge.HD.us2	60	Starz Edge HD
+DirecTV.Sports.Mix.us2	32	DirecTV Sports Mix
+MTV.-.Music.Television.HD.(Pacific).us2	118	MTV - Music Television HD (Pacific)
+Cinemax.Classics.us2	54	Cinemax Classics
+Total.Crime.us2	107	Total Crime
+Spectrum.News.1.-.Toledo/Lima.-.STVA.us2	52	Spectrum News 1 - Toledo/Lima - STVA
+Starz.(Pacific).us2	78	Starz (Pacific)
+De.Pelicula.us2	74	De Pelicula
+NBC.East.Stream.us2	117	NBC East Stream
+Phoenix.Info.News.us2	244	Phoenix Info News
+Zee.TV.us2	141	Zee TV
+The.Family.Channel.us2	129	The Family Channel
+News.12.Hudson.Valley.us2	192	News 12 Hudson Valley
+Spectrum.News.1.-.Columbus.-.STVA.us2	52	Spectrum News 1 - Columbus - STVA
+FOX.SOUL.us2	97	FOX SOUL
+Family.Movie.Classics.us2	69	Family Movie Classics
+ShopHQ.HD.us2	25	ShopHQ HD
+IFC.HD.us2	96	IFC HD
+SBS.Plus.us2	48	SBS Plus
+DirecTV.Playboy.us2	178	DirecTV Playboy
+Big.Ten.Network.HD.us2	91	Big Ten Network HD
+E!.Entertainment.Television.HD.us2	83	E! Entertainment Television HD
+MSG.Sportsnet.2.HD.us2	35	MSG Sportsnet 2 HD
+NBA.League.Pass.7.HD.us2	35	NBA League Pass 7 HD
+MSG.SportsZone.us2	136	MSG SportsZone
+The.Nest.us2	121	The Nest
+Disney.XD.HD.us2	184	Disney XD HD
+Dabl.us2	185	Dabl
+Honvietv.us2	158	Honvietv
+Tastemade.en.Español.us2	0	Tastemade en Español
+West.TV.us2	125	West TV
+Estrella.TV.us2	125	Estrella TV
+Cooking.Channel.HD.us2	144	Cooking Channel HD
+Weather.Nation.TV.HD.us2	48	Weather Nation TV HD
+Starz.Kids.HD.us2	59	Starz Kids HD
+MLB.Network.HD.Alternate.us2	70	MLB Network HD Alternate
+Vevo.Reggaeton.and.Trap.us2	65	Vevo Reggaeton and Trap
+¡HOLA!.TV.us2	181	¡HOLA! TV
+Starz.Encore.Suspense.us2	62	Starz Encore Suspense
+The.Travel.Channel.HD.us2	93	The Travel Channel HD
+Pure.Flix.TV.us2	49	Pure Flix TV
+CSPAN2.us2	94	CSPAN2
+Home.and.Garden.Television.HD.(Pacific).us2	161	Home and Garden Television HD (Pacific)
+Disney.Channel.HD.us2	160	Disney Channel HD
+ROOT.Sports.Northwest.HD.us2	24	ROOT Sports Northwest HD
+Comet.(Pacific).us2	100	Comet (Pacific)
+NBC.Sports.4K.us2	26	NBC Sports 4K
+Vevo.90s.us2	83	Vevo 90s
+Spectrum.News.1.-.Dayton.-.STVA.us2	52	Spectrum News 1 - Dayton - STVA
+ABS-CBN.News.Channel.us2	166	ABS-CBN News Channel
+Amazon.Movies.us2	46	Amazon Movies
+TLC.HD.(Pacific).us2	89	TLC HD (Pacific)
+Scientology.Media.Productions.us2	142	Scientology Media Productions
+Yes.Network.Overflow.us2	13	Yes Network Overflow
+CBS.News.National.Stream.us2	110	CBS News National Stream
+The.Cowboy.Channel.us2	82	The Cowboy Channel
+FS2.Fox.Sports.2.HD.us2	66	FS2 Fox Sports 2 HD
+Living.Faith.Network.HD.us2	163	Living Faith Network HD
+TNT.HD.us2	64	TNT HD
+Cine.Mexicano.US.Feed.us2	71	Cine Mexicano US Feed
+FXX.HD.(Pacific).us2	168	FXX HD (Pacific)
+SonLife.Broadcasting.Network.HD.us2	68	SonLife Broadcasting Network HD
+Kartoon.Channel.us2	230	Kartoon Channel
+BET.Jams.us2	95	BET Jams
+NHL.Network.HD.us2	110	NHL Network HD
+NESN+.New.England.Sports.Network.Plus.us2	85	NESN+ New England Sports Network Plus
+NBA.League.Pass.5.HD.us2	35	NBA League Pass 5 HD
+CFN.CATHOLIC.FAITH.NETWORK.us2	168	CFN CATHOLIC FAITH NETWORK
+Nippon.TV.Channel.us2	152	Nippon TV Channel
+Vevo.80s.us2	77	Vevo 80s
+Sony.MIX.us2	102	Sony MIX
+Showtime.Familyzone.HD.us2	51	Showtime Familyzone HD
+NBC.Sports.Bay.Area.Plus.us2	41	NBC Sports Bay Area Plus
+Monumental.Sports.Network.Outer.Market.us2	92	Monumental Sports Network Outer Market
+Spectrum.News.1.-.(MA).Pittsfield.-.STVA.us2	101	Spectrum News 1 - (MA) Pittsfield - STVA
+HDNet.Movies.us2	58	HDNet Movies
+Danbi.Christian.TV.us2	152	Danbi Christian TV
+Hustler.Mature.HD.us2	65	Hustler Mature HD
+Starz.Encore.Classic.us2	57	Starz Encore Classic
+MOTORTREND.HD.us2	104	MOTORTREND HD
+Action.Channel.us2	161	Action Channel
+BET.HD.us2	140	BET HD
+Sony.Cine.us2	57	Sony Cine
+Cinemax.HD.us2	51	Cinemax HD
+Oferta.TV.us2	96	Oferta TV
+TBN.Inspire.us2	166	TBN Inspire
+ScreenPix.Action.us2	64	ScreenPix Action
+Scares.by.Shudder.us2	57	Scares by Shudder
+MTVLIVE.us2	100	MTVLIVE
+ESPN.HD.us2	74	ESPN HD
+MSNBC.HD.us2	71	MSNBC HD
+truTV.HD.us2	123	truTV HD
+Spectrum.News.1.-.SO.CAL.-.STVA.us2	120	Spectrum News 1 - SO CAL - STVA
+MGM.Presents:.Westerns.us2	48	MGM Presents: Westerns
+CuriosityStream.us2	147	CuriosityStream
+MYX.Channel.us2	134	MYX Channel
+Syfy.HD.(Pacific).us2	84	Syfy HD (Pacific)
+Starz.Comedy.HD.us2	60	Starz Comedy HD
+Bandamax.us2	98	Bandamax
+DZMM.Radyo.Patrol.us2	92	DZMM Radyo Patrol
+LOCALISH.EASTERN.us2	192	LOCALISH EASTERN
+Big.Ten.Network.Overflow.us2	91	Big Ten Network Overflow
+TV.Land.HD.us2	175	TV Land HD
+3ABN.Proclaim.Network.us2	119	3ABN Proclaim Network
+Animal.Planet.HD.(Pacific).us2	96	Animal Planet HD (Pacific)
+NBA.League.Pass.8.HD.us2	35	NBA League Pass 8 HD
+NBC.Sports.Northwest.Streaming.us2	12	NBC Sports Northwest Streaming
+Cars.TV.HD.us2	144	Cars TV HD
+Right.Now.TV.us2	156	Right Now TV
+Telefe.international.us2	84	Telefe international
+Baby.TV.US.us2	190	Baby TV US
+ROAR.TV.us2	139	ROAR TV
+NBC.Sports.California.Plus.us2	96	NBC Sports California Plus
+i-CABLE.News.us2	25	i-CABLE News
+Fox.Soccer.Plus.HD.us2	62	Fox Soccer Plus HD
+SHO.x.BET.HD.us2	53	SHO x BET HD
+Story.us2	131	Story
+The.Travel.Channel.HD.(Pacific).us2	94	The Travel Channel HD (Pacific)
+LooLoo.Kids.TV.us2	49	LooLoo Kids TV
+Blaze.TV.us2	69	Blaze TV
+GMA.Life.TV.us2	115	GMA Life TV
+Univision.Network.HD.us2	113	Univision Network HD
+Monumental.Sports.Network.2.HD.us2	25	Monumental Sports Network 2 HD
+VividTV.us2	64	VividTV
+CBS.Sports.Network.HD.us2	66	CBS Sports Network HD
+Nicktoons.us2	227	Nicktoons
+NBA.League.Pass.6.us2	33	NBA League Pass 6
+VSIN.Vegas.Sports.and.Information.Network.us2	95	VSIN Vegas Sports and Information Network
+Turner.Classic.Movies.HD.us2	62	Turner Classic Movies HD
+Sari.Sari.Channel.us2	138	Sari Sari Channel
+Victory.Channel.us2	171	Victory Channel
+AFN.spectrum.us2	0	AFN spectrum
+Antena.3.Internacional.us2	68	Antena 3 Internacional
+American.Heroes.Channel.HD.us2	97	American Heroes Channel HD
+Spectrum.News.1.(Carolinas).-.Coastal.STVA.us2	109	Spectrum News 1 (Carolinas) - Coastal STVA
+FX.HD.(Pacific).us2	64	FX HD (Pacific)
+GZTV.us2	120	GZTV
+DOG.TV.us2	95	DOG TV
+Telecentro.TV.us2	78	Telecentro TV
+CBS.Sports.HQ.us2	38	CBS Sports HQ
+NBA.League.Pass.4.HD.us2	33	NBA League Pass 4 HD
+Quest.us2	131	Quest
+MSG.Zone.1.us2	105	MSG Zone 1
+Starz.Encore.HD.us2	55	Starz Encore HD
+MSG.Sportsnet.Zone.1.HD.us2	107	MSG Sportsnet Zone 1 HD
+USA.Network.HD.(Pacific).us2	89	USA Network HD (Pacific)
+SportsNet.Pittsburgh.Plus.us2	74	SportsNet Pittsburgh Plus
+INSP.HD.us2	98	INSP HD
+YTA.Youtoo.America.us2	115	YTA Youtoo America
+Yes.Network.us2	75	Yes Network
+RACER.Network.HD.us2	123	RACER Network HD
+5.StarMAX.HD.East.us2	54	5 StarMAX HD East
+Meganoticias.MX.us2	234	Meganoticias MX
+AFN.prime.Pacific.us2	0	AFN prime Pacific
+A.and.E.HD.East.us2	131	A and E HD East
+Once.us2	124	Once
+Spectrum.News.1.(Kentucky).Covington.us2	51	Spectrum News 1 (Kentucky) Covington
+Free.Speech.TV.us2	70	Free Speech TV
+S-channel.us2	119	S-channel
+ACC.Network.us2	61	ACC Network
+Vevo.True.School.Hip-Hop.us2	79	Vevo True School Hip-Hop
+Outdoor.America.Field.and.Stream.us2	170	Outdoor America Field and Stream
+Penthouse.TV.XX5.Premium.us2	65	Penthouse TV XX5 Premium
+Bowling.TV.us2	86	Bowling TV
+Vietface.TV.us2	121	Vietface TV
+NFL.SUNDAY.TICKET.RED.ZONE.us2	25	NFL SUNDAY TICKET RED ZONE
+Univision.Network.(Pacific).us2	112	Univision Network (Pacific)
+Sur.Peru.us2	78	Sur Peru
+Sportsman.Channel.us2	190	Sportsman Channel
+HBO.Latino.HD.us2	90	HBO Latino HD
+Ovation.HD.us2	96	Ovation HD
+MGM+.HD.us2	66	MGM+ HD
+CASH.us2	36	CASH
+The.Film.Detective.us2	91	The Film Detective
+TUDN.us2	91	TUDN
+POP.HD.us2	130	POP HD
+Starz.Encore.Family.SD.us2	61	Starz Encore Family SD
+Oprah.Winfrey.Network.HD.us2	116	Oprah Winfrey Network HD
+HBO2.(Pacific).us2	66	HBO2 (Pacific)
+Recipe.TV.HD.us2	179	Recipe TV HD
+NBC.True.CRMZ.us2	97	NBC True CRMZ
+Great.American.Adventures.us2	64	Great American Adventures
+Spectrum.News.-.Alabama.STVA.us2	99	Spectrum News - Alabama STVA
+CHARGE!.us2	116	CHARGE!
+MovieSphere.Gold.us2	56	MovieSphere Gold
+Merit.TV.us2	100	Merit TV
+NBA.League.Pass.3.HD.us2	34	NBA League Pass 3 HD
+CSPAN.us2	62	CSPAN
+Bravo.(Pacific).us2	79	Bravo (Pacific)
+NBC.Sports.Philadelphia.Plus.us2	102	NBC Sports Philadelphia Plus
+Spectrum.News.1.-.Cleveland/Akron.-.STVA.us2	51	Spectrum News 1 - Cleveland/Akron - STVA
+Movie.Hub.Action.us2	48	Movie Hub Action
+Curiosity.NOW.us2	72	Curiosity NOW
+FNX.First.Nations.Experience.us2	166	FNX First Nations Experience
+Crime.and.Investigation.Network.HD.us2	105	Crime and Investigation Network HD
+UniMas.us2	110	UniMas
+CSPAN3.us2	116	CSPAN3
+NBA.League.Pass.7.us2	34	NBA League Pass 7
+Teen.Nick.us2	219	Teen Nick
+ESPN2.HD.us2	77	ESPN2 HD
+Discovery.Channel.HD.us2	92	Discovery Channel HD
+Nuestra.Visión.us2	68	Nuestra Visión
+QVC3.us2	65	QVC3
+Spectrum.News.1.-.Madison.-.STVA.us2	54	Spectrum News 1 - Madison - STVA
+Grjngo.-.Western.Movies.us2	56	Grjngo - Western Movies
+Game+.Game.Plus.HD.us2	105	Game+ Game Plus HD
+Willow.2.Xtra.us2	97	Willow 2 Xtra
+Tastemade.Home.us2	70	Tastemade Home
+MGM+.Drive-In.us2	55	MGM+ Drive-In
+The.Filipino.Channel.(Pacific).us2	23	The Filipino Channel (Pacific)
+MGM+.Hits.HD.us2	60	MGM+ Hits HD
+Hustler.Mature.us2	64	Hustler Mature
+News.12.Brooklyn.us2	192	News 12 Brooklyn
+Start.TV.Network.us2	100	Start TV Network
+MTV.Classic.us2	96	MTV Classic
+Ve.Plus.us2	190	Ve Plus
+NBA.League.Pass.2.HD.us2	39	NBA League Pass 2 HD
+Big.Ten.Network.Overflow.HD.us2	91	Big Ten Network Overflow HD
+Starz.Encore.Action.HD.us2	55	Starz Encore Action HD
+ACC.Digital.Network.us2	46	ACC Digital Network
+Rai.Radio.1.us2	144	Rai Radio 1
+TLC.HD.(US).us2	89	TLC HD (US)
+PBS.Stream.us2	132	PBS Stream
+Bon.Appétit.TV.us2	95	Bon Appétit TV
+Tr3s:.MTV,.Musica.y.Mas.us2	110	Tr3s: MTV, Musica y Mas
+Spectrum.News.-.Buffalo.-.STVA.us2	98	Spectrum News - Buffalo - STVA
+MGM.Presents:.Horror.us2	25	MGM Presents: Horror
+Starz.Encore.Westerns.(Pacific).us2	91	Starz Encore Westerns (Pacific)
+N+.Foro.us2	92	N+ Foro
+Showtime.Women.HD.us2	52	Showtime Women HD
+Cinema.Dinamita.us2	45	Cinema Dinamita
+The.First.us2	97	The First
+WRR.101.9.us2	35	WRR 101.9
+Peachtree.TV.us2	154	Peachtree TV
+Plus.Movies.us2	41	Plus Movies
+Cinema.Dinamita.(HD.Feed).us2	45	Cinema Dinamita (HD Feed)
+Film.24h.us2	47	Film 24h
+Universal.Westerns.us2	102	Universal Westerns
+MSG.National.us2	107	MSG National
+Mega.TV.HD.us2	115	Mega TV HD
+Home.Shopping.Network.us2	95	Home Shopping Network
+Vevo.2K.us2	76	Vevo 2K
+Monumental.Sports.Network.HD.us2	108	Monumental Sports Network HD
+CNN.En.Español.us2	112	CNN En Español
+Nick.Jr.HD.us2	179	Nick Jr HD
+Bang.U.us2	64	Bang U
+NFL.Network.HD.us2	59	NFL Network HD
+ATN.Movies.us2	0	ATN Movies
+Pinoy.Box.Office.us2	55	Pinoy Box Office
+Galavision.Cable.Network.HD.(Pacific).us2	118	Galavision Cable Network HD (Pacific)
+Spectrum.News.-.NY1.-.STVA.us2	103	Spectrum News - NY1 - STVA
+Root.Sports.Northwest.Plus.us2	0	Root Sports Northwest Plus
+MLB.Network.Strike.Zone.HD.us2	27	MLB Network Strike Zone HD
+Vien.Thao.TV.us2	380	Vien Thao TV
+EBS.America.us2	202	EBS America
+MGM+.Marquee.HD.us2	52	MGM+ Marquee HD
+MS.NOW.HD.us2	71	MS NOW HD
+Spectrum.News.-.Central.NY.STVA.us2	96	Spectrum News - Central NY STVA
+Willow.Cricket.HD.us2	91	Willow Cricket HD
+National.Geographic.HD.(Pacific).us2	108	National Geographic HD (Pacific)
+NBA.League.Pass.9.HD.us2	34	NBA League Pass 9 HD
+Spectrum.News.1.-.Dallas.-.Ft.Worth.STVA.us2	99	Spectrum News 1 - Dallas - Ft Worth STVA
+Telemundo.Satellite.Feed.us2	101	Telemundo Satellite Feed
+MBN.Plus.us2	94	MBN Plus
+HBO2.HD.us2	67	HBO2 HD
+SUMtv.us2	121	SUMtv
+Movies!.us2	50	Movies!
+AMG.TV.us2	127	AMG TV
+NBC.Sports.HD.2.us2	24	NBC Sports HD 2
+MSG.Plus.(Zone.2).us2	106	MSG Plus (Zone 2)
+Showtime.2.HD.us2	48	Showtime 2 HD
+JBS.us2	115	JBS
+MSG.Plus.us2	106	MSG Plus
+New.England.Sports.Network.HD.us2	110	New England Sports Network HD
+90s.Sitcoms.us2	262	90s Sitcoms
+Bloomberg.HD.us2	103	Bloomberg HD
+Cinemax.HD.(Pacific).us2	51	Cinemax HD (Pacific)
+MSG2.HD.us2	13	MSG2 HD
+MagellanTV.Now.us2	119	MagellanTV Now
+The.Movie.Channel.Extra.HD.us2	52	The Movie Channel Extra HD
+Adult.On.Demand.us2	25	Adult On Demand
+TyC.Sports.Internacional.USA.us2	68	TyC Sports Internacional USA
+AFN.sports.us2	0	AFN sports
+TV.Land.HD.(Pacific).us2	175	TV Land HD (Pacific)
+i24.News.English.us2	121	i24 News English
+The.Grio.HD.us2	163	The Grio HD
+Food.Network.HD.us2	116	Food Network HD
+Law.and.Crime.us2	132	Law and Crime
+TYT.The.Young.Turks.us2	75	TYT The Young Turks
+Cinemax.(Pacific).us2	51	Cinemax (Pacific)
+El.Rey.Network.us2	59	El Rey Network
+Atrescine.us2	58	Atrescine
+Vevo.Country.us2	71	Vevo Country
+NBC.Sports.California.Plus.3.us2	12	NBC Sports California Plus 3
+Xplore.us2	242	Xplore
+HBO.Movies.us2	54	HBO Movies
+3ABN.Radio.Network.us2	153	3ABN Radio Network
+CentroAméricaTV.us2	115	CentroAméricaTV
+Grit.us2	101	Grit
+MSG.(Alt..feed).-.MSG2.OVERFLOW.us2	13	MSG (Alt. feed) - MSG2 OVERFLOW
+NHK.World.TV.us2	304	NHK World TV
+De.Pelicula.Clasico.us2	74	De Pelicula Clasico
+Cinemax.Spanish.HD.us2	52	Cinemax Spanish HD
+FS1.HD.us2	60	FS1 HD
+TBS.HD.(Pacific).us2	145	TBS HD (Pacific)
+The.Repair.Shop.us2	115	The Repair Shop
+Sony.KAL.us2	178	Sony KAL
+Create.us2	175	Create
+Little.Saigon.Radio.Channel.us2	24	Little Saigon Radio Channel
+GMA.Pinoy.TV.us2	108	GMA Pinoy TV
+SportsNet.Pittsburgh.HD.us2	86	SportsNet Pittsburgh HD
+Ryz.Sports.Network.us2	52	Ryz Sports Network
+Cinemax.Action.us2	54	Cinemax Action
+80s.Sitcoms.us2	241	80s Sitcoms
+Dabl.Network.LLC.us2	185	Dabl Network LLC
+Me.TV.Network.us2	138	Me TV Network
+Scripps.News.us2	133	Scripps News
+YTN.Radio.Korea.us2	108	YTN Radio Korea
+Hallmark.Mystery.HD.us2	48	Hallmark Mystery HD
+NHK.1.HD.us2	32	NHK 1 HD
+IndiePlex.HD.us2	60	IndiePlex HD
+Tribeca.Festival.+.us2	54	Tribeca Festival +
+NBC.Sports.Boston.HD.us2	122	NBC Sports Boston HD
+Hogar.TV.us2	156	Hogar TV
+Revolt.HD.us2	119	Revolt HD
+COZI.TV.us2	182	COZI TV
+Spectrum.News.1.-.El.Paso.Texas.STVA.us2	101	Spectrum News 1 - El Paso Texas STVA
+ESPNEWS.HD.us2	108	ESPNEWS HD
+Lifetime.Real.Women.us2	108	Lifetime Real Women
+TCT.us2	164	TCT
+Pursuit.Channel.us2	185	Pursuit Channel
+PI.KBS.World.us2	103	PI KBS World
+Fox.Deportes.HD.us2	92	Fox Deportes HD
+Reality.Kings.TV.us2	52	Reality Kings TV
+3ABN.International.Network.us2	148	3ABN International Network
+Heroes.and.Icons.Network.SD.us2	108	Heroes and Icons Network SD
+Jewelry.Television.us2	60	Jewelry Television
+NBA.TV.HD.us2	127	NBA TV HD
+BET.Soul.us2	62	BET Soul
+truTV.HD.(Pacific).us2	119	truTV HD (Pacific)
+Westerns.Plus.us2	45	Westerns Plus
+Playboy.En.Español.us2	171	Playboy En Español
+TViet.Network.us2	174	TViet Network
+VGN.TV.us2	124	VGN TV
+Bravo.HD.us2	80	Bravo HD
+CBO.us2	127	CBO
+Fun.Roads.us2	186	Fun Roads
+Multimedios.USA.us2	66	Multimedios USA
+Spectrum.News.1.-.Cincinnati.-.STVA.us2	51	Spectrum News 1 - Cincinnati - STVA
+Telefe.Internacional.us2	84	Telefe Internacional
+Spectrum.News.1.-.San.Antonio.us2	99	Spectrum News 1 - San Antonio
+Next.Level.Sports.HD.us2	87	Next Level Sports HD
+America’s.Test.Kitchen.us2	196	America’s Test Kitchen
+Nickelodeon.(Pacific).us2	131	Nickelodeon (Pacific)
+WE.tv.HD.us2	106	WE tv HD
+SBS.TV.Korea.us2	95	SBS TV Korea
+Outside.Television.HD.us2	146	Outside Television HD
+Spectrum.News.1.-.(MA).Worcester.-.STVA.us2	101	Spectrum News 1 - (MA) Worcester - STVA
+ZooMoo.us2	468	ZooMoo
+Telemundo.Satellite.Feed.Pacific.us2	95	Telemundo Satellite Feed Pacific
+CW.us2	112	CW
+Space.City.Home.Network.HD.us2	104	Space City Home Network HD
+Spectrum.News.1.(Carolinas).-.Charlotte.STVA.us2	109	Spectrum News 1 (Carolinas) - Charlotte STVA
+Cartoon.Network.HD.us2	261	Cartoon Network HD
+ABC.National.Feed.us2	105	ABC National Feed
+TC.Internacional.us2	104	TC Internacional
+Local.Now.us2	95	Local Now
+FS1.Fox.Sports.1.HD.us2	60	FS1 Fox Sports 1 HD
+Great.American.Romcoms.us2	64	Great American Romcoms
+Comedy.Central.HD.us2	152	Comedy Central HD
+NBC.Sports.Boston.Outer.Market.us2	122	NBC Sports Boston Outer Market
+El.Sembrador.us2	122	El Sembrador
+ESPN.Deportes.HD.us2	77	ESPN Deportes HD
+Love.Kills.us2	159	Love Kills
+Spectrum.News.1.-.(Kentucky).Louisville.us2	51	Spectrum News 1 - (Kentucky) Louisville
+One.America.News.Network.HD.us2	96	One America News Network HD
+AFN.family/AFN.pulse.us2	0	AFN family/AFN pulse
+SHOPnow.us2	37	SHOPnow
+Spectrum.News+.us2	97	Spectrum News+
+DTV.ARANG.us2	195	DTV ARANG
+NBC.Sports.HD.1.us2	25	NBC Sports HD 1
+Magnolia.Network.HD.us2	106	Magnolia Network HD
+Daystar.Español.us2	157	Daystar Español
+DirecTV.-.MLB.Extra.Innings.-.MLBEI.us2	48	DirecTV - MLB Extra Innings - MLBEI
+Biz.TV.us2	145	Biz TV
+Jewish.Life.TV.us2	134	Jewish Life TV
+Rai.News.24.us2	334	Rai News 24
+AFN.movie.us2	0	AFN movie
+NBA.League.Pass/MLS.Direct.Kick.HDTV.us2	39	NBA League Pass/MLS Direct Kick HDTV
+AAPKA.Colors.US.us2	125	AAPKA Colors US
+Starz.Encore.Español.SD.us2	58	Starz Encore Español SD
+MBC.America.us2	110	MBC America
+FM.HD.us2	123	FM HD
+Golden.Eagle.Broadcasting.us2	173	Golden Eagle Broadcasting
+Impact.Network.us2	158	Impact Network
+MSG.Sportsnet.2.Zone.1.us2	35	MSG Sportsnet 2 Zone 1
+OPM.TV.us2	129	OPM TV
+Vevo.70s.us2	67	Vevo 70s
+GEMS.us2	18	GEMS
+Movie.Hub.Romance.us2	50	Movie Hub Romance
+News.12.Bronx.us2	192	News 12 Bronx
+Showtime.Showcase.HD.us2	53	Showtime Showcase HD
+CBS.Sports.Golazo.Network.us2	85	CBS Sports Golazo Network
+Spectrum.SportsNet.LA.Dodgers.HD.us2	101	Spectrum SportsNet LA Dodgers HD
+Vevo.Pop.us2	73	Vevo Pop
+WWE.Network.us2	135	WWE Network
+NECN.New.England.Cable.News.us2	111	NECN New England Cable News
+BraZZers.TV.Plus.us2	65	BraZZers TV Plus
+Paramount.Network.HD.us2	78	Paramount Network HD
+Stories.by.AMC.us2	103	Stories by AMC
+3ABN.Latino.Network.us2	147	3ABN Latino Network
+NBC.Chicago.(Live.Stream).us2	48	NBC Chicago (Live Stream)
+Atreseries.us2	69	Atreseries
+NewsNation.us2	96	NewsNation
+NBA.League.Pass.2.us2	38	NBA League Pass 2
+Investigation.Discovery.HD.us2	97	Investigation Discovery HD
+Movie.Hub.Action.West.us2	48	Movie Hub Action West
+Circle.Country.us2	103	Circle Country
+WORLD.Channel.us2	133	WORLD Channel
+Comedy.Central.HD.(Pacific).us2	154	Comedy Central HD (Pacific)
+MSG.Plus.-.Syracuse.us2	106	MSG Plus - Syracuse
+MSG.Sportsnet.Zone.3.(MSG.WNY).us2	121	MSG Sportsnet Zone 3 (MSG WNY)
+Fight.Network.us2	76	Fight Network
+UNIVERSO.HD.us2	88	UNIVERSO HD
+NFL.RedZone.HD.us2	14	NFL RedZone HD
+ESTRELLA.NEWS.us2	177	ESTRELLA NEWS
+NBC.Sports.Now.us2	100	NBC Sports Now
+Showtime.Next.HD.us2	56	Showtime Next HD
+CMT.HD.us2	114	CMT HD
+NBC.West.Stream.us2	118	NBC West Stream
+Spectrum.Bay.News.9.Tampa.us2	104	Spectrum Bay News 9 Tampa
+Kapatid.us2	59	Kapatid
+UPtv.us2	117	UPtv
+Playboy.TV.us2	178	Playboy TV
+NTN24.us2	93	NTN24
+Nosey.on.Peacock.us2	127	Nosey on Peacock
+Spectrum.SportsNet.Lakers.HD.us2	103	Spectrum SportsNet Lakers HD
+PBS.Kids.West.Stream.us2	178	PBS Kids West Stream
+EarthX.us2	131	EarthX
+SundanceTV.HD.us2	71	SundanceTV HD
+Spectrum.News.1.(Carolinas).-.Raleigh.STVA.us2	109	Spectrum News 1 (Carolinas) - Raleigh STVA
+Playboy.Premium.HD.us2	178	Playboy Premium HD
+Cinema.One.us2	50	Cinema One
+HSN2.us2	95	HSN2
+Disney.XD.HD.(Pacific).us2	184	Disney XD HD (Pacific)
+NBA.League.Pass.9.us2	33	NBA League Pass 9
+FX.Movie.Channel.HD.us2	50	FX Movie Channel HD
+VIETV.us2	182	VIETV
+Military.History.Channel.us2	89	Military History Channel
+The.Movie.Channel.(Pacific).us2	55	The Movie Channel (Pacific)
+Charming.China.us2	112	Charming China
+Boomerang.us2	362	Boomerang
+Air.and.Space.us2	116	Air and Space
+AccuWeather.HD.us2	20	AccuWeather HD
+Cleo.TV.HD.us2	193	Cleo TV HD
+News.12.Connecticut.us2	192	News 12 Connecticut
+CNN.HD.us2	91	CNN HD
+TV.ONE.HD.us2	164	TV ONE HD
+Discovery.Family.Channel.HD.us2	185	Discovery Family Channel HD
+Trinity.Broadcasting.Network.HD.us2	160	Trinity Broadcasting Network HD
+Mexicanal.us2	131	Mexicanal
+FS2.HD.us2	66	FS2 HD
+HBO.West.us2	85	HBO West
+Haunt.TV.us2	87	Haunt TV
+Compre.AQUI.los.productos.mejores.del.TV.us2	35	Compre AQUI los productos mejores del TV
+Spectrum.News.1.-.Austin.us2	98	Spectrum News 1 - Austin
+Rede.Globo.TV.Internacional.us2	103	Rede Globo TV Internacional
+Saigon.Broadcasting.Network.us2	138	Saigon Broadcasting Network
+Arizona.Family.Sports.us2	135	Arizona Family Sports
+AMC.HD.us2	50	AMC HD
+Rai.Premium.us2	100	Rai Premium
+Horror.Plus.us2	46	Horror Plus
+MeTV.Plus.us2	117	MeTV Plus
+Spectrum.News.-.Albany.Capital.Region.STVA.us2	95	Spectrum News - Albany Capital Region STVA
+MoviePlex.HD.us2	60	MoviePlex HD
+Marquee.Sports.Network.HD.us2	101	Marquee Sports Network HD
+Smithsonian.HD.Network.us2	96	Smithsonian HD Network
+ESPN8.The.Ocho.us2	99	ESPN8 The Ocho
+Xumo.Free.Westerns.us2	54	Xumo Free Westerns
+Comet.us2	100	Comet
+Cine.Estelar.us2	72	Cine Estelar
+Discovery.en.Español.us2	95	Discovery en Español
+ScreenPix.us2	60	ScreenPix
+AFN.prime.Atlantic.us2	0	AFN prime Atlantic
+Movie.Hub.West.us2	49	Movie Hub West
+Dabl.Network.LLC.Pacific.us2	185	Dabl Network LLC Pacific
+HSN.Home.Shopping.Network.HD.us2	95	HSN Home Shopping Network HD
+Christian.Television.Network.us2	159	Christian Television Network
+BET.Her.us2	101	BET Her
+Bounce.TV.us2	96	Bounce TV
+CTI.Zhong.Tian.Channel.us2	102	CTI Zhong Tian Channel
+The.Jack.Hanna.Channel.us2	40	The Jack Hanna Channel
+Hallmark.Channel.HD.us2	49	Hallmark Channel HD
+[TFC].The.Filipino.Channel.HD.us2	106	[TFC] The Filipino Channel HD
+Altitude.Sports.us2	96	Altitude Sports
+Golf.Channel.HD.us2	46	Golf Channel HD
+SBS.HD.us2	95	SBS HD
+BYU-TV.us2	121	BYU-TV
+Fox.Business.HD.us2	122	Fox Business HD
+MLS.Direct.Kick.-.Direct.TV.-.MLSSO.us2	48	MLS Direct Kick - Direct TV - MLSSO
+HBO.Zone.HD.us2	54	HBO Zone HD
+Justice.Central.HD.us2	190	Justice Central HD
+Great.American.Family.HD.us2	49	Great American Family HD
+NRB.TV.us2	157	NRB TV
+The.Word.Network.us2	180	The Word Network
+AXS.TV.us2	144	AXS TV
+DangerTV.us2	123	DangerTV
+Busted.TV.us2	174	Busted TV
+CW.Plus.East.us2	137	CW Plus East
+Starz.HD.us2	77	Starz HD
+Vevo.Latino.us2	70	Vevo Latino
+Hustler.TV.us2	65	Hustler TV
+The.Discovery.Channel.HD.(Pacific).us2	92	The Discovery Channel HD (Pacific)
+Vevo.Holiday.us2	25	Vevo Holiday
+Freeform.Pacific.us2	96	Freeform Pacific
+LMN.HD.us2	62	LMN HD
+The.Hope.Channel.us2	155	The Hope Channel
+Galavision.Cable.Network.HD.us2	108	Galavision Cable Network HD
+Playboy.HD.us2	178	Playboy HD
+NBC.Sports.Bay.Area.HD.us2	139	NBC Sports Bay Area HD
+Fawesome.us2	25	Fawesome
+FXX.HD.us2	168	FXX HD
+NBC.Sports.California.Outer.Market.us2	118	NBC Sports California Outer Market
+RFD.TV.HD.us2	136	RFD TV HD
+HBO.Signature.HD.us2	71	HBO Signature HD
+DirecTV.GO4IT.us2	96	DirecTV GO4IT
+Peru.Magico.us2	113	Peru Magico
+PixL.us2	65	PixL
+AFN.sports2.us2	0	AFN sports2
+ETBN.Enlace.USA.us2	153	ETBN Enlace USA
+Great.American.Faith.and.Living.us2	49	Great American Faith and Living
+Vevo.Regional.Mexicano.us2	68	Vevo Regional Mexicano
+ActionMAX.HD.us2	54	ActionMAX HD
+ASPiRE.HD.us2	149	ASPiRE HD
+PBS.KIDS.HD.us2	178	PBS KIDS HD
+NASCAR.Channel.us2	38	NASCAR Channel
+NBA.League.Pass.1.us2	38	NBA League Pass 1
+News.12.Long.Island.us2	191	News 12 Long Island
+NASA.Plus.us2	147	NASA Plus
+Universal.Crime.us2	43	Universal Crime
+beIN.Sports.USA.HD.us2	105	beIN Sports USA HD
+BET.HD.(Pacific).us2	138	BET HD (Pacific)
+Blossom.TV.us2	169	Blossom TV
+News.12.New.Jersey.us2	192	News 12 New Jersey
+Spectrum.News.-.(New.York).Rochester.STVA.us2	99	Spectrum News - (New York) Rochester STVA
+DIRECTV.Sports.MixHD.us2	25	DIRECTV Sports MixHD
+Video.Rola.us2	154	Video Rola
+Nickelodeon.HD.us2	131	Nickelodeon HD
+Universal.Movies.us2	39	Universal Movies
+Rewind.HD.us2	61	Rewind HD
+SportsGrid.us2	64	SportsGrid
+Tan.Tv.us2	117	Tan Tv
+DUCKTV.us2	2216	DUCKTV
+CARACOL.INTERNATIONAL.us2	93	CARACOL INTERNATIONAL
+Marquee.Sports.Network.Overflow.us2	24	Marquee Sports Network Overflow
+History.Channel.En.Español.us2	114	History Channel En Español
+Spectrum.News.1.(Carolinas).-.Greensboro.STVA.us2	107	Spectrum News 1 (Carolinas) - Greensboro STVA
+AWE.Plus.us2	143	AWE Plus
+NBA.League.Pass.10.us2	36	NBA League Pass 10
+VME.us2	137	VME
+EWTN.Español.us2	155	EWTN Español
+Prime.Revenue.Frontier.us2	190	Prime Revenue Frontier
+Catchy.Comedy.us2	181	Catchy Comedy
+Cinevault.Classics.us2	46	Cinevault Classics
+Disney.Channel.(Pacific).us2	160	Disney Channel (Pacific)
+and.TV.us2	144	and TV
+BabyFirst.TV.us2	186	BabyFirst TV
+88.Films.us2	59	88 Films
+Starz.Encore.Westerns.SD.us2	91	Starz Encore Westerns SD
+ABC.National.Feed.Pacific.us2	104	ABC National Feed Pacific
+Freeform.HD.us2	93	Freeform HD
+Daystar.Television.Network.HD.[CHARTER].us2	177	Daystar Television Network HD [CHARTER]
+FX.HD.us2	64	FX HD
+World.Fishing.Network.HD.(US).us2	162	World Fishing Network HD (US)
+BBC.News.(North.America).HD.us2	141	BBC News (North America) HD
+Rai.Italia.us2	101	Rai Italia
+HBO.Drama.us2	71	HBO Drama
+Sony.Movie.Channel.HD.us2	55	Sony Movie Channel HD
+In.The.Garage.us2	106	In The Garage
+Comedy.TV.HD.us2	157	Comedy.TV HD
+AFN.news.us2	0	AFN news
+Cheddar.us2	144	Cheddar
+NBC.Sports.Bay.Area.Outer.Market.us2	139	NBC Sports Bay Area Outer Market
+The.Cowgirl.Channel.us2	0	The Cowgirl Channel
+Syfy.HD.us2	82	Syfy HD
+Lifetime.HD.us2	98	Lifetime HD
+Filmrise.Mysteries.us2	104	Filmrise Mysteries
+HBO.(Pacific).us2	85	HBO (Pacific)
+CCTV4-China.Central.TV.us2	156	CCTV4-China Central TV
+DIRECTV.Lifetime.us2	98	DIRECTV Lifetime
+Movie.Hub.us2	50	Movie Hub
+TNT.HD.(Pacific).us2	62	TNT HD (Pacific)
+Vice.us2	106	Vice
+FloRacing.24/7.us2	86	FloRacing 24/7
+Fox.News.Channel.HD.us2	72	Fox News Channel HD
+The.Movie.Channel.HD.us2	55	The Movie Channel HD
+Disney.Junior.HD.(Pacific).us2	217	Disney Junior HD (Pacific)
+HBCUGO.SPORTS.us2	84	HBCUGO SPORTS
+Curiosity.Channel.HD.us2	133	Curiosity Channel HD
+ScreenPix.Westerns.us2	75	ScreenPix Westerns
+Showtime.Extreme.HD.us2	47	Showtime Extreme HD
+SEC.Network.HD.us2	53	SEC Network HD
+RTV.International.us2	120	RTV International
+Billiard.TV.us2	47	Billiard TV
+Discovery.Turbo.TV.us2	109	Discovery Turbo TV
+Black.Voices.us2	276	Black Voices
+Spectrum.News.1.-.(Kentucky).-.Evansville.us2	51	Spectrum News 1 - (Kentucky) - Evansville

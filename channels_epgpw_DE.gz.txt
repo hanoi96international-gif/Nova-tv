@@ -1,0 +1,250 @@
+10620	90	Sky Documentaries
+10634	41	Sky Sport Tennis
+10640	97	Sky Nature
+10645	57	Sky Sport Golf
+10675	60	Sky Sport Top Event
+10781	74	SKY Sport F1
+10785	72	Sky Sport Mix
+10908	96	Sky Crime
+10918	92	sky showcase
+76614	82	sixx
+76615	28	Jukebox
+76616	147	ORF 2
+76618	80	QVC2
+76619	42	Eurosport 1
+76622	270	Nick Jr.
+76624	66	Romance TV
+76627	111	ZDF
+76628	103	Nat Geo HD
+76629	198	TV5 Monde
+76630	120	Motorvision TV
+76631	49	Silverline
+76632	50	DAZN
+76633	35	CNN Türk
+76636	105	N24 Doku
+76638	94	ATV II
+76639	96	Bloomberg Europe TV
+76641	92	ARTE
+76642	40	Beate-Uhse.TV
+76643	171	France 3
+76645	43	Warner TV Film
+76646	108	Curiosity Channel
+76647	132	CNBC
+76648	122	HR
+76649	102	PHOENIX
+76650	163	BBC News
+76652	41	Trace TV
+76654	102	Canale 5
+76655	88	Canal+
+76657	92	BBC One
+76658	61	STAR TV
+76659	67	SPORT1
+76660	243	Playboy TV
+76661	80	HSE
+76662	82	Universal Channel HD
+76663	84	Sky Krimi
+76664	67	SAT.1
+76666	197	münchen.tv
+76667	108	Crime + Investigation
+76670	54	3+
+76673	89	RTL Living
+76674	129	Das Erste
+76675	74	Heimatkanal
+76678	204	France 5
+76679	192	Warner TV Comedy
+76680	123	KiKA
+76681	257	NHK WORLD TV
+76682	122	3sat
+76684	116	WDR
+76685	69	Adult Channel
+76686	109	Discovery HD
+76687	158	travelxp 4K
+76688	106	Bergblick
+76690	71	EXTREME SPORTS
+76691	128	France 2
+76692	92	DMAX
+76693	116	SWR/SR
+76694	24	NOW US
+76696	130	tagesschau24
+76697	80	QVC
+76698	318	France 24 (franz.)
+76699	114	TLC
+76700	108	RTL Crime
+76701	180	Hamburg 1
+76702	120	ProSieben MAXX
+76703	154	Belgien 1
+76704	82	VOX
+76707	13	eSports1
+76708	70	TELE 5
+76710	173	Leipzig Fernsehen
+76711	41	Euro Star
+76712	111	BR
+76713	40	LUST PUR
+76714	102	SPIEGEL Geschichte
+76715	115	kabel eins Doku
+76716	109	SAT.1 Gold
+76718	117	ZDFinfo
+76721	139	Nautical Channel
+76722	101	RTLup
+76723	87	Classica
+76725	50	kabel eins CLASSICS
+76726	75	UHD1
+76730	114	MDR
+76731	115	RiC
+76732	83	PULS 4
+76733	96	Sky Sport News
+76734	84	ORF III
+76735	118	Al Jazeera
+76736	241	Nicktoons
+76737	71	HSE Extra
+76738	93	ONE
+76739	102	ZDFneo
+76740	68	RTL
+76741	39	Euro D
+76742	198	COMEDY CENTRAL
+76744	57	Eurosport 2
+76745	128	ANIXE
+76747	268	France 4
+76748	127	NDR
+76749	111	ProSieben Fun
+76751	113	RBB
+76752	59	Mezzo
+76754	47	SPORT1+
+76756	88	ORF SPORT +
+76757	84	BBC Two
+76758	37	Gute Laune TV
+76759	110	Animal Planet
+76760	107	Turkmax Gurme
+76761	40	BBC four
+76762	94	ProSieben
+76763	364	Cartoon Network
+76764	96	Syfy
+76765	58	More than Sports TV
+76767	200	SUPER RTL
+76769	94	SAT.1 emotions
+76770	47	KinoweltTV
+76771	174	BBC World News
+76772	77	SRF zwei
+76773	71	123.tv
+76774	83	Sky Atlantic HD
+76775	160	Fashion TV
+76776	162	Marco Polo TV
+76779	34	Show Turk
+76780	121	MTV
+76781	108	sonnenklar.TV
+76783	108	NAT GEO WILD
+76784	122	SRF 1
+76785	55	Canal+ Sport
+76786	146	Disney Channel
+76787	93	NITRO
+76789	217	TOGGO plus
+76792	75	kabel eins
+76794	157	Bibel TV
+76795	185	WELT
+76796	92	VOXup
+76797	103	CNN International
+76800	92	GEO Television
+76803	77	GoldStar TV
+76804	128	RTL Passion
+76805	140	K-TV
+76806	100	Warner TV Serie
+76807	395	France 24 (engl.)
+76808	101	PULS acht
+76809	44	DELUXE MUSIC
+76810	71	ATV
+100304	81	oe24.TV
+182674	87	DF1
+212817	21	Sky Sport Bundesliga 10
+212821	86	Sky Sport Bundesliga
+212824	23	Sky Sport 5
+212838	22	Sky Sport 4
+321554	41	Sky Cinema Highlights HD
+379181	58	DOKUSAT
+401577	23	Sky Sport 1
+401732	152	Sky One
+412084	61	DFB Play
+438439	153	nick
+438440	75	Welt der Wunder TV
+438441	45	sportdigital Fussball
+438442	118	ORF 1
+438444	165	ntv
+438445	103	Sky Sport Premier League
+438446	209	Auto Motor Sport
+438447	95	TV2
+438448	91	Sky Sport Austria
+438449	118	Home & Garden TV
+438450	117	Servus TV Österreich
+438452	100	The HISTORY Channel
+438454	85	AXN White
+438455	59	DMF
+438456	58	Canal+ Cinéma
+438457	71	RTLZWEI
+438458	43	Sky Cinema Action HD
+438459	44	Sky Cinema Classics HD
+438460	108	13th Street Universal
+438461	45	Sky Cinema Premiere HD
+438462	353	euronews (ger)
+438463	109	DR1
+438465	44	Sky Cinema Family HD
+438466	141	ARD alpha
+438467	229	Fix & Foxi
+438468	81	AXN Black
+438469	177	Bon Gusto
+438470	47	Kanal 7 Int
+446434	24	Sky Sport Bundesliga 6
+450290	32	MS Sport
+450292	27	Sport 18 - myTeamTV
+450294	47	SportDigital1+
+450295	25	Sport 5 - myTeamTV
+450297	13	eSportsONE
+450299	25	Sport 12 - myTeamTV
+450300	24	Sport 8 - myTeamTV
+450302	24	Sport 10 - myTeamTV
+450303	25	Sport 7 - myTeamTV
+450306	24	Sport 11 - myTeamTV
+450500	19	Sport 3 - myTeamTV
+450501	24	Sport 2 - myTeamTV
+450502	24	Sport 9 - myTeamTV
+451927	53	DAZN 2
+451928	54	DAZN 1
+452118	21	Sky Sport Austria 6 HD
+452120	19	Sky Sport Austria 3 HD
+452121	10	Sky Sport Austria 4 HD
+452122	21	Sky Sport Austria 5 HD
+452123	94	Sky Sport Austria 1 HD
+452124	35	Sky Sport UHD
+452125	21	Sky Sport Austria 7 HD
+452126	26	Sky Sport Austria 2 HD
+453384	24	Sky Sport 8
+455988	25	Sport 14 - myTeamTV
+456147	19	Sport 4 - myTeamTV
+456331	15	Sky Sport 3
+456554	24	Sport 17 - myTeamTV
+462760	25	Sport 15 - myTeamTV
+473829	21	Sky Sport Bundesliga 9
+477005	29	Sky Sport Bundesliga 5
+478720	23	Sky Sport 9
+480217	22	Sky Sport 6
+482486	22	Sky Sport 2
+482487	25	Sport 13 - myTeamTV
+482693	21	Sky Sport 7
+491421	24	Sport 16 - myTeamTV
+499802	21	Sky Sport Bundesliga 8
+500397	434	Cartoonito
+513148	20	Sport 6 - myTeamTV
+535469	40	Rocket Beans TV
+540526	24	Sky Sport Bundesliga 7
+558272	29	Sky Sport Bundesliga 4
+558543	30	Sky Sport Bundesliga 3
+558979	19	Sport 1 - myTeamTV
+559320	30	Sky Sport Bundesliga 2
+559683	21	Sky Sport 10
+561726	20	Sky Sport Bundesliga 1
+562033	21	Sky Replay HD
+562034	37	Sky Sport Bundesliga UHD
+562035	100	Sky Showcase HD
+562036	134	Top Serien
+568719	147	tv.berlin
+575368	0	PULS 24
+438451	39	DR2
+197537	82	Motorvision+

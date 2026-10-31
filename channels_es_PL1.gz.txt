@@ -1,0 +1,636 @@
+INULTRA.pl	189	INULTRA
+TVP.Info.HD.pl	384	TVP Info HD
+SWR.pl	158	SWR
+News24.pl	182	News24
+TVP.3.pl	269	TVP 3
+Polsat.Boxing.Night.HD.pl	61	Polsat Boxing Night HD
+Stingray.CMusic.pl	79	Stingray CMusic
+National.Geographic.Wild.HD.pl	123	National Geographic Wild HD
+Sky.Cinema.pl	69	Sky Cinema
+Spiegel.Geschichte.pl	162	Spiegel Geschichte
+Stingray.iConcerts.pl	110	Stingray iConcerts
+Stingray.DJAZZ.HD.pl	157	Stingray DJAZZ HD
+BR.pl	174	BR
+HISTORY.pl	135	HISTORY
+Eurosport.2.pl	83	Eurosport 2
+Eleven.Sports.2.pl	95	Eleven Sports 2
+CANAL+.EXTRA.6.HD.pl	0	CANAL+ EXTRA 6 HD
+Polsat.Doku.pl	154	Polsat Doku
+Travel.Channel.HD.pl	165	Travel Channel HD
+TVP.3.Rzeszów.pl	346	TVP 3 Rzeszów
+RTS.Deux.pl	165	RTS Deux
+RTS.Un.pl	246	RTS Un
+Stingray.iConcerts.HD.pl	110	Stingray iConcerts HD
+Ukraina.1.pl	0	Ukraina 1
+TVS.HD.pl	103	TVS HD
+360TuneBox.HD.pl	121	360TuneBox HD
+Arirang.TV.pl	256	Arirang TV
+Ginx.eSports.TV.HD.pl	134	Ginx eSports TV HD
+Polsat.News.2.pl	152	Polsat News 2
+Polsat.Café.HD.pl	138	Polsat Café HD
+n-tv.pl	251	n-tv
+TV.Okazje.pl	650	TV Okazje
+Super.Polsat.HD.pl	139	Super Polsat HD
+CANAL+.Sport.2.HD.pl	53	CANAL+ Sport 2 HD
+Polskie.Radio.Program.1.pl	224	Polskie Radio Program 1
+MCM.Top.pl	23	MCM Top
+Sky.Fussball.Bundesliga.pl	130	Sky Fussball Bundesliga
+Dorcel.TV.pl	122	Dorcel TV
+TBN.Polska.HD.pl	224	TBN Polska HD
+Eleven.Sports.1.HD.pl	112	Eleven Sports 1 HD
+CANAL+.DOKUMENT.pl	132	CANAL+ DOKUMENT
+DR.2.pl	76	DR 2
+Nowa.TV.HD.pl	205	Nowa TV HD
+Belgia.-.TV1.pl	230	Belgia - TV1
+HOME.TV.pl	172	HOME TV
+Antena.HD.pl	135	Antena HD
+FOX.Comedy.pl	218	FOX Comedy
+Stingray.Loud.HD.pl	83	Stingray Loud HD
+Eska.TV.pl	197	Eska TV
+CANAL+.EXTRA.7.HD.pl	0	CANAL+ EXTRA 7 HD
+FILMAX.pl	112	FILMAX
+TV.4.HD.pl	133	TV 4 HD
+Polsat.Sport.Premium.3.pl	53	Polsat Sport Premium 3
+Ale.kino+.pl	86	Ale kino+
+TVP.3.Łódź.pl	357	TVP 3 Łódź
+MTV.80s.pl	0	MTV 80s
+RAI.2.pl	174	RAI 2
+TVP.World.pl	537	TVP World
+Twoja.Telewizja.Morska.pl	473	Twoja Telewizja Morska
+Polonia.1.pl	131	Polonia 1
+TVP.Kobieta.pl	141	TVP Kobieta
+Syfy.pl	148	Syfy
+Water.Planet.HD.pl	205	Water Planet HD
+CANAL+.Family.HD.pl	133	CANAL+ Family HD
+Polsat.Music.HD.pl	121	Polsat Music HD
+QVC.pl	121	QVC
+Fightklub.HD.pl	36	Fightklub HD
+STARS.TV.HD.pl	65	STARS.TV HD
+CANAL+.Sport.5.pl	66	CANAL+ Sport 5
+TV.Republika.pl	191	TV Republika
+Polsat.Viasat.Explore.HD.pl	135	Polsat Viasat Explore HD
+CT.2.pl	183	CT 2
+Polsat.Sport.pl	54	Polsat Sport
+Cinemax2.pl	72	Cinemax2
+Sky.Hits.pl	0	Sky Hits
+Love.Nature.4K.pl	137	Love Nature 4K
+TVP.3.Wrocław.pl	338	TVP 3 Wrocław
+Polsat.News.HD.pl	189	Polsat News HD
+Hustler.HD.pl	106	Hustler HD
+CI.Polsat.pl	138	CI Polsat
+CANAL+.KUCHNIA.pl	198	CANAL+ KUCHNIA
+TVP.Kultura.pl	121	TVP Kultura
+Kabel.Eins.pl	117	Kabel Eins
+Food.Network.HD.-.EN.pl	165	Food Network HD - EN
+Kino.TV.pl	76	Kino TV
+CANAL+.EXTRA.17.HD.pl	0	CANAL+ EXTRA 17 HD
+Active.Family.pl	210	Active Family
+Fashion.TV.HD.pl	236	Fashion TV HD
+Discovery.Channel.HD.pl	117	Discovery Channel HD
+Das.Erste.pl	173	Das Erste
+STOPKLATKA.HD.pl	96	STOPKLATKA HD
+CANAL+.EXTRA.10.HD.pl	0	CANAL+ EXTRA 10 HD
+Eleven.Sports.3.pl	115	Eleven Sports 3
+Junior.(niem.).pl	0	Junior (niem.)
+DocuBox.HD.pl	199	DocuBox HD
+TVP.3.Kraków.pl	387	TVP 3 Kraków
+TVP.Nauka.pl	177	TVP Nauka
+2x2.pl	103	2x2
+Stingray.Classica.pl	136	Stingray Classica
+Travelxp.4K.pl	239	Travelxp 4K
+Nautical.Channel.pl	227	Nautical Channel
+Sportowa.TV.pl	41	Sportowa.TV
+CBS.Europa.HD.pl	0	CBS Europa HD
+VOX.pl	132	VOX
+DMAX.pl	150	DMAX
+CANAL+.Film.pl	94	CANAL+ Film
+Redlight.pl	76	Redlight
+SRF.Zwei.pl	123	SRF Zwei
+NPO.1.pl	233	NPO 1
+TVN.Turbo.HD.pl	172	TVN Turbo HD
+RTL.102.5.pl	48	RTL 102.5
+AXN.Spin.pl	129	AXN Spin
+Adventure.pl	150	Adventure
+SCI.FI.HD.pl	104	SCI FI HD
+WELT.pl	321	WELT
+TVN.Style.pl	119	TVN Style
+Polsat.Play.pl	173	Polsat Play
+E!.Entertainment.pl	135	E! Entertainment
+XSport.pl	0	XSport
+DW.pl	373	DW
+iTVN.pl	179	iTVN
+DR.1.pl	97	DR 1
+Extreme.Channel.pl	140	Extreme Channel
+BBC.Earth.pl	124	BBC Earth
+Erox.HD.pl	193	Erox HD
+National.Geographic.pl	128	National Geographic
+Eleven.Sports.1.4K.pl	112	Eleven Sports 1 4K
+Stingray.Juicebox.HD.pl	31	Stingray Juicebox HD
+Sportklub.pl	62	Sportklub
+TTV.pl	179	TTV
+PULS.2.pl	194	PULS 2
+TVP.Dokument.HD.pl	160	TVP Dokument HD
+Motowizja.pl	167	Motowizja
+TVN.7.HD.pl	112	TVN 7 HD
+Lubelska.tv.HD.pl	287	Lubelska.tv HD
+wPolsce.pl.HD.pl	153	wPolsce.pl HD
+CANAL+.EXTRA.18.HD.pl	0	CANAL+ EXTRA 18 HD
+Polsat.Rodzina.HD.pl	172	Polsat Rodzina HD
+BBC.Lifestyle.HD.pl	130	BBC Lifestyle HD
+Polsat.Seriale.HD.pl	141	Polsat Seriale HD
+Animal.Planet.(niem.).pl	167	Animal Planet (niem.)
+myZen.tv.HD.pl	181	myZen.tv HD
+Eurosport.1.HD.pl	76	Eurosport 1 HD
+Polsat.2.HD.pl	152	Polsat 2 HD
+Kino.Polska.Muzyka.pl	87	Kino Polska Muzyka
+Nick.Jr..pl	460	Nick Jr.
+Planete+.HD.pl	169	Planete+ HD
+Sundance.TV.pl	110	Sundance TV
+Record.TV.pl	157	Record TV
+Eurosport.1.(niem.).pl	62	Eurosport 1 (niem.)
+TVP.1.HD.pl	200	TVP 1 HD
+BBC.CBeebies.pl	626	BBC CBeebies
+Discovery.Science.HD.pl	155	Discovery Science HD
+CANAL+.EXTRA.3.HD.pl	0	CANAL+ EXTRA 3 HD
+Polsat.Sport.Premium.4.pl	46	Polsat Sport Premium 4
+Stingray.Festival.4K.pl	129	Stingray Festival 4K
+CANAL+.1.HD.pl	90	CANAL+ 1 HD
+France.2.-.PL.pl	179	France 2 - PL
+CT.1.pl	180	CT 1
+Sky.Cinema.+.24.pl	0	Sky Cinema + 24
+National.Geographic.HD.pl	128	National Geographic HD
+TVP.3.Białystok.pl	376	TVP 3 Białystok
+CNN.pl	142	CNN
+MTV.Live.HD.pl	0	MTV Live HD
+MTV.00s.pl	0	MTV 00s
+CANAL+.DOMO.HD.pl	174	CANAL+ DOMO HD
+HISTORY2.HD.pl	131	HISTORY2 HD
+13.Ulica.pl	91	13 Ulica
+Eleven.Sports.2.HD.pl	95	Eleven Sports 2 HD
+CANAL+.EXTRA.4.HD.pl	0	CANAL+ EXTRA 4 HD
+Prime.Fight.HD.pl	36	Prime Fight HD
+Alfa.TVP.pl	0	Alfa TVP
+Eska.TV.Extra.HD.pl	66	Eska TV Extra HD
+Bollywood.HD.pl	52	Bollywood HD
+WTK.pl	292	WTK
+HISTORY.HD.(niem.).pl	153	HISTORY HD (niem.)
+2x2.HD.pl	103	2x2 HD
+MDR.pl	180	MDR
+Futsal.2.pl	0	Futsal 2
+Disney.Junior.pl	372	Disney Junior
+Kino.Polska.pl	97	Kino Polska
+BBC.First.HD.pl	116	BBC First HD
+E!.Entertainment.HD.pl	135	E! Entertainment HD
+ducktv.HD.pl	2043	ducktv HD
+Polsat.pl	108	Polsat
+Eleven.Sports.1.pl	112	Eleven Sports 1
+GOLD.TV.pl	57	GOLD TV
+CANAL+.DOKUMENT.HD.pl	132	CANAL+ DOKUMENT HD
+wPolsce.pl.pl	153	wPolsce.pl
+ORF.1.pl	206	ORF 1
+TVP.Wilno.HD.pl	259	TVP Wilno HD
+HBO3.pl	100	HBO3
+Boomerang.pl	603	Boomerang
+Polsat.Film.HD.pl	96	Polsat Film HD
+Ginx.eSports.TV.pl	134	Ginx eSports TV
+CANAL+.KUCHNIA.HD.pl	197	CANAL+ KUCHNIA HD
+Sky.News.pl	40	Sky News
+Nicktoons.pl	303	Nicktoons
+ONTV.HD.pl	57	ONTV HD
+ZOOM.TV.HD.pl	119	ZOOM TV HD
+SAT.1.pl	106	SAT.1
+WP.HD.pl	141	WP HD
+CBS.Europa.pl	0	CBS Europa
+Nautical.Channel.HD.pl	227	Nautical Channel HD
+Polsat.Sport.News.HD.pl	52	Polsat Sport News HD
+4FUN.TV.pl	84	4FUN.TV
+Cinemax.HD.pl	73	Cinemax HD
+TVN.24.pl	206	TVN 24
+TTV.HD.pl	179	TTV HD
+TVP.2.pl	140	TVP 2
+AXN.Black.pl	119	AXN Black
+Polo.TV.HD.pl	139	Polo TV HD
+Golf.Channel.pl	188	Golf Channel
+Polsat.Seriale.pl	142	Polsat Seriale
+TV.Puls.pl	101	TV Puls
+Polsat.Rodzina.pl	172	Polsat Rodzina
+MiniMini+.HD.pl	598	MiniMini+ HD
+13.tv.pl	208	13.tv
+STOPKLATKA.pl	97	STOPKLATKA
+NLO.TV.2.pl	0	NLO TV 2
+Baby.TV.pl	1775	Baby TV
+ID.pl	126	ID
+Fashion.TV.pl	224	Fashion TV
+TVN.Fabuła.pl	117	TVN Fabuła
+E-SPORT.HD.pl	385	E-SPORT HD
+Czwórka.Polskie.Radio.HD.pl	47	Czwórka Polskie Radio HD
+Nitro.pl	151	Nitro
+Motorvision.pl	195	Motorvision
+Top.Kids.pl	349	Top Kids
+HBO2.HD.pl	83	HBO2 HD
+Vivid.Touch.pl	151	Vivid Touch
+Sky.Sport.Austria.pl	122	Sky Sport Austria
+Sky.Cinema.Special.pl	66	Sky Cinema Special
+iTVS.pl	192	iTVS
+Tele.5.HD.pl	154	Tele 5 HD
+Red.Carpet.TV.HD.pl	136	Red Carpet TV HD
+CANAL+.EXTRA.14.HD.pl	0	CANAL+ EXTRA 14 HD
+TV.Regionalna.Lubin.pl	145	TV Regionalna Lubin
+CANAL+.Sport.2.pl	53	CANAL+ Sport 2
+Food.Network.HD.pl	149	Food Network HD
+Paramount.Network.pl	75	Paramount Network
+FightBox.pl	64	FightBox
+TVP.3.Gdańsk.pl	342	TVP 3 Gdańsk
+MIXTAPE.HD.pl	55	MIXTAPE HD
+Belsat.TV.pl	215	Belsat TV
+METRO.HD.pl	129	METRO HD
+NickMusic.pl	0	NickMusic
+Spreekanal.pl	21	Spreekanal
+Arte.HD.pl	132	Arte HD
+France.24.pl	504	France 24
+Eleven.Sports.3.HD.pl	115	Eleven Sports 3 HD
+Travel.Channel.pl	165	Travel Channel
+ARD-alpha.pl	220	ARD-alpha
+Euronews.pl	279	Euronews
+Radio.Silesia.pl	38	Radio Silesia
+FOX.Comedy.HD.pl	218	FOX Comedy HD
+MTV.90s.pl	0	MTV 90s
+TVP.3.Warszawa.pl	342	TVP 3 Warszawa
+TVP.Rozrywka.pl	173	TVP Rozrywka
+Stingray.DJAZZ.pl	157	Stingray DJAZZ
+TVS.pl	103	TVS
+Warner.TV.HD.pl	99	Warner TV HD
+Vivid.RED.HD.pl	135	Vivid RED HD
+Nuta.Gold.HD.pl	50	Nuta Gold HD
+Fanklub.TV.pl	0	Fanklub TV
+4FUN.DANCE.pl	58	4FUN DANCE
+Power.TV.pl	127	Power TV
+SRF.1.pl	197	SRF 1
+Playboy.TV.pl	350	Playboy TV
+Sky.Krimi.pl	133	Sky Krimi
+Polsat.Boxing.Night.pl	61	Polsat Boxing Night
+TV.6.HD.pl	133	TV 6 HD
+Extreme.Channel.HD.pl	140	Extreme Channel HD
+4FUN.KIDS.pl	99	4FUN KIDS
+TV.Relax.pl	508	TV Relax
+HGTV.pl	182	HGTV
+360TuneBox.pl	122	360TuneBox
+Hamburg.1.pl	0	Hamburg 1
+RFM.TV.pl	35	RFM TV
+Bibel.TV.pl	253	Bibel TV
+TBN.Polska.pl	221	TBN Polska
+CANAL+.Sport.5.HD.pl	66	CANAL+ Sport 5 HD
+TVP.Sport.pl	91	TVP Sport
+Dami.Skarżysko-Kamienna.pl	49	Dami Skarżysko-Kamienna
+Nuta.TV.HD.pl	44	Nuta.TV HD
+RTL.HD.pl	110	RTL HD
+Polsat.Viasat.Nature.HD.pl	117	Polsat Viasat Nature HD
+Da.Vinci.HD.pl	428	Da Vinci HD
+CANAL+.Sport.HD.pl	86	CANAL+ Sport HD
+Fokus.TV.HD.pl	152	Fokus TV HD
+Polsat.1.pl	203	Polsat 1
+Kabaret.TV.pl	154	Kabaret TV
+TVP.3.Katowice.pl	345	TVP 3 Katowice
+TVP.Polonia.HD.pl	221	TVP Polonia HD
+Twoja.TV.pl	38	Twoja.TV
+TV.ASTA.pl	110	TV ASTA
+Polsat.Games.HD.pl	148	Polsat Games HD
+TVN24.BiS.pl	161	TVN24 BiS
+Nickelodeon.pl	264	Nickelodeon
+BBC.Brit.HD.pl	129	BBC Brit HD
+teleTOON+.pl	425	teleTOON+
+Music.Box.pl	357	Music Box
+Wydarzenia.24.HD.pl	240	Wydarzenia 24 HD
+JUNIOR.MUSIC.pl	29	JUNIOR MUSIC
+TVP.3.Lublin.pl	354	TVP 3 Lublin
+TVP.3.Gorzów.Wielkopolski.pl	351	TVP 3 Gorzów Wielkopolski
+TVP.Polonia.pl	221	TVP Polonia
+CANAL+.EXTRA.13.HD.pl	0	CANAL+ EXTRA 13 HD
+TVP.Wilno.pl	259	TVP Wilno
+TVP.1.pl	200	TVP 1
+Polsat.Sport.Premium.2.pl	73	Polsat Sport Premium 2
+sixx.pl	145	sixx
+Boomerang.HD.pl	603	Boomerang HD
+Nicktoons.HD.pl	303	Nicktoons HD
+JUNIOR.MUSIC.HD.pl	29	JUNIOR MUSIC HD
+Polo.TV.pl	138	Polo TV
+Stingray.Classica.HD.pl	136	Stingray Classica HD
+Top.Kids.HD.pl	349	Top Kids HD
+Sport.1.pl	102	Sport 1
+CANAL+.Sport.pl	86	CANAL+ Sport
+PROART.HD.pl	322	PROART HD
+CANAL+.Sport.3.HD.pl	88	CANAL+ Sport 3 HD
+ZOOM.TV.pl	119	ZOOM TV
+Cartoon.Network.pl	541	Cartoon Network
+BBC.First.pl	116	BBC First
+Polsat.Sport.Extra.HD.pl	55	Polsat Sport Extra HD
+Eleven.Sports.4.HD.pl	107	Eleven Sports 4 HD
+rheinmaintv.pl	0	rheinmaintv
+Polsat.Games.pl	148	Polsat Games
+Epic.Drama.HD.pl	110	Epic Drama HD
+Cinemax.pl	73	Cinemax
+SBN.pl	101	SBN
+Polsat.Sport.Extra.pl	55	Polsat Sport Extra
+MTV.Polska.pl	206	MTV Polska
+Wydarzenia.24.pl	240	Wydarzenia 24
+Discovery.Channel.pl	117	Discovery Channel
+TVP.3.Szczecin.pl	343	TVP 3 Szczecin
+Film.UA.Drama.pl	136	Film UA Drama
+Arte.pl	131	Arte
+AXN.pl	119	AXN
+TVN.7.pl	112	TVN 7
+DW.-.DE.pl	0	DW - DE
+Folx.TV.pl	102	Folx TV
+TV.Puls.HD.pl	101	TV Puls HD
+Dacha.TV.pl	205	Dacha TV
+Romance.TV.HD.pl	80	Romance TV HD
+Nat.Geo.People.HD.pl	133	Nat Geo People HD
+Al.Jazeera.HD.pl	178	Al Jazeera HD
+Private.TV.HD.pl	51	Private TV HD
+Tele.5.pl	154	Tele 5
+ducktv.plus.pl	87	ducktv plus
+E-SPORT.pl	405	E-SPORT
+Barely.Legal.pl	101	Barely Legal
+Red.Top.TV.pl	162	Red Top TV
+Travelxp.HD.pl	241	Travelxp HD
+Novelas+.pl	122	Novelas+
+HR.pl	190	HR
+Polsat.Sport.Fight.HD.pl	73	Polsat Sport Fight HD
+FilmBox.Premium.HD.pl	67	FilmBox Premium HD
+CANAL+.Sport.4.pl	76	CANAL+ Sport 4
+Echo.24.pl	21	Echo 24
+Phoenix.pl	139	Phoenix
+iTVN.Extra.International.pl	211	iTVN Extra International
+MiniMini+.pl	601	MiniMini+
+Polsat.Viasat.History.HD.pl	122	Polsat Viasat History HD
+Red.Carpet.TV.pl	134	Red Carpet TV
+Polsat.Sport.Premium.1.pl	67	Polsat Sport Premium 1
+Discovery.Science.pl	155	Discovery Science
+Clubbing.TV.pl	190	Clubbing TV
+ORF.2.pl	236	ORF 2
+13.Ulica.HD.pl	91	13 Ulica HD
+TVN.HD.pl	122	TVN HD
+TV.5.Monde.Europe.pl	268	TV 5 Monde Europe
+HISTORY2.pl	131	HISTORY2
+HGTV.HD.pl	182	HGTV HD
+TV.6.pl	133	TV 6
+Food.Network.pl	149	Food Network
+Polsat.Sport.Fight.pl	73	Polsat Sport Fight
+TVN.Fabuła.HD.pl	117	TVN Fabuła HD
+TOYA.pl	686	TOYA
+Nuta.TV.pl	44	Nuta.TV
+Nuta.Gold.pl	50	Nuta Gold
+BabyFirstTV.pl	0	BabyFirstTV
+TV.Berlin.pl	206	TV.Berlin
+Telewizja.Kłodzka.pl	40	Telewizja Kłodzka
+CANAL+.EXTRA.12.HD.pl	0	CANAL+ EXTRA 12 HD
+M.6.pl	106	M 6
+HBO3.HD.pl	100	HBO3 HD
+Polsat.HD.pl	108	Polsat HD
+BBC.Brit.pl	129	BBC Brit
+ducktv.pl	2116	ducktv
+Gametoon.HD.pl	283	Gametoon HD
+RBB.pl	167	RBB
+France.24.-.EN.pl	605	France 24 - EN
+Polsat.Sport.Premium.5.pl	40	Polsat Sport Premium 5
+Warner.TV.pl	99	Warner TV
+KSW.HD.pl	61	KSW HD
+Fokus.TV.pl	152	Fokus TV
+13.tv.3D.pl	208	13.tv 3D
+FunBox.UHD.pl	187	FunBox UHD
+Da.Vinci.pl	428	Da Vinci
+DTX.HD.pl	131	DTX HD
+English.Club.TV.HD.pl	791	English Club TV HD
+France.24.HD.pl	504	France 24 HD
+Golf.Channel.HD.pl	188	Golf Channel HD
+EinsLive.pl	35	EinsLive
+FilmBox.Extra.HD.pl	68	FilmBox Extra HD
+Telewizja.Pomerania.pl	308	Telewizja Pomerania
+FOX.pl	111	FOX
+God.TV.pl	239	God TV
+CANAL+.Seriale.HD.pl	141	CANAL+ Seriale HD
+Czwórka.Polskie.Radio.pl	47	Czwórka Polskie Radio
+Comedy.Central.HD.pl	236	Comedy Central HD
+TV.ASTA.HD.pl	110	TV ASTA HD
+NPO.3.pl	415	NPO 3
+teleTOON+.HD.pl	428	teleTOON+ HD
+Dorcel.XXX.HD.pl	85	Dorcel XXX HD
+Novela.tv.HD.pl	148	Novela tv HD
+Power.TV.HD.pl	127	Power TV HD
+Music.Box.HD.pl	357	Music Box HD
+HBO2.pl	83	HBO2
+CANAL+.PREMIUM.HD.pl	92	CANAL+ PREMIUM HD
+Kino.Polska.HD.pl	97	Kino Polska HD
+Sky.Action.pl	66	Sky Action
+Eska.TV.Extra.pl	66	Eska TV Extra
+Sky.Sport.HD.1.pl	4	Sky Sport HD 1
+TVE.pl	120	TVE
+CANAL+.EXTRA.9.HD.pl	0	CANAL+ EXTRA 9 HD
+FilmBox.Arthouse.HD.pl	92	FilmBox Arthouse HD
+Polsat.Film.pl	96	Polsat Film
+ZDF.HD.pl	151	ZDF HD
+TLC.HD.pl	109	TLC HD
+Discovery.Life.pl	147	Discovery Life
+CANAL+.EXTRA.2.HD.pl	0	CANAL+ EXTRA 2 HD
+TV.Toruń.pl	145	TV Toruń
+MIXTAPE.pl	55	MIXTAPE
+AMC.pl	83	AMC
+Euronews.HD.pl	279	Euronews HD
+TVN24.BiS.HD.pl	161	TVN24 BiS HD
+Freedom.pl	218	Freedom
+CANAL+.DOMO.pl	174	CANAL+ DOMO
+Ukraina.24.pl	0	Ukraina 24
+HBO.pl	74	HBO
+Deutsches.Musik.Fernsehen.pl	0	Deutsches Musik Fernsehen
+TVP.Sport.HD.pl	91	TVP Sport HD
+Disco.Polo.Music.pl	126	Disco Polo Music
+FilmBox.Action.pl	64	FilmBox Action
+TVN.24.HD.pl	204	TVN 24 HD
+EWTN.pl	191	EWTN
+NDR.pl	192	NDR
+FightBox.HD.pl	64	FightBox HD
+ONTV.pl	57	ONTV
+AXN.White.pl	105	AXN White
+TVP.HD.pl	157	TVP HD
+MTV.Europe.pl	207	MTV Europe
+Cartoon.Network/Warner.TV.pl	0	Cartoon Network/Warner TV
+Disney.Channel.HD.pl	281	Disney Channel HD
+DIZI.pl	121	DIZI
+France.24.HD.-.EN.pl	605	France 24 HD - EN
+Sky.Comedy.pl	0	Sky Comedy
+Bloomberg.(ang.).pl	117	Bloomberg (ang.)
+NICK.pl	246	NICK
+Sundance.TV.HD.pl	110	Sundance TV HD
+Comedy.Central.pl	236	Comedy Central
+TV.Okazje.HD.pl	653	TV Okazje HD
+BBC.Lifestyle.pl	130	BBC Lifestyle
+CANAL+.Seriale.pl	141	CANAL+ Seriale
+SCI.FI.pl	104	SCI FI
+Eurosport.1.pl	76	Eurosport 1
+Cinemax2.HD.pl	72	Cinemax2 HD
+XTREME.TV.pl	163	XTREME TV
+Polsat.Sport.Premium.6.pl	46	Polsat Sport Premium 6
+RAI.1.pl	165	RAI 1
+Dorcel.TV.HD.pl	122	Dorcel TV HD
+dlaCiebie.tv.pl	218	dlaCiebie.tv
+STARS.TV.pl	64	STARS.TV
+Nowa.TV.pl	205	Nowa TV
+Ukraina.1.HD.pl	0	Ukraina 1 HD
+Eleven.Sports.4.pl	107	Eleven Sports 4
+Star.Cinema.pl	31	Star Cinema
+Rybalka.TV.pl	236	Rybalka TV
+Star.Family.pl	20	Star Family
+Cartoon.Network.HD.pl	541	Cartoon Network HD
+HOME.TV.HD.pl	172	HOME TV HD
+Eska.TV.HD.pl	197	Eska TV HD
+KSW.pl	61	KSW
+Goldstar.TV.pl	118	Goldstar TV
+TVP.Kultura.2.pl	138	TVP Kultura 2
+Polsat.Comedy.Central.Extra.HD.pl	219	Polsat Comedy Central Extra HD
+DTX.pl	131	DTX
+Polskie.Radio.Program.2.pl	137	Polskie Radio Program 2
+Mezzo.Live.HD.pl	92	Mezzo Live HD
+Stingray.Retro.pl	68	Stingray Retro
+TVP.Dokument.pl	161	TVP Dokument
+TVP.3.Bydgoszcz.pl	335	TVP 3 Bydgoszcz
+Polsat.Play.HD.pl	173	Polsat Play HD
+Dorcel.XXX.pl	85	Dorcel XXX
+Lubelska.tv.pl	399	Lubelska.tv
+tvregionalna.pl.pl	346	tvregionalna.pl
+Adult.Channel.pl	108	Adult Channel
+FOX.HD.pl	111	FOX HD
+CANAL+.EXTRA.5.HD.pl	0	CANAL+ EXTRA 5 HD
+Ukraina.2.pl	0	Ukraina 2
+FilmBox.Arthouse.pl	92	FilmBox Arthouse
+Brazzers.TV.Europe.pl	322	Brazzers TV Europe
+ID.HD.pl	126	ID HD
+3SAT.pl	190	3SAT
+Disney.Channel.pl	281	Disney Channel
+Reality.Kings.TV.pl	60	Reality Kings TV
+Sportowa.TV.HD.pl	41	Sportowa.TV HD
+CI.Polsat.HD.pl	139	CI Polsat HD
+TVP.3.Kielce.pl	368	TVP 3 Kielce
+Radio.Nowy.Świat.pl	53	Radio Nowy Świat
+HISTORY.HD.pl	135	HISTORY HD
+HOME.4K.pl	2488	HOME 4K
+PRO.7.pl	172	PRO 7
+ZDF.Info.pl	174	ZDF Info
+Fightklub.pl	36	Fightklub
+TLC.pl	109	TLC
+Futsal.1.pl	0	Futsal 1
+CANAL+.Film.HD.pl	94	CANAL+ Film HD
+AMC.HD.pl	83	AMC HD
+Active.Family.HD.pl	210	Active Family HD
+Ale.kino+.HD.pl	86	Ale kino+ HD
+METRO.pl	129	METRO
+Discovery.Historia.pl	145	Discovery Historia
+TVP.3.Opole.pl	347	TVP 3 Opole
+HBO.HD.pl	74	HBO HD
+NASA.TV.pl	66	NASA TV
+CNBC.pl	113	CNBC
+Discovery.Life.HD.pl	146	Discovery Life HD
+RTLZWEI.pl	109	RTLZWEI
+TVP.World.HD.pl	534	TVP World HD
+TVP.Kultura.HD.pl	122	TVP Kultura HD
+PULS.2.HD.pl	194	PULS 2 HD
+National.Geographic.Wild.pl	122	National Geographic Wild
+Polonia.1.HD.pl	131	Polonia 1 HD
+TVC.pl	164	TVC
+WP.pl	141	WP
+TVP.ABC.pl	369	TVP ABC
+Heimatkanal.pl	115	Heimatkanal
+CANAL+.4K.Ultra.HD.pl	97	CANAL+ 4K Ultra HD
+Beate-Uhse.TV.pl	58	Beate-Uhse.TV
+GM24.pl	0	GM24
+CANAL+.PREMIUM.pl	92	CANAL+ PREMIUM
+TVP.Info.pl	384	TVP Info
+Eroxxx.HD.pl	117	Eroxxx HD
+VOX.Music.TV.pl	122	VOX Music TV
+CBS.Reality.pl	0	CBS Reality
+TVP.3.Olsztyn.pl	363	TVP 3 Olsztyn
+TVN.Turbo.pl	172	TVN Turbo
+CANAL+.1.pl	90	CANAL+ 1
+Nat.Geo.People.pl	133	Nat Geo People
+Polsat.Sport.HD.pl	54	Polsat Sport HD
+ONE.pl	140	ONE
+TVP.Kobieta.HD.pl	141	TVP Kobieta HD
+Adventure.HD.pl	150	Adventure HD
+KI.KA.pl	205	KI.KA
+Polsat.News.pl	189	Polsat News
+13.tv.HD.pl	208	13.tv HD
+Planete+.pl	169	Planete+
+Hustler.TV.pl	96	Hustler TV
+TVT.pl	157	TVT
+Blue.Hustler.pl	143	Blue Hustler
+Nick.Jr..HD.pl	460	Nick Jr. HD
+MTV.Germany.pl	186	MTV Germany
+Polsat.2.pl	152	Polsat 2
+Polsat.Music.pl	121	Polsat Music
+MTV.Hits.pl	0	MTV Hits
+TV.Republika.HD.pl	191	TV Republika HD
+Animal.Planet.HD.pl	138	Animal Planet HD
+muenchen.tv.pl	310	muenchen.tv
+FilmBox.Family.pl	71	FilmBox Family
+Super.RTL.pl	306	Super RTL
+CANAL+.EXTRA.11.HD.pl	0	CANAL+ EXTRA 11 HD
+TVP.Seriale.pl	165	TVP Seriale
+ATV.pl	122	ATV
+BBC.World.News.pl	279	BBC World News
+CANAL+.Sport.3.pl	88	CANAL+ Sport 3
+TVP.Historia.pl	153	TVP Historia
+CAVEMMA.2:.Resurrection.pl	0	CAVEMMA 2: Resurrection
+TVP.2.HD.pl	140	TVP 2 HD
+English.Club.TV.pl	794	English Club TV
+TVP.Nauka.HD.pl	177	TVP Nauka HD
+Amazing.TV.pl	0	Amazing TV
+CANAL+.EXTRA.16.HD.pl	0	CANAL+ EXTRA 16 HD
+AXN.HD.pl	119	AXN HD
+TV.Trwam.pl	317	TV Trwam
+Nova.pl	130	Nova
+CANAL+.Family.pl	133	CANAL+ Family
+FashionBox.HD.pl	148	FashionBox HD
+Sky.Select.pl	0	Sky Select
+Polsat.Café.pl	138	Polsat Café
+Super.Polsat.pl	139	Super Polsat
+ULTRA.TV.4K.pl	32	ULTRA TV 4K
+DocuBox.pl	199	DocuBox
+AXN.Spin.HD.pl	129	AXN Spin HD
+MTV.Polska.HD.pl	206	MTV Polska HD
+Polsat.Doku.HD.pl	154	Polsat Doku HD
+Biznes24.HD.pl	157	Biznes24 HD
+Redlight.HD.pl	76	Redlight HD
+TVP.3.Poznań.pl	352	TVP 3 Poznań
+Discovery.Channel.(niem.).pl	172	Discovery Channel (niem.)
+StudioMED.TV.pl	198	StudioMED TV
+Al.Jazeera.pl	178	Al Jazeera
+Kino.TV.HD.pl	77	Kino TV HD
+Romance.TV.pl	80	Romance TV
+13th.Street.pl	163	13th Street
+TVP.4K.pl	0	TVP 4K
+CANAL+.EXTRA.8.HD.pl	0	CANAL+ EXTRA 8 HD
+Mezzo.pl	90	Mezzo
+CANAL+.EXTRA.1.HD.pl	0	CANAL+ EXTRA 1 HD
+Sportklub.HD.pl	62	Sportklub HD
+TeenNick.pl	266	TeenNick
+Eska.Rock.TV.pl	70	Eska Rock TV
+TV.4.pl	133	TV 4
+Fast&amp;FunBox.HD.pl	242	Fast&FunBox HD
+Motowizja.HD.pl	167	Motowizja HD
+Disney.XD.pl	301	Disney XD
+Club.MTV.pl	0	Club MTV
+NPO.2.pl	183	NPO 2
+Polsat.JimJam.pl	566	Polsat JimJam
+Polsat.News.2.HD.pl	152	Polsat News 2 HD
+Tele.5.(niem.).pl	0	Tele 5 (niem.)
+FILMAX.HD.pl	111	FILMAX HD
+TV.Regio.pl	227	TV Regio
+TVN.pl	122	TVN
+TVN.Style.HD.pl	119	TVN Style HD
+CANAL+.Sport.4.HD.pl	76	CANAL+ Sport 4 HD
+JAZZ.HD.pl	55	JAZZ HD
+Eurosport.2.HD.pl	83	Eurosport 2 HD
+Antena.pl	135	Antena
+Polsat.Comedy.Central.Extra.pl	219	Polsat Comedy Central Extra
+BBC.Earth.HD.pl	124	BBC Earth HD
+Discovery.HD.(niem.).pl	172	Discovery HD (niem.)
+WDR.pl	182	WDR

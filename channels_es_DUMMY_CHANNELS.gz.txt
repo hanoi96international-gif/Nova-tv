@@ -1,0 +1,166 @@
+No.Game.Dummy.Scheduled.us	96	No Game Scheduled
+Football.Dummy.us	96	Football
+Basketball.Dummy.us	96	Basketball
+Baseball.Dummy.us	96	Baseball
+Golf.Dummy.us	96	Golf
+MLB.Baseball.Dummy.us	96	MLB Baseball
+MLS.Soccer.Dummy.us	96	MLS Soccer
+NBA.Basketball.Dummy.us	96	NBA Basketball
+NHL.Hockey.Dummy.us	96	NHL Hockey
+Peacock.Dummy.us	96	Peacock
+Amazon.Programming.Dummy.us	96	Amazon Programming
+DAZN.Dummy.us	96	DAZN
+FITE.TV.Dummy.us	96	FITE TV
+UFC.Fight.Pass.Dummy.us	96	UFC Fight Pass
+UFC.247.Dummy.us	96	UFC 247
+PPV.EVENTS.Dummy.us	96	PPV EVENT
+World.Soccer.Dummy.us	96	World Soccer
+NCAA.Mens.Basketball.Dummy.us	96	NCAA Mens Basketball
+NCAA.Womens.Basketball.Dummy.us	96	NCAA Womens Basketball
+NCAA.Baseball.Dummy.us	96	NCAA Baseball
+NCAA.Softball.Dummy.us	96	NCAA Softball
+Olympics.Dummy.us	96	Olympics
+X-Games.Dummy.us	96	X-Games
+Redbull.Dummy.us	96	Redbull
+Soccer.Dummy.us	96	Soccer
+Volleyball.Dummy.us	96	Volleyball
+Cricket.Dummy.us	96	Cricket
+Tennis.Dummy.us	96	Tennis
+Rugby.Dummy.us	96	Rugby
+AUS.Rules.Football.Dummy.us	96	Australian Rules Football
+Racing.Dummy.us	96	Racing
+24.7.Dummy.us	96	24/7 Programming
+Darts.Dummy.us	96	Darts
+Stingray.Music.Dummy.us	96	Stingray Music
+Minor.League.Hockey.Dummy.us	96	Minor League Hockey
+ESPN+.Dummy.us	96	ESPN+
+Sporty.Stuff.TV.Dummy.us	96	Sporty Stuff TV
+Religious.Dummy.us	96	Religious Programming
+Music.Dummy.us	96	Music
+NFL.Dummy.us	96	NFL
+Local.Programming.Dummy.us	96	Local Programming
+Adult.Programming.Dummy.us	96	Adult Programming
+Blank.Dummy.us	96	 
+Movie.Dummy.us	96	Movie
+March.Madness.us	96	March Madness
+BIG.10.us	96	Big 10
+Minor.League.Baseball.Dummy.us	96	Minor League Baseball
+Flo.Events.Dummy.us	96	Flo Events
+NCAA.Football.Dummy.us	96	NCAA Football
+WNBA.dummy.us	96	WNBA
+NEWS.dummy.us	96	NEWS
+WEATHER.dummy.us	96	WEATHER
+Christmas.Music.Dummy.us	96	Christmas Music
+Christmas.Radio.Dummy.us	96	Christmas Radio
+Christmas.Message.Dummy.us	96	Christmas Message
+Christmas.Dummy.us	96	Christmas
+Christmas.Fireplace.Dummy.us	96	Christmas Fireplace
+Barstool.Sports.Dummy.us	96	Barstool Sports
+Monday.Night.Football.Dummy.us	96	Monday Night Football
+Sunday.Night.Football.Dummy.us	96	Sunday Night Football
+Thursday.Night.Football.Dummy.us	96	Thursday Night Football
+ESPN.Play.Dummy.us	96	ESPN Play
+UEFA.Champions.League.Dummy.us	96	UEFA Champions League
+Premier.League.Dummy.us	96	Premier League
+GaaGo.TV.Dummy.us	96	GaaGo TV
+LOI.TV.Dummy.us	96	LOI TV
+National.League.Dummy.us	96	National League
+Scottish.Professional.Football.League.Dummy.us	96	Scottish Professional Football League
+Scottish.Premiership.Dummy.us	96	Scottish Premiership
+English.Football.League.Dummy.us	96	English Football League
+Test.Dummy.us	96	Test Channel
+Netflix.Dummy.us	96	Netflix
+Kids.Dummy.us	96	Kids Programming
+Cinebox.Dummy.us	96	Cinebox
+Discovery+.Dummy.us	96	Discovery+
+Disney+.DUMMY.us	96	Disney+
+HBO.MAX.us	96	HBO MAX
+HULU.us	96	HULU
+Sky.Store.Premiere.us	96	Sky Store Premiere
+BilliardTV.Dummy.us	96	Billiard TV
+ITVX.Dummy.us	96	ITVX
+TrillerTV.Dummy.us	96	TrillerTV
+Info.Guide.Dummy.us	96	Info Guide
+Pluto.TV.Dummy.us	96	Pluto TV
+Fishtank.Live.Dummy.us	96	Fishtank Live
+TgCom24.Dummy.us	96	TgCom24
+Radio.105.Dummy.us	96	Radio 105
+RAI.4K.Dummy.us	96	RAI 4K
+Radio.TV.RDS.Serie.A.Dummy.us	96	Radio TV RDS Serie A
+Love.Nature.Dummy.us	96	Love Nature
+Beisbol.LMP.Dummy.us	96	Beisbol LMP
+MorbidoTV.Dummy.us	96	MorbidoTV
+Virnin.Radio.TV.Dummy.us	96	Virgin Radio TV
+Radio.Monte.Carlo.Dummy.us	96	Radio Monte Carlo
+R101.Dummy.us	96	R101
+Grande.Fratello.Regia.1.Dummy.us	96	Grande Fratello Regia 1
+Grande.Fratello.Regia.2.Dummy.us	96	Grande Fratello Regia 2
+Grande.Fratello.Un'ora.fa.Dummy.us	96	Grande Fratello Un'ora fa
+Grande.Fratello.Party.Dummy.us	96	Grande Fratello Party
+BBC.World.News.Dummy.us	96	BBC World News
+Lazio.Style.TV.Dummy.us	96	Lazio Style TV
+Lazio.Style.Radio.Dummy.us	96	Lazio Style Radio
+Shopping.Dummy.us	96	Shopping
+Sports.Dummy.us	96	Sports
+Apple.TV+.Originals.Dummy.us	96	Apple TV+ Originals
+AMC+.Originals.Dummy.us	96	AMC+ Originals
+Paramount+.Originals.Dummy.us	96	Paramount+ Originals
+StarzPlay.Originals.Dummy.us	96	StarzPlay Originals
+Ride.TV.Dummy.us	96	Ride TV
+Fox.Live.Now.Dummy.us	96	Fox Live Now
+Curiosity.Stream.Dummy.us	96	Curiosity.Stream
+XITE.80s.Dummy.us	96	XITE 80s
+Music.Choice.Dummy.us	96	Music Choice
+This.Old.House.Makers.Dummy.us	96	This Old House Makers
+Sky.Sports+.Dummy.us	96	Sky Sports+
+Adult.Section.Dummy.us	96	Adult Section
+Bookies.Dummy.us	96	Bookies
+Clubber.TV.Dummy.us	96	Clubber TV
+Rugby.Pass.Dummy.us	96	Rugby Pass
+Stan.Sport.Dummy.us	96	Stan Sport
+Sportsnet+.Dummy.us	96	Sportsnet+
+Live.Football.us	96	Live Football
+Live.Event.us	96	Live Event
+Fubo.Sports.us	96	Fubo Sports
+Betfred.Super.League.us	96	Betfred Super League
+Amazon.Events.us	96	Amazon Events
+Nicktoons.Canada.us	96	Nicktoons Canada
+Hit.TV.es	96	Hit TV
+GAA+.ie	96	GAA+
+UEFA.LEAGUES.ch	96	UEFA LEAGUES
+EFL.uk	96	EFL
+InfoWars.DUMMY.us	96	InfoWars
+XITE.Celebrates.DUMMY.us	96	XITE Celebrates
+XITE.80s.Flashback.DUMMY.us	96	XITE 80s Flashback
+XITE.90s.Throwback.DUMMY.us	96	XITE 90s Throwback
+XITE.Hits.DUMMY.us	96	XITE Hits
+XITE.Country.Today.DUMMY.us	96	XITE Country Today
+XITE.Classic.Country.DUMMY.us	96	XITE Classic Country
+XITE.Nuevo.Latino.DUMMY.us	96	XITE Nuevo Latino
+XITE.Siempre.Latino.DUMMY.us	96	XITE Siempre Latino
+XITE.RandB.Classic.Jams.DUMMY.us	96	XITE RandB Classic Jams
+XITE.Rock.x.Metal.DUMMY.us	96	XITE Rock x Metal
+XITE.Just.Chill.DUMMY.us	96	XITE Just Chill
+XITE.Rap.Game.DUMMY.us	96	XITE Rap Game
+XITE.Hip-Hop.Evolution.DUMMY.us	96	XITE Hip-Hop Evolution
+XITE.RandB.Feels.DUMMY.us	96	XITE RandB Feels
+XITE.60sAnd70s.Groove.DUMMY.us	96	XITE 60sAnd70s Groove
+XITE.Christian.Hits.DUMMY.us	96	XITE Christian Hits
+XITE.Reggae.Vibes.DUMMY.us	96	XITE Reggae Vibes
+MonoMax.DUMMY.us	96	MonoMax
+Setanta.Sports.DUMMY.us	96	Setanta Sports
+Coupang.Play.DUMMY.us	96	Coupang Play
+Sirius.XM.DUMMY.us	96	Sirius Xm
+Spirit.TV.DUMMY.us	96	Spirit TV: Change Your Atmosphere
+Elvis.Presley.Music.Channel.DUMMY.us	96	The King Of Rock n Roll
+Paramount.Movie.Channel.DUMMY.us	96	Paramount Movie Channel
+History.101.DUMMY.us	96	History 101
+FC.Bayern.DUMMY.us	96	FC Bayern
+Ballsack.TV.DUMMY.us	96	Ballsack.TV
+Streaming.DUMMY.us	96	Streaming
+The.Scooby-Doo.Show.DUMMY.us	96	The Scooby-Doo Show
+Cartoon.DUMMY.us	96	Cartoon
+Uptown.Music.Television.DUMMY.us	96	Uptown Music Television
+Azteca.Conecta.DUMMY.mx	96	Azteca Conecta
+Azteca.Latidos.DUMMY.mx	96	Azteca Latidos
+Event.DUMMY.us	96	Event

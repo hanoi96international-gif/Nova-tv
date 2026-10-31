@@ -1,0 +1,48 @@
+CHANNEL ANIXE HD Serie.de (89) ANIXE HD Serie.de
+CHANNEL Kinomir.de (14) Kinomir.de
+CHANNEL KinoweltTV.de (30) KinoweltTV.de
+CHANNEL Magenta Musik 1.de (9) Magenta Musik 1.de
+CHANNEL Magenta Musik 2.de (9) Magenta Musik 2.de
+CHANNEL MagentaSport.de (14) MagentaSport.de
+CHANNEL MagentaTV+.de (0) MagentaTV+.de
+CHANNEL Sky Cinema Action.de (29) Sky Cinema Action.de
+CHANNEL Sky Cinema Classics.de (31) Sky Cinema Classics.de
+CHANNEL Sky Cinema Family.de (30) Sky Cinema Family.de
+CHANNEL Sky Cinema Highlights.de (26) Sky Cinema Highlights.de
+CHANNEL Sky Cinema Premiere.de (30) Sky Cinema Premiere.de
+CHANNEL Warner TV Film (Sky).de (29) Warner TV Film (Sky).de
+CHANNEL Warner TV Film.de (29) Warner TV Film.de
+CHANNEL Warner TV Serie (Sky).de (68) Warner TV Serie (Sky).de
+CHANNEL Warner TV Serie.de (68) Warner TV Serie.de
+202512302300 202512310500 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202512310500 202512311100 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202512311100 202512311700 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202512311700 202512312300 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202512312300 202601010500 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202601010500 202601011100 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202601011100 202601011700 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202601011700 202601012300 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202601012300 202601020500 Magenta Musik 1.de             | Sendepause auf Magenta Musik 1
+202512302300 202512310500 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202512310500 202512311100 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202512311100 202512311700 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202512311700 202512312300 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202512312300 202601010500 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202601010500 202601011100 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202601011100 202601011700 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202601011700 202601012300 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202601012300 202601020500 Magenta Musik 2.de             | Sendepause auf Magenta Musik 2
+202512302100 202512310100 MagentaSport.de                | MagentaSport Programmubersicht
+202512310100 202512310500 MagentaSport.de                | MagentaSport Programmubersicht
+202512310500 202512310900 MagentaSport.de                | MagentaSport Programmubersicht
+202512310900 202512311300 MagentaSport.de                | MagentaSport Programmubersicht
+202512311300 202512311700 MagentaSport.de                | MagentaSport Programmubersicht
+202512311700 202512312100 MagentaSport.de                | MagentaSport Programmubersicht
+202512312100 202601010100 MagentaSport.de                | MagentaSport Programmubersicht
+202601010100 202601010500 MagentaSport.de                | MagentaSport Programmubersicht
+202601010500 202601010900 MagentaSport.de                | MagentaSport Programmubersicht
+202601010900 202601011300 MagentaSport.de                | MagentaSport Programmubersicht
+202601011300 202601011700 MagentaSport.de                | MagentaSport Programmubersicht
+202601011700 202601012100 MagentaSport.de                | MagentaSport Programmubersicht
+202601012100 202601020100 MagentaSport.de                | MagentaSport Programmubersicht
+202601020100 202601020500 MagentaSport.de                | MagentaSport Programmubersicht
