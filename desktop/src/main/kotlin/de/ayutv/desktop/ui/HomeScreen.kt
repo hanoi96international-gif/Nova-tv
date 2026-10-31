@@ -31,6 +31,7 @@ private sealed interface HomeItem {
     data class Live(val channel: Channel, val list: List<Channel>) : HomeItem { override val key get() = "c:" + channel.key }
     data class Film(val movie: Movie, val progress: Float?) : HomeItem { override val key get() = "m:" + movie.key }
     data class Show(val series: Series, val progress: Float?) : HomeItem { override val key get() = "s:" + series.key }
+    data class Rec(val recording: de.ayutv.desktop.data.Recording) : HomeItem { override val key get() = "r:" + recording.id }
 }
 
 private data class HomeRow(val title: String, val items: List<HomeItem>)
@@ -73,6 +74,9 @@ fun HomeScreen(app: AppState) {
                 Episodes.seriesKeyOf(key)?.let { series[it] }?.let { HomeItem.Show(it, fraction) }
             }.distinctBy { it.key }.take(20)
             if (resume.isNotEmpty()) add(HomeRow("Weiter schauen", resume))
+            val recordings = user.recordings.filter { it.state == de.ayutv.desktop.data.Recording.DONE || it.state == de.ayutv.desktop.data.Recording.RUNNING }
+                .sortedByDescending { it.start }.take(20)
+            if (recordings.isNotEmpty()) add(HomeRow("⏺ Aufnahmen", recordings.map { HomeItem.Rec(it) }))
 
             val visible = store.allVisible()
             val recent = store.recentChannels().take(20)
@@ -103,6 +107,7 @@ fun HomeScreen(app: AppState) {
         is HomeItem.Live -> app.play(Playback.Live(item.channel, item.list))
         is HomeItem.Film -> playMovie(app, item.movie)
         is HomeItem.Show -> { app.openSeries = item.series; app.screen = Screen.SERIES }
+        is HomeItem.Rec -> app.playRecording(item.recording)
     }
 
     fun menu(item: HomeItem) {
@@ -121,6 +126,12 @@ fun HomeScreen(app: AppState) {
                 MenuItem("Aus „Weiter schauen“ entfernen") { store.updateUser { u -> u.copy(positions = u.positions - item.movie.key) } },
             )
             is HomeItem.Show -> listOf(MenuItem("Folgen zeigen") { open(item) })
+            is HomeItem.Rec -> listOf(
+                MenuItem("▶ Abspielen") { open(item) },
+                MenuItem(if (item.recording.state == de.ayutv.desktop.data.Recording.RUNNING) "⏹ Aufnahme beenden" else "🗑 Löschen") {
+                    app.removeRecording(item.recording, deleteFile = item.recording.state != de.ayutv.desktop.data.Recording.RUNNING)
+                },
+            )
         }
         dialog = { MenuDialog(app, title(item), entries, onDismiss = { dialog = null }) }
     }
@@ -146,6 +157,12 @@ fun HomeScreen(app: AppState) {
                             item.movie.name, item.movie.category, item.movie.poster, onClick = { open(item) }, progress = item.progress,
                             wide = false, onMenu = { menu(item) }, focusRequester = if (rowIndex == 0 && index == 0) first else null,
                         )
+                        is HomeItem.Rec -> Tile(
+                            item.recording.title,
+                            (if (item.recording.state == de.ayutv.desktop.data.Recording.RUNNING) "⏺ läuft · " else "") + "${item.recording.channelName} · ${clock(item.recording.start)}",
+                            store.channel(item.recording.channelKey)?.logo, onClick = { open(item) }, onMenu = { menu(item) },
+                            focusRequester = if (rowIndex == 0 && index == 0) first else null,
+                        )
                         is HomeItem.Show -> Tile(
                             item.series.name, item.series.category, item.series.cover, onClick = { open(item) }, progress = item.progress,
                             wide = false, onMenu = { menu(item) }, focusRequester = if (rowIndex == 0 && index == 0) first else null,
@@ -162,6 +179,7 @@ fun HomeScreen(app: AppState) {
 }
 
 private fun title(item: HomeItem) = when (item) {
+    is HomeItem.Rec -> item.recording.title
     is HomeItem.Live -> item.channel.name
     is HomeItem.Film -> item.movie.name
     is HomeItem.Show -> item.series.name

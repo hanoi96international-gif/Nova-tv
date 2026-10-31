@@ -44,6 +44,12 @@ class Store(val dir: File) {
     private val _user = MutableStateFlow(UserData())
     val user: StateFlow<UserData> = _user.asStateFlow()
 
+    /** Profile (das erste heißt „Ich“ und nutzt die alte user.json weiter). */
+    private val _profiles = MutableStateFlow(listOf(Profile(0, "Ich")))
+    val profiles: StateFlow<List<Profile>> = _profiles.asStateFlow()
+    private val _profile = MutableStateFlow(0L)
+    val profile: StateFlow<Long> = _profile.asStateFlow()
+
     init {
         dir.mkdirs()
         load()
@@ -70,25 +76,61 @@ class Store(val dir: File) {
         return _content.value.filterKeys { it in enabled }.values.flatMap { it.series }
     }
 
-    /** Filme ohne ausgeblendete Kategorien. */
+    /** Filme ohne ausgeblendete und gesperrte Kategorien. */
     fun movies(): List<Movie> {
         val hidden = _user.value.hiddenMovieGroups
-        return allMovies().filter { "${it.playlistId}|${it.category}" !in hidden }
+        return allMovies().filter { "${it.playlistId}|${it.category}" !in hidden && !locked(GroupKind.MOVIES, it.playlistId, it.category) }
     }
 
-    /** Serien ohne ausgeblendete Kategorien. */
+    /** Serien ohne ausgeblendete und gesperrte Kategorien. */
     fun series(): List<Series> {
         val hidden = _user.value.hiddenSeriesGroups
-        return allSeries().filter { "${it.playlistId}|${it.category}" !in hidden }
+        return allSeries().filter { "${it.playlistId}|${it.category}" !in hidden && !locked(GroupKind.SERIES, it.playlistId, it.category) }
     }
+
+    // ---------------------------------------------------------------- Kindersicherung
+
+    private fun lockKey(kind: GroupKind, playlistId: Long, name: String) = "${kind.lockName}|$playlistId|$name"
+
+    /** Gruppe gesperrt (und nicht mit der PIN entsperrt)? */
+    fun locked(kind: GroupKind, playlistId: Long, name: String): Boolean {
+        val u = _user.value
+        return !u.parentalUnlocked && u.lockedGroups.isNotEmpty() && lockKey(kind, playlistId, name) in u.lockedGroups
+    }
+
+    private fun lockedChannel(c: Channel) = locked(GroupKind.LIVE, c.playlistId, c.group)
+
+    fun isGroupLocked(kind: GroupKind, playlistId: Long, name: String) = lockKey(kind, playlistId, name) in _user.value.lockedGroups
+
+    /** Gruppe [name] in allen Playlists sperren bzw. freigeben (braucht eine PIN). */
+    fun setLocked(kind: GroupKind, name: String, lock: Boolean) = updateUser { u ->
+        val ids = _content.value.filterValues { c ->
+            when (kind) {
+                GroupKind.LIVE -> c.channels.any { it.group == name }
+                GroupKind.MOVIES -> c.movies.any { it.category == name }
+                GroupKind.SERIES -> c.series.any { it.category == name }
+            }
+        }.keys
+        val keys = ids.map { lockKey(kind, it, name) }.toSet()
+        u.copy(lockedGroups = if (lock) u.lockedGroups + keys else u.lockedGroups - keys)
+    }
+
+    /** Mit der PIN entsperren (bis zum Beenden) bzw. wieder sperren. */
+    fun unlock(pin: String): Boolean {
+        if (pin != _user.value.parentalPin || pin.isEmpty()) return false
+        updateUser { it.copy(parentalUnlocked = true) }
+        return true
+    }
+
+    fun relock() = updateUser { it.copy(parentalUnlocked = false) }
 
     fun channel(key: String): Channel? = _content.value.values.firstNotNullOfOrNull { c -> c.channels.firstOrNull { it.key == key } }
 
-    private fun visible(channel: Channel, hidden: Set<String>) = "${channel.playlistId}|${channel.group}" !in hidden
+    private fun visible(channel: Channel, hidden: Set<String>) = "${channel.playlistId}|${channel.group}" !in hidden && !lockedChannel(channel)
 
     /** Doppelte Fassungen zusammenfassen (wenn eingeschaltet): jeder Sender einmal, in der besten Fassung. */
     private fun merged(list: List<Channel>): List<Channel> =
-        if (_user.value.mergeVariants) ChannelVariants.merge(list, { it.name }, { it.playlistId }) else list
+        if (_user.value.mergeVariants) ChannelVariants.merge(list, { it.name }, { it.playlistId }, { de.ayutv.data.parse.ChannelQuality.score(it.key, it.name) }) else list
 
     /** Gruppen des Anbieters (Live), die nicht ausgeblendet sind, mit Anzahl, in der Reihenfolge der Playlist. */
     fun liveGroups(): List<Pair<String, Int>> {
@@ -127,7 +169,20 @@ class Store(val dir: File) {
      * Auch Fassungen aus ausgeblendeten Gruppen zählen (sie sind nur in den Listen verborgen).
      */
     fun alternatives(channel: Channel): List<Channel> =
-        ChannelVariants.alternatives(channel, _content.value[channel.playlistId]?.channels.orEmpty(), { it.name }, { it.playlistId }, { a, b -> a.key == b.key })
+        ChannelVariants.alternatives(
+            channel, _content.value[channel.playlistId]?.channels.orEmpty(), { it.name }, { it.playlistId }, { a, b -> a.key == b.key },
+            score = { de.ayutv.data.parse.ChannelQuality.score(it.key, it.name) },
+        )
+
+    /** Archiv-Adresse (Catch-up) für eine vergangene oder laufende Sendung; null = kein Archiv. */
+    fun archiveUrl(channel: Channel, start: Long, stop: Long, now: Long = System.currentTimeMillis()): String? {
+        val playlist = _playlists.value.firstOrNull { it.id == channel.playlistId }
+        return de.ayutv.data.parse.CatchupUrls.url(
+            channel.url, channel.catchupDays, channel.catchupType, channel.catchupSource,
+            xtreamPlaylist = playlist?.type == PlaylistType.XTREAM, timezone = playlist?.timezone,
+            start = start, stop = stop, now = now,
+        )
+    }
 
     /** Gruppen je Art (für „Gruppen ein- und ausblenden“): Name, Anzahl, ausgeblendet. */
     fun groupsOf(playlistId: Long, kind: GroupKind): List<Triple<String, Int, Boolean>> {
@@ -205,9 +260,10 @@ class Store(val dir: File) {
     /** Zuletzt geschaute Sender, neuester zuerst. */
     fun recentChannels(): List<Channel> = byKeys(_user.value.recent)
 
+    /** Sender nach Schlüssel (Favoriten, eigene Gruppen, Verlauf), ohne gesperrte Gruppen. */
     private fun byKeys(keys: List<String>): List<Channel> {
         val all = channels().associateBy { it.key }
-        return keys.mapNotNull { all[it] }
+        return keys.mapNotNull { all[it] }.filterNot(::lockedChannel)
     }
 
     fun programmes(channel: Channel): List<Programme> = _guide.value[channel.key].orEmpty()
@@ -222,7 +278,7 @@ class Store(val dir: File) {
 
     fun updateUser(transform: (UserData) -> UserData) {
         _user.update(transform)
-        save(USER, UserData.serializer(), _user.value)
+        save(userFile(_profile.value), UserData.serializer(), _user.value)
     }
 
     fun toggleFavorite(key: String): Boolean {
@@ -295,6 +351,28 @@ class Store(val dir: File) {
         }
     }
 
+    fun hasReminder(channel: Channel, start: Long): Boolean = _user.value.reminders.any { it.channelKey == channel.key && it.start == start }
+
+    /** Erinnerung setzen oder entfernen; true = jetzt gesetzt. */
+    fun toggleReminder(channel: Channel, programme: Programme): Boolean {
+        var set = false
+        updateUser { u ->
+            val existing = u.reminders.firstOrNull { it.channelKey == channel.key && it.start == programme.start }
+            set = existing == null
+            u.copy(reminders = if (existing != null) u.reminders - existing else u.reminders + Reminder(channel.key, channel.name, programme.title, programme.start))
+        }
+        return set
+    }
+
+    fun toggleTeam(team: String): Boolean {
+        var now = false
+        updateUser { u ->
+            now = team !in u.followedTeams
+            u.copy(followedTeams = if (now) u.followedTeams + team else u.followedTeams - team, reminders = if (now) u.reminders else u.reminders.filterNot { it.team && it.title.contains(team, ignoreCase = true) })
+        }
+        return now
+    }
+
     fun hideGroup(name: String) = updateUser { u ->
         val pairs = channels().filter { it.group == name }.map { "${it.playlistId}|$name" }.toSet()
         u.copy(hiddenGroups = u.hiddenGroups + pairs)
@@ -307,10 +385,16 @@ class Store(val dir: File) {
         else u.copy(hiddenMovieGroups = u.hiddenMovieGroups + allMovies().filter { it.category == name }.map { "${it.playlistId}|$name" })
     }
 
-    fun rememberWatched(key: String) = updateUser { u -> u.copy(recent = (listOf(key) + u.recent.filter { it != key }).take(30)) }
+    fun rememberWatched(key: String) = updateUser { u ->
+        u.copy(recent = (listOf(key) + u.recent.filter { it != key }).take(30), watchedAt = u.watchedAt + (key to System.currentTimeMillis()))
+    }
 
     fun savePosition(key: String, positionMs: Long, durationMs: Long) = updateUser { u ->
-        u.copy(positions = u.positions + (key to positionMs), durations = if (durationMs > 0) u.durations + (key to durationMs) else u.durations)
+        u.copy(
+            positions = u.positions + (key to positionMs),
+            durations = if (durationMs > 0) u.durations + (key to durationMs) else u.durations,
+            watchedAt = u.watchedAt + (key to System.currentTimeMillis()),
+        )
     }
 
     // ---------------------------------------------------------------- Ändern (Playlists, Inhalte)
@@ -352,11 +436,64 @@ class Store(val dir: File) {
         return guide.mapValues { (_, list) -> list.map { it.copy(start = it.start + shift, stop = it.stop + shift) } }
     }
 
+    // ---------------------------------------------------------------- Profile
+
+    private fun userFile(profile: Long) = if (profile == 0L) USER else "user-$profile.json"
+
+    fun currentProfile(): Profile = _profiles.value.firstOrNull { it.id == _profile.value } ?: _profiles.value.first()
+
+    /**
+     * Neues Profil: übernimmt Einstellungen (Schlüssel, Proxy, ausgeblendete Gruppen, Kindersicherung), aber keine
+     * Favoriten, eigenen Gruppen, Verlauf, Erinnerungen und Aufnahmen.
+     */
+    fun createProfile(name: String, pin: String = ""): Profile {
+        val id = (_profiles.value.maxOfOrNull { it.id } ?: 0) + 1
+        val profile = Profile(id, name.trim().ifEmpty { "Profil $id" }, pin)
+        val base = _user.value.copy(
+            favorites = emptyList(), customGroups = emptyList(), groupOrder = emptyMap(), recent = emptyList(),
+            positions = emptyMap(), durations = emptyMap(), watchedAt = emptyMap(), reminders = emptyList(),
+            followedTeams = emptySet(), recordings = emptyList(), subtitleTimings = emptyMap(), intros = emptyMap(),
+            parentalUnlocked = false,
+        )
+        save(userFile(id), UserData.serializer(), base)
+        _profiles.update { it + profile }
+        save(PROFILES, ListSerializer(Profile.serializer()), _profiles.value)
+        return profile
+    }
+
+    fun updateProfile(profile: Profile) {
+        _profiles.update { list -> list.map { if (it.id == profile.id) profile else it } }
+        save(PROFILES, ListSerializer(Profile.serializer()), _profiles.value)
+    }
+
+    /** Profil löschen (nicht das erste und nicht das aktuelle). */
+    fun deleteProfile(id: Long) {
+        if (id == 0L || id == _profile.value) return
+        _profiles.update { list -> list.filterNot { it.id == id } }
+        save(PROFILES, ListSerializer(Profile.serializer()), _profiles.value)
+        File(dir, userFile(id)).delete()
+    }
+
+    /** Zu Profil [id] wechseln; false bei falscher PIN. */
+    fun switchProfile(id: Long, pin: String = ""): Boolean {
+        val target = _profiles.value.firstOrNull { it.id == id } ?: return false
+        if (target.pin.isNotEmpty() && target.pin != pin) return false
+        if (id == _profile.value) return true
+        save(userFile(_profile.value), UserData.serializer(), _user.value)
+        _profile.value = id
+        _user.value = read(userFile(id), UserData.serializer()) ?: UserData()
+        save(CURRENT_PROFILE, Long.serializer(), id)
+        _guide.value = shifted(rawGuide)
+        return true
+    }
+
     // ---------------------------------------------------------------- Dateien
 
     private fun load() {
         _playlists.value = read(PLAYLISTS, ListSerializer(Playlist.serializer())) ?: emptyList()
-        _user.value = read(USER, UserData.serializer()) ?: UserData()
+        _profiles.value = read(PROFILES, ListSerializer(Profile.serializer())) ?: listOf(Profile(0, "Ich"))
+        _profile.value = _profiles.value.firstOrNull { it.id == (read(CURRENT_PROFILE, Long.serializer()) ?: 0L) }?.id ?: 0L
+        _user.value = read(userFile(_profile.value), UserData.serializer()) ?: UserData()
         _content.value = _playlists.value.mapNotNull { p -> read("content-${p.id}.json.gz", Content.serializer())?.let { p.id to it } }.toMap()
         // Vergangenes nicht wieder laden.
         val now = System.currentTimeMillis()
@@ -387,6 +524,8 @@ class Store(val dir: File) {
     companion object {
         private const val PLAYLISTS = "playlists.json"
         private const val USER = "user.json"
+        private const val PROFILES = "profiles.json"
+        private const val CURRENT_PROFILE = "profile.json"
         private const val GUIDE = "guide.json.gz"
         private const val DAY = 24 * 3_600_000L
         val JSON = Json { ignoreUnknownKeys = true; encodeDefaults = false }
@@ -398,7 +537,7 @@ class Store(val dir: File) {
 }
 
 /** Art der Gruppen (Gruppen ein- und ausblenden). */
-enum class GroupKind(val label: String) { LIVE("Live TV"), MOVIES("Filme"), SERIES("Serien") }
+enum class GroupKind(val label: String, val lockName: String) { LIVE("Live TV", "LIVE"), MOVIES("Filme", "VOD"), SERIES("Serien", "SERIES") }
 
 /** Ein Land in der Länderauswahl: Kürzel, Name, Anzahl Gruppen, gerade sichtbar. */
 data class CountryChoice(val code: String, val label: String, val groups: Int, val visible: Boolean)

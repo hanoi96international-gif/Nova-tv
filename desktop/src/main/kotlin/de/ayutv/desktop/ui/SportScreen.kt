@@ -48,6 +48,27 @@ fun SportScreen(app: AppState) {
         events = withContext(Dispatchers.Default) { SportEvents.of(store.listedChannels(), guide, user.favorites.toSet(), now = now) }
     }
 
+    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    // ☰ / Rechtsklick auf ein Spiel: erinnern, Verein folgen (wie auf dem Fire TV: OK halten = Verein folgen).
+    fun eventMenu(e: SportEvent) {
+        val items = buildList {
+            if (e.programme.start > System.currentTimeMillis()) {
+                val set = store.hasReminder(e.channel, e.programme.start)
+                add(MenuItem(if (set) "⏰ Erinnerung entfernen" else "⏰ Erinnern") {
+                    app.toast(if (store.toggleReminder(e.channel, e.programme)) "Erinnerung um ${clock(e.programme.start)}" else "Erinnerung entfernt")
+                })
+            }
+            e.pairing?.let { de.ayutv.data.parse.Teams.ofPairing(it) }.orEmpty().forEach { team ->
+                val follows = team in user.followedTeams
+                add(MenuItem(if (follows) "Nicht mehr folgen: $team" else "Verein folgen: $team") {
+                    app.toast(if (store.toggleTeam(team)) "Du folgst $team: vor jedem Spiel kommt eine Erinnerung" else "$team entfolgt")
+                })
+            }
+            e.alsoOn.forEach { c -> add(MenuItem("▶ Auf ${c.name}") { app.play(Playback.Live(c, listOf(e.channel) + e.alsoOn)) }) }
+        }
+        if (items.isNotEmpty()) dialog = { MenuDialog(app, e.headline, items, onDismiss = { dialog = null }) }
+    }
+
     val list = events
     when {
         guide.isEmpty() -> Empty("Noch kein TV-Guide. Unter „Einstellungen“ den TV-Guide laden.")
@@ -62,16 +83,17 @@ fun SportScreen(app: AppState) {
             Column(Modifier.fillMaxSize()) {
                 Label("Sport", Type.title, Modifier.padding(bottom = 8.dp))
                 LazyColumn(Modifier.fillMaxSize()) {
-                    section("Jetzt live", running, app, scores, matches, now)
-                    section("Heute", todayList, app, scores, matches, now)
-                    section("Morgen", tomorrow, app, scores, matches, now)
+                    section("Jetzt live", running, app, scores, matches, now, ::eventMenu)
+                    section("Heute", todayList, app, scores, matches, now, ::eventMenu)
+                    section("Morgen", tomorrow, app, scores, matches, now, ::eventMenu)
                 }
             }
         }
     }
+    dialog?.invoke()
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String, events: List<SportEvent>, app: AppState, scores: LiveScores, matches: List<LiveScores.Match>, now: Long) {
+private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String, events: List<SportEvent>, app: AppState, scores: LiveScores, matches: List<LiveScores.Match>, now: Long, onMenu: (SportEvent) -> Unit) {
     if (events.isEmpty()) return
     item(key = "h$title") { Label(title, Type.heading, Modifier.padding(top = 14.dp, bottom = 4.dp)) }
     items(events, key = { "$title|${it.channel.key}|${it.programme.start}" }) { e ->
@@ -89,6 +111,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String
             title = (if (p.start <= now) "🔴 " else "") + e.headline + score,
             subtitle = "${clock(p.start)} – ${clock(p.stop)} · ${e.channel.name}$also",
             onClick = { app.play(Playback.Live(e.channel, listOf(e.channel) + e.alsoOn)) },
+            onMenu = { onMenu(e) },
             leading = { Logo(e.channel.logo) },
         )
     }

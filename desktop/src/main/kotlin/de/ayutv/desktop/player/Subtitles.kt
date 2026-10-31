@@ -35,8 +35,8 @@ class Subtitles(private val http: OkHttpClient, private val dir: File) {
             dir.mkdirs()
             val cached = File(dir, "${safe(key)}.$language.srt")
             if (cached.isFile && cached.length() > 0) return@withContext Found(cached, "gespeichert")
-            val apiKey = openSubtitlesKey.ifBlank { builtInKey() }
-            if (apiKey.isBlank()) throw IOException("Kein OpenSubtitles-Schlüssel. Bitte unter Einstellungen eintragen.")
+            val apiKey = openSubtitlesKey.trim()
+            if (apiKey.isBlank()) throw IOException("Kein OpenSubtitles-Schlüssel. Bitte unter Einstellungen eintragen oder die Sicherung vom Fire TV übernehmen.")
 
             progress("Suche Untertitel bei OpenSubtitles …")
             val query = queryOf(title)
@@ -136,9 +136,5 @@ class Subtitles(private val http: OkHttpClient, private val dir: File) {
         private const val API = "https://api.opensubtitles.com/api/v1"
         private const val DEEPL_BATCH = 50
         private val JSON = "application/json".toMediaType()
-
-        /** Schlüssel der App (beim Bauen aus dem CI-Geheimnis eingesetzt, nicht im Quelltext). */
-        fun builtInKey(): String =
-            Subtitles::class.java.getResourceAsStream("/opensubtitles.key")?.use { it.readBytes().decodeToString().trim() }.orEmpty()
     }
 }

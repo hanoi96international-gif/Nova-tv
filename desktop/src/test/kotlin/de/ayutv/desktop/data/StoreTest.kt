@@ -132,6 +132,74 @@ class StoreTest {
     }
 
     @Test
+    fun remindersAndTeams() {
+        val s = store().withChannels(channel(1, "Sport"))
+        val c = s.channels().first()
+        val p = Programme(System.currentTimeMillis() + 3_600_000, System.currentTimeMillis() + 7_200_000, "Dortmund – Schalke")
+        assertTrue(s.toggleReminder(c, p))
+        assertTrue(s.hasReminder(c, p.start))
+        assertEquals(false, s.toggleReminder(c, p))
+        assertTrue(s.user.value.reminders.isEmpty())
+        assertTrue(s.toggleTeam("Borussia Dortmund"))
+        assertEquals(setOf("Borussia Dortmund"), s.user.value.followedTeams)
+        assertEquals(false, s.toggleTeam("Borussia Dortmund"))
+    }
+
+    @Test
+    fun archiveUrlForXtream() {
+        val s = store()
+        s.savePlaylist(Playlist(1, "X", PlaylistType.XTREAM, "http://h:8080", timezone = "UTC"))
+        val c = Channel("1:c:5", 1, "Sender", "G", url = "http://h:8080/live/u/p/5.ts", catchupDays = 3)
+        s.setContent(1, Store.Content(listOf(c)))
+        val start = 1_704_139_200_000L
+        assertEquals("http://h:8080/timeshift/u/p/60/2024-01-01:20-00/5.ts", s.archiveUrl(c, start, start + 3_600_000, start + 7_200_000))
+        assertEquals(null, s.archiveUrl(c.copy(catchupDays = 0), start, start + 3_600_000, start + 7_200_000))
+    }
+
+    @Test
+    fun lockedGroupsDisappearEverywhereUntilUnlocked() {
+        val s = store().withChannels(channel(1, "Erwachsene"), channel(2, "News"))
+        s.toggleFavorite("1:c:1")
+        s.createGroup("Meine", listOf("1:c:1"))
+        s.updateUser { it.copy(parentalPin = "1234") }
+        s.setLocked(GroupKind.LIVE, "Erwachsene", lock = true)
+        assertEquals(listOf("1:c:2"), s.allVisible().map { it.key })
+        assertEquals(listOf("1:c:2"), s.listedChannels().map { it.key })
+        assertTrue(s.favorites().isEmpty())
+        assertEquals(listOf("News"), s.liveGroups().map { it.first })
+        assertEquals(false, s.unlock("0000"))
+        assertTrue(s.unlock("1234"))
+        assertEquals(2, s.allVisible().size)
+        s.relock()
+        assertEquals(1, s.allVisible().size)
+        // Die Entsperrung wird nicht gespeichert.
+        assertTrue(Store.JSON.encodeToString(UserData.serializer(), s.user.value.copy(parentalUnlocked = true)).contains("parentalUnlocked").not())
+    }
+
+    @Test
+    fun profilesKeepOwnFavoritesAndSurviveRestart() {
+        val dir = Files.createTempDirectory("dna-store").toFile()
+        val s = Store(dir).withChannels(channel(1, "A"), channel(2, "A"))
+        s.toggleFavorite("1:c:1")
+        s.updateUser { it.copy(deeplKey = "geheim") }
+        val kids = s.createProfile("Kinder", pin = "")
+        val parents = s.createProfile("Eltern", pin = "4711")
+        assertTrue(s.switchProfile(kids.id))
+        assertTrue(s.favorites().isEmpty())
+        assertEquals("geheim", s.user.value.deeplKey)
+        s.toggleFavorite("1:c:2")
+        assertEquals(false, s.switchProfile(parents.id, "0000"))
+        assertTrue(s.switchProfile(0))
+        assertEquals(listOf("1:c:1"), s.favorites().map { it.key })
+        assertTrue(s.switchProfile(kids.id))
+        // Nach einem Neustart: dasselbe Profil, dieselben Favoriten.
+        val again = Store(dir)
+        assertEquals(kids.id, again.profile.value)
+        assertEquals(listOf("1:c:2"), again.user.value.favorites)
+        assertEquals(3, again.profiles.value.size)
+    }
+
+    @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))
         assertEquals(listOf("x", "y"), Ordering.apply(listOf("y", "x"), listOf("x")) { it })

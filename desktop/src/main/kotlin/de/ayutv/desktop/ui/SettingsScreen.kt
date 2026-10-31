@@ -48,10 +48,14 @@ fun SettingsScreen(app: AppState) {
     var importing by remember { mutableStateOf(false) }
     var groupsOf by remember { mutableStateOf<Playlist?>(null) }
     var countries by remember { mutableStateOf(false) }
-    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    val dialogState = remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    var dialog by dialogState
 
     LazyColumn(Modifier.fillMaxSize()) {
         item { ScreenHeader("Einstellungen", "OK ändert · ☰ Menü einer Playlist") }
+
+        item { Section("Update") }
+        item { UpdateSection(app) }
 
         item { Section("Fernbedienung") }
         item { RemoteSection(app) }
@@ -109,11 +113,45 @@ fun SettingsScreen(app: AppState) {
             }
             Label(BufferProfile.of(user.bufferProfile).hint, Type.small)
             Spacer(Modifier.height(8.dp))
+            Label("HDR-Anpassung (HDR10/HLG auf normalem Bildschirm)", Type.body)
+            Row(Modifier.padding(vertical = 4.dp)) {
+                HDR_MODES.forEach { (value, label) ->
+                    Selectable({ app.store.updateUser { it.copy(hdrMode = value) }; app.applyBuffer() }, selected = user.hdrMode == value) { Label(label) }
+                    Spacer(Modifier.width(6.dp))
+                }
+            }
+            Label(
+                if (app.player.gpuVideo) "Videoausgabe: Grafikkarte (schnell, auch für 4K). Automatisch: HEVC/AV1 mit 10 Bit in 4K gilt als HDR10."
+                else "Videoausgabe: RGB (kompatibel; die Grafik kann den schnellen Weg nicht). HDR wird nicht angepasst.",
+                Type.small, maxLines = 2,
+            )
+            Spacer(Modifier.height(8.dp))
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
             }
             Toggle("Im Bild schalten ↑/↓ um (aus: ↑/↓ öffnen die Senderliste)", user.zapWithUpDown) {
                 app.store.updateUser { u -> u.copy(zapWithUpDown = !u.zapWithUpDown) }
+            }
+        }
+
+        item { Section("Abgleich mit dem Fire TV") }
+        item {
+            Column(Modifier.width(560.dp)) {
+                Label("Favoriten und Verlauf (Weiter schauen, zuletzt gesehen) zwischen PC und Fire TV abgleichen, wie mit dem Handy. Adresse und PIN: Fire TV → Einstellungen → Handy als Fernbedienung.", Type.small, maxLines = 3)
+                Row {
+                    Field("Adresse des Fire TV (z. B. http://192.168.178.40:8096)", user.syncAddress, { v -> app.store.updateUser { it.copy(syncAddress = v.trim()) } }, Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    Field("PIN", user.syncPin, { v -> app.store.updateUser { it.copy(syncPin = v.filter(Char::isLetterOrDigit).take(12)) } }, Modifier.width(120.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton("⇄ Jetzt abgleichen", {
+                        if (user.syncAddress.isBlank() || user.syncPin.isBlank()) return@TextButton app.toast("Bitte Adresse und PIN des Fire TV eintragen")
+                        app.scope.launch { app.syncDevices() }
+                    }, primary = true)
+                    Spacer(Modifier.width(12.dp))
+                    app.deviceSyncStatus?.let { Label(it, Type.small, maxLines = 2) }
+                }
+                Toggle("Automatisch alle 30 Minuten abgleichen", user.autoSync) { app.store.updateUser { u -> u.copy(autoSync = !u.autoSync) } }
             }
         }
 
@@ -144,13 +182,53 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Profile") }
+        item { ProfileSection(app, dialogState) }
+
+        item { Section("Aufnahmen") }
+        item {
+            Column(Modifier.width(760.dp)) {
+                Label("Ordner: ${app.recorder.folder.absolutePath}. Aufnehmen: im TV-Guide eine Sendung öffnen → „Aufnehmen“, im Bild ☰ → „aufnehmen“. Jede laufende Aufnahme braucht beim Anbieter eine weitere Verbindung.", Type.small, maxLines = 3)
+                user.recordings.sortedByDescending { it.start }.forEach { r ->
+                    val state = when (r.state) {
+                        de.ayutv.desktop.data.Recording.PLANNED -> "geplant ${DATE_TIME.format(Instant.ofEpochMilli(r.start))}"
+                        de.ayutv.desktop.data.Recording.RUNNING -> "⏺ läuft"
+                        de.ayutv.desktop.data.Recording.DONE -> "fertig"
+                        else -> "fehlgeschlagen"
+                    }
+                    ListRow("${r.channelName}: ${r.title}", {
+                        if (r.state == de.ayutv.desktop.data.Recording.DONE) app.playRecording(r)
+                    }, subtitle = state, trailing = "☰ Löschen", onMenu = {
+                        app.removeRecording(r, deleteFile = r.state != de.ayutv.desktop.data.Recording.RUNNING)
+                        app.toast(if (r.state == de.ayutv.desktop.data.Recording.RUNNING) "Aufnahme beendet" else "Aufnahme gelöscht")
+                    })
+                }
+            }
+        }
+
+        item { Section("Kindersicherung") }
+        item { ParentalSection(app, dialogState) }
+
+        item { Section("Erinnerungen") }
+        item {
+            val upcoming = user.reminders.filter { it.start > System.currentTimeMillis() }.sortedBy { it.start }
+            Label(
+                if (upcoming.isEmpty()) "Keine Erinnerungen. Im TV-Guide eine kommende Sendung öffnen → „Erinnern“, im Sport ☰ → „Verein folgen“."
+                else "${upcoming.size} Erinnerungen, die nächste: ${upcoming.first().title} (${clock(upcoming.first().start)}, ${upcoming.first().channelName})",
+                Type.small, maxLines = 2,
+            )
+            user.followedTeams.sorted().forEach { team ->
+                ListRow("⚽  $team", { app.store.toggleTeam(team) }, Modifier.width(760.dp), trailing = "OK = nicht mehr folgen")
+            }
+        }
+
         item { Section("Proxy") }
         item { ProxySection(app, playlists) }
 
         item { Section("Untertitel und Übersetzung") }
         item {
             Column(Modifier.width(520.dp)) {
-                Field("Eigener OpenSubtitles-Schlüssel (optional, sonst der der App)", user.openSubtitlesKey, { v -> app.store.updateUser { it.copy(openSubtitlesKey = v.trim()) } }, secret = true)
+                Field("OpenSubtitles-Schlüssel (eigener, kommt auch mit der Sicherung vom Fire TV)", user.openSubtitlesKey, { v -> app.store.updateUser { it.copy(openSubtitlesKey = v.trim()) } }, secret = true)
                 Field("DeepL-Schlüssel", user.deeplKey, { v -> app.store.updateUser { it.copy(deeplKey = v.trim()) } }, secret = true)
                 Field("Untertitel-Sprache (z. B. de)", user.subtitleLanguage, { v -> app.store.updateUser { it.copy(subtitleLanguage = v.trim().lowercase().take(5)) } })
             }
@@ -179,6 +257,11 @@ fun SettingsScreen(app: AppState) {
             )
             Spacer(Modifier.height(8.dp))
             Label("Daten: ${app.store.dir.absolutePath}", Type.small)
+            Spacer(Modifier.height(6.dp))
+            TextButton("Protokoll öffnen", {
+                val file = de.ayutv.desktop.Log.current
+                runCatching { java.awt.Desktop.getDesktop().open(file) }.onFailure { app.toast("Protokoll: ${file?.absolutePath}") }
+            })
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -193,6 +276,110 @@ fun SettingsScreen(app: AppState) {
 @Composable
 private fun Section(title: String) {
     Label(title, Type.heading, Modifier.padding(top = 22.dp, bottom = 6.dp))
+}
+
+/** Profile: eigene Favoriten, Gruppen und Verlauf je Person; optional mit PIN. */
+@Composable
+private fun ProfileSection(app: AppState, dialogState: androidx.compose.runtime.MutableState<(@Composable () -> Unit)?>) {
+    val profiles by app.store.profiles.collectAsState()
+    val current by app.store.profile.collectAsState()
+    var dialog by dialogState
+    Column(Modifier.width(760.dp)) {
+        Label("Jedes Profil hat eigene Favoriten, eigene Gruppen, Verlauf und Erinnerungen. Playlists und Einstellungen werden beim Anlegen übernommen. Beim Start fragt DnA-TV, wer schaut.", Type.small, maxLines = 2)
+        profiles.forEach { p ->
+            ListRow(
+                "👤  ${p.name}" + if (p.pin.isNotEmpty()) "  🔒" else "",
+                onClick = { app.switchProfile(p.id).also { ok -> if (!ok) dialog = { PinDialog(app, "PIN für „${p.name}“", { app.switchProfile(p.id, it) }, { dialog = null }) } } },
+                subtitle = if (p.id == current) "aktiv" else null,
+                trailing = "☰ Menü",
+                onMenu = {
+                    dialog = {
+                        MenuDialog(app, p.name, buildList {
+                            add(MenuItem("Umbenennen") { dialog = { NameDialog(app, "Profil umbenennen", p.name, { app.store.updateProfile(p.copy(name = it)) }, { dialog = null }) } })
+                            add(MenuItem(if (p.pin.isEmpty()) "🔒 PIN festlegen" else "PIN entfernen") {
+                                if (p.pin.isNotEmpty()) app.store.updateProfile(p.copy(pin = ""))
+                                else dialog = { NameDialog(app, "PIN für „${p.name}“ (Ziffern)", onDone = { pin -> app.store.updateProfile(p.copy(pin = pin.filter(Char::isDigit))) }, onDismiss = { dialog = null }) }
+                            })
+                            if (p.id != 0L && p.id != current) add(MenuItem("Löschen") { app.store.deleteProfile(p.id) })
+                        }, onDismiss = { if (dialog != null) dialog = null })
+                    }
+                },
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        TextButton("＋ Profil anlegen", { dialog = { NameDialog(app, "Neues Profil", onDone = { app.store.createProfile(it) }, onDismiss = { dialog = null }) } })
+    }
+}
+
+/** PIN festlegen, gesperrte Gruppen zeigen, bis zum Beenden entsperren. Gesperrte Gruppen fehlen überall. */
+@Composable
+private fun ParentalSection(app: AppState, dialogState: androidx.compose.runtime.MutableState<(@Composable () -> Unit)?>) {
+    val user = app.store.user.collectAsState().value
+    var dialog by dialogState
+    Column(Modifier.width(760.dp)) {
+        Label(
+            when {
+                user.parentalPin.isEmpty() -> "Keine PIN. Mit PIN lassen sich Gruppen sperren (☰ auf einer Gruppe → „Mit PIN sperren“)."
+                user.parentalUnlocked -> "Entsperrt bis zum Beenden. ${user.lockedGroups.size} gesperrte Gruppen sind gerade sichtbar."
+                else -> "${user.lockedGroups.size} Gruppen gesperrt. Sie fehlen in Listen, Suche, Sport, TV-Guide und Favoriten."
+            },
+            Type.small, maxLines = 2,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row {
+            if (user.parentalPin.isEmpty()) {
+                TextButton("PIN festlegen …", {
+                    dialog = { NameDialog(app, "Neue PIN (nur Ziffern)", onDone = { pin ->
+                        val digits = pin.filter(Char::isDigit)
+                        if (digits.length < 4) app.toast("Bitte mindestens 4 Ziffern") else { app.store.updateUser { it.copy(parentalPin = digits) }; app.toast("PIN gespeichert") }
+                    }, onDismiss = { dialog = null }) }
+                })
+            } else {
+                if (user.parentalUnlocked) TextButton("🔒 Wieder sperren", { app.store.relock() }, primary = true)
+                else TextButton("🔓 Entsperren …", { dialog = { PinDialog(app, "PIN eingeben", { app.store.unlock(it) }, { dialog = null }) } }, primary = true)
+                Spacer(Modifier.width(8.dp))
+                TextButton("PIN und Sperren entfernen …", {
+                    dialog = { PinDialog(app, "Zum Entfernen die PIN eingeben", { pin ->
+                        (pin == user.parentalPin).also { ok -> if (ok) app.store.updateUser { it.copy(parentalPin = "", lockedGroups = emptySet(), parentalUnlocked = false) } }
+                    }, { dialog = null }) }
+                })
+            }
+        }
+        if (user.parentalUnlocked) user.lockedGroups.sorted().forEach { key ->
+            val (kind, _, name) = key.split('|', limit = 3).let { Triple(it.getOrElse(0) { "" }, it.getOrElse(1) { "" }, it.getOrElse(2) { key }) }
+            val groupKind = de.ayutv.desktop.data.GroupKind.entries.firstOrNull { it.lockName == kind } ?: de.ayutv.desktop.data.GroupKind.LIVE
+            ListRow("🔒  $name", { app.store.setLocked(groupKind, name, lock = false) }, trailing = "${groupKind.label} · OK = freigeben")
+        }
+    }
+}
+
+/** Version und Updates (wie auf dem Fire TV über die Releases bei GitHub). */
+@Composable
+private fun UpdateSection(app: AppState) {
+    val updater = app.updater
+    val state = updater.state
+    Column(Modifier.width(760.dp)) {
+        Label(
+            "Installiert: ${updater.currentVersion} · " + when (state) {
+                de.ayutv.desktop.update.Updater.State.Idle -> "noch nicht geprüft"
+                de.ayutv.desktop.update.Updater.State.Checking -> "prüfe …"
+                de.ayutv.desktop.update.Updater.State.UpToDate -> "aktuell"
+                is de.ayutv.desktop.update.Updater.State.Available -> "Version ${state.release.version} verfügbar"
+                is de.ayutv.desktop.update.Updater.State.Downloading -> "lädt ${state.release.version}: ${state.percent} %"
+                is de.ayutv.desktop.update.Updater.State.Failed -> state.message
+            },
+            Type.body,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row {
+            if (state is de.ayutv.desktop.update.Updater.State.Available) {
+                TextButton("Jetzt installieren", { app.installUpdate(state.release) }, primary = true)
+                Spacer(Modifier.width(8.dp))
+            }
+            TextButton("Nach Updates suchen", { app.scope.launch { app.updater.check(force = true) } })
+        }
+        Label("Der Installer ersetzt die App, Playlists und Einstellungen bleiben. Bei der ZIP-Fassung den Installer nehmen oder die neue ZIP entpacken.", Type.small, maxLines = 2)
+    }
 }
 
 /** Ein/Aus-Schalter als Zeile (OK oder Klick schaltet um). */

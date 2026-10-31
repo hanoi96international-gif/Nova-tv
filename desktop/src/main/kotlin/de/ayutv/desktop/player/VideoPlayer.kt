@@ -89,6 +89,7 @@ class VideoPlayer {
             private fun mine(mediaPlayer: MediaPlayer) = mediaPlayer === player
             override fun playing(mediaPlayer: MediaPlayer) = ui {
                 if (!mine(mediaPlayer)) return@ui
+                detectHdr(mediaPlayer)
                 playing = true; buffering = false; error = null; paused = false; readTracks()
                 // Lautstärke gilt je Player: beim Wechsel mitnehmen.
                 if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
@@ -98,9 +99,16 @@ class VideoPlayer {
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { if (mine(mediaPlayer)) buffering = newCache < 100f }
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { if (mine(mediaPlayer)) positionMs = newTime }
             override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { if (mine(mediaPlayer)) durationMs = newLength }
-            override fun error(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { error = "Der Stream lässt sich nicht abspielen"; playing = false } }
+            override fun error(mediaPlayer: MediaPlayer) = ui {
+                if (mine(mediaPlayer)) {
+                    error = "Der Stream lässt sich nicht abspielen"; playing = false
+                    de.ayutv.desktop.Log.warn("VLC-Fehler: ${runCatching { mediaPlayer.media().info().mrl() }.getOrNull().orEmpty()}")
+                }
+            }
             override fun finished(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; onFinished?.invoke() } }
-            override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.media.TrackType, id: Int) = ui { if (mine(mediaPlayer)) readTracks() }
+            override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.media.TrackType, id: Int) = ui {
+                if (mine(mediaPlayer)) { readTracks(); detectHdr(mediaPlayer) }
+            }
         })
     }
 
@@ -128,6 +136,8 @@ class VideoPlayer {
         buffering = true
         paused = false
         hasVideo = true
+        looksHdr = false
+        updateTransfer()
         positionMs = startMs
         durationMs = 0
         startupMs = 0
@@ -164,6 +174,11 @@ class VideoPlayer {
                 corrupted = stats?.demuxCorrupted() ?: 0,
                 startupMs = startupMs,
                 cacheMs = networkCacheMs,
+                output = (if (gpuVideo) "Grafikkarte (YUV)" else "RGB") + when (transfer) {
+                    YuvVideo.Transfer.PQ -> ", HDR10 angepasst"
+                    YuvVideo.Transfer.HLG -> ", HLG angepasst"
+                    YuvVideo.Transfer.SDR -> ""
+                },
             )
         }.getOrNull()
     }
@@ -213,11 +228,12 @@ class VideoPlayer {
     fun stop() {
         player?.controls()?.stop()
         tap.close()
-        frame = null
+        clearFrames()
         playing = false
     }
 
     fun release() {
+        clearFrames()
         runCatching { normal?.controls()?.stop() }
         runCatching { tapped?.controls()?.stop() }
         tap.close()
@@ -233,15 +249,69 @@ class VideoPlayer {
         subtitleTracks = p.subpictures().trackDescriptions().map { it.id() to it.description() }
     }
 
+    // ---------------------------------------------------------------- Bilder
+
+    /** Schneller Weg (YUV + Shader auf der Grafikkarte); false = RGB wie früher (falls die Grafik den Shader nicht kann). */
+    val gpuVideo: Boolean = YuvVideo.available && System.getProperty("dnatv.video") != "rgb"
+    /** Aktuelles Bild auf dem schnellen Weg (die Oberfläche zeichnet es, siehe VideoView). */
+    private val yuv = java.util.concurrent.atomic.AtomicReference<YuvFrame?>(null)
+    fun currentFrame(): YuvFrame? = yuv.get()
+    /** Zählt jedes neue Bild (die Oberfläche zeichnet dann neu, ohne alles neu aufzubauen). */
+    var frameTick by mutableLongStateOf(0L); private set
+    /** Es gibt ein Bild (gleich welcher Weg). */
+    var hasFrame by mutableStateOf(false); private set
+
+    /** Seitenverhältnis, wie VLC es meldet (anamorphes SD: 720×576 als 16:9). */
+    @Volatile private var aspect = 16f / 9f
+    @Volatile private var planeWidth = 0
+    @Volatile private var planeHeight = 0
+
+    /** HDR-Art des laufenden Streams (für den Shader); aus Einstellung und Codec bestimmt. */
+    @Volatile var transfer = YuvVideo.Transfer.SDR; private set
+    /** Einstellung: AUTO (HEVC/AV1 10 Bit ab 4K = HDR10), PQ, HLG, OFF. */
+    @Volatile var hdrMode = "AUTO"
+        set(value) { field = value; updateTransfer() }
+    @Volatile private var looksHdr = false
+
+    private fun updateTransfer() {
+        transfer = when (hdrMode) {
+            "PQ" -> YuvVideo.Transfer.PQ
+            "HLG" -> YuvVideo.Transfer.HLG
+            "OFF" -> YuvVideo.Transfer.SDR
+            else -> if (looksHdr) YuvVideo.Transfer.PQ else YuvVideo.Transfer.SDR
+        }
+    }
+
+    /** VLC 3 meldet keine HDR-Kennung: 10 Bit (Profil Main 10) bei HEVC/AV1 in UHD gilt als HDR10. */
+    private fun detectHdr(p: MediaPlayer) {
+        val track = runCatching { p.media().info().videoTracks().firstOrNull() }.getOrNull() ?: return
+        val codec = track.codecName().orEmpty().lowercase()
+        val hevcMain10 = (codec.contains("hevc") || codec.contains("h265")) && track.profile() == 2
+        val av1 = codec.contains("av01") || codec.contains("av1")
+        looksHdr = (hevcMain10 || av1) && track.height() >= 2000
+        updateTransfer()
+    }
+
     private inner class Format : BufferFormatCallback {
         override fun getBufferFormat(sourceWidth: Int, sourceHeight: Int): BufferFormat {
+            aspect = if (sourceHeight > 0) sourceWidth.toFloat() / sourceHeight else 16f / 9f
+            planeWidth = sourceWidth
+            planeHeight = sourceHeight
+            if (gpuVideo) {
+                // I420: drei Ebenen, VLC rechnet nichts in RGB um (bei Hardware-Dekodierung nur Umsortieren).
+                val (pitches, lines) = YuvVideo.planes(sourceWidth, sourceHeight)
+                return BufferFormat("I420", sourceWidth, sourceHeight, pitches, lines)
+            }
             info = ImageInfo(sourceWidth, sourceHeight, ColorType.BGRA_8888, ColorAlphaType.PREMUL)
             pixels = ByteArray(sourceWidth * sourceHeight * 4)
             bitmap = Bitmap().apply { allocPixels(info!!) }
             return RV32BufferFormat(sourceWidth, sourceHeight)
         }
 
-        override fun newFormatSize(bufferWidth: Int, bufferHeight: Int, displayWidth: Int, displayHeight: Int) = Unit
+        override fun newFormatSize(bufferWidth: Int, bufferHeight: Int, displayWidth: Int, displayHeight: Int) {
+            if (displayWidth > 0 && displayHeight > 0) aspect = displayWidth.toFloat() / displayHeight
+        }
+
         override fun allocatedBuffers(buffers: Array<out ByteBuffer>) = Unit
     }
 
@@ -250,14 +320,8 @@ class VideoPlayer {
         override fun unlock(mediaPlayer: MediaPlayer) = Unit
 
         override fun display(mediaPlayer: MediaPlayer, nativeBuffers: Array<out ByteBuffer>, bufferFormat: BufferFormat, displayWidth: Int, displayHeight: Int) {
-            val target = bitmap ?: return
-            val imageInfo = info ?: return
-            val buffer = nativeBuffers[0]
-            buffer.rewind()
-            if (buffer.remaining() < pixels.size) return
-            buffer.get(pixels)
-            target.installPixels(imageInfo, pixels, imageInfo.width * 4)
-            val image = target.asComposeImageBitmap()
+            if (mediaPlayer !== player) return
+            if (gpuVideo) showYuv(nativeBuffers, bufferFormat, displayWidth, displayHeight) else showRgb(nativeBuffers)
             framesRendered.incrementAndGet()
             val now = System.currentTimeMillis()
             lastFrameAt = now
@@ -265,8 +329,51 @@ class VideoPlayer {
                 val took = (now - startedAt).coerceAtLeast(1)
                 ui { if (startupMs == 0L) startupMs = took }
             }
-            ui { frame = image }
         }
+
+        private fun showYuv(buffers: Array<out ByteBuffer>, format: BufferFormat, displayWidth: Int, displayHeight: Int) {
+            if (buffers.size < 3) return
+            val w = planeWidth.takeIf { it > 0 } ?: format.width
+            val h = planeHeight.takeIf { it > 0 } ?: format.height
+            val pitches = format.pitches
+            val frame = runCatching {
+                YuvFrame(
+                    YuvVideo.copyPlane(buffers[0], pitches[0], w, h),
+                    YuvVideo.copyPlane(buffers[1], pitches[1], (w + 1) / 2, (h + 1) / 2),
+                    YuvVideo.copyPlane(buffers[2], pitches[2], (w + 1) / 2, (h + 1) / 2),
+                    w, h,
+                    if (displayWidth > 0 && displayHeight > 0 && (displayWidth != w || displayHeight != h)) displayWidth.toFloat() / displayHeight else aspect,
+                    transfer,
+                )
+            }.getOrNull() ?: return
+            val old = yuv.getAndSet(frame)
+            // Das vorige Bild erst freigeben, wenn die Oberfläche es nicht mehr zeichnet (gleicher Thread).
+            ui {
+                old?.close()
+                frameTick++
+                if (!hasFrame) hasFrame = true
+            }
+        }
+
+        private fun showRgb(buffers: Array<out ByteBuffer>) {
+            val target = bitmap ?: return
+            val imageInfo = info ?: return
+            val buffer = buffers[0]
+            buffer.rewind()
+            if (buffer.remaining() < pixels.size) return
+            buffer.get(pixels)
+            target.installPixels(imageInfo, pixels, imageInfo.width * 4)
+            val image = target.asComposeImageBitmap()
+            ui { frame = image; if (!hasFrame) hasFrame = true }
+        }
+    }
+
+    /** Bilder des vorigen Streams verwerfen (kein altes Standbild beim nächsten). */
+    private fun clearFrames() {
+        val old = yuv.getAndSet(null)
+        ui { old?.close() }
+        frame = null
+        hasFrame = false
     }
 
     private inline fun ui(crossinline block: () -> Unit) = SwingUtilities.invokeLater { block() }
@@ -314,6 +421,8 @@ data class StreamInfo(
     val corrupted: Int,
     val startupMs: Long,
     val cacheMs: Int,
+    /** Videoweg und HDR („Grafikkarte, HDR10 angepasst“). */
+    val output: String = "–",
 ) {
     val resolution: String get() = when {
         height >= 2000 -> "4K (${width}×$height)"
@@ -326,6 +435,7 @@ data class StreamInfo(
     /** Zeilen für die Anzeige. */
     fun lines(): List<Pair<String, String>> = listOf(
         "Auflösung" to resolution,
+        "Ausgabe" to output,
         "Bildrate" to if (fps > 0) "%.3f fps".format(java.util.Locale.GERMAN, fps).replace(",000", "") else "–",
         "Video" to videoCodec.ifBlank { "–" },
         "Ton" to (audioCodec.ifBlank { "–" } + if (audioChannels > 0) ", ${channelsLabel(audioChannels)}" else ""),

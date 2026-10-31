@@ -5,7 +5,6 @@ import de.ayutv.data.net.ProxyConfig
 import de.ayutv.data.net.ProxyMode
 import de.ayutv.data.net.ProxyType
 import android.content.Context
-import de.ayutv.BuildConfig
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -188,7 +187,8 @@ data class AppSettings(
         )
 
     /** Eigener Schlüssel aus den Einstellungen, sonst der in die App eingebaute. */
-    val openSubtitlesApiKey: String get() = openSubtitlesKey.trim().ifEmpty { BuildConfig.OPENSUBTITLES_API_KEY }
+    /** Nur der eigene Schlüssel des Nutzers (die App bringt keinen mit). */
+    val openSubtitlesApiKey: String get() = openSubtitlesKey.trim()
     val onlineSubtitlesEnabled: Boolean get() = onlineSubtitles && openSubtitlesApiKey.isNotBlank()
     val translationEnabled: Boolean get() = translationProvider != TranslationProvider.NONE
 

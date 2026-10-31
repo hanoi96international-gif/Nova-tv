@@ -13,16 +13,15 @@ android {
         // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
         minSdk = 24
         targetSdk = 35
-        versionCode = 52
-        versionName = "0.41.0"
+        versionCode = 53
+        versionName = "0.42.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
         }
-        // App-Schlüssel für OpenSubtitles (GitHub-Secret OPENSUBTITLES_API_KEY). Damit funktionieren
-        // Online-Untertitel auf jedem Gerät ohne Einrichtung; ein eigener Schlüssel hat Vorrang.
-        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${System.getenv("OPENSUBTITLES_API_KEY").orEmpty().trim()}\"")
+        // Bewusst KEIN eingebauter Schlüssel (OpenSubtitles, DeepL o. Ä.): Die App enthält keinerlei Zugangsdaten.
+        // Schlüssel kommen nur vom Nutzer (Einrichtung per Handy) oder aus seiner übertragenen Sicherung.
     }
 
     // Fester Schlüssel für alle Builds (Debug, Release, CI): Jede neue Version lässt sich über die

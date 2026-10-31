@@ -498,12 +498,13 @@ class DeviceTourTest {
 
         // 4. Film: Untertitel standardmäßig aus, eingebettete englische Spur einschalten
         val movie = runBlocking { container.db.vod().search("", 5) }.firstOrNull()
-        // OpenSubtitles (eingebauter Schlüssel): Zugang gültig, Suche nach einem bekannten Film liefert Treffer.
-        // Danach aus, damit die Übersetzungstests nicht von zufälligen Online-Treffern abhängen.
+        // Die App bringt keinerlei Zugangsdaten mit: ohne eigene Eingabe oder übertragene Sicherung ist kein
+        // OpenSubtitles- oder DeepL-Schlüssel gesetzt. Danach aus, damit die Übersetzungstests nicht von Online-Treffern abhängen.
         section("opensubtitles") {
             val settings = runBlocking { container.settings.current() }
             if (settings.openSubtitlesApiKey.isBlank()) {
-                log("opensubtitles: kein eingebauter Schlüssel (GitHub-Secret fehlt)")
+                log("opensubtitles: kein Schlüssel (die App enthält bewusst keinen)")
+                assertTrue("Die App darf keinen DeepL-Schlüssel mitbringen", settings.deeplKey.isBlank())
             } else {
                 val check = runBlocking { de.ayutv.data.setup.KeyCheck.run(container.http, settings) }
                 val german = runBlocking { container.subtitles.countResults("Inception (2010)", "de", settings) }

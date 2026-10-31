@@ -60,6 +60,8 @@ sealed interface Playback {
         val series: Series? = null,
         val episodes: List<Pair<XtreamEpisode, String>> = emptyList(),
         val episodeId: String? = null,
+        /** Aus dem Archiv (Catch-up): kein Wiedergabestand, „Live“ springt zum Sender zurück. */
+        val archive: Channel? = null,
     ) : Playback
 }
 
@@ -70,6 +72,14 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
     val remote = PhoneRemote(store, input) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
     var remoteAddress by mutableStateOf<String?>(null); private set
+    val updater = de.ayutv.desktop.update.Updater(sync.http)
+    val deviceSync = de.ayutv.desktop.data.DeviceSync(store, sync.http)
+    val recorder = de.ayutv.desktop.player.Recorder()
+    val channelCheck = de.ayutv.desktop.player.ChannelCheck(store)
+    /** Zuletzt etwas abgespielt (der Sender-Check wartet danach 5 Minuten). */
+    @Volatile private var lastPlaybackAt = System.currentTimeMillis()
+    /** Ergebnis des letzten Abgleichs mit dem Fire TV (für die Einstellungen). */
+    var deviceSyncStatus by mutableStateOf<String?>(null); private set
 
     /** Handy-Fernbedienung ein-/ausschalten (Windows fragt beim ersten Mal nach der Firewall-Freigabe). */
     fun setPhoneRemote(on: Boolean) {
@@ -88,6 +98,28 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     /** Live TV: zuletzt gewählte Gruppe und Sender (nach dem Schauen geht es dort weiter). */
     var liveGroup: GroupRef? = null
     var liveFocus: String? = null
+    /** Erinnerung, die gerade fällig ist (Dialog „Umschalten?“). */
+    var dueReminder by mutableStateOf<de.ayutv.desktop.data.Reminder?>(null)
+    private val shownReminders = HashSet<String>()
+    /** Profilauswahl zeigen (beim Start, wenn es mehrere Profile gibt, und aus der Navigation). */
+    var choosingProfile by mutableStateOf(store.profiles.value.size > 1)
+
+    /** Zu einem anderen Profil wechseln (Wiedergabe endet, Startseite). false = falsche PIN. */
+    fun switchProfile(id: Long, pin: String = ""): Boolean {
+        if (id == store.profile.value) { choosingProfile = false; return true }
+        if (playing != null) stopPlayback()
+        if (!store.switchProfile(id, pin)) return false
+        liveGroup = null
+        liveFocus = null
+        openSeries = null
+        applyBuffer()
+        applyProxy()
+        screen = Screen.HOME
+        choosingProfile = false
+        toast("Profil: ${store.currentProfile().name}")
+        return true
+    }
+
     /** Länderauswahl anbieten (nach dem ersten Laden). */
     var askCountries by mutableStateOf(false)
 
@@ -97,6 +129,59 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     init {
         if (store.user.value.phoneRemote) setPhoneRemote(true)
         applyBuffer()
+        // Updates: kurz nach dem Start bei GitHub nachsehen, danach alle 6 Stunden.
+        scope.launch {
+            delay(20_000)
+            while (true) {
+                updater.check()?.let { toast("Update auf ${it.version} verfügbar: Einstellungen → Update") }
+                delay(6 * 3_600_000L)
+            }
+        }
+        // Sender-Check in der Ruhezeit (nichts läuft seit 5 Minuten), höchstens alle 12 Stunden.
+        scope.launch {
+            delay(5 * 60_000L)
+            while (true) {
+                fun idle() = playing == null && System.currentTimeMillis() - lastPlaybackAt > 5 * 60_000L &&
+                    store.user.value.recordings.none { it.state == de.ayutv.desktop.data.Recording.RUNNING }
+                if (idle() && System.currentTimeMillis() - channelCheck.lastRun > de.ayutv.desktop.player.ChannelCheck.EVERY_MS) {
+                    runCatching { channelCheck.run(::idle) }.onFailure { de.ayutv.desktop.Log.warn("Sender-Check", it) }
+                }
+                delay(5 * 60_000L)
+            }
+        }
+        // Abgleich mit dem Fire TV alle 30 Minuten (wenn eingeschaltet).
+        scope.launch {
+            delay(30_000)
+            while (true) {
+                val u = store.user.value
+                if (u.autoSync && u.syncAddress.isNotBlank() && u.syncPin.isNotBlank()) syncDevices(quiet = true)
+                delay(30 * 60_000L)
+            }
+        }
+        // Erinnerungen: kurz vor Beginn fragen; Spiele gefolgter Vereine alle 30 Minuten einplanen.
+        scope.launch {
+            var lastTeams = 0L
+            while (true) {
+                val now = System.currentTimeMillis()
+                if (now - lastTeams > 30 * 60_000L && store.user.value.followedTeams.isNotEmpty()) {
+                    lastTeams = now
+                    runCatching { planTeamReminders(now) }.onFailure { de.ayutv.desktop.Log.warn("Vereins-Erinnerungen", it) }
+                }
+                val due = store.user.value.reminders.firstOrNull { r ->
+                    r.start - REMINDER_AHEAD_MS <= now && now < r.start + 10 * 60_000L && "${r.channelKey}@${r.start}" !in shownReminders
+                }
+                if (due != null && dueReminder == null) {
+                    shownReminders += "${due.channelKey}@${due.start}"
+                    dueReminder = due
+                    runCatching { input.window?.toFront() }
+                }
+                runCatching { withContext(Dispatchers.IO) { runRecordings(now) } }.onFailure { de.ayutv.desktop.Log.warn("Aufnahmen", it) }
+                // Vorbei: aufräumen.
+                val old = store.user.value.reminders.filter { now > it.start + 30 * 60_000L }
+                if (old.isNotEmpty()) store.updateUser { it.copy(reminders = it.reminders - old.toSet()) }
+                delay(15_000)
+            }
+        }
         // Wie auf dem Fire TV: Playlists alle 12 Stunden, TV-Guide alle 8 Stunden nachladen, auch wenn DnA-TV läuft.
         scope.launch {
             delay(1_500)
@@ -104,7 +189,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 val first = store.playlists.value.any { it.enabled && it.lastSync == 0L }
                 val problems = runCatching { sync.refreshDue() }.getOrElse { listOf(it.message ?: "Fehler") }
                 applyProxy()
-                if (problems.isNotEmpty()) toast("Aktualisieren: ${problems.first()}")
+                if (problems.isNotEmpty()) {
+                    problems.forEach { de.ayutv.desktop.Log.warn("Aktualisieren: $it") }
+                    toast("Aktualisieren: ${problems.first()}")
+                }
                 if (first && !store.user.value.countriesAsked && store.countries().size > 1) askCountries = true
                 delay(REFRESH_CHECK_MS)
             }
@@ -117,6 +205,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     /** Pufferprofil aus den Einstellungen an den Player geben. */
     fun applyBuffer() {
         player.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
+        player.hdrMode = store.user.value.hdrMode
     }
 
     fun toast(text: String) {
@@ -144,9 +233,15 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         // Ton nur abgreifen, wenn Untertitel ausgerichtet werden sollen (sonst gibt VLC den Ton selbst aus).
         player.tapAudio = false
         playerStatus = null
+        liveDelayMs = 0
+        pausedAt = 0
         if (playback is Playback.Live) {
             if (before != null && before.key != playback.channel.key) previousChannel = before
             triedVariants = mutableSetOf(playback.channel.key)
+        }
+        lastPlaybackAt = System.currentTimeMillis()
+        (playing as? Playback.Live)?.let { previous ->
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) }
         }
         playing = playback
         start(playback)
@@ -183,6 +278,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                     continue
                 }
                 healthySince = now
+                de.ayutv.desktop.Log.warn("Watchdog: ${playback.title}: ${player.error ?: "Bild steht"} (Versuch ${attempts + 1})")
                 if (attempts < MAX_RETRIES) {
                     attempts++
                     playerStatus = (if (failed) "Stream unterbrochen" else "Bild steht") + " – verbinde neu ($attempts/$MAX_RETRIES) …"
@@ -193,7 +289,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 }
                 val live = playback as? Playback.Live
                 val next = live?.let { l -> store.alternatives(l.channel).firstOrNull { it.key !in triedVariants } }
+                live?.let { de.ayutv.data.parse.ChannelQuality.recordFailure(it.channel.key) }
                 if (live != null && next != null) {
+                    de.ayutv.desktop.Log.info("Ausweichen: ${live.channel.name} → ${next.name}")
                     triedVariants.add(next.key)
                     playerStatus = "Weiche aus auf „${next.name}“ …"
                     // In der Liste bleibt der ursprüngliche Sender stehen (Zappen geht von dort weiter).
@@ -241,6 +339,144 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         }
     }
 
+    /** Spiele der gefolgten Vereine in den nächsten 7 Tagen als Erinnerungen eintragen (wie auf dem Fire TV). */
+    private suspend fun planTeamReminders(now: Long) {
+        val teams = store.user.value.followedTeams
+        val events = withContext(Dispatchers.Default) {
+            de.ayutv.desktop.data.SportEvents.of(store.listedChannels(), store.guide.value, store.user.value.favorites.toSet(), hours = 7 * 24, now = now)
+        }
+        val fresh = events.filter { e ->
+            val pairing = e.pairing ?: return@filter false
+            e.programme.start > now && teams.any { de.ayutv.data.parse.Teams.plays(it, pairing, e.programme.title + " " + e.programme.subtitle.orEmpty()) }
+        }.map { de.ayutv.desktop.data.Reminder(it.channel.key, it.channel.name, it.headline, it.programme.start, team = true) }
+        if (fresh.isEmpty()) return
+        store.updateUser { u ->
+            val known = u.reminders.map { it.channelKey to it.start }.toSet()
+            u.copy(reminders = u.reminders + fresh.filter { (it.channelKey to it.start) !in known })
+        }
+    }
+
+    /** Mit dem Fire TV abgleichen (Favoriten, Verlauf). */
+    suspend fun syncDevices(quiet: Boolean = false) {
+        val u = store.user.value
+        deviceSyncStatus = "Gleiche ab …"
+        runCatching { deviceSync.withFireTv(u.syncAddress, u.syncPin) }
+            .onSuccess { r ->
+                deviceSyncStatus = "${clock(System.currentTimeMillis())}: ${r.text}"
+                if (!quiet || r.favorites + r.history > 0) toast("Abgleich mit dem Fire TV: ${r.text}")
+            }
+            .onFailure {
+                de.ayutv.desktop.Log.warn("Abgleich mit dem Fire TV", it)
+                deviceSyncStatus = "Fehlgeschlagen: ${it.message}"
+                if (!quiet) toast("Abgleich fehlgeschlagen: ${it.message}")
+            }
+    }
+
+    // ---------------------------------------------------------------- Aufnahmen
+
+    /** Sendung aufnehmen (geplant oder laufend). Läuft sie schon, beginnt die Aufnahme sofort. */
+    fun record(channel: Channel, programme: de.ayutv.desktop.data.Programme) {
+        val r = de.ayutv.desktop.data.Recording(
+            id = System.currentTimeMillis(),
+            channelKey = channel.key, channelName = channel.name, title = programme.title,
+            start = programme.start, stop = programme.stop,
+            file = recorder.fileFor(channel.name, programme.title, programme.start).absolutePath,
+        )
+        store.updateUser { it.copy(recordings = it.recordings + r) }
+        toast(if (programme.start <= System.currentTimeMillis()) "⏺ Aufnahme läuft: ${programme.title}" else "⏺ Aufnahme geplant: ${programme.title} um ${clock(programme.start)}")
+        scope.launch { withContext(Dispatchers.IO) { runRecordings(System.currentTimeMillis()) } }
+    }
+
+    /** Aufnahme beenden bzw. Planung löschen; [deleteFile] löscht auch die Datei. */
+    fun removeRecording(r: de.ayutv.desktop.data.Recording, deleteFile: Boolean) {
+        recorder.stop(r.id)
+        if (!deleteFile && r.state == de.ayutv.desktop.data.Recording.RUNNING) {
+            // Laufende Aufnahme beenden: was bisher aufgenommen ist, bleibt.
+            store.updateUser { u -> u.copy(recordings = u.recordings.map { if (it.id == r.id) it.copy(state = de.ayutv.desktop.data.Recording.DONE, stop = System.currentTimeMillis()) else it }) }
+            return
+        }
+        if (deleteFile) java.io.File(r.file).delete()
+        store.updateUser { u -> u.copy(recordings = u.recordings.filterNot { it.id == r.id }) }
+    }
+
+    fun playRecording(r: de.ayutv.desktop.data.Recording) {
+        val file = java.io.File(r.file)
+        if (!file.isFile) return toast("Datei fehlt: ${file.name}")
+        play(Playback.Vod("rec:${r.id}", "${r.channelName}: ${r.title}", file.absolutePath, store.user.value.positions["rec:${r.id}"] ?: 0))
+    }
+
+    /** Fällige Aufnahmen starten (1 Minute vorher) und beenden (2 Minuten nach Ende). */
+    private fun runRecordings(now: Long) {
+        val list = store.user.value.recordings
+        if (list.isEmpty()) return
+        val changes = HashMap<Long, String>()
+        for (r in list) {
+            when (r.state) {
+                de.ayutv.desktop.data.Recording.PLANNED -> if (r.start - 60_000 <= now && now < r.stop) {
+                    val channel = store.channel(r.channelKey)
+                    val ok = channel != null && recorder.start(r, channel.url, Sync.USER_AGENT, Network.vlcOptions(channel.url))
+                    changes[r.id] = if (ok) de.ayutv.desktop.data.Recording.RUNNING else de.ayutv.desktop.data.Recording.FAILED
+                    if (!ok) toast("Aufnahme „${r.title}“ ließ sich nicht starten")
+                } else if (now >= r.stop) changes[r.id] = de.ayutv.desktop.data.Recording.FAILED
+                de.ayutv.desktop.data.Recording.RUNNING -> {
+                    if (now > r.stop + 120_000) {
+                        recorder.stop(r.id)
+                        val size = java.io.File(r.file).length()
+                        changes[r.id] = if (size > 100_000) de.ayutv.desktop.data.Recording.DONE else de.ayutv.desktop.data.Recording.FAILED
+                        toast(if (size > 100_000) "⏺ Aufnahme fertig: ${r.title}" else "Aufnahme „${r.title}“ ist leer geblieben")
+                    } else if (!recorder.isRunning(r.id)) {
+                        // Nach einem Neustart von DnA-TV weiter aufnehmen (in eine neue Datei).
+                        val channel = store.channel(r.channelKey)
+                        if (channel != null) recorder.start(r.copy(file = recorder.fileFor(r.channelName, r.title, now).absolutePath), channel.url, Sync.USER_AGENT, Network.vlcOptions(channel.url))
+                    }
+                }
+            }
+        }
+        if (changes.isNotEmpty()) store.updateUser { u -> u.copy(recordings = u.recordings.map { r -> changes[r.id]?.let { r.copy(state = it) } ?: r }) }
+    }
+
+    /** Fällige Erinnerung annehmen: zum Sender umschalten. */
+    fun acceptReminder(reminder: de.ayutv.desktop.data.Reminder) {
+        dueReminder = null
+        val channel = store.channel(reminder.channelKey) ?: return toast("Sender „${reminder.channelName}“ gibt es nicht mehr")
+        play(Playback.Live(channel, store.allVisible().takeIf { list -> list.any { it.key == channel.key } } ?: listOf(channel)))
+    }
+
+    /** Sendung aus dem Archiv (Catch-up) abspielen; false = Sender hat kein Archiv dafür. */
+    fun playArchive(channel: Channel, programme: de.ayutv.desktop.data.Programme): Boolean {
+        val url = store.archiveUrl(channel, programme.start, programme.stop) ?: return false
+        play(Playback.Vod("archive:${channel.key}:${programme.start}", "${channel.name}: ${programme.title}", url, archive = channel))
+        return true
+    }
+
+    /** Zeitversetzt (Live angehalten und weiter): so weit liegt das Bild hinter dem Sender. */
+    var liveDelayMs by mutableStateOf(0L); private set
+    private var pausedAt = 0L
+
+    /** Live anhalten/fortsetzen (VLC puffert dabei weiter, danach läuft das Bild zeitversetzt). */
+    fun toggleLivePause() {
+        if (player.paused) {
+            if (pausedAt > 0) liveDelayMs += System.currentTimeMillis() - pausedAt
+            pausedAt = 0
+            player.resume()
+        } else {
+            pausedAt = System.currentTimeMillis()
+            player.pause()
+        }
+    }
+
+    /** Zurück zum Live-Bild (nach Pause) bzw. bei Archiv zum laufenden Sender. */
+    fun backToLive(): Boolean {
+        val live = playing as? Playback.Live
+        if (live != null && (liveDelayMs > 0 || player.paused)) {
+            play(live)
+            return true
+        }
+        val archive = (playing as? Playback.Vod)?.archive ?: return false
+        play(Playback.Live(archive, store.allVisible()))
+        return true
+    }
+
     /** Zum vorher geschauten Sender (und wieder zurück). */
     fun backZap(): Boolean {
         val live = playing as? Playback.Live ?: return false
@@ -275,6 +511,12 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     }
 
     fun stopPlayback() {
+        lastPlaybackAt = System.currentTimeMillis()
+        (playing as? Playback.Live)?.let { live ->
+            // Beim Schauen gemessen: Auflösung und Startzeit fließen in die Wahl der besten Fassung ein.
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(live.channel.key, info.height, info.startupMs) }
+            channelCheck.save()
+        }
         stopAligning()
         savePosition()
         watchdog?.cancel()
@@ -300,6 +542,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     /** Wiedergabestand des laufenden Films merken (fast am Ende = gesehen, beim nächsten Mal von vorn). */
     fun savePosition() {
         val vod = playing as? Playback.Vod ?: return
+        if (vod.archive != null) return
         val position = player.positionMs
         val duration = player.durationMs
         if (position < 10_000) return
@@ -433,6 +676,15 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         const val MAX_RETRIES = 3
         const val ZAP_BURST_MS = 700L
         const val ZAP_SETTLE_MS = 450L
+        const val REMINDER_AHEAD_MS = 60_000L
+    }
+
+    /** Installer der neuen Version starten und DnA-TV beenden (der Installer ersetzt die App). */
+    fun installUpdate(release: de.ayutv.desktop.update.Updater.Release) = scope.launch {
+        updater.install(release) {
+            close()
+            kotlin.system.exitProcess(0)
+        }
     }
 
     fun close() {
@@ -440,6 +692,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         watchdog?.cancel()
         remote.stop()
         input.stop()
+        recorder.release()
+        channelCheck.save()
+        channelCheck.release()
         player.release()
     }
 }

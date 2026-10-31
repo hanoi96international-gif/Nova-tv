@@ -11,6 +11,7 @@ on:
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
       - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/src/main/java/de/ayutv/data/net/**"
+      - "app/src/main/java/de/ayutv/data/remote/SyncMerge.kt"
       - "app/src/main/java/de/ayutv/player/SpeechSync.kt"
       - "app/src/main/java/de/ayutv/player/SubtitleSync.kt"
       - "app/build.gradle.kts"
@@ -23,6 +24,7 @@ on:
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
       - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/src/main/java/de/ayutv/data/net/**"
+      - "app/src/main/java/de/ayutv/data/remote/SyncMerge.kt"
       - "app/src/main/java/de/ayutv/player/SpeechSync.kt"
       - "app/src/main/java/de/ayutv/player/SubtitleSync.kt"
       - "app/build.gradle.kts"
@@ -103,8 +105,6 @@ jobs:
           Remove-Item "$dst/plugins/plugins.dat" -ErrorAction SilentlyContinue
 
       - name: Installer bauen
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew -p desktop packageMsi packageExe createDistributable --console=plain
 
       - name: Starttest (VLC laden, Fenster öffnen)

@@ -35,6 +35,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -155,6 +157,10 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
             if (live != null) {
                 val fav = live.channel.key in user.favorites
                 add(MenuItem(if (fav) "★ Aus Favoriten entfernen" else "☆ Zu Favoriten") { toggleFavorite(live.channel) })
+                guide[live.channel.key]?.let { nowOf(it) }?.let { current ->
+                    add(MenuItem("⏺ „${current.title}“ aufnehmen") { app.record(live.channel, current) })
+                    if (app.store.archiveUrl(live.channel, current.start, current.stop) != null) add(MenuItem("⏮ Sendung von Anfang") { app.playArchive(live.channel, current) })
+                }
             }
             player.audioTracks.forEach { (id, name) -> add(MenuItem("🔊 Ton: $name") { player.selectAudio(id) }) }
             player.subtitleTracks.forEach { (id, name) -> add(MenuItem("💬 Untertitel: $name") { player.selectSubtitle(id) }) }
@@ -166,6 +172,14 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 if (nextEpisode != null) add(MenuItem("⏭ Nächste Folge") { playNext() })
             }
             add(MenuItem(if (tech) "Stream-Info ausblenden" else "Stream-Info zeigen") { tech = !tech; show() })
+            if (player.gpuVideo) {
+                val next = HDR_MODES[(HDR_MODES.indexOfFirst { it.first == user.hdrMode } + 1).mod(HDR_MODES.size)]
+                add(MenuItem("HDR-Anpassung: ${hdrLabel(user.hdrMode)} → ${next.second}") {
+                    store.updateUser { it.copy(hdrMode = next.first) }
+                    app.applyBuffer()
+                    app.toast("HDR-Anpassung: ${next.second}")
+                })
+            }
             add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
         }
         menu = {
@@ -265,11 +279,16 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         RemoteButton.LAST_CHANNEL, RemoteButton.BLUE -> if (first) app.backZap()
                         RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
                         RemoteButton.RED -> if (first) { toggleFavorite(live.channel); show() }
-                        RemoteButton.PLAY_PAUSE -> { player.togglePause(); show() }
-                        RemoteButton.PLAY -> { player.resume(); show() }
-                        RemoteButton.PAUSE -> { player.pause(); show() }
+                        // Wie auf dem Fire TV: ⏯ hält an (zeitversetzt weiter), ⏩ zurück zu Live, ⏪ Sendung von Anfang (Archiv).
+                        RemoteButton.PLAY_PAUSE -> { if (first) app.toggleLivePause(); show() }
+                        RemoteButton.PLAY -> { if (player.paused) app.toggleLivePause(); show() }
+                        RemoteButton.PAUSE -> { if (!player.paused) app.toggleLivePause(); show() }
                         RemoteButton.STOP -> app.stopPlayback()
-                        RemoteButton.FAST_FORWARD, RemoteButton.REWIND -> show()
+                        RemoteButton.FAST_FORWARD -> if (first) { if (!app.backToLive()) show() }
+                        RemoteButton.REWIND -> if (first) {
+                            val current = guide[live.channel.key]?.let { nowOf(it) }
+                            if (current == null || !app.playArchive(live.channel, current)) app.toast("Für diesen Sender gibt es kein Archiv")
+                        }
                         else -> return@onKeyEvent false
                     }
                     return@onKeyEvent true
@@ -292,7 +311,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     RemoteButton.RIGHT, RemoteButton.FAST_FORWARD -> seek(seekStep(button, forward = true, shift = e.isShiftPressed))
                     RemoteButton.UP, RemoteButton.DOWN, RemoteButton.INFO -> if (first) { if (layer == Layer.INFO) tech = !tech; show() }
                     RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
-                    RemoteButton.NEXT, RemoteButton.CHANNEL_UP -> if (first) playNext()
+                    RemoteButton.NEXT, RemoteButton.CHANNEL_UP -> if (first) { if ((playback as? Playback.Vod)?.archive != null) app.backToLive() else playNext() }
                     else -> return@onKeyEvent false
                 }
                 true
@@ -320,9 +339,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 )
             },
     ) {
-        val frame = player.frame
-        if (frame != null) {
-            Image(frame, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+        val hasFrame = player.hasFrame
+        if (hasFrame) {
+            VideoView(player, Modifier.fillMaxSize())
         } else if (live != null && !player.hasVideo) {
             Box(Modifier.align(Alignment.Center)) { Logo(live.channel.logo, 160) }
         }
@@ -338,7 +357,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     Label(if (live != null) "↑/↓ anderer Sender · OK Senderliste · Zurück beendet" else "Zurück beendet", Type.small)
                 }
             }
-            player.buffering && frame == null -> Box(Modifier.align(Alignment.Center)) { Label("Lädt …", Type.heading) }
+            player.buffering && !hasFrame -> Box(Modifier.align(Alignment.Center)) { Label("Lädt …", Type.heading) }
         }
         if (player.paused && layer == Layer.NONE) {
             Box(Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(50)).padding(20.dp)) { Label("⏸", Type.title) }
@@ -365,7 +384,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 when (playback) {
                     is Playback.Live -> {
                         val shown = app.zapTarget ?: playback.channel
-                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites)
+                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs)
                     }
                     is Playback.Vod -> VodBar(
                         playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
@@ -511,7 +530,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
 }
 
 @Composable
-private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean) {
+private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long) {
     val now = System.currentTimeMillis()
     val current = programmes.firstOrNull { it.start <= now && it.stop > now }
     val next = programmes.firstOrNull { it.start >= (current?.stop ?: now) }
@@ -535,11 +554,15 @@ private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Prog
             Spacer(Modifier.width(18.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Label(clock(now), Type.title)
+                when {
+                    paused -> Label("⏸ Angehalten", Type.heading, color = Palette.accent)
+                    delayMs > 1_000 -> Label("Zeitversetzt −${duration(delayMs)} · ⏩ Live", Type.small, color = Palette.accent)
+                }
                 Label("🔊 $volume %", Type.small)
             }
         }
         Spacer(Modifier.height(10.dp))
-        Label("↑/↓ umschalten · OK Senderliste · ◀ letzter Sender · ▶ Stream-Info · ☰ Ton/Untertitel · Ziffern wählen", Type.small)
+        Label("↑/↓ umschalten · OK Senderliste · ◀ letzter Sender · ▶ Stream-Info · ☰ Ton/Untertitel · ⏯ Pause · ⏪ von Anfang", Type.small)
     }
 }
 
@@ -605,8 +628,30 @@ fun duration(ms: Long): String {
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
 
+/** HDR-Anpassung: Wert und Anzeige. */
+val HDR_MODES = listOf("AUTO" to "Automatisch", "PQ" to "HDR10", "HLG" to "HLG", "OFF" to "Aus")
+fun hdrLabel(mode: String) = HDR_MODES.firstOrNull { it.first == mode }?.second ?: "Automatisch"
+
 /** Anteil der Sendung, der schon gelaufen ist. */
 fun Programme.fraction(now: Long = System.currentTimeMillis()): Float =
     if (stop > start) ((now - start).toFloat() / (stop - start)).coerceIn(0f, 1f) else 0f
 
 fun nowOf(list: List<Programme>, at: Long = System.currentTimeMillis()): Programme? = list.firstOrNull { it.start <= at && it.stop > at }
+
+/**
+ * Das Videobild. Neue Bilder lösen nur Neuzeichnen aus (nicht den ganzen Player-Bildschirm): [VideoPlayer.frameTick]
+ * wird erst beim Zeichnen gelesen. Schneller Weg: YUV-Ebenen + Shader; sonst das RGB-Bild wie früher.
+ */
+@Composable
+fun VideoView(player: de.ayutv.desktop.player.VideoPlayer, modifier: Modifier = Modifier) {
+    if (player.gpuVideo) {
+        androidx.compose.foundation.Canvas(modifier) {
+            player.frameTick // Neuzeichnen bei jedem Bild
+            val frame = player.currentFrame() ?: return@Canvas
+            drawIntoCanvas { canvas -> frame.draw(canvas.nativeCanvas, size.width, size.height) }
+        }
+    } else {
+        val frame = player.frame ?: return
+        Image(frame, null, modifier, contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+    }
+}
