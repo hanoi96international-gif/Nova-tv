@@ -72,6 +72,7 @@ fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
     val store = Store(Store.defaultDir())
+    Log.init(store.dir)
     // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
     Network.apply(store)
     // Fire-TV-Fernbedienung so früh wie möglich lesen (eigener Thread, nur unter Windows).
@@ -188,6 +189,7 @@ fun App(app: AppState, window: WindowState) {
             }
             if (app.askCountries) CountryDialog(app, first = true, onDismiss = { app.askCountries = false })
         }
+        app.dueReminder?.let { r -> de.ayutv.desktop.ui.ReminderDialog(app, r) }
         val line = app.message ?: status
         if (line != null) {
             Box(Modifier.align(Alignment.BottomCenter).padding(24.dp).background(Palette.raised, RoundedCornerShape(10.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
@@ -221,6 +223,10 @@ private fun Sidebar(app: AppState) {
             Spacer(Modifier.height(2.dp))
         }
         Spacer(Modifier.weight(1f))
+        if (app.updater.state is de.ayutv.desktop.update.Updater.State.Available) {
+            ListRow("⬆  Update verfügbar", onClick = { app.screen = Screen.SETTINGS })
+            Spacer(Modifier.height(6.dp))
+        }
         val source = app.input.source
         Label(
             if (source != null) "🎮 ${source.label} verbunden" else "Fernbedienung, Tastatur oder Maus",

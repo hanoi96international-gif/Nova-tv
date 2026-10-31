@@ -102,6 +102,26 @@ fun NameDialog(app: AppState, title: String, initial: String = "", onDone: (Stri
     FocusOnShow(field)
 }
 
+/** Fällige Erinnerung: „Gleich: … auf … – umschalten?“ (OK schaltet um, Zurück schließt). */
+@Composable
+fun ReminderDialog(app: AppState, reminder: de.ayutv.desktop.data.Reminder) {
+    val first = remember { FocusRequester() }
+    Overlay(app, { app.dueReminder = null }, width = 520) {
+        Column {
+            Label("⏰ " + if (reminder.start > System.currentTimeMillis()) "Gleich um ${clock(reminder.start)}" else "Läuft seit ${clock(reminder.start)}", Type.small, color = Palette.accent)
+            Label(reminder.title, Type.heading, maxLines = 3)
+            Label("auf ${reminder.channelName}", Type.body)
+            Spacer(Modifier.height(14.dp))
+            Row {
+                TextButton("▶ Umschalten", { app.acceptReminder(reminder) }, primary = true, focusRequester = first)
+                Spacer(Modifier.width(8.dp))
+                TextButton("Später", { app.dueReminder = null })
+            }
+        }
+    }
+    FocusOnShow(first, reminder)
+}
+
 /** Ja/Nein-Frage. */
 @Composable
 fun ConfirmDialog(app: AppState, question: String, yes: String = "Ja", onYes: () -> Unit, onDismiss: () -> Unit) {

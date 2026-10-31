@@ -99,7 +99,12 @@ class VideoPlayer {
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { if (mine(mediaPlayer)) buffering = newCache < 100f }
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { if (mine(mediaPlayer)) positionMs = newTime }
             override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { if (mine(mediaPlayer)) durationMs = newLength }
-            override fun error(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { error = "Der Stream lässt sich nicht abspielen"; playing = false } }
+            override fun error(mediaPlayer: MediaPlayer) = ui {
+                if (mine(mediaPlayer)) {
+                    error = "Der Stream lässt sich nicht abspielen"; playing = false
+                    de.ayutv.desktop.Log.warn("VLC-Fehler: ${runCatching { mediaPlayer.media().info().mrl() }.getOrNull().orEmpty()}")
+                }
+            }
             override fun finished(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; onFinished?.invoke() } }
             override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.media.TrackType, id: Int) = ui {
                 if (mine(mediaPlayer)) { readTracks(); detectHdr(mediaPlayer) }

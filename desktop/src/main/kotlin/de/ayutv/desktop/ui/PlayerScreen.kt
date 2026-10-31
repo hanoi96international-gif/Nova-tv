@@ -275,11 +275,16 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         RemoteButton.LAST_CHANNEL, RemoteButton.BLUE -> if (first) app.backZap()
                         RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
                         RemoteButton.RED -> if (first) { toggleFavorite(live.channel); show() }
-                        RemoteButton.PLAY_PAUSE -> { player.togglePause(); show() }
-                        RemoteButton.PLAY -> { player.resume(); show() }
-                        RemoteButton.PAUSE -> { player.pause(); show() }
+                        // Wie auf dem Fire TV: ⏯ hält an (zeitversetzt weiter), ⏩ zurück zu Live, ⏪ Sendung von Anfang (Archiv).
+                        RemoteButton.PLAY_PAUSE -> { if (first) app.toggleLivePause(); show() }
+                        RemoteButton.PLAY -> { if (player.paused) app.toggleLivePause(); show() }
+                        RemoteButton.PAUSE -> { if (!player.paused) app.toggleLivePause(); show() }
                         RemoteButton.STOP -> app.stopPlayback()
-                        RemoteButton.FAST_FORWARD, RemoteButton.REWIND -> show()
+                        RemoteButton.FAST_FORWARD -> if (first) { if (!app.backToLive()) show() }
+                        RemoteButton.REWIND -> if (first) {
+                            val current = guide[live.channel.key]?.let { nowOf(it) }
+                            if (current == null || !app.playArchive(live.channel, current)) app.toast("Für diesen Sender gibt es kein Archiv")
+                        }
                         else -> return@onKeyEvent false
                     }
                     return@onKeyEvent true
@@ -302,7 +307,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     RemoteButton.RIGHT, RemoteButton.FAST_FORWARD -> seek(seekStep(button, forward = true, shift = e.isShiftPressed))
                     RemoteButton.UP, RemoteButton.DOWN, RemoteButton.INFO -> if (first) { if (layer == Layer.INFO) tech = !tech; show() }
                     RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
-                    RemoteButton.NEXT, RemoteButton.CHANNEL_UP -> if (first) playNext()
+                    RemoteButton.NEXT, RemoteButton.CHANNEL_UP -> if (first) { if ((playback as? Playback.Vod)?.archive != null) app.backToLive() else playNext() }
                     else -> return@onKeyEvent false
                 }
                 true
@@ -375,7 +380,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 when (playback) {
                     is Playback.Live -> {
                         val shown = app.zapTarget ?: playback.channel
-                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites)
+                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs)
                     }
                     is Playback.Vod -> VodBar(
                         playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
@@ -521,7 +526,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
 }
 
 @Composable
-private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean) {
+private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long) {
     val now = System.currentTimeMillis()
     val current = programmes.firstOrNull { it.start <= now && it.stop > now }
     val next = programmes.firstOrNull { it.start >= (current?.stop ?: now) }
@@ -545,11 +550,15 @@ private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Prog
             Spacer(Modifier.width(18.dp))
             Column(horizontalAlignment = Alignment.End) {
                 Label(clock(now), Type.title)
+                when {
+                    paused -> Label("⏸ Angehalten", Type.heading, color = Palette.accent)
+                    delayMs > 1_000 -> Label("Zeitversetzt −${duration(delayMs)} · ⏩ Live", Type.small, color = Palette.accent)
+                }
                 Label("🔊 $volume %", Type.small)
             }
         }
         Spacer(Modifier.height(10.dp))
-        Label("↑/↓ umschalten · OK Senderliste · ◀ letzter Sender · ▶ Stream-Info · ☰ Ton/Untertitel · Ziffern wählen", Type.small)
+        Label("↑/↓ umschalten · OK Senderliste · ◀ letzter Sender · ▶ Stream-Info · ☰ Ton/Untertitel · ⏯ Pause · ⏪ von Anfang", Type.small)
     }
 }
 

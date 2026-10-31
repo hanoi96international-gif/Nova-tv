@@ -16,6 +16,8 @@ data class Playlist(
     val epgUrl: String? = null,
     val enabled: Boolean = true,
     val lastSync: Long = 0,
+    /** Zeitzone des Xtream-Servers (für Archiv-Adressen). */
+    val timezone: String? = null,
 )
 
 /**
@@ -33,6 +35,9 @@ data class Channel(
     val epgId: String? = null,
     val number: Int = 0,
     val catchupDays: Int = 0,
+    /** Archiv-Art aus der M3U (catchup="append|shift|flussonic|…") und Vorlage (catchup-source). */
+    val catchupType: String? = null,
+    val catchupSource: String? = null,
 )
 
 @Serializable
@@ -90,6 +95,10 @@ data class TimingMark(val ratio: Double, val offsetMs: Long)
 @Serializable
 data class IntroMark(val startMs: Long, val lengthMs: Long)
 
+/** Erinnerung an eine Sendung: kurz vor [start] fragt DnA-TV, ob es umschalten soll. */
+@Serializable
+data class Reminder(val channelKey: String, val channelName: String, val title: String, val start: Long, val team: Boolean = false)
+
 /** Eigene Sendergruppe (Sender aus allen Playlists, in eigener Reihenfolge). */
 @Serializable
 data class CustomGroup(val id: Long, val name: String, val keys: List<String> = emptyList())
@@ -134,6 +143,9 @@ data class UserData(
     val fullscreen: Boolean = false,
     /** Im Bild schalten ↑/↓ um (wie auf dem Fire TV); aus = ↑/↓ öffnen die Senderliste. */
     val zapWithUpDown: Boolean = true,
+    /** Erinnerungen an Sendungen (aus TV-Guide und Sport) und gefolgte Vereine. */
+    val reminders: List<Reminder> = emptyList(),
+    val followedTeams: Set<String> = emptySet(),
     /** HDR-Anpassung: AUTO (HEVC/AV1 10 Bit in 4K = HDR10), PQ (HDR10), HLG, OFF. */
     val hdrMode: String = "AUTO",
     /** Pufferprofil (FAST, BALANCED, STABLE). */

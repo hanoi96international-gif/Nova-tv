@@ -64,7 +64,11 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                 }
             }
             store.setContent(playlist.id, content)
-            store.savePlaylist(playlist.copy(lastSync = System.currentTimeMillis(), epgUrl = playlist.epgUrl ?: epg))
+            // Zeitzone des Servers (Xtream): die Archiv-Adressen rechnen in Serverzeit.
+            val timezone = if (playlist.type == PlaylistType.XTREAM) {
+                runCatching { withContext(Dispatchers.IO) { Xtream(playlist).let { api -> api.get(api.info(), XtreamParsing::account)?.timezone } } }.getOrNull()
+            } else null
+            store.savePlaylist(playlist.copy(lastSync = System.currentTimeMillis(), epgUrl = playlist.epgUrl ?: epg, timezone = timezone ?: playlist.timezone))
         } finally {
             _status.value = null
         }
@@ -90,6 +94,8 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                         epgId = entry.tvgId,
                         number = entry.number ?: position,
                         catchupDays = entry.catchupDays,
+                        catchupType = entry.catchupType,
+                        catchupSource = entry.catchupSource,
                     )
                 }
             }
@@ -234,6 +240,10 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
             extra.forEach { (k, v) -> builder.addQueryParameter(k, v) }
             return builder.build().toString()
         }
+
+        /** Anmeldung und Server-Angaben (Zeitzone). */
+        fun info(): String = "$base/player_api.php".toHttpUrl().newBuilder()
+            .addQueryParameter("username", user).addQueryParameter("password", pass).build().toString()
 
         fun live(id: String) = "$base/live/${enc(user)}/${enc(pass)}/$id.ts"
         fun movie(id: String, extension: String) = "$base/movie/${enc(user)}/${enc(pass)}/$id.$extension"

@@ -53,6 +53,9 @@ fun SettingsScreen(app: AppState) {
     LazyColumn(Modifier.fillMaxSize()) {
         item { ScreenHeader("Einstellungen", "OK ändert · ☰ Menü einer Playlist") }
 
+        item { Section("Update") }
+        item { UpdateSection(app) }
+
         item { Section("Fernbedienung") }
         item { RemoteSection(app) }
 
@@ -157,6 +160,19 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Erinnerungen") }
+        item {
+            val upcoming = user.reminders.filter { it.start > System.currentTimeMillis() }.sortedBy { it.start }
+            Label(
+                if (upcoming.isEmpty()) "Keine Erinnerungen. Im TV-Guide eine kommende Sendung öffnen → „Erinnern“, im Sport ☰ → „Verein folgen“."
+                else "${upcoming.size} Erinnerungen, die nächste: ${upcoming.first().title} (${clock(upcoming.first().start)}, ${upcoming.first().channelName})",
+                Type.small, maxLines = 2,
+            )
+            user.followedTeams.sorted().forEach { team ->
+                ListRow("⚽  $team", { app.store.toggleTeam(team) }, Modifier.width(760.dp), trailing = "OK = nicht mehr folgen")
+            }
+        }
+
         item { Section("Proxy") }
         item { ProxySection(app, playlists) }
 
@@ -192,6 +208,11 @@ fun SettingsScreen(app: AppState) {
             )
             Spacer(Modifier.height(8.dp))
             Label("Daten: ${app.store.dir.absolutePath}", Type.small)
+            Spacer(Modifier.height(6.dp))
+            TextButton("Protokoll öffnen", {
+                val file = de.ayutv.desktop.Log.current
+                runCatching { java.awt.Desktop.getDesktop().open(file) }.onFailure { app.toast("Protokoll: ${file?.absolutePath}") }
+            })
             Spacer(Modifier.height(40.dp))
         }
     }
@@ -206,6 +227,35 @@ fun SettingsScreen(app: AppState) {
 @Composable
 private fun Section(title: String) {
     Label(title, Type.heading, Modifier.padding(top = 22.dp, bottom = 6.dp))
+}
+
+/** Version und Updates (wie auf dem Fire TV über die Releases bei GitHub). */
+@Composable
+private fun UpdateSection(app: AppState) {
+    val updater = app.updater
+    val state = updater.state
+    Column(Modifier.width(760.dp)) {
+        Label(
+            "Installiert: ${updater.currentVersion} · " + when (state) {
+                de.ayutv.desktop.update.Updater.State.Idle -> "noch nicht geprüft"
+                de.ayutv.desktop.update.Updater.State.Checking -> "prüfe …"
+                de.ayutv.desktop.update.Updater.State.UpToDate -> "aktuell"
+                is de.ayutv.desktop.update.Updater.State.Available -> "Version ${state.release.version} verfügbar"
+                is de.ayutv.desktop.update.Updater.State.Downloading -> "lädt ${state.release.version}: ${state.percent} %"
+                is de.ayutv.desktop.update.Updater.State.Failed -> state.message
+            },
+            Type.body,
+        )
+        Spacer(Modifier.height(6.dp))
+        Row {
+            if (state is de.ayutv.desktop.update.Updater.State.Available) {
+                TextButton("Jetzt installieren", { app.installUpdate(state.release) }, primary = true)
+                Spacer(Modifier.width(8.dp))
+            }
+            TextButton("Nach Updates suchen", { app.scope.launch { app.updater.check(force = true) } })
+        }
+        Label("Der Installer ersetzt die App, Playlists und Einstellungen bleiben. Bei der ZIP-Fassung den Installer nehmen oder die neue ZIP entpacken.", Type.small, maxLines = 2)
+    }
 }
 
 /** Ein/Aus-Schalter als Zeile (OK oder Klick schaltet um). */

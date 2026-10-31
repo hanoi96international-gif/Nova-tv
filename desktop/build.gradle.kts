@@ -26,12 +26,16 @@ kotlin {
 val keyResources = layout.buildDirectory.dir("generated/keys")
 val writeKeys by tasks.registering {
     val key = providers.environmentVariable("OPENSUBTITLES_API_KEY").orElse("")
+    val versionName = appVersionName
     inputs.property("keyHash", key.map { it.trim().hashCode() })
+    inputs.property("version", versionName)
     outputs.dir(keyResources)
     doLast {
         val file = keyResources.get().file("opensubtitles.key").asFile
         file.parentFile.mkdirs()
         file.writeText(key.get().trim())
+        // Für die Update-Prüfung: welche Version läuft.
+        keyResources.get().file("app.version").asFile.writeText(versionName)
     }
 }
 
@@ -50,6 +54,7 @@ sourceSets {
             "de/ayutv/data/parse/Episodes.kt",
             "de/ayutv/data/parse/ChannelVariants.kt",
             "de/ayutv/data/parse/Countries.kt",
+            "de/ayutv/data/parse/CatchupUrls.kt",
             "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
             "de/ayutv/data/parse/Srt.kt",
             "de/ayutv/data/parse/ProgrammeText.kt",

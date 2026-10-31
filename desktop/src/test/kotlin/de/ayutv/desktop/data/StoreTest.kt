@@ -132,6 +132,31 @@ class StoreTest {
     }
 
     @Test
+    fun remindersAndTeams() {
+        val s = store().withChannels(channel(1, "Sport"))
+        val c = s.channels().first()
+        val p = Programme(System.currentTimeMillis() + 3_600_000, System.currentTimeMillis() + 7_200_000, "Dortmund – Schalke")
+        assertTrue(s.toggleReminder(c, p))
+        assertTrue(s.hasReminder(c, p.start))
+        assertEquals(false, s.toggleReminder(c, p))
+        assertTrue(s.user.value.reminders.isEmpty())
+        assertTrue(s.toggleTeam("Borussia Dortmund"))
+        assertEquals(setOf("Borussia Dortmund"), s.user.value.followedTeams)
+        assertEquals(false, s.toggleTeam("Borussia Dortmund"))
+    }
+
+    @Test
+    fun archiveUrlForXtream() {
+        val s = store()
+        s.savePlaylist(Playlist(1, "X", PlaylistType.XTREAM, "http://h:8080", timezone = "UTC"))
+        val c = Channel("1:c:5", 1, "Sender", "G", url = "http://h:8080/live/u/p/5.ts", catchupDays = 3)
+        s.setContent(1, Store.Content(listOf(c)))
+        val start = 1_704_139_200_000L
+        assertEquals("http://h:8080/timeshift/u/p/60/2024-01-01:20-00/5.ts", s.archiveUrl(c, start, start + 3_600_000, start + 7_200_000))
+        assertEquals(null, s.archiveUrl(c.copy(catchupDays = 0), start, start + 3_600_000, start + 7_200_000))
+    }
+
+    @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))
         assertEquals(listOf("x", "y"), Ordering.apply(listOf("y", "x"), listOf("x")) { it })

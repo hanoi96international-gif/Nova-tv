@@ -129,6 +129,16 @@ class Store(val dir: File) {
     fun alternatives(channel: Channel): List<Channel> =
         ChannelVariants.alternatives(channel, _content.value[channel.playlistId]?.channels.orEmpty(), { it.name }, { it.playlistId }, { a, b -> a.key == b.key })
 
+    /** Archiv-Adresse (Catch-up) für eine vergangene oder laufende Sendung; null = kein Archiv. */
+    fun archiveUrl(channel: Channel, start: Long, stop: Long, now: Long = System.currentTimeMillis()): String? {
+        val playlist = _playlists.value.firstOrNull { it.id == channel.playlistId }
+        return de.ayutv.data.parse.CatchupUrls.url(
+            channel.url, channel.catchupDays, channel.catchupType, channel.catchupSource,
+            xtreamPlaylist = playlist?.type == PlaylistType.XTREAM, timezone = playlist?.timezone,
+            start = start, stop = stop, now = now,
+        )
+    }
+
     /** Gruppen je Art (für „Gruppen ein- und ausblenden“): Name, Anzahl, ausgeblendet. */
     fun groupsOf(playlistId: Long, kind: GroupKind): List<Triple<String, Int, Boolean>> {
         val c = _content.value[playlistId] ?: return emptyList()
@@ -293,6 +303,28 @@ class Store(val dir: File) {
             is GroupRef.Provider -> u.copy(groupOrder = u.groupOrder + (list.name to keys))
             GroupRef.All -> u
         }
+    }
+
+    fun hasReminder(channel: Channel, start: Long): Boolean = _user.value.reminders.any { it.channelKey == channel.key && it.start == start }
+
+    /** Erinnerung setzen oder entfernen; true = jetzt gesetzt. */
+    fun toggleReminder(channel: Channel, programme: Programme): Boolean {
+        var set = false
+        updateUser { u ->
+            val existing = u.reminders.firstOrNull { it.channelKey == channel.key && it.start == programme.start }
+            set = existing == null
+            u.copy(reminders = if (existing != null) u.reminders - existing else u.reminders + Reminder(channel.key, channel.name, programme.title, programme.start))
+        }
+        return set
+    }
+
+    fun toggleTeam(team: String): Boolean {
+        var now = false
+        updateUser { u ->
+            now = team !in u.followedTeams
+            u.copy(followedTeams = if (now) u.followedTeams + team else u.followedTeams - team, reminders = if (now) u.reminders else u.reminders.filterNot { it.team && it.title.contains(team, ignoreCase = true) })
+        }
+        return now
     }
 
     fun hideGroup(name: String) = updateUser { u ->
