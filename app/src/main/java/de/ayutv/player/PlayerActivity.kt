@@ -651,6 +651,8 @@ class PlayerActivity : ComponentActivity() {
             }
             val active = p.playWhenReady && p.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
             val waiting = active && p.playbackState == Player.STATE_BUFFERING
+            if (isLive && everReady && waiting && !liveWaiting) liveStalls.addLast(SystemClock.elapsedRealtime())
+            liveWaiting = waiting
             val frozen = active && p.playbackState == Player.STATE_READY && p.currentPosition == lastPosition
             lastPosition = p.currentPosition
             stalledSeconds = if (waiting || frozen) stalledSeconds + 1 else 0
@@ -692,17 +694,53 @@ class PlayerActivity : ComponentActivity() {
         seenDrops = drops.count
         val recent = drops.recent(DROP_WINDOW_MS)
         val last = recent.lastOrNull() ?: return
-        dropInfo = "Trennungen ${recent.size}× in 10 Min. (zuletzt: ${last.reason})"
+        // Für den Fehlerbericht: jede Trennung mit Uhrzeit und Grund (nicht nur die letzte).
+        statusHistory += "Trennung ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.GERMANY).format(java.util.Date())}: ${last.reason}" +
+            " (${playing?.name.orEmpty()}, Puffer ${player?.totalBufferedDuration?.div(1000) ?: 0} s)"
+        val closed = recent.count { it.reason.startsWith("Anbieter hat") }
+        val silent = recent.count { "Zeitüberschreitung" in it.reason }
+        dropInfo = "Trennungen ${recent.size}× in 10 Min. (vom Anbieter beendet: $closed, keine Daten: $silent, andere: ${recent.size - closed - silent}; zuletzt: ${last.reason})"
         Log.i(TAG, "Verbindung zum Anbieter abgerissen: ${last.reason} (${recent.size}× in 10 Min.)")
         val now = SystemClock.elapsedRealtime()
-        if (recent.size >= DROP_WARN_COUNT && message == null && (dropWarnedAt == 0L || now - dropWarnedAt > DROP_WINDOW_MS)) {
+        // Unsichtbar überbrückt (der Puffer lief weiter): kein Hinweis, nur in der Stream-Info und im Fehlerbericht.
+        while (liveStalls.isNotEmpty() && now - liveStalls.first() > DROP_WINDOW_MS) liveStalls.removeFirst()
+        if (recent.size < DROP_WARN_COUNT || liveStalls.isEmpty()) return
+        // TS-Verbindungen reißen immer wieder ab, der Anbieter beendet sie: für diese Sitzung HLS versuchen (kurze
+        // Abrufe statt einer Dauerverbindung, die viele Anbieter regelmäßig kappen).
+        val channel = playing
+        if (closed >= DROP_WARN_COUNT && !sessionHls && settings.liveFormat == LiveFormat.TS && channel != null &&
+            "/live/" in channel.url && channel.url.endsWith(".ts")
+        ) {
+            sessionHls = true
+            statusHistory += "Wechsel auf HLS für diese Sitzung (TS-Verbindung wurde $closed× beendet)"
+            val text = "Der Anbieter beendet die Verbindung immer wieder. DnA-TV wechselt für diese Sitzung auf HLS – das ist robuster."
+            handler.post { playChannel(channel); message = text; handler.postDelayed({ if (message == text) message = null }, 8_000) }
+            return
+        }
+        if (message == null && (dropWarnedAt == 0L || now - dropWarnedAt > DROP_WINDOW_MS)) {
             dropWarnedAt = now
-            val text = "Der Anbieter trennt oft die Verbindung (${recent.size}× in 10 Min.). DnA-TV verbindet jedes Mal neu. " +
-                "Hilft meist: LAN-Kabel statt WLAN, oder nicht auf zwei Geräten gleichzeitig schauen."
+            val oneConnection = channel?.let { container.accountLimits.maxConnections(it.playlistId) } == 1
+            val text = when {
+                closed >= silent && oneConnection ->
+                    "Der Anbieter beendet die Verbindung immer wieder (${recent.size}× in 10 Min.). Dein Zugang erlaubt nur 1 Verbindung: " +
+                        "Läuft er gerade noch auf einem anderen Gerät (Handy, PC, zweiter Fire TV, andere App)?"
+                closed >= silent ->
+                    "Der Anbieter beendet die Verbindung immer wieder (${recent.size}× in 10 Min.). Das liegt am Anbieter oder an " +
+                        "zu vielen Geräten mit demselben Zugang. DnA-TV verbindet jedes Mal neu."
+                else ->
+                    "Vom Anbieter kamen mehrmals 8 Sekunden lang keine Daten an (${recent.size}× in 10 Min.). Meist liegt das am WLAN: " +
+                        "LAN-Kabel oder Router näher hilft. DnA-TV verbindet jedes Mal neu."
+            }
             message = text
-            handler.postDelayed({ if (message == text) message = null }, 8_000)
+            handler.postDelayed({ if (message == text) message = null }, 10_000)
         }
     }
+
+    /** Sichtbare Hänger im Live-Bild (Puffer leer), für die Einordnung der Trennungen. */
+    private val liveStalls = ArrayDeque<Long>()
+    private var liveWaiting = false
+    /** Diese Sitzung über HLS statt TS (der Anbieter beendet TS-Verbindungen zu oft). */
+    private var sessionHls = false
 
     /**
      * Der Fernseher wechselt die Bildwiederholrate: HDMI synchronisiert neu, Bild und Ton fallen
@@ -1272,7 +1310,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun adaptLiveUrl(url: String): String =
-        if (settings.liveFormat == LiveFormat.HLS && "/live/" in url && url.endsWith(".ts")) url.removeSuffix(".ts") + ".m3u8" else url
+        if ((settings.liveFormat == LiveFormat.HLS || sessionHls) && "/live/" in url && url.endsWith(".ts")) url.removeSuffix(".ts") + ".m3u8" else url
 
     fun toggleFavorite() {
         val channel = current ?: return
@@ -3721,6 +3759,13 @@ class PlayerActivity : ComponentActivity() {
             val p = player ?: return
             Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
             playerErrors++
+            // Automatisch auf HLS gewechselt, aber das liefert der Anbieter nicht: zurück zu TS.
+            if (sessionHls && !everReady && settings.liveFormat == LiveFormat.TS) {
+                sessionHls = false
+                statusHistory += "HLS geht bei diesem Anbieter nicht (${error.errorCodeName}), zurück zu TS"
+                playing?.let { channel -> handler.post { playChannel(channel) } }
+                return
+            }
             // Bildoptimierung scheitert auf diesem Gerät: ohne sie neu starten und für diese Sitzung aus lassen.
             if (pictureActive && (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED ||
                     error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)
