@@ -153,6 +153,9 @@ fun SettingsScreen(app: AppState) {
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
             }
+            Toggle("Mini-Vorschau in der Senderliste (ausgewählter Sender läuft stumm im Infofeld)", user.livePreview) {
+                app.store.updateUser { u -> u.copy(livePreview = !u.livePreview) }
+            }
             Toggle("Im Bild schalten ↑/↓ um (aus: ↑/↓ öffnen die Senderliste)", user.zapWithUpDown) {
                 app.store.updateUser { u -> u.copy(zapWithUpDown = !u.zapWithUpDown) }
             }

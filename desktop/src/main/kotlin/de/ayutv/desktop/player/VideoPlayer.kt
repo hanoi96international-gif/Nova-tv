@@ -138,6 +138,7 @@ class VideoPlayer {
                 if (!mine(mediaPlayer)) return@ui
                 detectHdr(mediaPlayer)
                 playing = true; buffering = false; error = null; paused = false; readTracks()
+                if (muted) mediaPlayer.audio().setMute(true)
                 // Lautstärke gilt je Player: beim Wechsel mitnehmen.
                 if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
             }
@@ -269,6 +270,13 @@ class VideoPlayer {
     }
 
     fun toggleMute() = player?.audio()?.mute()
+
+    /** Stumm (Multiview: nur ein Feld hat Ton; Mini-Vorschau). Gilt sofort und für jeden weiteren Start. */
+    @Volatile var muted = false
+        set(value) {
+            field = value
+            runCatching { player?.audio()?.setMute(value) }
+        }
 
     fun selectAudio(id: Int) = player?.audio()?.setTrack(id)
     fun selectSubtitle(id: Int) = player?.subpictures()?.setTrack(id)

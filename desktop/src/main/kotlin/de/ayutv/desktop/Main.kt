@@ -175,7 +175,10 @@ fun App(app: AppState, window: WindowState) {
             },
     ) {
         val playing = app.playing
-        if (playing != null) {
+        val multiview = app.multiview
+        if (multiview != null) {
+            de.ayutv.desktop.ui.MultiviewScreen(app, multiview)
+        } else if (playing != null) {
             PlayerScreen(app, playing, window, ::toggleFullscreen)
         } else {
             Row(Modifier.fillMaxSize()) {

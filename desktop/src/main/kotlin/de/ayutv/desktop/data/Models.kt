@@ -190,6 +190,8 @@ data class UserData(
     val videoLayout: String = "AUTO",
     /** Direktausgabe für HDR-Bildschirme: VLC zeichnet selbst im Vollbild, HDR10 unverändert. */
     val directOutput: Boolean = false,
+    /** Mini-Vorschau des ausgewählten Senders in der Senderliste (stumm). */
+    val livePreview: Boolean = true,
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */

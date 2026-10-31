@@ -230,6 +230,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     private var watchdog: Job? = null
 
     fun play(playback: Playback) {
+        // Vorschau und Multiview vorher beenden: Viele Konten erlauben nur eine Verbindung gleichzeitig.
+        stopPreview()
+        multiview?.let { closeMultiview(null) }
         stopAligning()
         val before = (playing as? Playback.Live)?.channel
         // Ton nur abgreifen, wenn Untertitel ausgerichtet werden sollen (sonst gibt VLC den Ton selbst aus).
@@ -248,6 +251,92 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         playing = playback
         start(playback)
         watch(playback)
+    }
+
+    // ---------------------------------------------------------------- Multiview und Vorschau
+
+    /** Multiview offen (bis zu vier Sender gleichzeitig); null = nicht. */
+    var multiview by mutableStateOf<Multiview?>(null); private set
+
+    /** Multiview aus dem laufenden Sender öffnen: der kommt ins erste Feld (mit Ton). */
+    fun openMultiview() {
+        val live = playing as? Playback.Live ?: return
+        stopPlayback()
+        val mv = Multiview(live.list)
+        multiview = mv
+        setTile(0, live.channel)
+    }
+
+    fun setTile(index: Int, channel: Channel) {
+        val mv = multiview ?: return
+        val tile = mv.tiles[index]
+        val p = tile.player ?: VideoPlayer().also { created ->
+            created.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
+            created.hdrMode = store.user.value.hdrMode
+            created.videoLayout = store.user.value.videoLayout
+            tile.player = created
+        }
+        p.muted = mv.audio != index
+        tile.channel = channel
+        p.play(channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(channel.url).toTypedArray())
+        lastPlaybackAt = System.currentTimeMillis()
+    }
+
+    fun clearTile(index: Int) {
+        val mv = multiview ?: return
+        val tile = mv.tiles[index]
+        tile.player?.stop()
+        tile.channel = null
+        if (mv.audio == index) mv.tiles.indexOfFirst { it.channel != null }.takeIf { it >= 0 }?.let { setMultiviewAudio(it) }
+    }
+
+    fun zapTile(index: Int, step: Int) {
+        val mv = multiview ?: return
+        val from = mv.tiles[index].channel ?: return
+        val list = mv.list.takeIf { it.size > 1 } ?: return
+        val at = list.indexOfFirst { it.key == from.key }.coerceAtLeast(0)
+        setTile(index, list[(at + step).mod(list.size)])
+    }
+
+    /** Ton zu Feld [index]; die anderen stumm. */
+    fun setMultiviewAudio(index: Int) {
+        val mv = multiview ?: return
+        if (mv.tiles[index].channel == null) return
+        mv.audio = index
+        mv.tiles.forEachIndexed { i, t -> t.player?.muted = i != index }
+    }
+
+    /** Multiview schließen; mit [fullscreen] diesen Sender danach groß weiterschauen. */
+    fun closeMultiview(fullscreen: Channel?) {
+        val mv = multiview ?: return
+        multiview = null
+        // Erst alle Verbindungen schließen (Kontolimit), dann die Player im Hintergrund freigeben.
+        mv.tiles.forEach { it.player?.stop() }
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) { mv.tiles.forEach { t -> t.player?.let { p -> runCatching { p.release() } } } }
+        if (fullscreen != null) play(Playback.Live(fullscreen, mv.list))
+    }
+
+    /** Mini-Vorschau in der Senderliste (stumm, kleiner Puffer); erst bei Bedarf angelegt. */
+    var preview by mutableStateOf<VideoPlayer?>(null); private set
+    var previewKey by mutableStateOf<String?>(null); private set
+
+    fun showPreview(channel: Channel?) {
+        if (channel == null || playing != null || multiview != null || !store.user.value.livePreview) return stopPreview()
+        if (previewKey == channel.key) return
+        val p = preview ?: VideoPlayer().also { created ->
+            created.muted = true
+            created.networkCacheMs = 1_200
+            created.videoLayout = store.user.value.videoLayout
+            preview = created
+        }
+        previewKey = channel.key
+        p.play(channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(channel.url).toTypedArray())
+    }
+
+    fun stopPreview() {
+        if (previewKey == null) return
+        previewKey = null
+        preview?.stop()
     }
 
     /** Laufende Wiedergabe neu starten (z. B. nach Wechsel der Videoausgabe), Filme an derselben Stelle. */
@@ -541,6 +630,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
 
     /** Taste Home: wie auf dem Fire TV zur Startseite (Wiedergabe und offene Dialoge schließen). */
     fun goHome() {
+        multiview?.let { closeMultiview(null) }
+        stopPreview()
         if (playing != null) stopPlayback()
         openSeries = null
         // Offene Dialoge und Unterseiten schließen (begrenzt: ein Handler bleibt bis zum nächsten Zeichnen aktiv).
@@ -706,6 +797,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         recorder.release()
         channelCheck.save()
         channelCheck.release()
+        multiview?.tiles?.forEach { t -> t.player?.let { runCatching { it.release() } } }
+        preview?.let { runCatching { it.release() } }
         player.release()
     }
 }

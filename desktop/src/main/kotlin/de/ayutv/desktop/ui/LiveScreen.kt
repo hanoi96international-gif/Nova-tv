@@ -1,5 +1,7 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -297,13 +299,28 @@ fun LiveScreen(app: AppState) {
 
             // ------------------------------------------------ Was läuft
             val focused = focusedKey?.let { k -> shown.firstOrNull { it.key == k } }
-            Panel(Modifier.width(320.dp).fillMaxHeight()) {
+            // Mini-Vorschau: Bleibt die Auswahl kurz auf einem Sender, läuft er stumm oben im Feld.
+            LaunchedEffect(focused?.key, user.livePreview) {
+                if (focused == null || !user.livePreview) { app.stopPreview(); return@LaunchedEffect }
+                kotlinx.coroutines.delay(1_200)
+                app.showPreview(focused)
+            }
+            androidx.compose.runtime.DisposableEffect(Unit) { onDispose { app.stopPreview() } }
+            Panel(Modifier.width(320.dp).fillMaxHeight()) { Column {
+                val preview = app.preview
+                if (focused != null && preview != null && app.previewKey == focused.key) {
+                    Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Color.Black)) {
+                        VideoView(preview, Modifier.fillMaxSize())
+                        preview.error?.let { Label(it, Type.small, Modifier.align(Alignment.Center), maxLines = 2) }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
                 if (focused == null) {
                     Label("Sender auswählen: Steuerkreuz, Pfeiltasten oder Maus. OK/Klick spielt ab, ☰, Rechtsklick oder OK lange drücken öffnet das Menü (Favorit, Gruppe, Verschieben).", Type.small, maxLines = 6)
                 } else {
                     ChannelInfo(focused, guide[focused.key].orEmpty())
                 }
-            }
+            } }
         }
         dialog?.invoke()
     }

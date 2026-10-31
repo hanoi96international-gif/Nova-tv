@@ -181,6 +181,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     app.toast("HDR-Anpassung: ${next.second}")
                 })
             }
+            if (live != null) add(MenuItem("◫ Multiview (bis zu 4 Sender gleichzeitig)") { app.openMultiview() })
             add(MenuItem(if (user.directOutput) "HDR-Bildschirm: Direktausgabe ausschalten" else "HDR-Bildschirm: Direktausgabe (Vollbild, HDR unverändert)") {
                 store.updateUser { it.copy(directOutput = !it.directOutput) }
                 app.applyBuffer()
