@@ -132,7 +132,9 @@ fun PlayerScreen(activity: PlayerActivity) {
                     val barVisible = activity.overlay == Overlay.CONTROLS || activity.overlay == Overlay.INFO
                     it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else activity.subtitleLook.position.bottomFraction)
                 },
-                modifier = Modifier.fillMaxSize(),
+                // Nebeneinander (Multiview): Hauptbild links, zweiter Sender rechts, gleich groß.
+                modifier = if (activity.pipPlayer != null && activity.pipSplit) Modifier.fillMaxHeight().fillMaxWidth(0.5f).align(Alignment.CenterStart)
+                else Modifier.fillMaxSize(),
             )
         }
 
@@ -141,7 +143,8 @@ fun PlayerScreen(activity: PlayerActivity) {
         }
 
         activity.pipPlayer?.let { pip ->
-            PipWindow(pip, activity.pipChannel?.name.orEmpty(), Modifier.align(Alignment.BottomEnd))
+            if (activity.pipSplit) SplitWindow(pip, activity.pipChannel?.name.orEmpty(), Modifier.align(Alignment.CenterEnd))
+            else PipWindow(pip, activity.pipChannel?.name.orEmpty(), Modifier.align(Alignment.BottomEnd))
         }
 
         if (activity.syncPanel && activity.overlay == Overlay.NONE) {
@@ -751,6 +754,9 @@ private fun TracksOverlay(activity: PlayerActivity) {
                 OptionRow("⧉ Zweites Spiel als kleines Bild (Konferenz) …", selected = false) { activity.openPipPicker() }
             } else {
                 item { OptionRow("⇄ Bilder tauschen (auch mit ⏩)", selected = false) { activity.swapPip() } }
+                item {
+                    OptionRow(if (activity.pipSplit) "◱ Zweiten Sender als kleines Bild" else "◫ Nebeneinander (Multiview, gleich groß)", selected = false) { activity.togglePipSplit() }
+                }
                 item { OptionRow("⧉ Anderes kleines Bild …", selected = false) { activity.openPipPicker() } }
                 item { OptionRow("✕ Kleines Bild schließen", selected = false) { activity.closePip() } }
             }
@@ -1010,6 +1016,33 @@ private fun PipWindow(player: androidx.media3.exoplayer.ExoPlayer, label: String
             fontSize = 13.sp,
             maxLines = 1,
             modifier = Modifier.fillMaxWidth().background(Color.Black.copy(alpha = 0.7f)).padding(horizontal = 8.dp, vertical = 3.dp),
+        )
+    }
+}
+
+/** Multiview: zweiter Sender gleich groß rechts neben dem Hauptbild (ohne Ton; ⏩ tauscht, der Ton folgt dem Hauptbild). */
+@Composable
+private fun SplitWindow(player: androidx.media3.exoplayer.ExoPlayer, label: String, modifier: Modifier) {
+    Box(modifier.fillMaxHeight().fillMaxWidth(0.5f)) {
+        androidx.compose.runtime.key(player) {
+            AndroidView(
+                factory = { context ->
+                    android.view.SurfaceView(context).apply {
+                        setZOrderMediaOverlay(true)
+                        player.setVideoSurfaceView(this)
+                    }
+                },
+                onRelease = { view -> player.clearVideoSurfaceView(view) },
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).align(Alignment.Center),
+            )
+        }
+        Text(
+            "$label  ·  ⏩ tauschen",
+            color = Color.White,
+            fontSize = 14.sp,
+            maxLines = 1,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp)
+                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(6.dp)).padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
 }

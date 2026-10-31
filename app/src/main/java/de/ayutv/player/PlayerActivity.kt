@@ -2842,6 +2842,14 @@ class PlayerActivity : ComponentActivity() {
     /** Auswahl für das kleine Bild: laufende Spiele und der vorige Sender (Sender, Beschriftung). */
     var pipChoices by mutableStateOf<List<Pair<ChannelEntity, String>>?>(null); private set
     private var pipRetries = 0
+    /** Multiview: zweiter Sender gleich groß neben dem Hauptbild statt klein unten rechts (gemerkt). */
+    var pipSplit by mutableStateOf(false); private set
+
+    fun togglePipSplit() {
+        pipSplit = !pipSplit
+        getSharedPreferences(PIP_PREFS, MODE_PRIVATE).edit().putBoolean(PIP_SPLIT, pipSplit).apply()
+        closeOverlay()
+    }
 
     fun openPipPicker() {
         lifecycleScope.launch {
@@ -2895,6 +2903,7 @@ class PlayerActivity : ComponentActivity() {
             })
         }
         pipRetries = 0
+        pipSplit = getSharedPreferences(PIP_PREFS, MODE_PRIVATE).getBoolean(PIP_SPLIT, false)
         val url = adaptLiveUrl(channel.url)
         preview.setMediaItem(mediaItem(url, guessMime(url)))
         preview.repeatMode = Player.REPEAT_MODE_ONE
@@ -3943,6 +3952,8 @@ class PlayerActivity : ComponentActivity() {
         private const val EARLY_MISS_PERCENT = 40
         /** Zeilen-Abgleich: ab so viel Prozent übernehmen, darunter vergleichen. */
         private const val ELASTIC_MIN_PERCENT = 50
+        private const val PIP_PREFS = "multiview"
+        private const val PIP_SPLIT = "split"
         /** Weiter als so weit vom nächsten Anker weg gilt der Zeilen-Abgleich dort als ungeklärt. */
         private const val ELASTIC_COVER_MS = 90_000L
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
