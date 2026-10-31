@@ -500,6 +500,18 @@ class PlayerActivity : ComponentActivity() {
         userAgent?.let { headers?.userAgent = it }
     }
 
+    /** Was gerade läuft (Film, Sport, Fußball …), auch wenn die Bildoptimierung aus ist. */
+    private var pictureContent: PictureTuning.Content? = null
+
+    /**
+     * Sportmodus: Bei Sport und Fußball mit 25/50 Bildern auf 50 Hz umschalten, auch wenn „Bildwiederholrate anpassen“
+     * aus ist – sonst ruckelt der Ball bei 60 Hz sichtbar. Gilt nur, solange Sport läuft (Bildoptimierung nicht „Aus“).
+     */
+    private fun sportFrameRate(fps: Float): Boolean =
+        isLive && settings.pictureTuning != PictureTuning.Mode.OFF &&
+            (pictureContent == PictureTuning.Content.SPORT || pictureContent == PictureTuning.Content.FOOTBALL) &&
+            (fps in 24.5f..25.5f || fps in 49.5f..50.5f)
+
     /** Profil je Inhalt wählen und (wenn die Bildverarbeitung läuft) sofort anwenden. */
     private fun updatePictureProfile() {
         val channel = playing
@@ -515,6 +527,10 @@ class PlayerActivity : ComponentActivity() {
             }
             else -> PictureTuning.Content.OTHER
         }
+        val sportBefore = pictureContent == PictureTuning.Content.SPORT || pictureContent == PictureTuning.Content.FOOTBALL
+        pictureContent = content
+        // Sport hat gerade begonnen: gleich auf 50 Hz, nicht erst beim nächsten Formatwechsel.
+        if (!sportBefore && !settings.matchFrameRate) stats.frameRate.takeIf(::sportFrameRate)?.let(frameRateMatcher::match)
         val profile = PictureTuning.profile(content, settings.pictureTuning)
         pictureProfile = profile
         val p = player ?: return
@@ -774,7 +790,7 @@ class PlayerActivity : ComponentActivity() {
         stats = stats.copy(frameRate = snapped, frameRateMeasured = true, displayHz = frameRateMatcher.currentRefreshRate())
         memoryKey()?.let { container.playerMemory.rememberFrameRate(it, snapped, isLive) }
         suggestFrameRateMatching()
-        if (settings.matchFrameRate) frameRateMatcher.match(snapped)
+        if (settings.matchFrameRate || sportFrameRate(snapped)) frameRateMatcher.match(snapped)
     }
 
     /** Mehrfaches Nachladen in kurzer Zeit: größeren Puffer empfehlen (einmal pro Sitzung). */
@@ -3907,6 +3923,7 @@ class PlayerActivity : ComponentActivity() {
         )
         video?.frameRate?.takeIf { it > 1f }?.let { fps -> memoryKey()?.let { container.playerMemory.rememberFrameRate(it, fps, isLive) } }
         if (settings.matchFrameRate) video?.frameRate?.let(frameRateMatcher::match)
+        else video?.frameRate?.takeIf(::sportFrameRate)?.let(frameRateMatcher::match)
         suggestFrameRateMatching()
         checkDynamicRange(video)
         checkPicture(video)
