@@ -182,10 +182,11 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             // fallback: Beim ersten Betreten (noch nichts gemerkt) auf den gewählten Bereich, nicht auf den nächstgelegenen.
             Modifier.width(if (isPortrait) 170.dp else 250.dp).fillMaxHeight()
                 // ▲/▼ am Ende bleiben in der Spalte (sprangen sonst in die Seitenleiste oder nach rechts).
+                .background(AyuColors.Surface.copy(alpha = 0.5f))
                 .keepVerticalFocus()
                 .focusRestorer(pageFocus.getValue(page))
                 .verticalScroll(rememberScrollState())
-                .background(AyuColors.Surface.copy(alpha = 0.5f)).padding(vertical = 32.dp, horizontal = 14.dp),
+                .padding(vertical = 32.dp, horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text("Einstellungen", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 10.dp, bottom = 18.dp))
@@ -754,7 +755,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 settings.preferInternetGuide -> "Eigener zuerst, Anbieter ergänzt"
                                 else -> "Anbieter zuerst, eigener ergänzt"
                             },
-                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01), richtige Zeiten auch nach " +
+                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, MagentaTV, Dyn-Spielplan), richtige Zeiten auch nach " +
                                 "der Zeitumstellung. Der TV-Guide des Anbieters liegt oft daneben; „Nur eigener“ lädt ihn gar nicht. " +
                                 "Der Guide wird nach dem Umschalten neu geladen.",
                         ) {
