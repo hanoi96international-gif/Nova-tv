@@ -41,16 +41,18 @@ object SelfTest {
                 ok = player.framesRendered.get() > 0
                 // Schneller Weg: das Testbild (Blau 3DA9FC) über den Shader zeichnen und die Farbe prüfen.
                 if (player.gpuVideo) {
-                    val frame = player.currentFrame()
-                    val color = frame?.let { f ->
+                    // Auf dem Oberflächen-Thread zeichnen, wie in der App (dort werden alte Bilder freigegeben).
+                    var color: Triple<Int, Int, Int>? = null
+                    javax.swing.SwingUtilities.invokeAndWait { color = player.currentFrame()?.let { f ->
                         val info = org.jetbrains.skia.ImageInfo(64, 36, org.jetbrains.skia.ColorType.RGBA_8888, org.jetbrains.skia.ColorAlphaType.PREMUL)
                         val surface = org.jetbrains.skia.Surface.makeRaster(info)
                         f.draw(surface.canvas, 64f, 36f)
                         val px = org.jetbrains.skia.Bitmap.makeFromImage(surface.makeImageSnapshot()).readPixels(info, 64 * 4, 0, 0)
                         px?.let { val at = (18 * 64 + 32) * 4; Triple(it[at].toInt() and 0xFF, it[at + 1].toInt() and 0xFF, it[at + 2].toInt() and 0xFF) }
-                    }
-                    lines += "pixel=${color?.toList()} (erwartet etwa [61, 169, 252])"
-                    ok = ok && color != null && kotlin.math.abs(color.first - 61) < 25 && kotlin.math.abs(color.second - 169) < 25 && kotlin.math.abs(color.third - 252) < 25
+                    } }
+                    val c = color
+                    lines += "pixel=${c?.toList()} (erwartet etwa [61, 169, 252])"
+                    ok = ok && c != null && kotlin.math.abs(c.first - 61) < 25 && kotlin.math.abs(c.second - 169) < 25 && kotlin.math.abs(c.third - 252) < 25
                 }
                 player.release()
                 image.delete()

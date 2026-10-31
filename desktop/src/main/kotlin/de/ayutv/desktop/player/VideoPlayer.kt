@@ -347,9 +347,10 @@ class VideoPlayer {
                 )
             }.getOrNull() ?: return
             val old = yuv.getAndSet(frame)
-            // Das vorige Bild erst freigeben, wenn die Oberfläche es nicht mehr zeichnet (gleicher Thread).
+            // Alte Bilder erst ein paar Bilder später freigeben: Wer gerade noch eines zeichnet (Oberfläche,
+            // Starttest), hält nie ein schon freigegebenes in der Hand.
             ui {
-                old?.close()
+                if (old != null) retire(old)
                 frameTick++
                 if (!hasFrame) hasFrame = true
             }
@@ -368,10 +369,21 @@ class VideoPlayer {
         }
     }
 
+    /** Zuletzt ersetzte Bilder (nur auf dem Oberflächen-Thread angefasst). */
+    private val retired = ArrayDeque<YuvFrame>()
+
+    private fun retire(frame: YuvFrame) {
+        retired.addLast(frame)
+        while (retired.size > RETIRED_FRAMES) retired.removeFirst().close()
+    }
+
     /** Bilder des vorigen Streams verwerfen (kein altes Standbild beim nächsten). */
     private fun clearFrames() {
         val old = yuv.getAndSet(null)
-        ui { old?.close() }
+        ui {
+            if (old != null) retire(old)
+            while (retired.isNotEmpty()) retired.removeFirst().close()
+        }
         frame = null
         hasFrame = false
     }
@@ -380,6 +392,8 @@ class VideoPlayer {
 
     companion object {
         const val NETWORK_CACHE_MS = 2_500
+        /** So viele ersetzte Bilder bleiben kurz erhalten, bevor ihr Speicher frei wird. */
+        private const val RETIRED_FRAMES = 3
         private val VLC_OPTIONS = arrayOf(
             "--quiet", "--no-video-title-show", "--http-reconnect", "--avcodec-hw=any",
             // Live-TV kommt oft als 1080i/576i: automatisch entflechten, mit voller Bildrate (50 statt 25 Bilder).
