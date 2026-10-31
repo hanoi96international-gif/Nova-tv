@@ -65,6 +65,20 @@ object SelfTest {
                     }
                     player.stop()
                 }
+                // Direktausgabe (HDR-Bildschirm): VLC zeichnet selbst ins Vollbildfenster. Nur zur Info, kein Abbruch.
+                if (de.ayutv.desktop.input.WindowsRemote.isWindows && !java.awt.GraphicsEnvironment.isHeadless()) {
+                    runCatching {
+                        javax.swing.SwingUtilities.invokeAndWait { player.directWindow = de.ayutv.desktop.player.DirectWindow({ null }, {}, {}) }
+                        player.direct = true
+                        val before = player.framesRendered.get()
+                        javax.swing.SwingUtilities.invokeAndWait { player.play(image.absolutePath, null, 0, ":image-duration=10") }
+                        val until = System.currentTimeMillis() + 15_000
+                        while (player.framesRendered.get() <= before && System.currentTimeMillis() < until) Thread.sleep(200)
+                        lines += "direct: running=${player.framesRendered.get() > before} playing=${player.playing} error=${player.error}"
+                        javax.swing.SwingUtilities.invokeAndWait { player.stop() }
+                        player.direct = false
+                    }.onFailure { lines += "direct: FEHLER $it" }
+                }
                 player.release()
                 image.delete()
             }
