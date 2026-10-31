@@ -114,6 +114,8 @@ data class UserData(
     val subtitleLanguage: String = "de",
     /** Handy als Fernbedienung eingeschaltet, und die PIN in der Adresse. */
     val phoneRemote: Boolean = false,
+    /** Sender und Filme im Vollbild starten (danach wieder das Fenster). */
+    val fullscreenPlayback: Boolean = true,
     /** Proxy wie in der Fire-TV-App (aus der Sicherung übernehmbar). */
     val proxy: ProxySettings = ProxySettings(),
     /** Am Ton gefundene Ausrichtung der Untertitel je Film/Folge (Schlüssel → Faktor und Versatz). */

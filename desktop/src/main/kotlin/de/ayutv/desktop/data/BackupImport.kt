@@ -26,9 +26,15 @@ import java.util.concurrent.TimeUnit
  * Fire TV (Adresse aus „Einrichtung per Handy“) oder aus einer gespeicherten Datei.
  */
 class BackupImport(private val store: Store) {
-    data class Result(val playlists: Int, val favorites: Int, val groups: Int, val missingPasswords: Int) {
+    /** [proxy]: null = kein Proxy in der Sicherung, sonst ob das Proxy-Passwort dabei war. */
+    data class Result(val playlists: Int, val favorites: Int, val groups: Int, val missingPasswords: Int, val proxy: Boolean? = null) {
         val summary: String
             get() = "Übernommen: $playlists Playlists, $favorites Favoriten, $groups eigene Gruppen" +
+                when (proxy) {
+                    null -> ""
+                    true -> ", Proxy mit Passwort"
+                    false -> ", Proxy ohne Passwort (bitte unter Einstellungen → Proxy eintragen)"
+                } +
                 if (missingPasswords > 0) ". Bei $missingPasswords Playlist(s) fehlt das Passwort (Sicherung ohne Passwort): bitte in den Einstellungen eintragen." else "."
     }
 
@@ -151,7 +157,7 @@ class BackupImport(private val store: Store) {
                 subtitleLanguage = setting("subtitle_language_code") ?: u.subtitleLanguage,
             )
         }
-        return Result(ids.size, added, groups, missing)
+        return Result(ids.size, added, groups, missing, proxy?.let { it.password.isNotEmpty() || it.user.isEmpty() })
     }
 
     private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.contentOrNull

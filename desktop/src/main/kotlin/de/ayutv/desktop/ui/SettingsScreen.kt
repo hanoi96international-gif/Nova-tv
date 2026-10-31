@@ -120,6 +120,15 @@ fun SettingsScreen(app: AppState) {
             TextButton(if (address != null) "Ausschalten" else "Einschalten", { app.setPhoneRemote(address == null) })
         }
 
+        item { Section("Bild") }
+        item {
+            ListRow(
+                (if (user.fullscreenPlayback) "☑" else "☐") + "  Sender und Filme im Vollbild starten",
+                onClick = { app.store.updateUser { it.copy(fullscreenPlayback = !it.fullscreenPlayback) } },
+                subtitle = "Vollbild jederzeit: F11, Doppelklick ins Bild oder „⛶ Vollbild“ links unten. Esc verlässt das Vollbild.",
+            )
+        }
+
         item { Section("Bedienung") }
         item {
             Label(

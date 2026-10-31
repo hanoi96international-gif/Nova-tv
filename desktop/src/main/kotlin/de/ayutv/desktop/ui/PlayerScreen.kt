@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -141,8 +142,15 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
         }
     }
 
-    BackHandler(app, enabled = fullscreen && menu == null) { window.placement = WindowPlacement.Floating }
+    // Im Vollbild schauen (Einstellung, Standard an); beim Verlassen des Players wieder das Fenster wie vorher.
+    // Dann führt Esc direkt zurück zur Liste, sonst verlässt Esc zuerst das Vollbild.
+    val autoFullscreen = remember { app.store.user.value.fullscreenPlayback && window.placement != WindowPlacement.Fullscreen }
+    BackHandler(app, enabled = fullscreen && menu == null && !autoFullscreen) { window.placement = WindowPlacement.Floating }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    DisposableEffect(Unit) {
+        if (autoFullscreen) window.placement = WindowPlacement.Fullscreen
+        onDispose { if (autoFullscreen) window.placement = WindowPlacement.Floating }
+    }
     // Leiste nach 4 Sekunden ohne Eingabe ausblenden (nicht bei Pause oder Fehler).
     LaunchedEffect(lastInput, player.playing) {
         delay(4_000)

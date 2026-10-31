@@ -29,6 +29,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.DpSize
@@ -124,7 +125,10 @@ fun App(app: AppState, window: WindowState) {
     }
 
     Box(
-        Modifier.fillMaxSize().background(Palette.background).onKeyEvent { e ->
+        Modifier.fillMaxSize().background(Palette.background).onPreviewKeyEvent { e ->
+            // F11 immer, auch während ein Eingabefeld den Fokus hat.
+            if (e.key == Key.F11 && e.type == KeyEventType.KeyDown) { toggleFullscreen(window); true } else false
+        }.onKeyEvent { e ->
             // Was kein Element selbst nutzt: Pfeiltasten wechseln den Fokus, Esc/Zurück geht eine Ebene zurück.
             if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
             when (e.key) {
@@ -133,10 +137,6 @@ fun App(app: AppState, window: WindowState) {
                 Key.DirectionLeft -> focus.moveFocus(FocusDirection.Left)
                 Key.DirectionRight -> focus.moveFocus(FocusDirection.Right)
                 Key.Escape, Key.Back -> app.back()
-                Key.F11 -> {
-                    window.placement = if (window.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
-                    true
-                }
                 else -> false
             }
         },
@@ -146,7 +146,7 @@ fun App(app: AppState, window: WindowState) {
             PlayerScreen(app, playing, window)
         } else {
             Row(Modifier.fillMaxSize()) {
-                Sidebar(app)
+                Sidebar(app, window)
                 Box(Modifier.weight(1f).fillMaxHeight().padding(16.dp)) {
                     when (app.screen) {
                         Screen.LIVE -> LiveScreen(app)
@@ -170,7 +170,7 @@ fun App(app: AppState, window: WindowState) {
 }
 
 @Composable
-private fun Sidebar(app: AppState) {
+private fun Sidebar(app: AppState, window: WindowState) {
     val first = remember { FocusRequester() }
     Column(Modifier.width(200.dp).fillMaxHeight().background(Palette.surface).padding(10.dp)) {
         Label("DnA-TV", Type.title, Modifier.padding(start = 12.dp, top = 8.dp, bottom = 16.dp))
@@ -183,5 +183,12 @@ private fun Sidebar(app: AppState) {
             )
             Spacer(Modifier.height(2.dp))
         }
+        Spacer(Modifier.weight(1f))
+        val full = window.placement == WindowPlacement.Fullscreen
+        ListRow(if (full) "⛶  Fenster (F11)" else "⛶  Vollbild (F11)", onClick = { toggleFullscreen(window) })
     }
+}
+
+fun toggleFullscreen(window: WindowState) {
+    window.placement = if (window.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
 }
