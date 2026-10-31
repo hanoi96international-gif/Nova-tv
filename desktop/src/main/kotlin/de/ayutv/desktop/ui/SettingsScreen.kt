@@ -55,23 +55,33 @@ fun SettingsScreen(app: AppState) {
             val c = content[p.id]
             val counts = c?.let { "${it.channels.size} Sender · ${it.movies.size} Filme · ${it.series.size} Serien" } ?: "noch nicht geladen"
             val synced = if (p.lastSync > 0) " · geladen ${DATE_TIME.format(Instant.ofEpochMilli(p.lastSync))}" else ""
-            ListRow(
-                title = (if (p.enabled) "" else "⏸ ") + p.name,
-                subtitle = "${if (p.type == PlaylistType.XTREAM) "Xtream" else "M3U"} · $counts$synced",
-                onClick = { editing = p },
-                onMenu = {
-                    dialog = {
-                        MenuDialog(app, p.name, listOf(
-                            MenuItem("Bearbeiten") { editing = p },
-                            MenuItem("Jetzt neu laden") { app.scope.launch { runCatching { app.sync.syncPlaylist(p.id) }.onFailure { app.toast("${p.name}: ${it.message}") } } },
-                            MenuItem(if (p.enabled) "Ausschalten" else "Einschalten") { app.store.savePlaylist(p.copy(enabled = !p.enabled)) },
-                            MenuItem("Löschen") {
-                                dialog = { ConfirmDialog(app, "Playlist „${p.name}“ löschen?", "Löschen", { app.store.deletePlaylist(p.id) }, { dialog = null }) }
-                            },
-                        ), onDismiss = { if (dialog != null) dialog = null })
-                    }
-                },
-            )
+            val missingPassword = p.type == PlaylistType.XTREAM && p.password.isNullOrEmpty()
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                ListRow(
+                    title = p.name,
+                    subtitle = "${if (p.type == PlaylistType.XTREAM) "Xtream" else "M3U"} · $counts$synced" +
+                        if (missingPassword) " · ⚠ Passwort fehlt" else "",
+                    onClick = { editing = p },
+                    trailing = if (p.enabled) "● Aktiv" else "○ Aus",
+                )
+                Row(Modifier.padding(start = 12.dp)) {
+                    TextButton(if (p.enabled) "Ausschalten" else "Einschalten", {
+                        app.store.savePlaylist(p.copy(enabled = !p.enabled))
+                        app.applyProxy()
+                        if (!p.enabled && app.store.content.value[p.id] == null) {
+                            app.scope.launch { runCatching { app.sync.syncPlaylist(p.id) }.onFailure { app.toast("${p.name}: ${it.message}") } }
+                        }
+                    }, primary = !p.enabled)
+                    Spacer(Modifier.width(6.dp))
+                    TextButton(if (missingPassword) "Passwort eintragen" else "Bearbeiten", { editing = p })
+                    Spacer(Modifier.width(6.dp))
+                    TextButton("Neu laden", { app.scope.launch { runCatching { app.sync.syncPlaylist(p.id); app.sync.syncGuide() }.onSuccess { app.toast("${p.name} geladen") }.onFailure { app.toast("${p.name}: ${it.message}") } } })
+                    Spacer(Modifier.width(6.dp))
+                    TextButton("Löschen", {
+                        dialog = { ConfirmDialog(app, "Playlist „${p.name}“ löschen?", "Löschen", { app.store.deletePlaylist(p.id) }, { dialog = null }) }
+                    })
+                }
+            }
         }
         item {
             Row(Modifier.padding(vertical = 8.dp)) {

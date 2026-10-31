@@ -90,7 +90,10 @@ class BackupImportTest {
         val store = Store(Files.createTempDirectory("dna-import").toFile())
         val error = runCatching { BackupImport(store).import(wrapped, null) }.exceptionOrNull()
         assertTrue(error?.message.orEmpty().contains("Passwort"))
-        assertEquals(2, BackupImport(store).import(wrapped, "pw").playlists)
+        val result = BackupImport(store).import(wrapped, "pw")
+        assertEquals(2, result.playlists)
+        assertTrue(result.encrypted && !result.summary.contains("ohne Passwort –"))
+        assertTrue(BackupImport(Store(Files.createTempDirectory("dna-import").toFile())).import(plain, null).summary.startsWith("Sicherung ohne Passwort"))
     }
 
     @Test

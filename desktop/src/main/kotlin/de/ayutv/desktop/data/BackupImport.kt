@@ -27,9 +27,18 @@ import java.util.concurrent.TimeUnit
  */
 class BackupImport(private val store: Store) {
     /** [proxy]: null = kein Proxy in der Sicherung, sonst ob das Proxy-Passwort dabei war. */
-    data class Result(val playlists: Int, val favorites: Int, val groups: Int, val missingPasswords: Int, val proxy: Boolean? = null) {
+    data class Result(
+        val playlists: Int,
+        val favorites: Int,
+        val groups: Int,
+        val missingPasswords: Int,
+        val proxy: Boolean? = null,
+        /** Die Sicherung war mit Passwort verschlüsselt (nur dann enthält sie Passwörter und Schlüssel). */
+        val encrypted: Boolean = true,
+    ) {
         val summary: String
-            get() = "Übernommen: $playlists Playlists, $favorites Favoriten, $groups eigene Gruppen" +
+            get() = (if (encrypted) "" else "Sicherung ohne Passwort – darin stehen keine Passwörter und Schlüssel. ") +
+                "Übernommen: $playlists Playlists, $favorites Favoriten, $groups eigene Gruppen" +
                 when (proxy) {
                     null -> ""
                     true -> ", Proxy mit Passwort"
@@ -52,6 +61,10 @@ class BackupImport(private val store: Store) {
             if (e is java.net.SocketTimeoutException || e is java.net.ConnectException || e is java.net.NoRouteToHostException) throw IOException(UNREACHABLE, e)
             throw e
         }
+        // Mit Passwort angefragt, aber unverschlüsselt erhalten: dann kam das Passwort beim Fire TV nicht an.
+        if (password.isNotEmpty() && !text.contains("\"encrypted\"")) {
+            throw IOException("Der Fire TV hat die Sicherung ohne Verschlüsselung geschickt, also ohne Passwörter. Bitte die Fire-TV-App aktualisieren oder den Weg über das Handy nehmen.")
+        }
         import(text, password.ifEmpty { null })
     }
 
@@ -59,6 +72,7 @@ class BackupImport(private val store: Store) {
     fun import(text: String, password: String?): Result {
         var root = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull()
             ?: throw IllegalArgumentException("Das ist keine DnA-TV-Sicherung.")
+        val encrypted = root["encrypted"] is JsonObject
         if (root.str("format") != FORMAT) throw IllegalArgumentException("Das ist keine DnA-TV-Sicherung.")
         (root["encrypted"] as? JsonObject)?.let { e ->
             if (password.isNullOrEmpty()) throw IllegalArgumentException("Diese Sicherung ist mit einem Passwort geschützt – bitte Passwort eingeben.")
@@ -157,7 +171,7 @@ class BackupImport(private val store: Store) {
                 subtitleLanguage = setting("subtitle_language_code") ?: u.subtitleLanguage,
             )
         }
-        return Result(ids.size, added, groups, missing, proxy?.let { it.password.isNotEmpty() || it.user.isEmpty() })
+        return Result(ids.size, added, groups, missing, proxy?.let { it.password.isNotEmpty() || it.user.isEmpty() }, encrypted)
     }
 
     private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.contentOrNull
