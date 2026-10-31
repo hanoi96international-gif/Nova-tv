@@ -1,0 +1,331 @@
+373	1	Das Erste
+408	2	ZDF
+404	3	RTL
+381	4	SAT.1
+374	5	ProSieben
+385	6	VOX
+405	7	Kabel Eins
+382	8	RTLZWEI
+403	9	Super RTL
+387	10	KiKA
+54	11	Nick/Comedy Central+1
+392	12	3sat
+375	13	WELT
+376	14	ntv
+371	15	phoenix
+48	16	TELE 5
+391	17	ZDFneo
+4375	18	MOMENTS
+411	20	Lokal-TV
+407	21	BR Fernsehen Süd
+386	25	hr-fernsehen
+370	27	MDR-Fernsehen Sachsen
+377	29	NDR Fernsehen Niedersachsen
+368	30	Radio Bremen TV
+384	31	rbb fernsehen Berlin
+379	36	SR Fernsehen
+398	37	SWR Fernsehen BW
+393	38	SWR Fernsehen RP
+397	39	WDR Fernsehen Köln
+5078	49	More Than Sports TV
+3757	50	MS Sport
+6947	51	MS GOLF 1
+6946	52	MS GOLF 2
+389	53	Eurosport 1
+5027	54	Red Bull TV
+5026	55	Red Bull TV Motorsport
+401	56	SPORT1
+394	57	ARTE
+402	58	ONE
+452	59	ANIXE+
+4777	60	ANIXE HD Serie
+50	61	Comedy Central
+5394	62	TOP SERIEN
+27	63	Disney Channel
+429	64	DMAX
+5206	65	Fashion TV
+3583	66	HGTV
+5477	68	OUTtv
+396	69	ProSieben MAXX
+395	70	NITRO
+542	71	RTLup
+5329	72	RiC
+338	73	SAT.1 GOLD
+39	74	DF1
+380	75	sixx
+383	76	TLC
+601	77	TOGGO plus
+3930	78	VOXup
+5399	79	wedotv Movies
+479	80	ARD-alpha
+378	81	ZDFinfo
+400	82	tagesschau24
+482	83	Euronews Deutsch
+485	84	Bibel TV
+487	86	K-TV
+5839	87	Imearth
+5840	88	Travelxp
+573	89	Kabel Eins Doku
+5295	90	Marco Polo TV
+553	91	N24 Doku
+60	92	Welt der Wunder
+5505	94	SCHLAGER DELUXE
+25	95	DELUXE MUSIC
+28	96	MTV
+5312	97	DMF
+5331	98	Ballermann TV
+5387	99	Schlagerparadies.TV
+5388	100	Volksmusik.TV
+5390	101	FOLX MUSIC TELEVISION
+5389	102	ONE MUSIC TELEVISION
+5391	103	ZWEI MUSIC TELEVISION
+5397	104	Stingray Classica
+5398	105	Stingray iConcerts
+5400	106	Stingray DJAZZ
+4724	107	123.live
+451	109	HSE
+6685	110	Juwelo
+446	112	QVC
+6686	113	QVC ZWEI
+5172	114	Shop LC
+486	115	sonnenklar.TV
+5315	120	Al Jazeera English
+5330	123	Asharq News
+5475	125	ERT Cosmos
+454	126	BBC News
+5506	127	CNBC International
+399	128	CNN International
+5600	129	Euronews English
+5601	130	FREEDOM
+5602	131	Espreso
+6002	132	France 2
+6003	133	France 3
+5316	136	France 24 francais
+5386	137	France 24 english
+5314	138	TV5MONDE Europe
+616	141	Magenta Musik 1
+617	142	Magenta Musik 2
+255	200	13TH STREET
+110	202	AXN Black
+157	205	Kabel Eins CLASSICS
+137	206	KinoweltTV
+259	207	ProSieben FUN
+216	208	RTL Crime
+133	210	Sky Sci-Fi
+181	211	Warner TV Comedy
+184	212	Warner TV Film
+53	213	Warner TV Serie
+185	214	Universal TV
+109	215	Baby TV
+148	216	Cartoonito
+126	217	Cartoon Network
+221	222	Nick Jr.
+117	230	BonGusto
+661	233	Heimatkanal
+209	234	RTL Passion
+260	236	Romance TV
+227	237	RTL Living
+224	239	SAT.1 emotions
+188	240	AXN White
+571	242	wetter.com TV
+105	245	Animal Planet
+106	246	Crime+Investigation
+23	247	Discovery Channel
+153	248	GEO Television
+162	249	The HISTORY Channel
+35	253	National Geographic
+569	254	National Geographic Wild
+45	255	Bergblick
+4406	256	Spiegel Geschichte
+186	257	Curiosity Channel
+108	260	auto motor und sport
+18	263	Eurosport 2
+604	266	Motorvision+
+191	268	eSportsONE
+112	276	Blue Hustler
+32	277	Lust pur
+228	278	Penthouse Passion
+34	279	Playboy Europe
+218	284	Jukebox
+5075	300	MagentaSport
+550	301	Sport 1 - myTeamTV
+548	302	Sport 2 - myTeamTV
+549	303	Sport 3 - myTeamTV
+648	304	Sport 4 - myTeamTV
+645	305	Sport 5 - myTeamTV
+647	306	Sport 6 - myTeamTV
+646	307	Sport 7 - myTeamTV
+623	308	Sport 8 - myTeamTV
+626	309	Sport 9 - myTeamTV
+624	310	Sport 10 - myTeamTV
+625	311	Sport 11 - myTeamTV
+627	312	Sport 12 - myTeamTV
+629	313	Sport 13 - myTeamTV
+628	314	Sport 14 - myTeamTV
+367	315	Sport 15 - myTeamTV
+366	316	Sport 16 - myTeamTV
+369	317	Sport 17 - myTeamTV
+3686	318	Sport 18 - myTeamTV
+194	319	SPORTDIGITAL FUSSBALL
+44	320	Sportdigital1+
+637	321	Sky Sport Kompakt 1
+483	350	TeleBom/TeleDom
+475	351	Euronews Russki
+472	352	Kinomir
+476	354	OstWest
+474	360	iTVN
+473	361	TVP Polonia
+6499	365	HT SPOR
+136	366	Euro D
+21	367	Eurostar TV
+29	368	Kanal 7
+3826	369	beIN iZ
+440	370	beIN Movies Turk
+4378	371	Habertürk TV
+215	373	Show Turk
+3827	374	Show Max
+439	376	TV8 Int
+236	377	ÜLKE TV
+121	380	Euronews Italiano
+43	381	Rai 1
+46	382	Rai 2
+210	383	Rai 3
+3685	400	Baden TV
+3749	401	Baden TV Süd
+578	402	L-TV
+660	403	Regio TV
+6048	406	RTL Rhein-Neckar
+161	425	a.tv
+448	426	allgäu.tv
+175	427	BR Fernsehen Nord
+177	428	NIEDERBAYERN TV Deggendorf - Straubing
+238	429	Franken Fernsehen
+173	430	tv.ingolstadt
+174	431	NIEDERBAYERN TV Landshut
+241	433	münchen.tv
+141	434	Oberpfalz TV
+143	435	RFO
+6047	436	RTL Bayern
+146	437	SAT.1 Bayern
+154	438	NIEDERBAYERN TV Passau
+170	439	TV Oberfranken
+156	440	TV Mainfranken
+171	441	TVA Ostbayern
+649	450	ALEX Berlin
+599	452	tv.berlin
+242	457	rbb fernsehen Brandenburg
+100	461	RTL Bremen & Niedersachsen
+144	462	SAT.1 Niedersachsen und Bremen
+244	465	Hamburg 1
+150	466	NDR Fernsehen Hamburg
+151	467	NDR Fernsehen Schleswig-Holstein
+102	468	RTL Hamburg & Schleswig-Holstein
+142	469	SAT.1 Hamburg und Schleswig-Holstein
+101	474	RTL Hessen
+240	476	NDR Fernsehen Mecklenburg-Vorpommern
+4380	480	ems TV
+4513	481	Friesischer Rundfunk
+3750	492	NRWision
+478	493	RTL Nordrhein-Westfalen
+251	494	SAT.1 Nordrhein-Westfalen
+2616	495	Studio 47
+160	496	WDR Fernsehen Aachen
+158	497	WDR Fernsehen Bielefeld
+155	498	WDR Fernsehen Bonn
+172	499	WDR Fernsehen Dortmund
+165	500	WDR Fernsehen Duisburg
+167	501	WDR Fernsehen Düsseldorf
+531	502	WDR Fernsehen Essen
+239	503	WDR Fernsehen Münster
+166	504	WDR Fernsehen Siegen
+249	505	WDR Fernsehen Wuppertal
+3045	512	OK4
+663	513	OK54 Trier
+3042	515	OK Weinstraße
+662	517	rheinlOKal
+3044	518	OK:TV Mainz
+145	522	SAT.1 Rheinland-Pfalz und Hessen
+581	523	TV Mittelrhein
+2612	535	Chemnitz Fernsehen
+2611	536	Dresden Fernsehen
+4727	541	LAUSITZWELLE
+3179	542	Leipzig Fernsehen
+2610	545	TV Westsachsen
+4888	563	MDF.1 Fernsehen
+147	564	MDR-Fernsehen Sachsen-Anhalt
+4723	574	RFH Regionalfernsehen Harz
+3660	585	altenburg.tv
+5744	586	JenaTV
+252	587	MDR-Fernsehen Thüringen
+2609	589	Rennsteig.TV
+3073	591	salve.tv
+5144	592	SRF
+5577	700	Sky Showcase
+576	701	Sky One
+201	703	Sky Krimi
+264	704	Sky Atlantic
+4924	708	Sky Crime
+5143	709	Sky Documentaries
+5142	710	Sky Nature
+465	712	Sky Sci-Fi (Sky)
+471	713	13TH STREET (Sky)
+462	714	Universal TV (Sky)
+458	718	Warner TV Serie (Sky)
+461	719	Warner TV Comedy (Sky)
+134	720	Heimatkanal (Sky)
+658	721	Romance TV (Sky)
+6730	726	National Geographic (Sky)
+6799	727	National Geographic Wild (Sky)
+467	728	The HISTORY Channel (Sky)
+5141	730	Crime+Investigation (Sky)
+3843	732	Cartoonito (Sky)
+4379	734	Nick Jr. (Sky)
+4405	735	Nicktoons (Sky)
+4512	736	Cartoon Network (Sky)
+132	737	Jukebox (Sky)
+107	740	Beate-Uhse.TV (Sky)
+195	755	Sky Cinema Premiere
+6210	756	Sky Cinema Blockbuster
+40	757	Sky Cinema Action
+572	758	Sky Cinema Feelgood
+200	759	Sky Cinema Classics
+540	760	Warner TV Film (Sky)
+190	800	Sky Sport News
+31	801	Sky Sport Top Event
+42	802	Sky Sport Bundesliga
+4889	803	Sky Sport F1
+5555	804	Sky Sport Premier League
+5556	805	Sky Sport Mix
+198	806	Sky Sport Tennis
+5558	807	Sky Sport Golf
+206	811	Sky Sport Bundesliga 1
+211	812	Sky Sport Bundesliga 2
+199	813	Sky Sport Bundesliga 3
+232	814	Sky Sport Bundesliga 4
+234	815	Sky Sport Bundesliga 5
+231	816	Sky Sport Bundesliga 6
+258	817	Sky Sport Bundesliga 7
+219	818	Sky Sport Bundesliga 8
+237	819	Sky Sport Bundesliga 9
+5557	820	Sky Sport Bundesliga 10
+192	821	Sky Sport 1
+212	822	Sky Sport 2
+189	823	Sky Sport 3
+111	824	Sky Sport 4
+114	825	Sky Sport 5
+113	826	Sky Sport 6
+127	827	Sky Sport 7
+261	828	Sky Sport 8
+187	829	Sky Sport 9
+5554	830	Sky Sport 10
+416	901	Testkanal L01
+243	902	Testkanal L02
+442	903	Testkanal L03
+179	904	Testkanal L04
+532	905	Testkanal L05
+477	906	Testkanal L06
+457	907	Testkanal L07
+530	951	Testkanal I01
+257	953	Testkanal I03
+812	981	MagentaTV+
+413	999	Meine Aufnahmen

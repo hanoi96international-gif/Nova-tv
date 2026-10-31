@@ -1,0 +1,86 @@
+dyn_list_2799.json: 17294 Bytes, 0 Termine
+dyn_list_38606.json: 29638 Bytes, 0 Termine
+dyn_list_56005.json: 8686 Bytes, 0 Termine
+dyn_list_56006.json: 12295 Bytes, 0 Termine
+dyn_list_84889.json: 6279 Bytes, 0 Termine
+dyn_sport_basketball.json: 103135 Bytes, 14 Termine
+   entry ListEntry  list=76269 size=4 paging={"total": 1, "page": 1, "size": 12}
+      event | ratiopharm ulm - EWE Baskets Oldenburg | easyCredit BBL | 2026-10-31T17:15:00.0000000Z–2026-10-31T19:45:00.0000000Z | /event/ratiopharm_ulm_EWE_Baskets_Oldenburg_105671
+      program | Top 10 - Monster Griesel | easyCredit BBL | None–None | /program/Top_10_Monster_Griesel_105946
+      program | Dyn Timeout Spezial - Jack Kayil – Der geplatzte NBA-Traum? | easyCredit BBL  | None–None | /program/Dyn_Timeout_Spezial_Jack_Kayil_Der_geplatzte_NBA_Traum_105500
+   entry ListEntry Live & Demnächst list=75021 size=31 paging={"total": 3, "page": 1, "size": 12, "next": "/lists/75021?page=2&sub=Anonymous"}
+      event | BMA365 Bamberg Baskets - Science City Jena | easyCredit BBL | 2026-11-01T13:45:00.0000000Z–2026-11-01T16:15:00.0000000Z | /event/BMA365_Bamberg_Baskets_Science_City_Jena_105676
+      event | ROSTOCK SEAWOLVES - FC Bayern München Basketball | easyCredit BBL | 2026-11-01T13:45:00.0000000Z–2026-11-01T16:15:00.0000000Z | /event/ROSTOCK_SEAWOLVES_FC_Bayern_München_Basketball_105673
+      event | Veolia Towers Hamburg - SYNTAINICS MBC | easyCredit BBL | 2026-11-01T15:15:00.0000000Z–2026-11-01T17:45:00.0000000Z | /event/Veolia_Towers_Hamburg_SYNTAINICS_MBC_105670
+   entry ListEntry Wiederholungen list=57113 size=50 paging={"total": 5, "page": 0, "size": 12, "next": "/lists/57113?page=1&sub=Anonymous"}
+   entry ListEntry Highlights list=76556 size=20 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/76556?page=1&sub=Anonymous"}
+   entry ListEntry Wettbewerbe list=2772 size=4 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/2772?page=1&sub=Anonymous"}
+   entry ListEntry Magazine & Dokus list=77238 size=25 paging={"total": 3, "page": 0, "size": 12, "next": "/lists/77238?page=1&sub=Anonymous"}
+   entry ImageEntry  list=None size=None paging=null
+   entry UserEntry Deine Merkliste list=Bookmarks size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/bookmarks/list?page=1&sub=Anonymous", "authorization": {"type": "UserProfile", "scope": "Catalog"}}
+   entry CustomEntry Für dich empfohlen list=Followings_8a66365 size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/follows/list?item_type=event&sport=basketball", "authorization": {"type": "UserAccount", "scope": "Catalog"}}
+   entry ListEntry Empfehlung der Redaktion list=88055 size=5 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88055?page=1&sub=Anonymous"}
+   entry ListEntry  list=86287 size=6 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/86287?page=1&sub=Anonymous"}
+   entry ListEntry Dyn Gametime list=88438 size=15 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/88438?page=1&sub=Anonymous"}
+   entry ListEntry  list=88067 size=4 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88067?page=1&sub=Anonymous"}
+dyn_sport_handball.json: 187515 Bytes, 14 Termine
+   entry ListEntry  list=76268 size=6 paging={"total": 1, "page": 1, "size": 12}
+      event | TBV Lemgo Lippe - SC Magdeburg | Dyn Topspiel | Opel Handball-Bundesliga | 2026-10-31T18:45:00.0000000Z–2026-10-31T21:00:00.0000000Z | /event/TBV_Lemgo_Lippe_SC_Magdeburg_Dyn_Topspiel_105614
+      program | HINTERM LOGO - Rhein-Neckar Löwen: Einmal Löwe, immer Löwe | Opel Handball-Bundesliga | None–None | /program/HINTERM_LOGO_Rhein_Neckar_Löwen_Einmal_Löwe_immer_Löwe_105852
+      program | Dyn Analyse – WM-Kandidaten im Check | Opel Handball-Bundesliga | None–None | /program/Dyn_Analyse_WM_Kandidaten_im_Check_105961
+   entry ListEntry Live & Demnächst list=75023 size=50 paging={"total": 5, "page": 1, "size": 12, "next": "/lists/75023?page=2&sub=Anonymous"}
+      event | HC Leipzig - BSV Sachsen Zwickau | Alsco Handball Bundesliga Frauen | 2026-11-01T13:15:00.0000000Z–2026-11-01T15:30:00.0000000Z | /event/HC_Leipzig_BSV_Sachsen_Zwickau_105195
+      event | HSG Wetzlar - MT Melsungen | Opel Handball-Bundesliga | 2026-11-01T13:45:00.0000000Z–2026-11-01T16:00:00.0000000Z | /event/HSG_Wetzlar_MT_Melsungen_105604
+      event | ThSV Eisenach - Füchse Berlin | Opel Handball-Bundesliga | 2026-11-01T15:15:00.0000000Z–2026-11-01T17:30:00.0000000Z | /event/ThSV_Eisenach_Füchse_Berlin_105606
+   entry ListEntry Wiederholungen list=76607 size=50 paging={"total": 5, "page": 0, "size": 12, "next": "/lists/76607?page=1&sub=Anonymous"}
+   entry ListEntry Highlights list=76555 size=20 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/76555?page=1&sub=Anonymous"}
+   entry ListEntry Deine Handball-Formate  list=98760 size=5 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/98760?page=1&sub=Anonymous"}
+   entry ListEntry Wettbewerbe list=2717 size=12 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/2717?page=1&sub=Anonymous"}
+   entry ListEntry  list=95212 size=50 paging={"total": 5, "page": 0, "size": 12, "next": "/lists/95212?page=1&sub=Anonymous"}
+   entry ListEntry  list=87960 size=44 paging={"total": 4, "page": 0, "size": 12, "next": "/lists/87960?page=1&sub=Anonymous"}
+   entry ListEntry  list=103915 size=6 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/103915?page=1&sub=Anonymous"}
+   entry CustomEntry Für dich empfohlen list=Followings_b54a801 size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/follows/list?item_type=event&sport=handball", "authorization": {"type": "UserAccount", "scope": "Catalog"}}
+   entry UserEntry Deine Merkliste list=Bookmarks size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/bookmarks/list?page=1&sub=Anonymous", "authorization": {"type": "UserProfile", "scope": "Catalog"}}
+   entry ListEntry Magazine & Dokus list=76570 size=25 paging={"total": 3, "page": 0, "size": 12, "next": "/lists/76570?page=1&sub=Anonymous"}
+   entry ListEntry  list=103914 size=4 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/103914?page=1&sub=Anonymous"}
+   entry ListEntry Empfehlung der Redaktion list=88055 size=5 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88055?page=1&sub=Anonymous"}
+   entry ListEntry  list=88066 size=4 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88066?page=1&sub=Anonymous"}
+dyn_sport_hockey.json: 95948 Bytes, 14 Termine
+   entry ListEntry  list=84756 size=5 paging={"total": 1, "page": 1, "size": 12}
+      event | Mannheimer HC (D) - Rot-Weiss Köln (D) | 1. Feldhockey Bundesliga Damen 26/27 | 2026-10-31T10:25:00.0000000Z–2026-10-31T12:30:00.0000000Z | /event/Mannheimer_HC_(D)_Rot_Weiss_Köln_(D)_105563
+      program | Highlights TSV Mannheim Hockey - Berliner HC (D) | 1. Feldhockey Bundesliga Damen 26/27 | None–None | /program/Highlights_TSV_Mannheim_Hockey_Berliner_HC_(D)_105934
+      program | Highlights Uhlenhorster HC - Harvestehuder THC (H) | 1. Feldhockey Bundesliga Herren 26/27 | None–None | /program/Highlights_Uhlenhorster_HC_Harvestehuder_THC_(H)_105936
+   entry ListEntry Live & Demnächst list=84595 size=12 paging={"total": 1, "page": 1, "size": 12}
+      event | Mannheimer HC (D) - Bremer HC (D) | 1. Feldhockey Bundesliga Damen 26/27 | 2026-11-01T10:25:00.0000000Z–2026-11-01T12:30:00.0000000Z | /event/Mannheimer_HC_(D)_Bremer_HC_(D)_105801
+      event | Münchner SC (D) - Der Club an der Alster (D) | 1. Feldhockey Bundesliga Damen 26/27 | 2026-11-01T10:25:00.0000000Z–2026-11-01T12:30:00.0000000Z | /event/Münchner_SC_(D)_Der_Club_an_der_Alster_(D)_105800
+      event | Berliner HC (D) - Großflottbeker THGC (D) | 1. Feldhockey Bundesliga Damen 26/27 | 2026-11-01T10:25:00.0000000Z–2026-11-01T12:30:00.0000000Z | /event/Berliner_HC_(D)_Großflottbeker_THGC_(D)_105805
+   entry ListEntry Wiederholungen list=84596 size=50 paging={"total": 5, "page": 0, "size": 12, "next": "/lists/84596?page=1&sub=Anonymous"}
+   entry ListEntry Wettbewerbe list=84597 size=3 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/84597?page=1&sub=Anonymous"}
+   entry ListEntry Highlights list=84593 size=25 paging={"total": 3, "page": 0, "size": 12, "next": "/lists/84593?page=1&sub=Anonymous"}
+   entry UserEntry Deine Merkliste list=Bookmarks size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/bookmarks/list?page=1&sub=Anonymous", "authorization": {"type": "UserProfile", "scope": "Catalog"}}
+   entry CustomEntry Für dich empfohlen list=Followings_d432398 size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/follows/list?item_type=event&sport=hockey", "authorization": {"type": "UserAccount", "scope": "Catalog"}}
+   entry ListEntry  list=96561 size=18 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/96561?page=1&sub=Anonymous"}
+   entry ListEntry Dyn Gametime list=88438 size=15 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/88438?page=1&sub=Anonymous"}
+   entry ListEntry Empfehlung der Redaktion list=88055 size=5 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88055?page=1&sub=Anonymous"}
+dyn_sport_tischtennis.json: 28 Bytes, 0 Termine
+dyn_sport_volleyball.json: 156620 Bytes, 13 Termine
+   entry ListEntry  list=76270 size=6 paging={"total": 1, "page": 1, "size": 12}
+      event | Dresdner SC - VfB Suhl LOTTO Thüringen | DEKRA 1. Volleyball Bundesliga Frauen | 2026-10-31T15:55:00.0000000Z–2026-10-31T19:15:00.0000000Z | /event/Dresdner_SC_VfB_Suhl_LOTTO_Thüringen_105874
+      program | Dyn Overload – Die großen Männer-Predictions zur Saison 26/27 | 1. Bundesliga Männer | None–None | /program/Dyn_Overload_Die_großen_Männer_Predictions_zur_Saison_26_27_105952
+      program | Dyn Volleybla - Jan Zimmermann zwischen EM-Aus und Transferchaos | 1. Bundesliga Männer | None–None | /program/Dyn_Volleybla_Jan_Zimmermann_zwischen_EM_Aus_und_Transferchaos_105853
+   entry ListEntry Live & Demnächst list=75024 size=20 paging={"total": 2, "page": 1, "size": 12, "next": "/lists/75024?page=2&sub=Anonymous"}
+      event | Binder Blaubären TSV Flacht - Schwarz-Weiß Erfurt | DEKRA 1. Volleyball Bundesliga Frauen | 2026-11-01T13:40:00.0000000Z–2026-11-01T17:00:00.0000000Z | /event/Binder_Blaubären_TSV_Flacht_Schwarz_Weiß_Erfurt_105878
+      event | VCO Dresden - NawaRo Straubing | Sparda 2. Liga Pro | 2026-11-01T13:40:00.0000000Z–2026-11-01T17:00:00.0000000Z | /event/VCO_Dresden_NawaRo_Straubing_105877
+      event | ETV Hamburger Volksbank Volleys - Skurios Volleys Borken | DEKRA 1. Volleyball Bundesliga Frauen | 2026-11-01T14:10:00.0000000Z–2026-11-01T17:30:00.0000000Z | /event/ETV_Hamburger_Volksbank_Volleys_Skurios_Volleys_Borken_105879
+   entry ListEntry Wiederholungen list=77825 size=50 paging={"total": 5, "page": 0, "size": 12, "next": "/lists/77825?page=1&sub=Anonymous"}
+   entry ImageEntry  list=None size=None paging=null
+   entry ListEntry Highlights list=76559 size=20 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/76559?page=1&sub=Anonymous"}
+   entry ListEntry Unsere Wettbewerbe list=25280 size=5 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/25280?page=1&sub=Anonymous"}
+   entry ListEntry  list=100504 size=50 paging={"total": 5, "page": 0, "size": 12, "next": "/lists/100504?page=1&sub=Anonymous"}
+   entry ListEntry  list=100502 size=16 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/100502?page=1&sub=Anonymous"}
+   entry UserEntry Deine Merkliste list=Bookmarks size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/bookmarks/list?page=1&sub=Anonymous", "authorization": {"type": "UserProfile", "scope": "Catalog"}}
+   entry CustomEntry Für dich empfohlen list=Followings_bda474c size=-1 paging={"total": -1, "page": 0, "size": -1, "next": "/account/profile/follows/list?item_type=event&sport=volleyball", "authorization": {"type": "UserAccount", "scope": "Catalog"}}
+   entry ListEntry Magazine & Dokus list=76573 size=25 paging={"total": 3, "page": 0, "size": 12, "next": "/lists/76573?page=1&sub=Anonymous"}
+   entry ListEntry Empfehlung der Redaktion list=88055 size=5 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88055?page=1&sub=Anonymous"}
+   entry ListEntry Dyn Gametime list=88438 size=15 paging={"total": 2, "page": 0, "size": 12, "next": "/lists/88438?page=1&sub=Anonymous"}
+   entry ListEntry  list=88068 size=4 paging={"total": 1, "page": 0, "size": 12, "next": "/lists/88068?page=1&sub=Anonymous"}
