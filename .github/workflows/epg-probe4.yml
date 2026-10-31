@@ -1,0 +1,84 @@
+name: EPG-Probe-4
+on:
+  push:
+    branches: [epg-probe4]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Quellen laden und durchsuchen
+        run: |
+          set +e
+          mkdir -p out src && cd src
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          curl -sSL -m 60 -A "$UA" https://epgshare01.online/epgshare01/ -o ../out/epgshare01-index.html
+          grep -o 'epg_ripper_[A-Za-z0-9_]*\.xml\.gz' ../out/epgshare01-index.html | sort -u > ../out/epgshare01-files.txt
+          for f in DE1 AT1 CH1 ALL_SOURCES1 UK1 NL1 IT1 PL1 US2 US_SPORTS1 DUMMY_CHANNELS PLEX1 SAMSUNG1 RAKUTEN1 PLUTO1 DISTROTV1 SPORTS1 BEIN1 FANDUEL1; do
+            curl -sSL -m 300 -A "$UA" -o "es_$f.gz" "https://epgshare01.online/epgshare01/epg_ripper_${f}.xml.gz"
+          done
+          curl -sSL -m 300 -A "$UA" -o epgpw_DE.gz "https://epg.pw/xmltv/epg_DE.xml.gz"
+          curl -sSL -m 300 -A "$UA" -o epgpw_AT.gz "https://epg.pw/xmltv/epg_AT.xml.gz"
+          curl -sSL -m 300 -A "$UA" -o epgpw_CH.gz "https://epg.pw/xmltv/epg_CH.xml.gz"
+          for n in 1 2 3 4 5; do curl -sSL -m 300 -A "$UA" -o "openepg_germany$n.xml" "https://www.open-epg.com/files/germany$n.xml"; done
+          curl -sSL -m 60 -A "$UA" "https://api.github.com/repos/globetvapp/epg/contents/Germany" -o ../out/globetv-germany.json
+          for u in $(grep -o '"download_url": *"[^"]*"' ../out/globetv-germany.json | sed 's/.*"\(http[^"]*\)"/\1/'); do curl -sSL -m 300 -o "globetv_$(basename $u)" "$u"; done
+          curl -sSL -m 120 -A "$UA" -o iptvorg_guides.json "https://iptv-org.github.io/api/guides.json"
+          curl -sSL -m 120 -A "$UA" -o iptvorg_channels.json "https://iptv-org.github.io/api/channels.json"
+          # Dyn: Webseite und mögliche Programm-Schnittstellen
+          for u in https://www.dyn.sport/ https://dyn.sport/de/programm https://www.dyn.sport/sitemap.xml https://www.tvmovie.de/tv/sender/dyn-highlights https://www.tvspielfilm.de/tv-programm/sender/dyn-sport-mix,DYNMX.html; do
+            curl -sSL -m 60 -A "$UA" "$u" -o "../out/web_$(echo $u | tr -c 'a-zA-Z0-9' '_' | cut -c1-80).html"
+          done
+          ls -la > ../out/sizes.txt
+          cd ..
+          python3 - <<'PY'
+          import gzip, re, html, os, json, glob
+          pat = re.compile(r'(?i)dyn|magenta|paramount|prime|vodafone|giga|amazon|volley|sky.?cinema|wow|rtl.?\+|joyn|serie|film|cinema|kino')
+          summary = open("out/summary.txt","w")
+          for path in sorted(glob.glob("src/*")):
+              name = os.path.basename(path)
+              if name.endswith(".json"): continue
+              try:
+                  raw = open(path,"rb").read()
+                  if raw[:2] == b"\x1f\x8b": raw = gzip.decompress(raw)
+                  data = raw.decode("utf-8","replace")
+              except Exception as e:
+                  summary.write("%s: FEHLER %s\n" % (name, e)); continue
+              chans = re.findall(r'<channel id="([^"]*)"[^>]*>(.*?)</channel>', data, re.S)
+              progs = re.findall(r'<programme[^>]*channel="([^"]*)"', data)
+              counts = {}
+              for c in progs: counts[c] = counts.get(c,0)+1
+              summary.write("%s: %d Bytes, %d Sender, %d Sendungen\n" % (name, len(data), len(chans), len(progs)))
+              with open("out/channels_%s.txt" % name, "w") as o:
+                  for cid, body in chans:
+                      names = [html.unescape(n) for n in re.findall(r'<display-name[^>]*>(.*?)</display-name>', body)]
+                      o.write("%s\t%d\t%s\n" % (cid, counts.get(cid,0), " | ".join(names)))
+              hits = [(cid, body) for cid, body in chans if pat.search(cid + body)]
+              with open("out/hits_%s.txt" % name, "w") as o:
+                  ids = set()
+                  for cid, body in hits:
+                      names = [html.unescape(n) for n in re.findall(r'<display-name[^>]*>(.*?)</display-name>', body)]
+                      o.write("CHANNEL %s (%d) %s\n" % (cid, counts.get(cid,0), " | ".join(names)))
+                      if re.search(r'(?i)dyn|magenta|paramount|prime|vodafone|giga|amazon|volley', cid + body): ids.add(cid)
+                  for m in re.finditer(r'<programme start="([^"]*)" stop="([^"]*)" channel="([^"]*)"[^>]*>(.*?)</programme>', data, re.S):
+                      start, stop, ch, body = m.groups()
+                      if ch not in ids: continue
+                      t = re.search(r'<title[^>]*>(.*?)</title>', body, re.S)
+                      o.write("%s %s %-30s | %s\n" % (start[:12], stop[:12], ch, html.unescape(t.group(1)) if t else ""))
+          # iptv-org: Sender mit passenden Namen und ihre Guide-Seiten
+          try:
+              chans = json.load(open("src/iptvorg_channels.json")); guides = json.load(open("src/iptvorg_guides.json"))
+              ids = {c["id"]: c for c in chans if re.search(r'(?i)dyn|magenta|paramount|prime video|vodafone|volley', c.get("name","")) and c.get("country") in ("DE","AT","CH")}
+              with open("out/iptvorg.txt","w") as o:
+                  for cid, c in ids.items():
+                      o.write("CHANNEL %s %s\n" % (cid, c.get("name")))
+                      for g in guides:
+                          if g.get("channel") == cid: o.write("   GUIDE %s %s %s\n" % (g.get("site"), g.get("site_id"), g.get("lang")))
+          except Exception as e: open("out/iptvorg.txt","w").write(str(e))
+          PY
+          cd out && for f in web_*.html; do grep -oiE '(https?:)?//[a-z0-9.-]*(api|epg|schedule|program|graphql)[a-z0-9./_-]*' "$f" | sort -u > "$f.api.txt"; done
+          git init -q -b epg-probe4-results && git config user.name ci && git config user.email ci@users.noreply.github.com
+          find . -size +40M -delete
+          git add -A && git commit -qm results && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" epg-probe4-results
