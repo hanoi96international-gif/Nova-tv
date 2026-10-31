@@ -106,7 +106,7 @@ data class AppSettings(
     /** Raster-TV-Guide im Menü. Die EPG-Daten werden unabhängig davon für "Jetzt läuft" genutzt. */
     val showGuide: Boolean = true,
     /** Mini-Vorschau: In der Live-TV-Liste läuft der ausgewählte Sender nach kurzer Zeit stumm in der Detailspalte. */
-    val livePreview: Boolean = true,
+    val livePreview: Boolean = false,
     /** Flüssige Bedienung: ohne Überblendungen und mit sparsamem Hintergrund (wie auf schwachen Sticks automatisch). */
     val smoothUi: Boolean = false,
     /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen, mit Komma getrennt). */
@@ -429,7 +429,7 @@ class SettingsStore(private val context: Context) {
         asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
-        livePreview = this[Keys.livePreview] ?: true,
+        livePreview = this[Keys.livePreview] ?: false,
         smoothUi = this[Keys.smoothUi] ?: false,
         appsOrder = this[Keys.appsOrder] ?: "",
         appsHidden = this[Keys.appsHidden] ?: "",

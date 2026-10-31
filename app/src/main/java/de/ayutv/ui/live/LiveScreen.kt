@@ -597,13 +597,14 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
         if (channel == null) return@Column
         val player = preview.player
         if (player != null && preview.key == channel.key) {
-            // Mini-Vorschau: der ausgewählte Sender stumm, wie ein kleines Bild.
+            // Mini-Vorschau: der ausgewählte Sender stumm, wie ein kleines Bild. TextureView statt SurfaceView: Eine
+            // SurfaceView stanzt ein Loch ins Fenster und ließ dabei die Senderliste verschwinden.
             androidx.compose.runtime.key(player) {
                 androidx.compose.ui.viewinterop.AndroidView(
                     factory = { context ->
-                        android.view.SurfaceView(context).apply { player.setVideoSurfaceView(this) }
+                        android.view.TextureView(context).apply { player.setVideoTextureView(this) }
                     },
-                    onRelease = { view -> player.clearVideoSurfaceView(view) },
+                    onRelease = { view -> player.clearVideoTextureView(view) },
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
                 )
             }
