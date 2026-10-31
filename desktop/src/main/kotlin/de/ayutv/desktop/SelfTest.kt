@@ -16,8 +16,15 @@ object SelfTest {
         val lines = ArrayList<String>()
         var ok = false
         try {
+            // Start zweimal messen: beim ersten Mal legt VLC den Plugin-Zwischenspeicher an, danach muss es schnell gehen.
+            val first = System.currentTimeMillis()
+            VideoPlayer().release()
+            val firstMs = System.currentTimeMillis() - first
+            val second = System.currentTimeMillis()
             val player = VideoPlayer()
+            val secondMs = System.currentTimeMillis() - second
             lines += "vlc=${player.vlcVersion ?: "fehlt"} ${player.error.orEmpty()}".trim()
+            lines += "vlc_start_ms first=$firstMs second=$secondMs"
             if (player.available) {
                 val image = File.createTempFile("dna-tv-test", ".png")
                 val picture = BufferedImage(640, 360, BufferedImage.TYPE_INT_RGB)

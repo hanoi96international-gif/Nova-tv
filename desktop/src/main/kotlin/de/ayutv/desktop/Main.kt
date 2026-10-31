@@ -15,14 +15,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -53,26 +55,53 @@ import de.ayutv.desktop.ui.SearchScreen
 import de.ayutv.desktop.ui.SettingsScreen
 import de.ayutv.desktop.ui.SportScreen
 import de.ayutv.desktop.ui.Type
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
-    val store = Store(Store.defaultDir())
-    // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
-    Network.apply(store)
     application {
         val window = rememberWindowState(size = DpSize(1280.dp, 780.dp))
         val scope = rememberCoroutineScope()
-        val app = remember { AppState(store, Sync(store), scope) }
+        // Fenster sofort zeigen; Daten (Playlists, TV-Guide) und VLC im Hintergrund laden.
+        var app by remember { mutableStateOf<AppState?>(null) }
+        var failure by remember { mutableStateOf<String?>(null) }
+        LaunchedEffect(Unit) {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val store = Store(Store.defaultDir())
+                    // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
+                    Network.apply(store)
+                    AppState(store, Sync(store), scope)
+                }
+            }.onSuccess { app = it }.onFailure { failure = "DnA-TV konnte nicht starten: ${it.message}" }
+        }
         Window(
-            onCloseRequest = { app.close(); exitApplication() },
+            onCloseRequest = { app?.close(); exitApplication() },
             state = window,
             title = "DnA-TV",
             icon = remember { appIcon() },
         ) {
-            // Tasten vom Handy gehen an dieses Fenster.
-            LaunchedEffect(Unit) { app.remote.window = this@Window.window }
-            App(app, window)
+            val ready = app
+            if (ready == null) {
+                Starting(failure)
+            } else {
+                // Tasten vom Handy gehen an dieses Fenster.
+                LaunchedEffect(ready) { ready.remote.window = this@Window.window }
+                App(ready, window)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Starting(failure: String?) {
+    Box(Modifier.fillMaxSize().background(Palette.background), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Label("DnA-TV", Type.title)
+            Spacer(Modifier.height(8.dp))
+            Label(failure ?: "startet …", Type.body, maxLines = 4)
         }
     }
 }

@@ -41,7 +41,7 @@ class VideoPlayer {
     var audioTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
     var subtitleTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
 
-    private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
+    private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*(VLC_OPTIONS + cacheOptions())) }
         .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
     // Vor den Playern anlegen: [prepare] braucht sie schon beim Anlegen von [normal].
     private val format = Format()
@@ -219,12 +219,34 @@ class VideoPlayer {
          * Mitgeliefertes VLC (im App-Ordner, Unterordner „vlc“) vor dem ersten Player bekannt machen. Ohne eigenes VLC
          * sucht vlcj ein installiertes.
          */
+        /** Ordner des mitgelieferten VLC (null = installiertes VLC). */
+        private var bundledDir: File? = null
+
+        /**
+         * Plugin-Zwischenspeicher: Ohne ihn liest VLC bei jedem Start alle rund 300 Plugins ein (mit Virenscanner
+         * viele Sekunden). Fehlt er oder gehört er zu einer anderen VLC-Fassung (Update), legt VLC ihn diesmal neu an;
+         * danach startet es schnell.
+         */
+        private fun cacheOptions(): Array<String> {
+            val plugins = bundledDir?.let { File(it, "plugins") } ?: return emptyArray()
+            if (!plugins.isDirectory || !plugins.canWrite()) return emptyArray()
+            val core = File(bundledDir, "libvlccore.dll").takeIf { it.isFile } ?: File(bundledDir, "libvlccore.so")
+            val signature = "${core.length()}-${core.lastModified()}"
+            val marker = File(plugins, "dna-tv-cache.txt")
+            val cache = File(plugins, "plugins.dat")
+            val current = cache.isFile && runCatching { marker.readText() }.getOrNull() == signature
+            if (current) return emptyArray()
+            runCatching { marker.writeText(signature) }
+            return arrayOf("--reset-plugins-cache")
+        }
+
         fun useBundledVlc() {
             val dirs = listOfNotNull(
                 System.getProperty("compose.application.resources.dir")?.let { File(it, "vlc") },
                 File(System.getProperty("user.dir"), "vlc"),
             )
             val dir = dirs.firstOrNull { File(it, "libvlc.dll").isFile || File(it, "libvlc.so").isFile } ?: return
+            bundledDir = dir
             val path = System.getProperty("jna.library.path")
             // Die Plugins findet libVLC selbst im Unterordner „plugins“ neben libvlc.dll.
             System.setProperty("jna.library.path", if (path.isNullOrEmpty()) dir.absolutePath else path + File.pathSeparator + dir.absolutePath)
