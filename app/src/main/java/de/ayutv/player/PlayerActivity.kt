@@ -1625,6 +1625,8 @@ class PlayerActivity : ComponentActivity() {
                     // Übersetzer hängt (vom System beendet und lädt neu, oder belegt): neu starten und weiter übersetzen,
                     // diese Zeile im Original. Erst wenn er auch nach zwei Neustarts nicht antwortet, das Original zeigen.
                     Log.w(SUBTITLE_TAG, "Übersetzer antwortet nicht", e)
+                    // Nicht im Vorlauf stehen bleiben, solange der Übersetzer neu startet: Der Film läuft weiter.
+                    endPreroll()
                     Translators.remote.abort(e.message ?: "keine Antwort")
                     aheadTranslations[next.startMs] = next.text.orEmpty()
                     if (++hangs > MAX_TRANSLATOR_RESTARTS) {
@@ -1635,6 +1637,8 @@ class PlayerActivity : ComponentActivity() {
                     lineMs = 0L
                 } catch (e: Exception) {
                     Log.w(SUBTITLE_TAG, "Übersetzung mit Vorlauf fehlgeschlagen", e)
+                    // Übersetzer ausgefallen (z. B. vom System beendet): nicht im Vorlauf warten, der Film läuft weiter.
+                    endPreroll()
                     // Diese Zeile im Original zeigen. Hakt es öfter, kurz durchatmen (Speicher, Modell lädt neu) und weiter;
                     // erst wenn es dauerhaft nicht geht, die ganze Spur im Original, nie eine heruntergeladene Datei.
                     aheadTranslations[next.startMs] = next.text.orEmpty()
