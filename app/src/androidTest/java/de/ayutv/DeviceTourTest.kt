@@ -1238,6 +1238,20 @@ class DeviceTourTest {
             log("line_check: ${result.summary} empfehlung=${result.recommendation}")
             assertTrue("Leitungs-Check ohne Daten: ${result.summary}", result.failed == null && result.kbps > 0)
         }
+        // HLS: Datenrate des Senders aus Segmentgröße je Sekunde, nicht die Ladegeschwindigkeit eines Segments (die wäre
+        // im Emulator Hunderte Mbit/s). Dazu der Fassungsvergleich über alle Playlists.
+        section("hls_bitrate") {
+            val hls = live.firstOrNull { it.name == "HLS Test" } ?: error("HLS-Testsender fehlt")
+            val check = de.ayutv.data.repo.LineCheck(container.http)
+            val kbps = runBlocking { check.hls(hls.url, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT) }
+            val lineRate = runBlocking { check.run(hls, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, seconds = 4) }
+            val outcome = runBlocking {
+                de.ayutv.data.repo.VariantCompare(container.db, check).run(hls, de.ayutv.data.AppSettings.DEFAULT_USER_AGENT, de.ayutv.data.LiveFormat.TS)
+            }
+            log("hls_bitrate: kbps=$kbps line_check=${lineRate.kbps} variants=${outcome.candidates.size} ${outcome.text()}")
+            assertTrue("HLS-Datenrate unplausibel: $kbps", kbps != null && kbps in 50..30_000)
+            assertTrue("Leitungs-Check bei HLS misst die Leitung statt der Datenrate: ${lineRate.kbps}", lineRate.kbps in 50..30_000)
+        }
         // Spielstände (OpenLigaDB, echtes Netz): nur protokollieren, das Ergebnis hängt vom Spieltag ab
         section("live_scores") {
             val matches = runBlocking { container.liveScores.current() }

@@ -268,11 +268,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         var running by remember { mutableStateOf(false) }
                         var result by remember { mutableStateOf<de.ayutv.data.repo.LineCheck.Result?>(null) }
                         var variants by remember { mutableStateOf<String?>(null) }
+                        var hlsBetter by remember { mutableStateOf(false) }
                         SettingRow(
                             "Leitungs-Check",
                             if (running) "misst …" else "Jetzt messen",
                             result?.let { r -> r.summary + (variants?.let { "\n$it" } ?: "") + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
-                                ?: "Lädt den zuletzt geschauten Sender 10 Sekunden (ohne Bild) und misst Antwortzeit und Aussetzer, dann kurz einen Film für die Höchstgeschwindigkeit vom Anbieter.",
+                                ?: "Lädt den zuletzt geschauten Sender (ohne Bild) und misst Antwortzeit, Aussetzer und Datenrate, dann alle Fassungen desselben Senders (auch als HLS) und kurz einen Film für die Höchstgeschwindigkeit vom Anbieter. Dauert bis zu einer Minute.",
                         ) {
                             if (running) return@SettingRow
                             running = true
@@ -284,29 +285,29 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 variants = null
                                 val live = channel?.let { check.run(it, it.userAgent ?: settings.userAgent) }
                                 result = live
-                                // Andere Fassungen desselben Senders je 5 s messen: Welche schickt der Anbieter mit der höchsten
-                                // Datenrate? Die Messung fließt in die Wahl der besten Fassung ein (bei gleicher Auflösung gewinnt mehr).
+                                // Maximum suchen: alle Fassungen desselben Senders (auch anderer Playlists) und bei Xtream beide
+                                // Formate je 5 s messen. Die beste wird ab jetzt bei doppelten Sendern bevorzugt.
+                                hlsBetter = false
                                 if (channel != null && live != null && live.failed == null) {
-                                    de.ayutv.data.parse.ChannelQuality.recordBitrate(channel.key, live.kbps)
-                                    val others = runCatching { container.content.variantsOf(channel) }.getOrDefault(emptyList()).take(5)
-                                    if (others.isNotEmpty()) {
-                                        val measured = listOf(channel to live.kbps) + others.map { v ->
-                                            val r = check.run(v, v.userAgent ?: settings.userAgent, seconds = 5)
-                                            if (r.failed == null) de.ayutv.data.parse.ChannelQuality.recordBitrate(v.key, r.kbps)
-                                            v to (if (r.failed == null) r.kbps else -1)
-                                        }
-                                        val best = measured.maxByOrNull { it.second }
-                                        variants = "Fassungen: " + measured.sortedByDescending { it.second }.joinToString(" · ") { (v, kbps) ->
-                                            v.name + ": " + (if (kbps < 0) "kein Empfang" else "%.1f Mbit/s".format(kbps / 1000.0)) + (if (v === best?.first && kbps > 0) " ✓" else "")
-                                        } + (if (best != null && best.first.key != channel.key && best.second > live.kbps * 11 / 10)
-                                            "\nSchärfer: „${best.first.name}“ – wird ab jetzt bei doppelten Sendern bevorzugt." else "")
-                                    }
+                                    val outcome = de.ayutv.data.repo.VariantCompare(container.db, check)
+                                        .run(channel, settings.userAgent, settings.liveFormat, current = live.kbps.takeIf { de.ayutv.data.repo.VariantCompare.hlsForm(channel.url) == null || settings.liveFormat == LiveFormat.TS })
+                                    hlsBetter = outcome.hlsWins && settings.liveFormat == LiveFormat.TS
+                                    variants = (outcome.text() + (outcome.better?.let { b ->
+                                        "\nSchärfer: „${b.label}“ mit ${"%.1f".format(b.kbps / 1000.0)} Mbit/s" +
+                                            if (b.hls && settings.liveFormat == LiveFormat.TS) " – dafür unten das Live-Format auf HLS stellen." else " – wird ab jetzt bevorzugt."
+                                    } ?: if (outcome.candidates.size > 1) "\nDie geschaute Fassung ist schon die beste." else "")).ifBlank { null }
                                 }
                                 // Dazu die echte Geschwindigkeit vom Anbieter: ein Film wird nicht in Echtzeit, sondern so schnell wie möglich geliefert.
                                 val movie = runCatching { container.db.vod().search("", 1).firstOrNull() }.getOrNull()
                                 val provider = movie?.let { check.provider(it.url, settings.userAgent) }
                                 if (live != null && provider != null) result = live.copy(providerKbps = provider)
                                 running = false
+                            }
+                        }
+                        if (hlsBetter) {
+                            SettingRow("Live-Format auf HLS stellen", "Übernehmen", "Dein Anbieter schickt über HLS eine höhere Datenrate (schärferes Bild) als über MPEG-TS.") {
+                                update { it.copy(liveFormat = LiveFormat.HLS) }
+                                hlsBetter = false
                             }
                         }
                         result?.takeIf { it.recommendation != settings.bufferProfile }?.let { r ->

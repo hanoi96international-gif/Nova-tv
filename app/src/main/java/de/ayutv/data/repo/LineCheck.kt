@@ -63,6 +63,7 @@ class LineCheck(private val http: OkHttpClient) {
         val url = if (channel.url.substringBefore('?').lowercase().let { it.endsWith(".m3u8") || it.endsWith(".m3u") }) {
             firstSegment(client, channel.url, userAgent) ?: channel.url
         } else channel.url
+        val hlsKbps = if (url != channel.url) hls(channel.url, userAgent) else null
         val started = SystemClock.elapsedRealtime()
         runCatching {
             client.newCall(Request.Builder().url(url).header("User-Agent", userAgent).build()).execute().use { response ->
@@ -88,9 +89,62 @@ class LineCheck(private val http: OkHttpClient) {
                     bytes += n
                 }
                 val measuredMs = (SystemClock.elapsedRealtime() - started - firstByte.coerceAtLeast(0)).coerceAtLeast(1)
-                Result(channel.name, firstByte.coerceAtLeast(0), (bytes * 8 / measuredMs).toInt(), stalls, longest)
+                // HLS: Ein Segment kommt so schnell wie möglich (das wäre die Leitung); die Datenrate des Senders ist
+                // Segmentgröße je Sekunde Laufzeit.
+                Result(channel.name, firstByte.coerceAtLeast(0), hlsKbps ?: (bytes * 8 / measuredMs).toInt(), stalls, longest)
             }
         }.getOrElse { Result(channel.name, 0, 0, 0, 0, it.message ?: it.javaClass.simpleName) }
+    }
+
+    /**
+     * Datenrate eines HLS-Senders (kbit/s): bei mehreren Qualitäten die beste, dann die letzten zwei Segmente laden und
+     * Bytes je Sekunde Laufzeit (#EXTINF) rechnen. null, wenn es kein HLS ist oder nicht lädt.
+     */
+    suspend fun hls(url: String, userAgent: String): Int? = withContext(Dispatchers.IO) {
+        val client = http.newBuilder().readTimeout(8, TimeUnit.SECONDS).build()
+        fun get(u: String) = client.newCall(Request.Builder().url(u).header("User-Agent", userAgent).build()).execute().use {
+            if (!it.isSuccessful) error("HTTP ${it.code}")
+            it.body.string()
+        }
+        runCatching {
+            var media = url
+            var text = get(media)
+            if (!text.trimStart().startsWith("#EXTM3U")) return@runCatching null
+            if ("#EXT-X-STREAM-INF" in text) {
+                val lines = text.lines().map { it.trim() }
+                val best = lines.indices.filter { lines[it].startsWith("#EXT-X-STREAM-INF") }.maxByOrNull { i ->
+                    BANDWIDTH.find(lines[i])?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                } ?: return@runCatching null
+                val uri = lines.drop(best + 1).firstOrNull { it.isNotEmpty() && !it.startsWith("#") } ?: return@runCatching null
+                media = java.net.URI(media).resolve(uri).toString()
+                text = get(media)
+            }
+            val segments = ArrayList<Pair<Double, String>>()
+            var duration = -1.0
+            for (line in text.lines().map { it.trim() }) {
+                when {
+                    line.startsWith("#EXTINF:") -> duration = line.removePrefix("#EXTINF:").substringBefore(',').toDoubleOrNull() ?: -1.0
+                    line.isNotEmpty() && !line.startsWith("#") && duration > 0 -> { segments += duration to line; duration = -1.0 }
+                }
+            }
+            var bytes = 0L
+            var seconds = 0.0
+            for ((d, uri) in segments.takeLast(2)) {
+                val segment = java.net.URI(media).resolve(uri).toString()
+                client.newCall(Request.Builder().url(segment).header("User-Agent", userAgent).build()).execute().use { r ->
+                    if (!r.isSuccessful) return@use
+                    val stream = r.body.byteStream()
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = stream.read(buffer)
+                        if (n < 0) break
+                        bytes += n
+                    }
+                    seconds += d
+                }
+            }
+            if (seconds <= 0 || bytes <= 0) null else (bytes * 8 / 1000 / seconds).toInt()
+        }.getOrNull()
     }
 
     /** Bei HLS: das erste Segment der (ersten) Wiedergabeliste. */
@@ -103,6 +157,7 @@ class LineCheck(private val http: OkHttpClient) {
 
     companion object {
         private const val STALL_MS = 1_000L
+        private val BANDWIDTH = Regex("BANDWIDTH=(\\d+)")
 
         /** Puffer-Empfehlung aus den Messwerten. */
         fun recommend(firstByteMs: Long, stalls: Int, longestGapMs: Long, kbps: Int, failed: String?): BufferProfile = when {
