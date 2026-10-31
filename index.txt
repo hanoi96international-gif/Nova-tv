@@ -1,0 +1,31 @@
+dyn_channels_page.json 415 https://production-cdn.d3.dyn.sport/api/page?path=/channels&device=web_browser&sub=Anonymous
+dyn_channels_page2.json 415 https://production-cdn.d3.dyn.sport/api/page?path=%2Fchannels&device=web_browser&sub=Anonymous&segments=de
+dyn_volley_page.json 28 https://production-cdn.d3.dyn.sport/api/page?path=/volleyball&device=web_browser&sub=Anonymous
+dyn_live_page.json 28 https://production-cdn.d3.dyn.sport/api/page?path=/live&device=web_browser&sub=Anonymous
+dyn_home_page.json 77017 https://production-cdn.d3.dyn.sport/api/page?path=/&device=web_browser&sub=Anonymous
+dyn_config.json 52234 https://production-cdn.d3.dyn.sport/api/config?device=web_browser&sub=Anonymous
+dyn_sitemap.html 79272 https://www.dyn.sport/channels
+dyn_volley_web.html 79272 https://www.dyn.sport/volleyball
+IDS=
+dyn_schedules_guess.json 50 https://production-cdn.d3.dyn.sport/api/schedules?date=2026-10-31&hour=0&duration=24&device=web_browser&sub=Anonymous
+tvs_channels.json  https://live.tvspielfilm.de/static/content/channel-list/livetv
+tvs_dynmx.json  https://live.tvspielfilm.de/static/broadcast/list/DYNMX/2026-10-31
+tvs_dynhl.json  https://live.tvspielfilm.de/static/broadcast/list/DYNHL/2026-10-31
+tvmovie_dyn.html 805611 https://www.tvmovie.de/tv/sender/dyn-highlights
+tvmovie_api.json 0 https://www.tvmovie.de/api/v2/broadcasts?channel=DYNHL&date=2026-10-31
+iptvorg_magenta_channels.xml 36443 https://raw.githubusercontent.com/iptv-org/epg/master/sites/web.magentatv.de/web.magentatv.de.channels.xml
+iptvorg_magenta_config.js 5788 https://raw.githubusercontent.com/iptv-org/epg/master/sites/web.magentatv.de/web.magentatv.de.config.js
+iptvorg_tvspielfilm_channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/tvspielfilm.de/tvspielfilm.de.channels.xml
+iptvorg_tvspielfilm_config.js 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/tvspielfilm.de/tvspielfilm.de.config.js
+iptvorg_sites.json 198191 https://api.github.com/repos/iptv-org/epg/contents/sites
+iptvorg_magentatv.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/magentatv.de/magentatv.de.channels.xml
+iptvorg_tvmovie.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/tvmovie.de/tvmovie.de.channels.xml
+iptvorg_hd-plus.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/hd-plus.de/hd-plus.de.channels.xml
+iptvorg_zattoo.com.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/zattoo.com/zattoo.com.channels.xml
+iptvorg_waipu.tv.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/waipu.tv/waipu.tv.channels.xml
+iptvorg_sky.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/sky.de/sky.de.channels.xml
+iptvorg_tv.magenta.at.channels.xml 34732 https://raw.githubusercontent.com/iptv-org/epg/master/sites/tv.magenta.at/tv.magenta.at.channels.xml
+iptvorg_horizon.tv.channels.xml 19313 https://raw.githubusercontent.com/iptv-org/epg/master/sites/horizon.tv/horizon.tv.channels.xml
+iptvorg_tvtoday.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/tvtoday.de/tvtoday.de.channels.xml
+iptvorg_tvdigital.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/tvdigital.de/tvdigital.de.channels.xml
+iptvorg_prosiebensat1.de.channels.xml 14 https://raw.githubusercontent.com/iptv-org/epg/master/sites/prosiebensat1.de/prosiebensat1.de.channels.xml
