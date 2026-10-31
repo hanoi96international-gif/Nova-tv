@@ -143,6 +143,12 @@ data class UserData(
     val fullscreen: Boolean = false,
     /** Im Bild schalten ↑/↓ um (wie auf dem Fire TV); aus = ↑/↓ öffnen die Senderliste. */
     val zapWithUpDown: Boolean = true,
+    /** Wann zuletzt geschaut (Sender, Filme, Folgen): für den Abgleich mit dem Fire TV. */
+    val watchedAt: Map<String, Long> = emptyMap(),
+    /** Fire TV für den Abgleich: Adresse (http://…:8096) und PIN; automatisch alle 30 Minuten. */
+    val syncAddress: String = "",
+    val syncPin: String = "",
+    val autoSync: Boolean = false,
     /** Erinnerungen an Sendungen (aus TV-Guide und Sport) und gefolgte Vereine. */
     val reminders: List<Reminder> = emptyList(),
     val followedTeams: Set<String> = emptySet(),

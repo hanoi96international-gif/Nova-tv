@@ -339,10 +339,16 @@ class Store(val dir: File) {
         else u.copy(hiddenMovieGroups = u.hiddenMovieGroups + allMovies().filter { it.category == name }.map { "${it.playlistId}|$name" })
     }
 
-    fun rememberWatched(key: String) = updateUser { u -> u.copy(recent = (listOf(key) + u.recent.filter { it != key }).take(30)) }
+    fun rememberWatched(key: String) = updateUser { u ->
+        u.copy(recent = (listOf(key) + u.recent.filter { it != key }).take(30), watchedAt = u.watchedAt + (key to System.currentTimeMillis()))
+    }
 
     fun savePosition(key: String, positionMs: Long, durationMs: Long) = updateUser { u ->
-        u.copy(positions = u.positions + (key to positionMs), durations = if (durationMs > 0) u.durations + (key to durationMs) else u.durations)
+        u.copy(
+            positions = u.positions + (key to positionMs),
+            durations = if (durationMs > 0) u.durations + (key to durationMs) else u.durations,
+            watchedAt = u.watchedAt + (key to System.currentTimeMillis()),
+        )
     }
 
     // ---------------------------------------------------------------- Ändern (Playlists, Inhalte)

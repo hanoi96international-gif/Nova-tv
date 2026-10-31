@@ -73,6 +73,9 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     val remote = PhoneRemote(store, input) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
     var remoteAddress by mutableStateOf<String?>(null); private set
     val updater = de.ayutv.desktop.update.Updater(sync.http)
+    val deviceSync = de.ayutv.desktop.data.DeviceSync(store, sync.http)
+    /** Ergebnis des letzten Abgleichs mit dem Fire TV (für die Einstellungen). */
+    var deviceSyncStatus by mutableStateOf<String?>(null); private set
 
     /** Handy-Fernbedienung ein-/ausschalten (Windows fragt beim ersten Mal nach der Firewall-Freigabe). */
     fun setPhoneRemote(on: Boolean) {
@@ -109,6 +112,15 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             while (true) {
                 updater.check()?.let { toast("Update auf ${it.version} verfügbar: Einstellungen → Update") }
                 delay(6 * 3_600_000L)
+            }
+        }
+        // Abgleich mit dem Fire TV alle 30 Minuten (wenn eingeschaltet).
+        scope.launch {
+            delay(30_000)
+            while (true) {
+                val u = store.user.value
+                if (u.autoSync && u.syncAddress.isNotBlank() && u.syncPin.isNotBlank()) syncDevices(quiet = true)
+                delay(30 * 60_000L)
             }
         }
         // Erinnerungen: kurz vor Beginn fragen; Spiele gefolgter Vereine alle 30 Minuten einplanen.
@@ -301,6 +313,22 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             val known = u.reminders.map { it.channelKey to it.start }.toSet()
             u.copy(reminders = u.reminders + fresh.filter { (it.channelKey to it.start) !in known })
         }
+    }
+
+    /** Mit dem Fire TV abgleichen (Favoriten, Verlauf). */
+    suspend fun syncDevices(quiet: Boolean = false) {
+        val u = store.user.value
+        deviceSyncStatus = "Gleiche ab …"
+        runCatching { deviceSync.withFireTv(u.syncAddress, u.syncPin) }
+            .onSuccess { r ->
+                deviceSyncStatus = "${clock(System.currentTimeMillis())}: ${r.text}"
+                if (!quiet || r.favorites + r.history > 0) toast("Abgleich mit dem Fire TV: ${r.text}")
+            }
+            .onFailure {
+                de.ayutv.desktop.Log.warn("Abgleich mit dem Fire TV", it)
+                deviceSyncStatus = "Fehlgeschlagen: ${it.message}"
+                if (!quiet) toast("Abgleich fehlgeschlagen: ${it.message}")
+            }
     }
 
     /** Fällige Erinnerung annehmen: zum Sender umschalten. */

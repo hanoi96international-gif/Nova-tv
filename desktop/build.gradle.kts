@@ -55,6 +55,7 @@ sourceSets {
             "de/ayutv/data/parse/ChannelVariants.kt",
             "de/ayutv/data/parse/Countries.kt",
             "de/ayutv/data/parse/CatchupUrls.kt",
+            "de/ayutv/data/remote/SyncMerge.kt",
             "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
             "de/ayutv/data/parse/Srt.kt",
             "de/ayutv/data/parse/ProgrammeText.kt",

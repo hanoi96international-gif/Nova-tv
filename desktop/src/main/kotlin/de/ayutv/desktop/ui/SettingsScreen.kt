@@ -133,6 +133,27 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Abgleich mit dem Fire TV") }
+        item {
+            Column(Modifier.width(560.dp)) {
+                Label("Favoriten und Verlauf (Weiter schauen, zuletzt gesehen) zwischen PC und Fire TV abgleichen, wie mit dem Handy. Adresse und PIN: Fire TV → Einstellungen → Handy als Fernbedienung.", Type.small, maxLines = 3)
+                Row {
+                    Field("Adresse des Fire TV (z. B. http://192.168.178.40:8096)", user.syncAddress, { v -> app.store.updateUser { it.copy(syncAddress = v.trim()) } }, Modifier.weight(1f))
+                    Spacer(Modifier.width(8.dp))
+                    Field("PIN", user.syncPin, { v -> app.store.updateUser { it.copy(syncPin = v.filter(Char::isLetterOrDigit).take(12)) } }, Modifier.width(120.dp))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton("⇄ Jetzt abgleichen", {
+                        if (user.syncAddress.isBlank() || user.syncPin.isBlank()) return@TextButton app.toast("Bitte Adresse und PIN des Fire TV eintragen")
+                        app.scope.launch { app.syncDevices() }
+                    }, primary = true)
+                    Spacer(Modifier.width(12.dp))
+                    app.deviceSyncStatus?.let { Label(it, Type.small, maxLines = 2) }
+                }
+                Toggle("Automatisch alle 30 Minuten abgleichen", user.autoSync) { app.store.updateUser { u -> u.copy(autoSync = !u.autoSync) } }
+            }
+        }
+
         item { Section("Vom Fire TV übernehmen") }
         item {
             Label("Playlists, Favoriten, eigene Gruppen, Reihenfolgen und Schlüssel aus der Fire-TV-App übernehmen.", Type.small, maxLines = 2)
