@@ -98,7 +98,7 @@ fun RemoteScreen(onClose: () -> Unit) {
             )
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { send { status = "Abgleich: " + client.sync().text } }) { Text("⇅ Favoriten & Verlauf abgleichen") }
+                Button(onClick = { send { status = "Abgleich: " + client.sync().text } }) { Text("⇅ Favoriten, Verlauf & eigene Gruppen abgleichen") }
                 OutlinedButton(onClick = {
                     client.pin = null
                     paired = false

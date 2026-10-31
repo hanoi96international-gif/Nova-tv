@@ -137,7 +137,7 @@ fun SettingsScreen(app: AppState) {
         item { Section("Abgleich mit dem Fire TV") }
         item {
             Column(Modifier.width(560.dp)) {
-                Label("Favoriten und Verlauf (Weiter schauen, zuletzt gesehen) zwischen PC und Fire TV abgleichen, wie mit dem Handy. Adresse und PIN: Fire TV → Einstellungen → Handy als Fernbedienung.", Type.small, maxLines = 3)
+                Label("Favoriten, Verlauf, eigene und ausgeblendete Gruppen zwischen PC und Fire TV abgleichen – so hat jedes Gerät eine Kopie. Adresse und PIN: Fire TV → Einstellungen → Handy als Fernbedienung.", Type.small, maxLines = 3)
                 Row {
                     Field("Adresse des Fire TV (z. B. http://192.168.178.40:8096)", user.syncAddress, { v -> app.store.updateUser { it.copy(syncAddress = v.trim()) } }, Modifier.weight(1f))
                     Spacer(Modifier.width(8.dp))

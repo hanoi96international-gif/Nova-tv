@@ -206,6 +206,27 @@ class DeviceTourTest {
             assertTrue("Name der vorhandenen Playlist überschrieben", after.first { it.id == original.id }.name == "Xtream-Test")
         }
 
+        // 1b3. Abgleich als Kopie: Eigene Gruppe geht hier verloren, der Stand des anderen Geräts bringt sie zurück.
+        section("sync_groups") {
+            val db = container.db
+            val key = channels.first().key
+            val sync = de.ayutv.data.remote.DeviceSync(container)
+            runBlocking {
+                val id = db.customGroups().insert(de.ayutv.data.db.CustomGroupEntity(name = "Sync-Test", position = db.customGroups().maxGroupPosition() + 1))
+                db.customGroups().addItem(de.ayutv.data.db.CustomGroupItemEntity(id, key, 0))
+                val other = sync.export()
+                db.customGroups().deleteItems(id)
+                db.customGroups().deleteGroup(id)
+                val result = sync.import(other)
+                val back = db.customGroups().groups().firstOrNull { it.name == "Sync-Test" }
+                val items = back?.let { g -> db.customGroups().allItems().filter { it.groupId == g.id }.map { it.key } }
+                log("sync_groups: result=${result.text} back=${back != null} items=$items")
+                back?.let { db.customGroups().deleteItems(it.id); db.customGroups().deleteGroup(it.id) }
+                assertTrue("Eigene Gruppe kam per Abgleich nicht zurück", items == listOf(key))
+                assertTrue("Abgleich zählt die Gruppe nicht", result.groups == 1)
+            }
+        }
+
         // 1c. Sport: ein Bundesliga-Spiel im TV-Guide erscheint in der Sport-Übersicht, Verein folgen setzt die Erinnerung.
         section("sport") {
             val channel = channels.firstOrNull { it.epgId == "hd.test" } ?: error("Testsender fehlt")
