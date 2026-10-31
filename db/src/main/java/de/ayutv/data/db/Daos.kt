@@ -369,6 +369,10 @@ interface CustomGroupDao {
     @Query("DELETE FROM custom_groups")
     suspend fun clearGroups()
 
+    /** Einträge in eigenen Gruppen, deren Sender es nicht mehr gibt (für den Fehlerbericht). */
+    @Query("SELECT COUNT(*) FROM custom_group_items WHERE `key` NOT IN (SELECT `key` FROM channels)")
+    suspend fun orphanItems(): Int
+
     @Query("DELETE FROM custom_group_items")
     suspend fun clearItems()
 }
