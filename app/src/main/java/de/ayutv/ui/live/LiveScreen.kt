@@ -32,6 +32,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -591,9 +592,24 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
         delay(150) // schnelles Durchscrollen löst keine Abfragen aus
         programmes = content.upcoming(target, 6)
     }
+    val preview = rememberLivePreview(channel)
     Column(modifier.background(AyuColors.Surface).padding(24.dp)) {
         if (channel == null) return@Column
-        ChannelLogo(channel.logo, channel.name, Modifier.size(width = 120.dp, height = 72.dp))
+        val player = preview.player
+        if (player != null && preview.key == channel.key) {
+            // Mini-Vorschau: der ausgewählte Sender stumm, wie ein kleines Bild.
+            androidx.compose.runtime.key(player) {
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { context ->
+                        android.view.SurfaceView(context).apply { player.setVideoSurfaceView(this) }
+                    },
+                    onRelease = { view -> player.clearVideoSurfaceView(view) },
+                    modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
+                )
+            }
+        } else {
+            ChannelLogo(channel.logo, channel.name, Modifier.size(width = 120.dp, height = 72.dp))
+        }
         Spacer(Modifier.height(12.dp))
         Text(channel.name, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary)
@@ -639,4 +655,66 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
         Text("OK abspielen  ·  OK halten = Favorit, Gruppen, Verschieben, Mehrfachauswahl", fontSize = 13.sp, color = AyuColors.TextSecondary)
         Text("OK halten auf Gruppe = ausblenden bzw. bearbeiten", fontSize = 13.sp, color = AyuColors.TextSecondary)
     }
+}
+
+/** Laufende Mini-Vorschau: Player und Sender, für den er gerade läuft. */
+private class LivePreview {
+    var player by mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null)
+    var key by mutableStateOf<String?>(null)
+
+    /** Sofort beenden und Verbindung schließen (vor dem Abspielen: viele Konten erlauben nur eine Verbindung). */
+    fun stop() {
+        player?.release()
+        player = null
+        key = null
+    }
+}
+
+/**
+ * Mini-Vorschau in der Senderliste: Bleibt die Auswahl 1,5 s auf einem Sender, läuft er stumm (höchstens 720p, kleiner
+ * Puffer). Sobald die Liste verlassen oder ein Sender gestartet wird (Activity pausiert), ist sie sofort weg.
+ */
+@Composable
+private fun rememberLivePreview(channel: ChannelEntity?): LivePreview {
+    val container = LocalContainer.current
+    val context = LocalContext.current
+    val settings by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
+    val preview = remember { LivePreview() }
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    var resumed by remember { mutableStateOf(lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) }
+    androidx.compose.runtime.DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            // Direkt im Ereignis beenden, nicht erst beim nächsten Bild: Der Player startet gleich danach.
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE) preview.stop()
+            resumed = lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+        }
+        lifecycle.addObserver(observer)
+        onDispose {
+            lifecycle.removeObserver(observer)
+            preview.stop()
+        }
+    }
+    val enabled = settings?.livePreview == true
+    LaunchedEffect(channel?.key, resumed, enabled) {
+        if (channel == null || !resumed || !enabled) {
+            preview.stop()
+            return@LaunchedEffect
+        }
+        if (preview.key == channel.key) return@LaunchedEffect
+        delay(1_500)
+        val player = preview.player ?: de.ayutv.player.PlayerFactory.createPreview(
+            context, container.http, channel.userAgent ?: settings?.userAgent ?: de.ayutv.data.AppSettings().userAgent,
+        ).also { created ->
+            created.addListener(object : androidx.media3.common.Player.Listener {
+                // Läuft der Sender nicht: Vorschau einfach weglassen, das Logo bleibt.
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) { preview.key = null }
+            })
+            preview.player = created
+        }
+        player.setMediaItem(androidx.media3.common.MediaItem.fromUri(channel.url))
+        player.prepare()
+        player.play()
+        preview.key = channel.key
+    }
+    return preview
 }

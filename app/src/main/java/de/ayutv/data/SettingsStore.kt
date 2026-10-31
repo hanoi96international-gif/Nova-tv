@@ -105,6 +105,8 @@ data class AppSettings(
     val audioOutput: AudioOutput = AudioOutput.AUTO,
     /** Raster-TV-Guide im Menü. Die EPG-Daten werden unabhängig davon für "Jetzt läuft" genutzt. */
     val showGuide: Boolean = true,
+    /** Mini-Vorschau: In der Live-TV-Liste läuft der ausgewählte Sender nach kurzer Zeit stumm in der Detailspalte. */
+    val livePreview: Boolean = true,
     /** Korrektur für EPGs mit falscher Zeitzone, in Stunden. */
     val epgShiftHours: Int = 0,
     /** Sender ohne Programm beim Anbieter aus einem freien EPG (Deutschland, Österreich, Schweiz) ergänzen. */
@@ -223,6 +225,7 @@ class SettingsStore(private val context: Context) {
         val asyncDecoding = booleanPreferencesKey("async_decoding_v2")
         val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
+        val livePreview = booleanPreferencesKey("live_preview")
         val subLang = stringPreferencesKey("subtitle_language_code")
         val subAuto = booleanPreferencesKey("subtitles_auto_on")
         val provider = stringPreferencesKey("translation_provider")
@@ -357,6 +360,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.asyncDecoding] = next.asyncDecoding
             prefs[Keys.audioOutput] = next.audioOutput.name
             prefs[Keys.showGuide] = next.showGuide
+            prefs[Keys.livePreview] = next.livePreview
             prefs[Keys.subLang] = next.subtitleLanguage
             prefs[Keys.subAuto] = next.subtitlesAutoOn
             prefs[Keys.provider] = next.translationProvider.name
@@ -414,6 +418,7 @@ class SettingsStore(private val context: Context) {
         asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
+        livePreview = this[Keys.livePreview] ?: true,
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
         translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),

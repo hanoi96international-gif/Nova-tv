@@ -594,6 +594,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Das Programm-Raster. Die Programmdaten (Jetzt läuft, Suche, Empfehlungen) bleiben auch ausgeblendet aktiv.",
                         ) { update { it.copy(showGuide = !it.showGuide) } }
                     }
+                    item {
+                        SettingRow(
+                            "Mini-Vorschau in Live TV",
+                            onOff(settings.livePreview),
+                            "Der ausgewählte Sender läuft nach kurzer Zeit stumm in der Detailspalte. Beim Abspielen wird sie vorher beendet (auch bei Konten mit nur einer Verbindung).",
+                        ) { update { it.copy(livePreview = !it.livePreview) } }
+                    }
                     if (showAdvanced) item {
                         SettingRow(
                             "Hoch/Runter schaltet um",
