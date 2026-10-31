@@ -14,9 +14,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import okhttp3.FormBody
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * Sicherung der Fire-TV-App übernehmen: Playlists (mit Passwörtern, wenn die Sicherung ein Passwort hat), Favoriten,
@@ -32,11 +34,17 @@ class BackupImport(private val store: Store) {
 
     /** Vom Fire TV laden: [setupUrl] wie dort angezeigt („http://192.168.x.y:8095/123456“), [password] für die Sicherung. */
     suspend fun fromFireTv(http: OkHttpClient, setupUrl: String, password: String): Result = withContext(Dispatchers.IO) {
-        val base = setupUrl.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
+        val base = setupAddress(setupUrl)
         val request = Request.Builder().url("$base/backup").post(FormBody.Builder().add("backup_password", password).build()).build()
-        val text = http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Fire TV antwortet mit HTTP ${response.code}. Stimmt die Adresse aus „Einrichtung per Handy“?")
-            response.body.string()
+        val quick = http.newBuilder().connectTimeout(8, TimeUnit.SECONDS).build()
+        val text = try {
+            quick.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Fire TV antwortet mit HTTP ${response.code}. Stimmt die Adresse aus „Einrichtung per Handy“ (mit der Zahl am Ende)?")
+                response.body.string()
+            }
+        } catch (e: IOException) {
+            if (e is java.net.SocketTimeoutException || e is java.net.ConnectException || e is java.net.NoRouteToHostException) throw IOException(UNREACHABLE, e)
+            throw e
         }
         import(text, password.ifEmpty { null })
     }
@@ -153,6 +161,28 @@ class BackupImport(private val store: Store) {
 
     companion object {
         const val FORMAT = "dna-tv-backup"
+
+        private const val UNREACHABLE = "Fire TV nicht erreichbar. Auf dem Fire TV muss Einstellungen → Playlists offen sein " +
+            "(Kasten „Einrichtung per Handy“). PC und Fire TV im selben Netz? Ein VPN am PC (z. B. NordVPN, Proton VPN) " +
+            "sperrt oft das Heimnetz: kurz pausieren oder „Lokales Netzwerk erlauben“ einschalten."
+
+        /**
+         * Adresse aus „Einrichtung per Handy“ prüfen: Sie endet auf eine Zahl (PIN), Port 8095. Die Adresse der
+         * Handy-Fernbedienung (Port 8096) ist eine andere und kann keine Sicherung liefern.
+         */
+        fun setupAddress(input: String): String {
+            val base = input.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
+            val url = base.toHttpUrlOrNull() ?: throw IllegalArgumentException("Das ist keine gültige Adresse.")
+            if (url.port == 8096) throw IllegalArgumentException(
+                "Das ist die Adresse der Handy-Fernbedienung (Port 8096). Gebraucht wird die aus „Einrichtung per Handy“ " +
+                    "(Fire TV: Einstellungen → Playlists), z. B. http://${url.host}:8095/123456.",
+            )
+            if (url.pathSegments.none { it.isNotEmpty() }) throw IllegalArgumentException(
+                "Es fehlt die Zahl am Ende der Adresse: Sie steht auf dem Fire TV unter Einstellungen → Playlists → „Einrichtung per Handy“, " +
+                    "z. B. http://${url.host}:${url.port}/123456.",
+            )
+            return base
+        }
 
         /** Schlüssel beginnen mit der Playlist-Nummer („3:c:1234“): auf die neue Nummer umschreiben. */
         fun remapKey(key: String, ids: Map<Long, Long>): String? {

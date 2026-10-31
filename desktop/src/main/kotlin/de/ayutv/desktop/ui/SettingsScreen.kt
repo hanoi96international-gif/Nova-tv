@@ -218,7 +218,8 @@ private fun ImportDialog(app: AppState, onDismiss: () -> Unit) {
             Label("Sicherung vom Fire TV übernehmen", Type.heading)
             Spacer(Modifier.height(6.dp))
             Label(
-                "Auf dem Fire TV: Einstellungen → „Einrichtung per Handy“ öffnen und die angezeigte Adresse hier eintragen. " +
+                "Auf dem Fire TV: Einstellungen → Playlists öffnen (und offen lassen). Im Kasten „Einrichtung per Handy“ steht die " +
+                    "Adresse mit Port 8095 und einer Zahl am Ende – die hier eintragen (nicht die der Handy-Fernbedienung). " +
                     "Mit Sicherungs-Passwort werden auch die Playlist-Passwörter übernommen.",
                 Type.small, maxLines = 4,
             )

@@ -94,6 +94,15 @@ class BackupImportTest {
     }
 
     @Test
+    fun explainsWrongFireTvAddress() {
+        assertEquals("http://192.168.1.110:8095/402970", BackupImport.setupAddress("192.168.1.110:8095/402970/"))
+        val remote = runCatching { BackupImport.setupAddress("http://192.168.1.110:8096") }.exceptionOrNull()?.message.orEmpty()
+        assertTrue(remote, remote.contains("Handy-Fernbedienung") && remote.contains("8095"))
+        val noPin = runCatching { BackupImport.setupAddress("http://192.168.1.110:8095") }.exceptionOrNull()?.message.orEmpty()
+        assertTrue(noPin, noPin.contains("Zahl am Ende"))
+    }
+
+    @Test
     fun remapKeyNeedsKnownPlaylist() {
         assertEquals("3:c:42", BackupImport.remapKey("7:c:42", mapOf(7L to 3L)))
         assertNull(BackupImport.remapKey("8:c:42", mapOf(7L to 3L)))
