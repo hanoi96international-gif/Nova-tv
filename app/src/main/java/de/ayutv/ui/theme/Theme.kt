@@ -145,6 +145,7 @@ private val PivotScroll = object : androidx.compose.foundation.gestures.BringInt
 
 private const val PIVOT = 0.3f
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AyuTheme(content: @Composable () -> Unit) {
     MaterialTheme(

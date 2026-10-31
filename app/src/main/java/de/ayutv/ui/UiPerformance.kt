@@ -8,6 +8,8 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.view.FrameMetrics
 import android.view.Window
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import java.util.concurrent.atomic.AtomicLong
 
 /**
