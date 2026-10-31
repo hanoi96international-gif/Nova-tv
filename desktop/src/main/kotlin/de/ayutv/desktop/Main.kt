@@ -101,6 +101,12 @@ fun main(args: Array<String>) {
                     override fun windowLostFocus(e: WindowEvent?) { input.foreground = false }
                 }
                 awt.addWindowFocusListener(listener)
+                // Direktausgabe (HDR-Bildschirm): eigenes Vollbildfenster, Tasten gehen hierher weiter.
+                app.player.directWindow = de.ayutv.desktop.player.DirectWindow(
+                    owner = { input.window },
+                    onFocus = { focused -> input.foreground = focused || awt.isFocused },
+                    onClick = { input.tap(de.ayutv.desktop.input.RemoteButton.MENU) },
+                )
                 onDispose { awt.removeWindowFocusListener(listener) }
             }
             App(app, window)

@@ -54,6 +54,49 @@ class VideoPlayer {
     /** Der gerade benutzte der beiden. */
     private var player: EmbeddedMediaPlayer? = normal
 
+    /**
+     * Direktausgabe für HDR-Bildschirme (Einstellung): VLC zeichnet selbst in ein Vollbildfenster ([DirectWindow]),
+     * HDR10 kommt unverändert am Bildschirm an. Gilt ab dem nächsten [play]; nicht beim Ausrichten von Untertiteln.
+     */
+    @Volatile var direct = false
+    /** Fenster für die Direktausgabe (von der App gesetzt, kennt das Hauptfenster). */
+    var directWindow: DirectWindow? = null
+    private var directPlayer: EmbeddedMediaPlayer? = null
+    /** Läuft gerade über die Direktausgabe. */
+    val isDirect: Boolean get() = player != null && player === directPlayer
+
+    private fun directPlayer(): EmbeddedMediaPlayer? {
+        directPlayer?.let { return it }
+        val f = factory ?: return null
+        val window = directWindow ?: return null
+        window.prepare()
+        return f.mediaPlayers().newEmbeddedMediaPlayer().also { p ->
+            p.videoSurface().set(f.videoSurfaces().newVideoSurface(window.canvas))
+            // Tasten und Maus nicht von VLC schlucken lassen: Sie gehen an DnA-TV weiter.
+            runCatching { p.input().enableKeyInputHandling(false); p.input().enableMouseInputHandling(false) }
+            listen(p)
+            directPlayer = p
+        }
+    }
+
+    /** Menüs oder Senderliste offen: Direktausgabe kurz ausblenden (die Oberfläche liegt im Hauptfenster). */
+    fun coverDirect(covered: Boolean) {
+        directWindow?.cover(covered)
+    }
+
+    /** Kurzer Text im Bild der Direktausgabe (z. B. Sendername beim Umschalten); sonst nichts. */
+    fun osd(text: String) {
+        val p = player?.takeIf { it === directPlayer } ?: return
+        runCatching {
+            p.marquee().setText(text)
+            p.marquee().setSize(40)
+            p.marquee().setColour(java.awt.Color.WHITE)
+            p.marquee().setPosition(uk.co.caprica.vlcj.player.base.MarqueePosition.TOP_LEFT)
+            p.marquee().setTimeout(4_000)
+            p.marquee().enable(true)
+        }
+    }
+
     /** Sprechpausen aus dem Ton (nur, solange [tapAudio] an ist). */
     val speech = SpeechActivity()
     private val tap = AudioTap(speech) { player?.status()?.time() ?: 0L }
@@ -84,6 +127,10 @@ class VideoPlayer {
     private fun prepare(p: EmbeddedMediaPlayer) {
         val f = factory ?: return
         p.videoSurface().set(f.videoSurfaces().newVideoSurface(format, render, true))
+        listen(p)
+    }
+
+    private fun listen(p: EmbeddedMediaPlayer) {
         p.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
             // Nur Meldungen des gerade benutzten Players zählen (der andere ist gestoppt).
             private fun mine(mediaPlayer: MediaPlayer) = mediaPlayer === player
@@ -97,7 +144,11 @@ class VideoPlayer {
             override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; paused = true } }
             override fun stopped(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { if (mine(mediaPlayer)) buffering = newCache < 100f }
-            override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { if (mine(mediaPlayer)) positionMs = newTime }
+            override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) {
+                // Direktausgabe: Bilder sehen wir nicht; laufende Zeit zählt als Bild (für den Watchdog).
+                if (mediaPlayer === directPlayer && mediaPlayer === player) directFrame()
+                ui { if (mine(mediaPlayer)) positionMs = newTime }
+            }
             override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { if (mine(mediaPlayer)) durationMs = newLength }
             override fun error(mediaPlayer: MediaPlayer) = ui {
                 if (mine(mediaPlayer)) {
@@ -124,9 +175,16 @@ class VideoPlayer {
     val available: Boolean get() = player != null
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
-        val next = (if (tapAudio) tappedPlayer() else normal) ?: return
+        val useDirect = direct && !tapAudio && directWindow != null
+        val next = (if (useDirect) directPlayer() else if (tapAudio) tappedPlayer() else normal) ?: return
         if (next !== player) runCatching { player?.controls()?.stop() }
         player = next
+        if (next === directPlayer) {
+            clearFrames()
+            directWindow?.show()
+        } else {
+            directWindow?.hide()
+        }
         val p = next
         if (tapAudio) {
             speech.clear()
@@ -174,15 +232,15 @@ class VideoPlayer {
                 corrupted = stats?.demuxCorrupted() ?: 0,
                 startupMs = startupMs,
                 cacheMs = networkCacheMs,
-                output = (if (gpuVideo) "Grafikkarte (" + when (layout) {
+                output = if (p === directPlayer) "Direkt (VLC, Direct3D 11; HDR unverändert, wenn Windows-HDR an ist)" else (if (gpuVideo) "Grafikkarte (" + when (layout) {
                     YuvVideo.Layout.I420 -> "I420"
                     YuvVideo.Layout.NV12 -> "NV12"
                     YuvVideo.Layout.P010 -> "P010, 10 Bit"
-                } + ")" else "RGB") + when (transfer) {
+                } + ")" else "RGB") + (when (transfer) {
                     YuvVideo.Transfer.PQ -> ", HDR10 angepasst"
                     YuvVideo.Transfer.HLG -> ", HLG angepasst"
                     YuvVideo.Transfer.SDR -> ""
-                },
+                }),
             )
         }.getOrNull()
     }
@@ -231,6 +289,7 @@ class VideoPlayer {
 
     fun stop() {
         player?.controls()?.stop()
+        directWindow?.hide()
         tap.close()
         clearFrames()
         playing = false
@@ -241,8 +300,11 @@ class VideoPlayer {
         runCatching { normal?.controls()?.stop() }
         runCatching { tapped?.controls()?.stop() }
         tap.close()
+        runCatching { directPlayer?.controls()?.stop() }
         runCatching { normal?.release() }
         runCatching { tapped?.release() }
+        runCatching { directPlayer?.release() }
+        runCatching { directWindow?.dispose() }
         runCatching { factory?.release() }
     }
 
@@ -412,6 +474,17 @@ class VideoPlayer {
     private fun retire(frame: YuvFrame) {
         retired.addLast(frame)
         while (retired.size > RETIRED_FRAMES) retired.removeFirst().close()
+    }
+
+    /** Direktausgabe: Bild läuft (VLC zeigt es selbst). */
+    private fun directFrame() {
+        framesRendered.incrementAndGet()
+        val now = System.currentTimeMillis()
+        lastFrameAt = now
+        if (startupMs == 0L && startedAt > 0) {
+            val took = (now - startedAt).coerceAtLeast(1)
+            ui { if (startupMs == 0L) startupMs = took; if (!hasFrame) hasFrame = true }
+        }
     }
 
     /** Bilder des vorigen Streams verwerfen (kein altes Standbild beim nächsten). */

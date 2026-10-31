@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -180,6 +181,11 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     app.toast("HDR-Anpassung: ${next.second}")
                 })
             }
+            add(MenuItem(if (user.directOutput) "HDR-Bildschirm: Direktausgabe ausschalten" else "HDR-Bildschirm: Direktausgabe (Vollbild, HDR unverändert)") {
+                store.updateUser { it.copy(directOutput = !it.directOutput) }
+                app.applyBuffer()
+                app.restartPlayback()
+            })
             add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
         }
         menu = {
@@ -191,6 +197,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     BackHandler(app, enabled = menu == null && layer != Layer.CHANNELS && tech) { tech = false }
     LaunchedEffect(Unit) { refocus() }
     LaunchedEffect(menu, layer) { if (menu == null && layer != Layer.CHANNELS) refocus() }
+    // Direktausgabe (HDR-Bildschirm): Menü, Senderliste und Stream-Info liegen im Hauptfenster, das Vollbild so lange weg.
+    LaunchedEffect(menu, layer, tech) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech) }
+    DisposableEffect(Unit) { onDispose { player.coverDirect(true) } }
     // Info nach 5 Sekunden ohne Eingabe ausblenden (nicht bei Pause, Fehler oder offener Stream-Info).
     LaunchedEffect(lastInput, layer, player.playing, tech) {
         if (layer != Layer.INFO || tech) return@LaunchedEffect

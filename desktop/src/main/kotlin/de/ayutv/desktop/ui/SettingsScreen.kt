@@ -144,6 +144,12 @@ fun SettingsScreen(app: AppState) {
                 )
             }
             Spacer(Modifier.height(8.dp))
+            Toggle("HDR-Bildschirm: Direktausgabe (VLC zeigt das Bild selbst im Vollbild, HDR10 kommt unverändert an; Windows-HDR muss an sein)", user.directOutput) {
+                app.store.updateUser { u -> u.copy(directOutput = !u.directOutput) }
+                app.applyBuffer()
+            }
+            if (user.directOutput) Label("Menüs und Senderliste erscheinen wie gewohnt; solange sie offen sind, ist das Bild ausgeblendet. Mausklick ins Bild öffnet das Menü.", Type.small, maxLines = 2)
+            Spacer(Modifier.height(8.dp))
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
             }

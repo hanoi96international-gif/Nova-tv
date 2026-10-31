@@ -188,6 +188,8 @@ data class UserData(
     val hdrMode: String = "AUTO",
     /** Videoweg: AUTO (NV12, bei 10 Bit P010) oder I420 (kompatibel wie bis 0.42). */
     val videoLayout: String = "AUTO",
+    /** Direktausgabe für HDR-Bildschirme: VLC zeichnet selbst im Vollbild, HDR10 unverändert. */
+    val directOutput: Boolean = false,
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */
