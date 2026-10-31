@@ -77,7 +77,7 @@ class PhoneRemote(private val store: Store, private val input: RemoteInput, priv
             }
             "channels" -> {
                 val q = query["q"].orEmpty().lowercase()
-                val list = store.allVisible().filter { q.isEmpty() || it.name.lowercase().contains(q) }.take(60)
+                val list = store.listedChannels().filter { q.isEmpty() || it.name.lowercase().contains(q) }.take(60)
                 val json = JsonArray(list.map { c -> buildJsonObject { put("key", c.key); put("name", c.name); put("group", c.group) } })
                 exchange.reply(200, "application/json; charset=utf-8", json.toString())
             }

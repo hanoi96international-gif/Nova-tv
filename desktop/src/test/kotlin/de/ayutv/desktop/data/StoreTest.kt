@@ -121,6 +121,17 @@ class StoreTest {
     }
 
     @Test
+    fun sportAndSearchSeeCustomGroupsFromHiddenGroups() {
+        // Sender in eine eigene Gruppe verschoben, danach die Gruppe des Anbieters ausgeblendet.
+        val s = store().withChannels(channel(1, "Sport"), channel(2, "Sport"), channel(3, "News"))
+        s.createGroup("Mein Sport", listOf("1:c:2"))
+        s.toggleFavorite("1:c:1")
+        s.hideGroup("Sport")
+        assertEquals(listOf("1:c:3"), s.allVisible().map { it.key })
+        assertEquals(listOf("1:c:3", "1:c:1", "1:c:2"), s.listedChannels().map { it.key })
+    }
+
+    @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))
         assertEquals(listOf("x", "y"), Ordering.apply(listOf("y", "x"), listOf("x")) { it })

@@ -111,6 +111,18 @@ class Store(val dir: File) {
     }
 
     /**
+     * Sender, die irgendwo erscheinen: sichtbare Gruppen, dazu Favoriten und eigene Gruppen – auch wenn deren Sender
+     * aus einer ausgeblendeten Gruppe stammen. Für Sport, Suche und Handy-Fernbedienung (wie auf dem Fire TV).
+     */
+    fun listedChannels(): List<Channel> {
+        val visible = allVisible()
+        val seen = visible.mapTo(HashSet()) { it.key }
+        val u = _user.value
+        val extra = byKeys(u.favorites + u.customGroups.flatMap { it.keys }).filter { seen.add(it.key) }
+        return visible + extra
+    }
+
+    /**
      * Andere Fassungen desselben Senders (beste zuerst), auf die der Player ausweicht, wenn [channel] nicht läuft.
      * Auch Fassungen aus ausgeblendeten Gruppen zählen (sie sind nur in den Listen verborgen).
      */

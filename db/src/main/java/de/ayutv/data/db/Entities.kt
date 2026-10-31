@@ -230,6 +230,16 @@ const val USABLE_CHANNEL = """c.playlistId IN (SELECT id FROM playlists WHERE en
                AND NOT EXISTS (SELECT 1 FROM locked_groups l
                WHERE l.playlistId = c.playlistId AND l.kind = 'LIVE' AND l.name = c.groupTitle)"""
 
+/**
+ * Sender, die irgendwo in der App erscheinen: sichtbare Gruppen des Anbieters, dazu Favoriten und eigene Gruppen –
+ * auch wenn deren Sender aus einer ausgeblendeten Gruppe stammen (wer Sender in eigene Gruppen verschiebt und die
+ * Gruppe des Anbieters dann ausblendet, will sie in Sport, Suche und Erinnerungen trotzdem finden). Gesperrte Gruppen
+ * (Kindersicherung) und ausgeschaltete Playlists bleiben draußen.
+ */
+const val LISTED_CHANNELS_SQL = """SELECT * FROM visible_channels
+               UNION SELECT c.* FROM channels c WHERE $USABLE_CHANNEL
+               AND (c.`key` IN (SELECT `key` FROM favorites) OR c.`key` IN (SELECT `key` FROM custom_group_items))"""
+
 @DatabaseView(viewName = "visible_channels", value = VISIBLE_CHANNELS_SQL)
 data class VisibleChannelView(val id: Long)
 
