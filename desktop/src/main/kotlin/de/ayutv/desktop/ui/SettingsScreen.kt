@@ -26,6 +26,7 @@ import de.ayutv.desktop.data.ProxySettings
 import de.ayutv.desktop.data.config
 import de.ayutv.desktop.data.PlaylistType
 import kotlinx.coroutines.Dispatchers
+import de.ayutv.desktop.player.BufferProfile
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.FileDialog
@@ -45,10 +46,15 @@ fun SettingsScreen(app: AppState) {
     val content by app.store.content.collectAsState()
     var editing by remember { mutableStateOf<Playlist?>(null) }
     var importing by remember { mutableStateOf(false) }
+    var groupsOf by remember { mutableStateOf<Playlist?>(null) }
+    var countries by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
 
     LazyColumn(Modifier.fillMaxSize()) {
-        item { Label("Einstellungen", Type.title, Modifier.padding(bottom = 12.dp)) }
+        item { ScreenHeader("Einstellungen", "OK ändert · ☰ Menü einer Playlist") }
+
+        item { Section("Fernbedienung") }
+        item { RemoteSection(app) }
 
         item { Section("Playlists") }
         items(playlists, key = { it.id }) { p ->
@@ -63,6 +69,7 @@ fun SettingsScreen(app: AppState) {
                     dialog = {
                         MenuDialog(app, p.name, listOf(
                             MenuItem("Bearbeiten") { editing = p },
+                            MenuItem("Gruppen ein-/ausblenden …") { groupsOf = p },
                             MenuItem("Jetzt neu laden") { app.scope.launch { runCatching { app.sync.syncPlaylist(p.id) }.onFailure { app.toast("${p.name}: ${it.message}") } } },
                             MenuItem(if (p.enabled) "Ausschalten" else "Einschalten") { app.store.savePlaylist(p.copy(enabled = !p.enabled)) },
                             MenuItem("Löschen") {
@@ -78,6 +85,35 @@ fun SettingsScreen(app: AppState) {
                 TextButton("＋ Playlist hinzufügen", { editing = Playlist(app.store.nextPlaylistId(), "", PlaylistType.XTREAM, "") }, primary = true)
                 Spacer(Modifier.width(8.dp))
                 TextButton("⟳ Alle neu laden", { app.syncNow() })
+                Spacer(Modifier.width(8.dp))
+                if (playlists.size == 1) TextButton("Gruppen …", { groupsOf = playlists.first() })
+                else if (playlists.isNotEmpty()) TextButton("Gruppen …", {
+                    dialog = { MenuDialog(app, "Gruppen welcher Playlist?", playlists.map { p -> MenuItem(p.name) { groupsOf = p } }, onDismiss = { if (dialog != null) dialog = null }) }
+                })
+                Spacer(Modifier.width(8.dp))
+                if (playlists.isNotEmpty()) TextButton("Länder auswählen …", { countries = true })
+            }
+            Label("Playlists laden alle 12 Stunden neu, der TV-Guide alle 8 Stunden (auch während DnA-TV läuft). Menü einer Playlist: ☰, Rechtsklick oder OK lange drücken.", Type.small, maxLines = 2)
+        }
+
+        item { Section("Wiedergabe") }
+        item {
+            Label("Puffer", Type.body)
+            Row(Modifier.padding(vertical = 4.dp)) {
+                BufferProfile.entries.forEach { b ->
+                    Selectable({ app.store.updateUser { it.copy(bufferProfile = b.name) }; app.applyBuffer(); app.toast("Puffer: ${b.label} (gilt ab dem nächsten Sender)") }, selected = user.bufferProfile == b.name) {
+                        Label(b.label)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                }
+            }
+            Label(BufferProfile.of(user.bufferProfile).hint, Type.small)
+            Spacer(Modifier.height(8.dp))
+            Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
+                app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
+            }
+            Toggle("Im Bild schalten ↑/↓ um (aus: ↑/↓ öffnen die Senderliste)", user.zapWithUpDown) {
+                app.store.updateUser { u -> u.copy(zapWithUpDown = !u.zapWithUpDown) }
             }
         }
 
@@ -94,6 +130,18 @@ fun SettingsScreen(app: AppState) {
             Label("Programm für $guideCount Sender geladen. Eigene Adresse (XMLTV) je Playlist unter „Bearbeiten“.", Type.small, maxLines = 2)
             Spacer(Modifier.height(6.dp))
             TextButton("TV-Guide neu laden", { app.scope.launch { runCatching { app.sync.syncGuide() }.onFailure { app.toast("TV-Guide: ${it.message}") } } })
+            Spacer(Modifier.height(8.dp))
+            Toggle("Fehlendes Programm (oft Sky, DAZN) aus dem freien EPG von epgshare01 ergänzen (DE, AT, CH)", user.publicEpg) {
+                app.store.updateUser { u -> u.copy(publicEpg = !u.publicEpg) }
+            }
+            Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Label("Zeitverschiebung: ${if (user.epgShiftHours > 0) "+" else ""}${user.epgShiftHours} Std.", Type.body, Modifier.width(220.dp))
+                TextButton("−1", { app.store.setEpgShift(user.epgShiftHours - 1) })
+                Spacer(Modifier.width(6.dp))
+                TextButton("+1", { app.store.setEpgShift(user.epgShiftHours + 1) })
+                Spacer(Modifier.width(6.dp))
+                if (user.epgShiftHours != 0) TextButton("Zurücksetzen", { app.store.setEpgShift(0) })
+            }
         }
 
         item { Section("Proxy") }
@@ -120,13 +168,14 @@ fun SettingsScreen(app: AppState) {
             TextButton(if (address != null) "Ausschalten" else "Einschalten", { app.setPhoneRemote(address == null) })
         }
 
-        item { Section("Bedienung") }
+        item { Section("Bedienung mit Maus und Tastatur") }
         item {
             Label(
                 "Maus: Klick wählt, Rechtsklick öffnet das Menü, Doppelklick im Bild = Vollbild, Mausrad = Lautstärke.\n" +
-                    "Tastatur / Bluetooth-Fernbedienung: Pfeiltasten, Enter = OK (lange drücken = Menü), Esc = zurück, F11 = Vollbild.\n" +
-                    "Im Bild: ↑/↓ Sender, ←/→ spulen, Leertaste Pause, T Tonspur, U Untertitel, L Untertitel laden, G/H Untertitel früher/später, M Ton aus.",
-                Type.small, maxLines = 6,
+                    "Tastatur: Pfeiltasten, Enter = OK (lange drücken = Menü), Kontextmenü-Taste = Menü, Esc/Rücktaste = Zurück, " +
+                    "F11 = Vollbild (wird gemerkt), Bild ↑/↓ = Sender ±, Leertaste = Pause, Ziffern = Sendernummer.\n" +
+                    "Im Bild zusätzlich: +/− Lautstärke, M Ton aus, T/U Ton und Untertitel, L Untertitel laden, G/H Untertitel früher/später, N nächste Folge, Umschalt+◀/▶ 1 Minute.",
+                Type.small, maxLines = 8,
             )
             Spacer(Modifier.height(8.dp))
             Label("Daten: ${app.store.dir.absolutePath}", Type.small)
@@ -135,13 +184,57 @@ fun SettingsScreen(app: AppState) {
     }
 
     editing?.let { p -> PlaylistDialog(app, p, onDismiss = { editing = null }) }
+    groupsOf?.let { p -> GroupsDialog(app, p, onDismiss = { groupsOf = null }) }
+    if (countries) CountryDialog(app, onDismiss = { countries = false })
     if (importing) ImportDialog(app, onDismiss = { importing = false })
     dialog?.invoke()
 }
 
 @Composable
 private fun Section(title: String) {
-    Label(title, Type.heading, Modifier.padding(top = 18.dp, bottom = 6.dp))
+    Label(title, Type.heading, Modifier.padding(top = 22.dp, bottom = 6.dp))
+}
+
+/** Ein/Aus-Schalter als Zeile (OK oder Klick schaltet um). */
+@Composable
+private fun Toggle(text: String, on: Boolean, onToggle: () -> Unit) {
+    ListRow((if (on) "☑  " else "☐  ") + text, onToggle, Modifier.width(760.dp))
+}
+
+/**
+ * Fire-TV-Fernbedienung: Status, Tastentest und Belegung. Koppeln geht in Windows (Einstellungen → Bluetooth und
+ * Geräte → Gerät hinzufügen; auf der Fernbedienung Home 10 Sekunden halten).
+ */
+@Composable
+private fun RemoteSection(app: AppState) {
+    val input = app.input
+    val source = input.source
+    Column(Modifier.width(760.dp)) {
+        Label(
+            when {
+                !input.windowsAvailable -> "Die Erkennung der Fire-TV-Fernbedienung gibt es nur unter Windows. Pfeile und OK gehen trotzdem."
+                input.problem != null -> "Fernbedienungs-Erkennung nicht verfügbar: ${input.problem}. Pfeile und OK gehen trotzdem."
+                source != null -> "✓ ${source.label} verbunden und erkannt."
+                else -> "Bereit. Drück eine Taste auf der Fernbedienung – hier erscheint, was ankommt."
+            },
+            Type.body, maxLines = 2,
+        )
+        Spacer(Modifier.height(4.dp))
+        Label("Zuletzt gedrückt: ${input.lastPress ?: "–"}", Type.heading)
+        Spacer(Modifier.height(6.dp))
+        Label(
+            "Koppeln: Windows-Einstellungen → Bluetooth und Geräte → Gerät hinzufügen → Bluetooth; auf der Fire-TV-Fernbedienung " +
+                "Home 10 Sekunden gedrückt halten, bis „Amazon Fire TV Remote“ erscheint. Danach einfach DnA-TV nutzen.",
+            Type.small, maxLines = 3,
+        )
+        Spacer(Modifier.height(6.dp))
+        Label(
+            "Belegung wie auf dem Fire TV: Steuerkreuz und OK wählen (OK lange = Menü), ↩ Zurück, ⌂ Home = Startseite, ☰ Menü, " +
+                "⏯ Pause, ⏪/⏩ spulen (gehalten schneller). Im Live-TV: ▲/▼ umschalten, OK Senderliste, ◀ letzter Sender, ▶ Stream-Info, " +
+                "☰ Ton/Untertitel/Favorit. Lautstärke und Ein/Aus steuern Windows bzw. den Fernseher.",
+            Type.small, maxLines = 4,
+        )
+    }
 }
 
 @Composable

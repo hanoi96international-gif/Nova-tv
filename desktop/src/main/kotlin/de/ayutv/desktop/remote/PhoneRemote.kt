@@ -7,6 +7,8 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.awt.Window
+import de.ayutv.desktop.input.RemoteButton
+import de.ayutv.desktop.input.RemoteInput
 import java.awt.event.KeyEvent
 import java.net.Inet4Address
 import java.net.InetSocketAddress
@@ -19,7 +21,7 @@ import javax.swing.SwingUtilities
  * Handy als Fernbedienung: kleine Webseite im Heimnetz (http://<PC>:8096/<PIN>), keine App nötig.
  * Tasten gehen direkt an das DnA-TV-Fenster (nicht an andere Programme), Sender lassen sich suchen und starten.
  */
-class PhoneRemote(private val store: Store, private val onPlay: (String) -> Unit) {
+class PhoneRemote(private val store: Store, private val input: RemoteInput, private val onPlay: (String) -> Unit) {
     private var server: HttpServer? = null
     @Volatile var window: Window? = null
 
@@ -62,13 +64,20 @@ class PhoneRemote(private val store: Store, private val onPlay: (String) -> Unit
         when (parts.getOrNull(1)) {
             null, "" -> exchange.reply(200, "text/html; charset=utf-8", PAGE)
             "key" -> {
-                val code = KEYS[query["k"]] ?: return exchange.reply(400, "text/plain", "unbekannte Taste")
-                press(code)
+                val name = query["k"]
+                val button = BUTTONS[name]
+                val code = KEYS[name]
+                when {
+                    // Tasten wie auf der Fire-TV-Fernbedienung gehen denselben Weg wie die echte Fernbedienung.
+                    button != null -> input.tap(button)
+                    code != null -> press(code)
+                    else -> return exchange.reply(400, "text/plain", "unbekannte Taste")
+                }
                 exchange.reply(204, "text/plain", "")
             }
             "channels" -> {
                 val q = query["q"].orEmpty().lowercase()
-                val list = store.channels().filter { q.isEmpty() || it.name.lowercase().contains(q) }.take(60)
+                val list = store.allVisible().filter { q.isEmpty() || it.name.lowercase().contains(q) }.take(60)
                 val json = JsonArray(list.map { c -> buildJsonObject { put("key", c.key); put("name", c.name); put("group", c.group) } })
                 exchange.reply(200, "application/json; charset=utf-8", json.toString())
             }
@@ -101,12 +110,18 @@ class PhoneRemote(private val store: Store, private val onPlay: (String) -> Unit
     companion object {
         const val PORT = 8096
 
+        private val BUTTONS = mapOf(
+            "up" to RemoteButton.UP, "down" to RemoteButton.DOWN, "left" to RemoteButton.LEFT, "right" to RemoteButton.RIGHT,
+            "ok" to RemoteButton.OK, "back" to RemoteButton.BACK, "home" to RemoteButton.HOME, "menu" to RemoteButton.MENU,
+            "play" to RemoteButton.PLAY_PAUSE, "rew" to RemoteButton.REWIND, "ff" to RemoteButton.FAST_FORWARD,
+            "chup" to RemoteButton.CHANNEL_UP, "chdown" to RemoteButton.CHANNEL_DOWN, "info" to RemoteButton.INFO,
+            "next" to RemoteButton.NEXT,
+        )
+
+        /** Was es auf der Fire-TV-Fernbedienung nicht gibt: als PC-Taste. */
         private val KEYS = mapOf(
-            "up" to KeyEvent.VK_UP, "down" to KeyEvent.VK_DOWN, "left" to KeyEvent.VK_LEFT, "right" to KeyEvent.VK_RIGHT,
-            "ok" to KeyEvent.VK_ENTER, "back" to KeyEvent.VK_ESCAPE, "menu" to KeyEvent.VK_CONTEXT_MENU,
-            "play" to KeyEvent.VK_SPACE, "volup" to KeyEvent.VK_PLUS, "voldown" to KeyEvent.VK_MINUS, "mute" to KeyEvent.VK_M,
-            "chup" to KeyEvent.VK_PAGE_UP, "chdown" to KeyEvent.VK_PAGE_DOWN, "full" to KeyEvent.VK_F11,
-            "subs" to KeyEvent.VK_L, "audio" to KeyEvent.VK_T, "next" to KeyEvent.VK_N,
+            "volup" to KeyEvent.VK_PLUS, "voldown" to KeyEvent.VK_MINUS, "mute" to KeyEvent.VK_M,
+            "full" to KeyEvent.VK_F11, "subs" to KeyEvent.VK_L, "audio" to KeyEvent.VK_T,
         )
 
         /** Adresse des PCs im Heimnetz (192.168.x bevorzugt). */
@@ -135,13 +150,18 @@ li{list-style:none;padding:12px;border-bottom:1px solid #1E2631}ul{padding:0;mar
 </style></head><body>
 <h1>DnA-TV Fernbedienung</h1>
 <div class="grid">
-<button class="small" onclick="k('menu')">☰ Menü</button><button onclick="k('up')">▲</button><button class="small" onclick="k('back')">↩ Zurück</button>
+<button class="small" onclick="k('back')">↩ Zurück</button><button class="small" onclick="k('home')">⌂ Home</button><button class="small" onclick="k('menu')">☰ Menü</button>
+<span></span><button onclick="k('up')">▲</button><span></span>
 <button onclick="k('left')">◀</button><button class="ok" onclick="k('ok')">OK</button><button onclick="k('right')">▶</button>
 <button class="small" onclick="k('chup')">Sender +</button><button onclick="k('down')">▼</button><button class="small" onclick="k('chdown')">Sender −</button>
 </div>
 <div class="row">
-<button onclick="k('play')">⏯</button><button onclick="k('voldown')">🔉</button><button onclick="k('volup')">🔊</button><button onclick="k('mute')">🔇</button>
-<button class="small" onclick="k('subs')">UT</button><button class="small" onclick="k('audio')">Ton</button><button class="small" onclick="k('next')">⏭</button><button class="small" onclick="k('full')">⛶</button>
+<button onclick="k('rew')">⏪</button><button onclick="k('play')">⏯</button><button onclick="k('ff')">⏩</button><button class="small" onclick="k('info')">Info</button>
+</div>
+<div class="row"><button onclick="k('voldown')">🔉</button><button onclick="k('volup')">🔊</button><button onclick="k('mute')">🔇</button><button class="small" onclick="k('full')">⛶</button>
+</div>
+<div class="row">
+<button class="small" onclick="k('subs')">UT</button><button class="small" onclick="k('audio')">Ton</button><button class="small" onclick="k('next')">⏭</button><span></span>
 </div>
 <input id="q" placeholder="Sender suchen …" oninput="s()">
 <ul id="list"></ul>

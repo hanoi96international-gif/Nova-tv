@@ -1,5 +1,7 @@
 package de.ayutv.desktop.data
 
+import de.ayutv.data.parse.ChannelVariants
+import de.ayutv.data.parse.Countries
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +38,8 @@ class Store(val dir: File) {
     /** TV-Guide: Senderschlüssel → Sendungen, nach Beginn sortiert. */
     private val _guide = MutableStateFlow<Map<String, List<Programme>>>(emptyMap())
     val guide: StateFlow<Map<String, List<Programme>>> = _guide.asStateFlow()
+    /** TV-Guide wie geladen (ohne Verschiebung); vor [init] angelegt, weil [load] ihn füllt. */
+    @Volatile private var rawGuide: Map<String, List<Programme>> = emptyMap()
 
     private val _user = MutableStateFlow(UserData())
     val user: StateFlow<UserData> = _user.asStateFlow()
@@ -47,42 +51,138 @@ class Store(val dir: File) {
 
     // ---------------------------------------------------------------- Lesen
 
-    /** Sender aller eingeschalteten Playlists. */
+    private fun enabledIds(): Set<Long> = _playlists.value.filter { it.enabled }.map { it.id }.toSet()
+
+    /** Sender aller eingeschalteten Playlists (auch aus ausgeblendeten Gruppen und alle Fassungen). */
     fun channels(): List<Channel> {
-        val enabled = _playlists.value.filter { it.enabled }.map { it.id }.toSet()
+        val enabled = enabledIds()
         return _content.value.filterKeys { it in enabled }.values.flatMap { it.channels }
     }
 
-    fun movies(): List<Movie> {
-        val enabled = _playlists.value.filter { it.enabled }.map { it.id }.toSet()
+    /** Alle Filme der eingeschalteten Playlists (auch ausgeblendete Kategorien). */
+    fun allMovies(): List<Movie> {
+        val enabled = enabledIds()
         return _content.value.filterKeys { it in enabled }.values.flatMap { it.movies }
     }
 
-    fun series(): List<Series> {
-        val enabled = _playlists.value.filter { it.enabled }.map { it.id }.toSet()
+    fun allSeries(): List<Series> {
+        val enabled = enabledIds()
         return _content.value.filterKeys { it in enabled }.values.flatMap { it.series }
+    }
+
+    /** Filme ohne ausgeblendete Kategorien. */
+    fun movies(): List<Movie> {
+        val hidden = _user.value.hiddenMovieGroups
+        return allMovies().filter { "${it.playlistId}|${it.category}" !in hidden }
+    }
+
+    /** Serien ohne ausgeblendete Kategorien. */
+    fun series(): List<Series> {
+        val hidden = _user.value.hiddenSeriesGroups
+        return allSeries().filter { "${it.playlistId}|${it.category}" !in hidden }
     }
 
     fun channel(key: String): Channel? = _content.value.values.firstNotNullOfOrNull { c -> c.channels.firstOrNull { it.key == key } }
 
+    private fun visible(channel: Channel, hidden: Set<String>) = "${channel.playlistId}|${channel.group}" !in hidden
+
+    /** Doppelte Fassungen zusammenfassen (wenn eingeschaltet): jeder Sender einmal, in der besten Fassung. */
+    private fun merged(list: List<Channel>): List<Channel> =
+        if (_user.value.mergeVariants) ChannelVariants.merge(list, { it.name }, { it.playlistId }) else list
+
     /** Gruppen des Anbieters (Live), die nicht ausgeblendet sind, mit Anzahl, in der Reihenfolge der Playlist. */
     fun liveGroups(): List<Pair<String, Int>> {
         val hidden = _user.value.hiddenGroups
-        return channels().filter { "${it.playlistId}|${it.group}" !in hidden }
+        return merged(channels().filter { visible(it, hidden) })
             .groupingBy { it.group }.eachCount().toList()
     }
 
     /** Sender einer Gruppe des Anbieters, in eigener Reihenfolge (falls sortiert), sonst wie beim Anbieter. */
     fun inGroup(group: String): List<Channel> {
         val hidden = _user.value.hiddenGroups
-        val list = channels().filter { it.group == group && "${it.playlistId}|${it.group}" !in hidden }
+        val list = merged(channels().filter { it.group == group && visible(it, hidden) })
         return Ordering.apply(list, _user.value.groupOrder[group].orEmpty()) { it.key }
     }
 
-    /** Alle sichtbaren Sender (ohne ausgeblendete Gruppen). */
+    /** Alle sichtbaren Sender (ohne ausgeblendete Gruppen, doppelte Fassungen zusammengefasst). */
     fun allVisible(): List<Channel> {
         val hidden = _user.value.hiddenGroups
-        return channels().filter { "${it.playlistId}|${it.group}" !in hidden }
+        return merged(channels().filter { visible(it, hidden) })
+    }
+
+    /**
+     * Andere Fassungen desselben Senders (beste zuerst), auf die der Player ausweicht, wenn [channel] nicht läuft.
+     * Auch Fassungen aus ausgeblendeten Gruppen zählen (sie sind nur in den Listen verborgen).
+     */
+    fun alternatives(channel: Channel): List<Channel> =
+        ChannelVariants.alternatives(channel, _content.value[channel.playlistId]?.channels.orEmpty(), { it.name }, { it.playlistId }, { a, b -> a.key == b.key })
+
+    /** Gruppen je Art (für „Gruppen ein- und ausblenden“): Name, Anzahl, ausgeblendet. */
+    fun groupsOf(playlistId: Long, kind: GroupKind): List<Triple<String, Int, Boolean>> {
+        val c = _content.value[playlistId] ?: return emptyList()
+        val (names, hidden) = when (kind) {
+            GroupKind.LIVE -> c.channels.map { it.group } to _user.value.hiddenGroups
+            GroupKind.MOVIES -> c.movies.map { it.category } to _user.value.hiddenMovieGroups
+            GroupKind.SERIES -> c.series.map { it.category } to _user.value.hiddenSeriesGroups
+        }
+        return names.groupingBy { it }.eachCount().map { (name, count) -> Triple(name, count, "$playlistId|$name" in hidden) }
+    }
+
+    /** Gruppen ein- ([show]) oder ausblenden. */
+    fun setGroupsHidden(playlistId: Long, kind: GroupKind, names: Collection<String>, hide: Boolean) = updateUser { u ->
+        val keys = names.map { "$playlistId|$it" }.toSet()
+        fun Set<String>.apply() = if (hide) this + keys else this - keys
+        when (kind) {
+            GroupKind.LIVE -> u.copy(hiddenGroups = u.hiddenGroups.apply())
+            GroupKind.MOVIES -> u.copy(hiddenMovieGroups = u.hiddenMovieGroups.apply())
+            GroupKind.SERIES -> u.copy(hiddenSeriesGroups = u.hiddenSeriesGroups.apply())
+        }
+    }
+
+    /**
+     * Länder aus den Gruppennamen aller Playlists („DE | Sport“, „AT: News“, „|UK| …“), mit Anzahl der Gruppen und ob
+     * gerade sichtbar (mindestens eine Gruppe des Landes nicht ausgeblendet). Gruppen ohne erkennbares Land bleiben
+     * von der Länderauswahl unberührt.
+     */
+    fun countries(): List<CountryChoice> {
+        val u = _user.value
+        val byCountry = LinkedHashMap<String, MutableList<String>>()
+        val labels = HashMap<String, String>()
+        val enabled = enabledIds()
+        for ((id, c) in _content.value) {
+            if (id !in enabled) continue
+            fun add(name: String, hidden: Set<String>) {
+                val country = Countries.of(name) ?: return
+                labels[country.code] = country.label
+                byCountry.getOrPut(country.code) { ArrayList() } += if ("$id|$name" in hidden) "-" else "+"
+            }
+            c.channels.map { it.group }.distinct().forEach { add(it, u.hiddenGroups) }
+            c.movies.map { it.category }.distinct().forEach { add(it, u.hiddenMovieGroups) }
+            c.series.map { it.category }.distinct().forEach { add(it, u.hiddenSeriesGroups) }
+        }
+        return byCountry.map { (code, marks) -> CountryChoice(code, labels[code] ?: code, marks.size, marks.any { it == "+" }) }
+            .sortedByDescending { it.groups }
+    }
+
+    /** Nur die Gruppen der Länder [keep] zeigen (Live, Filme, Serien); Gruppen ohne Land bleiben, wie sie sind. */
+    fun keepCountries(keep: Set<String>) = updateUser { u ->
+        var live = u.hiddenGroups
+        var movies = u.hiddenMovieGroups
+        var series = u.hiddenSeriesGroups
+        for ((id, c) in _content.value) {
+            fun Set<String>.apply(names: List<String>): Set<String> {
+                var set = this
+                for (name in names.distinct()) {
+                    val code = Countries.of(name)?.code ?: continue
+                    set = if (code in keep) set - "$id|$name" else set + "$id|$name"
+                }
+                return set
+            }
+            live = live.apply(c.channels.map { it.group })
+            movies = movies.apply(c.movies.map { it.category })
+            series = series.apply(c.series.map { it.category })
+        }
+        u.copy(hiddenGroups = live, hiddenMovieGroups = movies, hiddenSeriesGroups = series, countriesAsked = true)
     }
 
     /** Favoriten in ihrer Reihenfolge; auch Sender aus ausgeblendeten Gruppen. */
@@ -90,18 +190,21 @@ class Store(val dir: File) {
 
     fun inCustom(id: Long): List<Channel> = byKeys(_user.value.customGroups.firstOrNull { it.id == id }?.keys.orEmpty())
 
+    /** Zuletzt geschaute Sender, neuester zuerst. */
+    fun recentChannels(): List<Channel> = byKeys(_user.value.recent)
+
     private fun byKeys(keys: List<String>): List<Channel> {
         val all = channels().associateBy { it.key }
         return keys.mapNotNull { all[it] }
     }
 
+    fun programmes(channel: Channel): List<Programme> = _guide.value[channel.key].orEmpty()
+
     fun nowPlaying(channel: Channel, at: Long = System.currentTimeMillis()): Programme? =
-        _guide.value[channel.key]?.firstOrNull { it.start <= at && it.stop > at }
+        programmes(channel).firstOrNull { it.start <= at && it.stop > at }
 
     fun upcoming(channel: Channel, count: Int, at: Long = System.currentTimeMillis()): List<Programme> =
-        _guide.value[channel.key].orEmpty().filter { it.stop > at }.take(count)
-
-    fun programmes(channel: Channel): List<Programme> = _guide.value[channel.key].orEmpty()
+        programmes(channel).filter { it.stop > at }.take(count)
 
     // ---------------------------------------------------------------- Ändern (Nutzer)
 
@@ -187,6 +290,11 @@ class Store(val dir: File) {
 
     fun showAllGroups() = updateUser { it.copy(hiddenGroups = emptySet()) }
 
+    fun hideMovieGroup(name: String, series: Boolean) = updateUser { u ->
+        if (series) u.copy(hiddenSeriesGroups = u.hiddenSeriesGroups + allSeries().filter { it.category == name }.map { "${it.playlistId}|$name" })
+        else u.copy(hiddenMovieGroups = u.hiddenMovieGroups + allMovies().filter { it.category == name }.map { "${it.playlistId}|$name" })
+    }
+
     fun rememberWatched(key: String) = updateUser { u -> u.copy(recent = (listOf(key) + u.recent.filter { it != key }).take(30)) }
 
     fun savePosition(key: String, positionMs: Long, durationMs: Long) = updateUser { u ->
@@ -215,8 +323,21 @@ class Store(val dir: File) {
     }
 
     fun setGuide(guide: Map<String, List<Programme>>) {
-        _guide.value = guide
+        rawGuide = guide
+        _guide.value = shifted(guide)
         save(GUIDE, MapSerializer(String.serializer(), ListSerializer(Programme.serializer())), guide)
+    }
+
+    /** TV-Guide um [hours] verschieben (Anbieter mit falscher Zeitzone). */
+    fun setEpgShift(hours: Int) {
+        updateUser { it.copy(epgShiftHours = hours.coerceIn(-12, 12)) }
+        _guide.value = shifted(rawGuide)
+    }
+
+    private fun shifted(guide: Map<String, List<Programme>>): Map<String, List<Programme>> {
+        val shift = _user.value.epgShiftHours * 3_600_000L
+        if (shift == 0L) return guide
+        return guide.mapValues { (_, list) -> list.map { it.copy(start = it.start + shift, stop = it.stop + shift) } }
     }
 
     // ---------------------------------------------------------------- Dateien
@@ -227,8 +348,9 @@ class Store(val dir: File) {
         _content.value = _playlists.value.mapNotNull { p -> read("content-${p.id}.json.gz", Content.serializer())?.let { p.id to it } }.toMap()
         // Vergangenes nicht wieder laden.
         val now = System.currentTimeMillis()
-        _guide.value = read(GUIDE, MapSerializer(String.serializer(), ListSerializer(Programme.serializer())))
+        rawGuide = read(GUIDE, MapSerializer(String.serializer(), ListSerializer(Programme.serializer())))
             ?.mapValues { (_, list) -> list.filter { it.stop > now - DAY } }.orEmpty()
+        _guide.value = shifted(rawGuide)
     }
 
     private fun <T> read(name: String, serializer: KSerializer<T>): T? = runCatching {
@@ -262,6 +384,12 @@ class Store(val dir: File) {
             System.getenv("APPDATA")?.let { File(it, "DnA-TV") } ?: File(System.getProperty("user.home"), ".dna-tv")
     }
 }
+
+/** Art der Gruppen (Gruppen ein- und ausblenden). */
+enum class GroupKind(val label: String) { LIVE("Live TV"), MOVIES("Filme"), SERIES("Serien") }
+
+/** Ein Land in der Länderauswahl: Kürzel, Name, Anzahl Gruppen, gerade sichtbar. */
+data class CountryChoice(val code: String, val label: String, val groups: Int, val visible: Boolean)
 
 /** Welche Liste gerade gezeigt wird (für Sortieren und Zappen). */
 sealed interface GroupRef {

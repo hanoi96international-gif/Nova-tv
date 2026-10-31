@@ -215,7 +215,7 @@ fun LiveScreen(app: AppState) {
                 if (shown.isEmpty()) {
                     Empty(
                         when (group) {
-                            GroupRef.Favorites -> "Noch keine Favoriten. Rechtsklick (oder Enter lange drücken) auf einen Sender → „Zu Favoriten“."
+                            GroupRef.Favorites -> "Noch keine Favoriten. ☰ oder Rechtsklick (oder OK lange drücken) auf einen Sender → „Zu Favoriten“."
                             is GroupRef.Custom -> "Die Gruppe ist leer. Rechtsklick auf einen Sender → „Zu Gruppe hinzufügen“."
                             else -> "Keine Sender. Unter „Einstellungen“ die Playlist neu laden."
                         },
@@ -276,7 +276,7 @@ fun LiveScreen(app: AppState) {
             val focused = focusedKey?.let { k -> shown.firstOrNull { it.key == k } }
             Panel(Modifier.width(320.dp).fillMaxHeight()) {
                 if (focused == null) {
-                    Label("Sender auswählen: Pfeiltasten oder Maus, Enter/Klick spielt ab. Rechtsklick oder Enter lange drücken öffnet das Menü.", Type.small, maxLines = 6)
+                    Label("Sender auswählen: Steuerkreuz, Pfeiltasten oder Maus. OK/Klick spielt ab, ☰, Rechtsklick oder OK lange drücken öffnet das Menü (Favorit, Gruppe, Verschieben).", Type.small, maxLines = 6)
                 } else {
                     ChannelInfo(focused, guide[focused.key].orEmpty())
                 }
@@ -317,13 +317,6 @@ fun ChannelInfo(channel: Channel, programmes: List<Programme>) {
             Label("DANACH", Type.small)
             next.forEach { p -> Label("${clock(p.start)}  ${p.title}", Type.body) }
         }
-    }
-}
-
-@Composable
-fun Progress(fraction: Float, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(4.dp).background(Palette.raised, RoundedCornerShape(2.dp))) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(4.dp).background(Palette.accent, RoundedCornerShape(2.dp)))
     }
 }
 

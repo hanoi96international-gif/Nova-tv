@@ -65,6 +65,17 @@ class VideoPlayer {
     val vlcVersion: String? = runCatching { factory?.application()?.version() }.getOrNull()
     /** Gezeigte Bilder (für den Selbsttest). */
     val framesRendered = java.util.concurrent.atomic.AtomicLong()
+    /** Zeitpunkt des letzten gezeigten Bildes (Watchdog: steht das Bild?). */
+    @Volatile var lastFrameAt = 0L; private set
+    /** Wann [play] aufgerufen wurde und wie lange es bis zum ersten Bild dauerte (Stream-Info). */
+    @Volatile private var startedAt = 0L
+    var startupMs by mutableLongStateOf(0L); private set
+    /** Der Stream hat ein Bild (Radiosender nicht). */
+    var hasVideo by mutableStateOf(true); private set
+    /** Pausiert vom Nutzer (nicht: puffert). */
+    var paused by mutableStateOf(false); private set
+    /** Puffer für Netz-Streams in ms (Einstellungen: Schnell, Ausgewogen, Stabil). */
+    var networkCacheMs = NETWORK_CACHE_MS
 
     private var bitmap: Bitmap? = null
     private var info: ImageInfo? = null
@@ -78,11 +89,11 @@ class VideoPlayer {
             private fun mine(mediaPlayer: MediaPlayer) = mediaPlayer === player
             override fun playing(mediaPlayer: MediaPlayer) = ui {
                 if (!mine(mediaPlayer)) return@ui
-                playing = true; buffering = false; error = null; readTracks()
+                playing = true; buffering = false; error = null; paused = false; readTracks()
                 // Lautstärke gilt je Player: beim Wechsel mitnehmen.
                 if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
             }
-            override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
+            override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; paused = true } }
             override fun stopped(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
             override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { if (mine(mediaPlayer)) buffering = newCache < 100f }
             override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { if (mine(mediaPlayer)) positionMs = newTime }
@@ -115,21 +126,55 @@ class VideoPlayer {
         }
         error = null
         buffering = true
+        paused = false
+        hasVideo = true
         positionMs = startMs
         durationMs = 0
+        startupMs = 0
+        startedAt = System.currentTimeMillis()
+        lastFrameAt = startedAt
         val options = buildList {
             userAgent?.let { add(":http-user-agent=$it") }
             if (startMs > 0) add(":start-time=${startMs / 1000.0}")
-            add(":network-caching=$NETWORK_CACHE_MS")
+            add(":network-caching=$networkCacheMs")
             addAll(extra)
         }
-        p.media().play(url, *options.toTypedArray())
+        if (!p.media().play(url, *options.toTypedArray())) error = "Der Stream lässt sich nicht öffnen"
+    }
+
+    /** Technische Angaben zum laufenden Stream (für die Stream-Info, Taste ▶ bzw. Info). */
+    fun streamInfo(): StreamInfo? {
+        val p = player ?: return null
+        return runCatching {
+            val info = p.media().info()
+            val video = info.videoTracks().firstOrNull()
+            val audio = info.audioTracks().firstOrNull()
+            val stats = info.statistics()
+            StreamInfo(
+                width = video?.width() ?: 0,
+                height = video?.height() ?: 0,
+                fps = video?.let { if (it.frameRateBase() > 0) it.frameRate().toDouble() / it.frameRateBase() else 0.0 } ?: 0.0,
+                videoCodec = video?.codecDescription()?.takeIf { it.isNotBlank() } ?: video?.codecName().orEmpty(),
+                audioCodec = audio?.codecDescription()?.takeIf { it.isNotBlank() } ?: audio?.codecName().orEmpty(),
+                audioChannels = audio?.channels() ?: 0,
+                inputKbps = ((stats?.inputBitrate() ?: 0f) * 8000).toInt(),
+                demuxKbps = ((stats?.demuxBitrate() ?: 0f) * 8000).toInt(),
+                displayed = stats?.picturesDisplayed() ?: 0,
+                lost = stats?.picturesLost() ?: 0,
+                corrupted = stats?.demuxCorrupted() ?: 0,
+                startupMs = startupMs,
+                cacheMs = networkCacheMs,
+            )
+        }.getOrNull()
     }
 
     fun togglePause() {
         val p = player ?: return
         if (p.status().isPlaying) p.controls().pause() else p.controls().play()
     }
+
+    fun pause() { player?.takeIf { it.status().isPlaying }?.controls()?.pause() }
+    fun resume() { player?.takeIf { !it.status().isPlaying }?.controls()?.play() }
 
     fun seekBy(deltaMs: Long) {
         val p = player ?: return
@@ -157,6 +202,14 @@ class VideoPlayer {
     /** Untertitel verschieben (ms, positiv = später). */
     fun subtitleDelay(ms: Long) = player?.subpictures()?.setDelay(ms * 1000)
 
+    /** Aufgeben (Watchdog): anhalten und [message] zeigen. */
+    fun stopWithError(message: String) {
+        runCatching { player?.controls()?.stop() }
+        playing = false
+        buffering = false
+        error = message
+    }
+
     fun stop() {
         player?.controls()?.stop()
         tap.close()
@@ -176,6 +229,7 @@ class VideoPlayer {
     private fun readTracks() {
         val p = player ?: return
         audioTracks = p.audio().trackDescriptions().map { it.id() to it.description() }
+        hasVideo = runCatching { p.video().trackCount() > 0 }.getOrDefault(true)
         subtitleTracks = p.subpictures().trackDescriptions().map { it.id() to it.description() }
     }
 
@@ -205,6 +259,12 @@ class VideoPlayer {
             target.installPixels(imageInfo, pixels, imageInfo.width * 4)
             val image = target.asComposeImageBitmap()
             framesRendered.incrementAndGet()
+            val now = System.currentTimeMillis()
+            lastFrameAt = now
+            if (startupMs == 0L && startedAt > 0) {
+                val took = (now - startedAt).coerceAtLeast(1)
+                ui { if (startupMs == 0L) startupMs = took }
+            }
             ui { frame = image }
         }
     }
@@ -212,8 +272,14 @@ class VideoPlayer {
     private inline fun ui(crossinline block: () -> Unit) = SwingUtilities.invokeLater { block() }
 
     companion object {
-        private const val NETWORK_CACHE_MS = 3_000
-        private val VLC_OPTIONS = arrayOf("--quiet", "--no-video-title-show", "--http-reconnect", "--avcodec-hw=any")
+        const val NETWORK_CACHE_MS = 2_500
+        private val VLC_OPTIONS = arrayOf(
+            "--quiet", "--no-video-title-show", "--http-reconnect", "--avcodec-hw=any",
+            // Live-TV kommt oft als 1080i/576i: automatisch entflechten, mit voller Bildrate (50 statt 25 Bilder).
+            "--deinterlace=-1", "--deinterlace-mode=yadif2x",
+            // Kurze Aussetzer überbrücken statt abzubrechen.
+            "--network-caching=$NETWORK_CACHE_MS",
+        )
 
         /**
          * Mitgeliefertes VLC (im App-Ordner, Unterordner „vlc“) vor dem ersten Player bekannt machen. Ohne eigenes VLC
@@ -229,5 +295,59 @@ class VideoPlayer {
             // Die Plugins findet libVLC selbst im Unterordner „plugins“ neben libvlc.dll.
             System.setProperty("jna.library.path", if (path.isNullOrEmpty()) dir.absolutePath else path + File.pathSeparator + dir.absolutePath)
         }
+    }
+}
+
+/** Stream-Info: was gerade läuft und wie gut. */
+data class StreamInfo(
+    val width: Int,
+    val height: Int,
+    val fps: Double,
+    val videoCodec: String,
+    val audioCodec: String,
+    val audioChannels: Int,
+    /** Gelesene Daten (Leitung) und Video-/Ton-Daten in kbit/s. */
+    val inputKbps: Int,
+    val demuxKbps: Int,
+    val displayed: Int,
+    val lost: Int,
+    val corrupted: Int,
+    val startupMs: Long,
+    val cacheMs: Int,
+) {
+    val resolution: String get() = when {
+        height >= 2000 -> "4K (${width}×$height)"
+        height >= 1000 -> "Full HD (${width}×$height)"
+        height >= 700 -> "HD (${width}×$height)"
+        height > 0 -> "SD (${width}×$height)"
+        else -> "–"
+    }
+
+    /** Zeilen für die Anzeige. */
+    fun lines(): List<Pair<String, String>> = listOf(
+        "Auflösung" to resolution,
+        "Bildrate" to if (fps > 0) "%.3f fps".format(java.util.Locale.GERMAN, fps).replace(",000", "") else "–",
+        "Video" to videoCodec.ifBlank { "–" },
+        "Ton" to (audioCodec.ifBlank { "–" } + if (audioChannels > 0) ", ${channelsLabel(audioChannels)}" else ""),
+        "Leitung" to if (inputKbps > 0) mbit(inputKbps) else "–",
+        "Datenrate" to if (demuxKbps > 0) mbit(demuxKbps) else "–",
+        "Bilder" to "$displayed gezeigt, $lost verworfen" + if (corrupted > 0) ", $corrupted beschädigt" else "",
+        "Startzeit" to if (startupMs > 0) "%.2f s".format(java.util.Locale.GERMAN, startupMs / 1000.0) else "–",
+        "Puffer" to "%.1f s".format(java.util.Locale.GERMAN, cacheMs / 1000.0),
+    )
+
+    private fun mbit(kbps: Int) = "%.1f Mbit/s".format(java.util.Locale.GERMAN, kbps / 1000.0)
+    private fun channelsLabel(n: Int) = when (n) { 1 -> "Mono"; 2 -> "Stereo"; 6 -> "5.1"; 8 -> "7.1"; else -> "$n Kanäle" }
+}
+
+/** Pufferprofile wie auf dem Fire TV. */
+enum class BufferProfile(val label: String, val cacheMs: Int, val hint: String) {
+    FAST("Schnell", 1_200, "kurze Umschaltzeit, für gute Leitungen"),
+    BALANCED("Ausgewogen", VideoPlayer.NETWORK_CACHE_MS, "Standard"),
+    STABLE("Stabil (4K)", 6_000, "großer Puffer gegen Ruckeln bei 4K und schwankender Leitung"),
+    ;
+
+    companion object {
+        fun of(name: String) = entries.firstOrNull { it.name == name } ?: BALANCED
     }
 }

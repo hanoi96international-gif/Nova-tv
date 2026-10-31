@@ -15,6 +15,8 @@ import de.ayutv.desktop.data.Series
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
 import de.ayutv.desktop.data.TimingMark
+import de.ayutv.desktop.input.RemoteInput
+import de.ayutv.desktop.player.BufferProfile
 import de.ayutv.desktop.player.SubtitleFiles
 import de.ayutv.desktop.player.Subtitles
 import de.ayutv.desktop.player.VideoPlayer
@@ -29,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 enum class Screen(val label: String, val icon: String) {
+    HOME("Start", "⌂"),
     LIVE("Live TV", "📺"),
     GUIDE("TV-Guide", "🗓"),
     SPORT("Sport", "⚽"),
@@ -60,11 +63,11 @@ sealed interface Playback {
 }
 
 /** Zustand der ganzen App (eine Instanz je Fenster). */
-class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
+class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val input: RemoteInput = RemoteInput()) {
     val player = VideoPlayer()
     val backup = BackupImport(store)
     val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
-    val remote = PhoneRemote(store) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
+    val remote = PhoneRemote(store, input) { key -> store.channel(key)?.let { play(Playback.Live(it, store.allVisible())) } }
     var remoteAddress by mutableStateOf<String?>(null); private set
 
     /** Handy-Fernbedienung ein-/ausschalten (Windows fragt beim ersten Mal nach der Firewall-Freigabe). */
@@ -75,22 +78,42 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         remoteAddress = remote.address()
     }
 
-    var screen by mutableStateOf(if (store.playlists.value.isEmpty()) Screen.SETTINGS else Screen.LIVE)
+    var screen by mutableStateOf(if (store.playlists.value.isEmpty()) Screen.SETTINGS else Screen.HOME)
     var playing by mutableStateOf<Playback?>(null); private set
     /** Geöffnete Serie (Folgenansicht), auch aus der Suche heraus. */
     var openSeries by mutableStateOf<Series?>(null)
     var message by mutableStateOf<String?>(null); private set
     private var messageJob: Job? = null
+    /** Länderauswahl anbieten (nach dem ersten Laden). */
+    var askCountries by mutableStateOf(false)
 
     /** Zurück-Aktionen, die neueste zuerst (Dialog, Unterseite, Player). */
     private val backStack = mutableStateListOf<() -> Boolean>()
 
     init {
         if (store.user.value.phoneRemote) setPhoneRemote(true)
+        applyBuffer()
+        // Wie auf dem Fire TV: Playlists alle 12 Stunden, TV-Guide alle 8 Stunden nachladen, auch wenn DnA-TV läuft.
+        scope.launch {
+            delay(1_500)
+            while (true) {
+                val first = store.playlists.value.any { it.enabled && it.lastSync == 0L }
+                val problems = runCatching { sync.refreshDue() }.getOrElse { listOf(it.message ?: "Fehler") }
+                applyProxy()
+                if (problems.isNotEmpty()) toast("Aktualisieren: ${problems.first()}")
+                if (first && !store.user.value.countriesAsked && store.countries().size > 1) askCountries = true
+                delay(REFRESH_CHECK_MS)
+            }
+        }
     }
 
     /** Proxy geändert (Einstellungen, Sicherung) oder neue Sender geladen: Wege neu festlegen. */
     fun applyProxy() = Network.apply(store)
+
+    /** Pufferprofil aus den Einstellungen an den Player geben. */
+    fun applyBuffer() {
+        player.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
+    }
 
     fun toast(text: String) {
         message = text
@@ -101,25 +124,173 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         }
     }
 
+    // ---------------------------------------------------------------- Wiedergabe
+
+    /** Vorher geschauter Sender (◀ bzw. „Letzter Sender“ springt zurück). */
+    var previousChannel by mutableStateOf<Channel?>(null); private set
+    /** Was der Player gerade versucht (Neu verbinden, Ausweichen); null = nichts. */
+    var playerStatus by mutableStateOf<String?>(null); private set
+    /** Fassungen, die für den laufenden Sender schon versucht wurden. */
+    private var triedVariants = mutableSetOf<String>()
+    private var watchdog: Job? = null
+
     fun play(playback: Playback) {
         stopAligning()
+        val before = (playing as? Playback.Live)?.channel
         // Ton nur abgreifen, wenn Untertitel ausgerichtet werden sollen (sonst gibt VLC den Ton selbst aus).
         player.tapAudio = false
+        playerStatus = null
+        if (playback is Playback.Live) {
+            if (before != null && before.key != playback.channel.key) previousChannel = before
+            triedVariants = mutableSetOf(playback.channel.key)
+        }
         playing = playback
-        when (playback) {
-            is Playback.Live -> {
-                store.rememberWatched(playback.channel.key)
-                player.play(playback.channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(playback.channel.url).toTypedArray())
+        start(playback)
+        watch(playback)
+    }
+
+    private fun start(playback: Playback, atMs: Long? = null) = when (playback) {
+        is Playback.Live -> {
+            store.rememberWatched(playback.channel.key)
+            player.play(playback.channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(playback.channel.url).toTypedArray())
+        }
+        is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
+    }
+
+    /**
+     * Watchdog wie auf dem Fire TV: Fehler oder stehendes Bild (Dauer-Puffern) → neu verbinden, bis zu drei Mal mit
+     * wachsender Pause; danach bei Live-TV auf die nächste Fassung desselben Senders ausweichen („RTL HD“ → „RTL 4K“).
+     */
+    private fun watch(playback: Playback) {
+        watchdog?.cancel()
+        watchdog = scope.launch {
+            var attempts = 0
+            var healthySince = System.currentTimeMillis()
+            while (playing === playback) {
+                delay(1_000)
+                if (playing !== playback) break
+                val now = System.currentTimeMillis()
+                // Radiosender haben kein Bild: die zählen nicht als eingefroren, solange der Ton läuft.
+                val stalled = !player.paused && now - player.lastFrameAt > STALL_MS && !(player.playing && !player.hasVideo)
+                val failed = player.error != null
+                if (!failed && !stalled) {
+                    if (player.playing && now - healthySince > HEALTHY_MS) attempts = 0
+                    if (player.playing && playerStatus != null && now - player.lastFrameAt < 1_000) playerStatus = null
+                    continue
+                }
+                healthySince = now
+                if (attempts < MAX_RETRIES) {
+                    attempts++
+                    playerStatus = (if (failed) "Stream unterbrochen" else "Bild steht") + " – verbinde neu ($attempts/$MAX_RETRIES) …"
+                    delay(500L shl (attempts - 1))
+                    if (playing !== playback) break
+                    start(playback, atMs = (playback as? Playback.Vod)?.let { player.positionMs })
+                    continue
+                }
+                val live = playback as? Playback.Live
+                val next = live?.let { l -> store.alternatives(l.channel).firstOrNull { it.key !in triedVariants } }
+                if (live != null && next != null) {
+                    triedVariants.add(next.key)
+                    playerStatus = "Weiche aus auf „${next.name}“ …"
+                    // In der Liste bleibt der ursprüngliche Sender stehen (Zappen geht von dort weiter).
+                    val switched = Playback.Live(next, live.list.map { if (it.key == live.channel.key) next else it })
+                    playing = switched
+                    start(switched)
+                    watch(switched)
+                    return@launch
+                }
+                playerStatus = null
+                if (player.error == null) player.stopWithError("Der Stream liefert kein Bild. Später noch einmal versuchen oder einen anderen Sender wählen.")
+                break
             }
-            is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
+        }
+    }
+
+    /** Ziel beim schnellen Umschalten (wird erst nach kurzer Pause gestartet). */
+    var zapTarget by mutableStateOf<Channel?>(null); private set
+    private var zapJob: Job? = null
+    private var lastZapAt = 0L
+
+    /** Umschalten in der laufenden Liste; schnell hintereinander gedrückt wird nur der letzte Sender gestartet. */
+    fun zap(step: Int) {
+        val live = playing as? Playback.Live ?: return
+        val list = live.list
+        if (list.size < 2) return
+        val from = zapTarget ?: live.channel
+        val index = list.indexOfFirst { it.key == from.key }.coerceAtLeast(0)
+        val target = list[(index + step).mod(list.size)]
+        val now = System.currentTimeMillis()
+        val burst = now - lastZapAt < ZAP_BURST_MS
+        lastZapAt = now
+        if (!burst && zapJob == null) {
+            play(live.copy(channel = target))
+            return
+        }
+        zapTarget = target
+        zapJob?.cancel()
+        zapJob = scope.launch {
+            delay(ZAP_SETTLE_MS)
+            zapJob = null
+            zapTarget = null
+            val current = playing as? Playback.Live ?: return@launch
+            play(current.copy(channel = target))
+        }
+    }
+
+    /** Zum vorher geschauten Sender (und wieder zurück). */
+    fun backZap(): Boolean {
+        val live = playing as? Playback.Live ?: return false
+        val previous = previousChannel?.takeIf { it.key != live.channel.key } ?: return false
+        val list = if (live.list.any { it.key == previous.key }) live.list else store.allVisible()
+        play(Playback.Live(previous, list))
+        toast("◀ Zurück: ${previous.name}")
+        return true
+    }
+
+    /** Eingetippte Sendernummer (Zifferntasten im Bild). */
+    var typedNumber by mutableStateOf("")
+        private set
+    private var numberJob: Job? = null
+
+    fun typeDigit(digit: Int) {
+        val live = playing as? Playback.Live ?: return
+        typedNumber = (typedNumber + digit).takeLast(4)
+        val typed = typedNumber
+        val numbers = live.list.mapIndexed { i, c -> (c.number.takeIf { it > 0 } ?: (i + 1)) to c }
+        val canGrow = numbers.any { (n, _) -> n.toString().let { it.length > typed.length && it.startsWith(typed) } }
+        numberJob?.cancel()
+        numberJob = scope.launch {
+            if (canGrow) delay(1_500)
+            val wanted = typed.toIntOrNull()
+            typedNumber = ""
+            val target = numbers.firstOrNull { it.first == wanted }?.second
+            if (target == null) toast("Kein Sender mit der Nummer $typed") else if ((playing as? Playback.Live)?.channel?.key != target.key) {
+                play(live.copy(channel = target))
+            }
         }
     }
 
     fun stopPlayback() {
         stopAligning()
         savePosition()
+        watchdog?.cancel()
+        zapJob?.cancel()
+        zapJob = null
+        zapTarget = null
+        playerStatus = null
         player.stop()
         playing = null
+    }
+
+    /** Taste Home: wie auf dem Fire TV zur Startseite (Wiedergabe und offene Dialoge schließen). */
+    fun goHome() {
+        if (playing != null) stopPlayback()
+        openSeries = null
+        // Offene Dialoge und Unterseiten schließen (begrenzt: ein Handler bleibt bis zum nächsten Zeichnen aktiv).
+        repeat(minOf(backStack.size, 8)) {
+            for (i in backStack.indices.reversed()) if (backStack[i]()) break
+        }
+        screen = Screen.HOME
     }
 
     /** Wiedergabestand des laufenden Films merken (fast am Ende = gesehen, beim nächsten Mal von vorn). */
@@ -230,6 +401,16 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         return false
     }
 
+    /** Zurück auf oberster Ebene: zur Startseite (wie die Zurück-Taste auf dem Fire TV-Startbildschirm). */
+    fun backToHome(): Boolean {
+        if (back()) return true
+        if (screen != Screen.HOME && store.playlists.value.isNotEmpty()) {
+            screen = Screen.HOME
+            return true
+        }
+        return false
+    }
+
     internal fun pushBack(handler: () -> Boolean) = backStack.add(handler)
     internal fun popBack(handler: () -> Boolean) = backStack.remove(handler)
 
@@ -241,11 +422,20 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     private companion object {
         /** So viel gehörter Ton (rückwärts ab jetzt) zählt für die Ausrichtung. */
         const val WINDOW_MS = 15 * 60_000L
+        const val REFRESH_CHECK_MS = 15 * 60_000L
+        /** So lange ohne neues Bild gilt ein Stream als eingefroren. */
+        const val STALL_MS = 12_000L
+        const val HEALTHY_MS = 30_000L
+        const val MAX_RETRIES = 3
+        const val ZAP_BURST_MS = 700L
+        const val ZAP_SETTLE_MS = 450L
     }
 
     fun close() {
         savePosition()
+        watchdog?.cancel()
         remote.stop()
+        input.stop()
         player.release()
     }
 }

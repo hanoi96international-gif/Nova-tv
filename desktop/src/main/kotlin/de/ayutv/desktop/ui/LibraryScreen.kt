@@ -47,13 +47,14 @@ fun LibraryScreen(app: AppState, series: Boolean) {
     val user by app.store.user.collectAsState()
     val playlists by app.store.playlists.collectAsState()
     var category by remember(series) { mutableStateOf(RECENT) }
+    var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
     if (series) app.openSeries?.let { s ->
         EpisodesView(app, s) { app.openSeries = null }
         return
     }
 
-    val movies = remember(content, playlists) { if (series) emptyList() else app.store.movies() }
-    val shows = remember(content, playlists) { if (series) app.store.series() else emptyList() }
+    val movies = remember(content, playlists, user.hiddenMovieGroups) { if (series) emptyList() else app.store.movies() }
+    val shows = remember(content, playlists, user.hiddenSeriesGroups) { if (series) app.store.series() else emptyList() }
     val categories = remember(movies, shows) {
         (if (series) shows.map { it.category } else movies.map { it.category }).groupingBy { it }.eachCount().toList()
     }
@@ -68,7 +69,15 @@ fun LibraryScreen(app: AppState, series: Boolean) {
                 item { ListRow("Neu hinzugefügt", { category = RECENT }, selected = category == RECENT) }
                 if (!series) item { ListRow("Weiterschauen", { category = CONTINUE }, selected = category == CONTINUE) }
                 items(categories, key = { it.first }) { (name, count) ->
-                    ListRow(name, { category = name }, trailing = count.toString(), selected = category == name)
+                    ListRow(name, { category = name }, trailing = count.toString(), selected = category == name, onMenu = {
+                        dialog = {
+                            MenuDialog(app, name, listOf(MenuItem("Kategorie ausblenden") {
+                                app.store.hideMovieGroup(name, series)
+                                if (category == name) category = RECENT
+                                app.toast("„$name“ ausgeblendet. Wieder einblenden: Einstellungen → Gruppen …")
+                            }), onDismiss = { dialog = null })
+                        }
+                    })
                 }
             }
         }
@@ -91,6 +100,7 @@ fun LibraryScreen(app: AppState, series: Boolean) {
             }
         }
     }
+    dialog?.invoke()
 }
 
 fun playMovie(app: AppState, movie: Movie) {

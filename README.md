@@ -80,7 +80,11 @@ Einrichten: *Einstellungen → Sicherung übernehmen …* holt Playlists, Favori
 
 Untertitel (Taste L oder „💬 DE laden“ im Player) kommen von OpenSubtitles oder per DeepL übersetzt und richten sich wie auf dem Fire TV nach rund 1,5 Minuten Gespräch selbst am Ton aus (auch bei anderer Bildrate); die Ausrichtung wird je Film gemerkt.
 
-Bedienung: Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur oder Bluetooth-Fernbedienung (Pfeiltasten, Enter, Esc) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
+**Fire-TV-Fernbedienung am PC:** In Windows unter *Einstellungen → Bluetooth und Geräte → Gerät hinzufügen* koppeln (auf der Fernbedienung Home 10 Sekunden halten). DnA-TV erkennt sie selbst und belegt sie wie auf dem Fire TV: Steuerkreuz und OK (lange = Menü), Zurück, Home (Startseite), ☰ Menü, ⏯, ⏪/⏩ (gehalten schneller). Im Live-TV schaltet ▲/▼ um, OK öffnet die Senderliste, ◀ springt zum letzten Sender, ▶ zeigt Programm- und Stream-Info, ☰ Ton, Untertitel und Favorit. Solange DnA-TV vorn ist, öffnen Home und Zurück nicht den Browser und ⏯ pausiert nicht Spotify. *Einstellungen → Fernbedienung* zeigt, welche Taste ankommt.
+
+Außerdem wie auf dem Fire TV: Startseite mit „Weiter schauen“, „Zuletzt gesehen“, Favoriten und „Mehr aus …“, doppelte Sender zusammengefasst (mit automatischem Ausweichen auf die nächste Fassung), Gruppen und Länder ein- und ausblenden (Live, Filme, Serien), Watchdog für eingefrorene Streams, Stream-Info, Pufferprofile, Zifferntasten, Playlists alle 12 und TV-Guide alle 8 Stunden automatisch neu.
+
+Bedienung mit Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur (Pfeile, Enter, Esc/Rücktaste, Kontextmenü-Taste, Leertaste, F11; Vollbild wird gemerkt) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
 
 Gebaut wird sie aus `desktop/` (Kotlin + Compose Desktop, Wiedergabe über VLC) mit denselben Lesern für M3U, Xtream, TV-Guide und Sicherung wie die Fire-TV-App: `./gradlew -p desktop run` bzw. `./gradlew -p desktop packageMsi`.
 

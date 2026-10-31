@@ -60,6 +60,66 @@ class StoreTest {
         assertTrue(s.channels().isEmpty())
     }
 
+    private fun named(id: Int, name: String, group: String) =
+        Channel("1:c:$id", 1, name, group, url = "http://x/$id.ts", number = id)
+
+    @Test
+    fun variantsAreMergedAndBecomeFallbacks() {
+        val s = store().withChannels(
+            named(1, "DE: RTL HD", "DE | Voll"), named(2, "DE: RTL 4K", "DE | Voll"), named(3, "RTL (Backup)", "DE | Voll"), named(4, "ZDF", "DE | Voll"),
+        )
+        assertEquals(listOf("DE: RTL HD", "ZDF"), s.allVisible().map { it.name })
+        assertEquals(listOf("DE | Voll" to 2), s.liveGroups())
+        assertEquals(listOf("DE: RTL 4K", "RTL (Backup)"), s.alternatives(s.allVisible().first()).map { it.name })
+        s.updateUser { it.copy(mergeVariants = false) }
+        assertEquals(4, s.allVisible().size)
+    }
+
+    @Test
+    fun movieAndSeriesCategoriesCanBeHidden() {
+        val s = store()
+        s.savePlaylist(Playlist(1, "Test", PlaylistType.XTREAM, "http://x"))
+        s.setContent(1, Store.Content(
+            movies = listOf(Movie("1:v:1", 1, "Film A", "Kino", url = "u"), Movie("1:v:2", 1, "Film B", "Kids", url = "u")),
+            series = listOf(Series("1:s:1", 1, "1", "Serie", "Doku")),
+        ))
+        s.hideMovieGroup("Kids", series = false)
+        assertEquals(listOf("Film A"), s.movies().map { it.name })
+        assertEquals(2, s.allMovies().size)
+        s.setGroupsHidden(1, GroupKind.SERIES, listOf("Doku"), hide = true)
+        assertTrue(s.series().isEmpty())
+        assertEquals(listOf(Triple("Doku", 1, true)), s.groupsOf(1, GroupKind.SERIES))
+        s.setGroupsHidden(1, GroupKind.MOVIES, listOf("Kids"), hide = false)
+        assertEquals(2, s.movies().size)
+    }
+
+    @Test
+    fun countryChoiceHidesOtherCountriesButKeepsGroupsWithoutCountry() {
+        val s = store().withChannels(channel(1, "DE | Sport"), channel(2, "AT | News"), channel(3, "UK | Movies"), channel(4, "Kinder"))
+        val codes = s.countries().map { it.code }.toSet()
+        assertEquals(setOf("DE", "AT", "UK"), codes)
+        s.keepCountries(setOf("DE", "AT", "CH"))
+        assertEquals(listOf("DE | Sport", "AT | News", "Kinder"), s.liveGroups().map { it.first })
+        assertTrue(s.user.value.countriesAsked)
+        assertEquals(false, s.countries().first { it.code == "UK" }.visible)
+        s.keepCountries(codes)
+        assertEquals(4, s.liveGroups().size)
+    }
+
+    @Test
+    fun guideShiftAppliesAndSurvivesReload() {
+        val dir = Files.createTempDirectory("dna-store").toFile()
+        val s = Store(dir).withChannels(channel(1, "A"))
+        val now = System.currentTimeMillis()
+        s.setGuide(mapOf("1:c:1" to listOf(Programme(now, now + 3_600_000, "Show"))))
+        s.setEpgShift(2)
+        assertEquals(now + 2 * 3_600_000, s.guide.value.getValue("1:c:1").first().start)
+        val again = Store(dir)
+        assertEquals(now + 2 * 3_600_000, again.guide.value.getValue("1:c:1").first().start)
+        again.setEpgShift(0)
+        assertEquals(now, again.guide.value.getValue("1:c:1").first().start)
+    }
+
     @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))

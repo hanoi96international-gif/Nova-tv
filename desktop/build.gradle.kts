@@ -49,6 +49,7 @@ sourceSets {
             "de/ayutv/data/parse/EpgMatcher.kt",
             "de/ayutv/data/parse/Episodes.kt",
             "de/ayutv/data/parse/ChannelVariants.kt",
+            "de/ayutv/data/parse/Countries.kt",
             "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
             "de/ayutv/data/parse/Srt.kt",
             "de/ayutv/data/parse/ProgrammeText.kt",
@@ -71,6 +72,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.11.0")
     implementation("uk.co.caprica:vlcj:4.12.1")
+    // Fire-TV-Fernbedienung: Windows-Schnittstellen (Raw Input, Tastatur-Hook). Dieselbe Version, die vlcj mitbringt.
+    implementation("net.java.dev.jna:jna-jpms:5.16.0")
+    implementation("net.java.dev.jna:jna-platform-jpms:5.16.0")
     // XmlPullParser gibt es unter Android eingebaut, hier aus kxml2.
     implementation("net.sf.kxml:kxml2:2.3.0")
     testImplementation(kotlin("test"))

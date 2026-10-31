@@ -121,4 +121,23 @@ data class UserData(
     /** Gelerntes Intro je Serie (Serienschlüssel → Beginn und Länge in ms). */
     val intros: Map<String, IntroMark> = emptyMap(),
     val remotePin: String = "",
+    /** Ausgeblendete Kategorien bei Filmen und Serien, je Playlist: "<Playlist>|<Kategorie>". */
+    val hiddenMovieGroups: Set<String> = emptySet(),
+    val hiddenSeriesGroups: Set<String> = emptySet(),
+    /** Doppelte Sender („RTL HD“, „RTL 4K“, „RTL (Backup)“) einmal zeigen, in der besten Fassung. */
+    val mergeVariants: Boolean = true,
+    /** Fehlendes Programm aus dem freien EPG (epgshare01, DE/AT/CH) ergänzen. */
+    val publicEpg: Boolean = true,
+    /** Länderauswahl nach dem ersten Laden schon gezeigt. */
+    val countriesAsked: Boolean = false,
+    /** Fenster zuletzt im Vollbild (beim nächsten Start wieder). */
+    val fullscreen: Boolean = false,
+    /** Im Bild schalten ↑/↓ um (wie auf dem Fire TV); aus = ↑/↓ öffnen die Senderliste. */
+    val zapWithUpDown: Boolean = true,
+    /** Pufferprofil (FAST, BALANCED, STABLE). */
+    val bufferProfile: String = "BALANCED",
+    /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */
+    val guideSyncedAt: Long = 0,
+    /** TV-Guide um Stunden verschieben (Anbieter mit falscher Zeitzone), −12 … +12. */
+    val epgShiftHours: Int = 0,
 )

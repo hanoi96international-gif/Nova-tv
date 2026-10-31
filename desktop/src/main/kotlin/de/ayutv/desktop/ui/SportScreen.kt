@@ -45,7 +45,7 @@ fun SportScreen(app: AppState) {
     }
     var events by remember { mutableStateOf<List<SportEvent>?>(null) }
     LaunchedEffect(content, guide, user.favorites, now / (5 * 60_000)) {
-        events = withContext(Dispatchers.Default) { SportEvents.of(store.channels(), guide, user.favorites.toSet(), now = now) }
+        events = withContext(Dispatchers.Default) { SportEvents.of(store.allVisible(), guide, user.favorites.toSet(), now = now) }
     }
 
     val list = events
