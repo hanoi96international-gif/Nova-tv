@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -21,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -35,7 +37,11 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.ApplicationScope
+import androidx.compose.ui.window.LocalWindowExceptionHandlerFactory
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowExceptionHandler
+import androidx.compose.ui.window.WindowExceptionHandlerFactory
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
@@ -62,48 +68,61 @@ import de.ayutv.desktop.ui.Type
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
     CrashLog.install(Store.defaultDir())
     application {
-        val window = rememberWindowState(size = DpSize(1280.dp, 780.dp))
-        val scope = rememberCoroutineScope()
-        // Fenster sofort zeigen; Daten (Playlists, TV-Guide) und VLC im Hintergrund laden.
-        var app by remember { mutableStateOf<AppState?>(null) }
-        var failure by remember { mutableStateOf<String?>(null) }
-        LaunchedEffect(Unit) {
-            runCatching {
-                withContext(Dispatchers.IO) {
-                    val store = Store(Store.defaultDir())
-                    // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
-                    Network.apply(store)
-                    AppState(store, Sync(store), scope)
-                }
-            }.onSuccess { app = it }.onFailure { failure = "DnA-TV konnte nicht starten: ${it.message}" }
-        }
-        Window(
-            onCloseRequest = { app?.close(); exitApplication() },
-            state = window,
-            title = "DnA-TV",
-            icon = remember { appIcon() },
-        ) {
-            val ready = app
-            if (ready == null) {
-                Starting(failure)
-            } else {
-                // Tasten vom Handy gehen an dieses Fenster (im Vollbild an das Vollbild-Fenster).
-                LaunchedEffect(ready) {
-                    ready.mainWindow = this@Window.window
-                    ready.remote.window = this@Window.window
-                }
-                App(ready, window)
-            }
-        }
-        val ready = app
-        val playing = ready?.playing
-        if (ready != null && playing != null && ready.fullscreen) FullscreenPlayer(ready, playing)
+        // Ein Fehler beim Zeichnen eines Fensters soll die App nicht beenden (Standard: Fehlerfenster und Ende),
+        // sondern nur protokolliert werden; das nächste Bild wird wieder normal gezeichnet.
+        CompositionLocalProvider(LocalWindowExceptionHandlerFactory provides KeepRunning) { Windows() }
     }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+private val KeepRunning = WindowExceptionHandlerFactory { window ->
+    WindowExceptionHandler { error -> CrashLog.write("Fenster ${window.name}", error) }
+}
+
+@Composable
+private fun ApplicationScope.Windows() {
+    val window = rememberWindowState(size = DpSize(1280.dp, 780.dp))
+    val scope = rememberCoroutineScope()
+    // Fenster sofort zeigen; Daten (Playlists, TV-Guide) und VLC im Hintergrund laden.
+    var app by remember { mutableStateOf<AppState?>(null) }
+    var failure by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        runCatching {
+            withContext(Dispatchers.IO) {
+                val store = Store(Store.defaultDir())
+                // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
+                Network.apply(store)
+                AppState(store, Sync(store), scope)
+            }
+        }.onSuccess { app = it }.onFailure { failure = "DnA-TV konnte nicht starten: ${it.message}" }
+    }
+    Window(
+        onCloseRequest = { app?.close(); exitApplication() },
+        state = window,
+        title = "DnA-TV",
+        icon = remember { appIcon() },
+    ) {
+        val ready = app
+        if (ready == null) {
+            Starting(failure)
+        } else {
+            // Tasten vom Handy gehen an dieses Fenster (im Vollbild an das Vollbild-Fenster).
+            LaunchedEffect(ready) {
+                ready.mainWindow = this@Window.window
+                ready.remote.window = this@Window.window
+            }
+            App(ready, window)
+        }
+    }
+    val ready = app
+    val playing = ready?.playing
+    if (ready != null && playing != null && ready.fullscreen) FullscreenPlayer(ready, playing)
 }
 
 /**
