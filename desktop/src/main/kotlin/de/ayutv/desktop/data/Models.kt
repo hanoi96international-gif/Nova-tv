@@ -114,6 +114,8 @@ data class UserData(
     val subtitleLanguage: String = "de",
     /** Handy als Fernbedienung eingeschaltet, und die PIN in der Adresse. */
     val phoneRemote: Boolean = false,
+    /** Sender und Filme im Vollbild starten (danach wieder das Fenster). */
+    val fullscreenPlayback: Boolean = true,
     /** Proxy wie in der Fire-TV-App (aus der Sicherung übernehmbar). */
     val proxy: ProxySettings = ProxySettings(),
     /** Am Ton gefundene Ausrichtung der Untertitel je Film/Folge (Schlüssel → Faktor und Versatz). */
@@ -121,4 +123,42 @@ data class UserData(
     /** Gelerntes Intro je Serie (Serienschlüssel → Beginn und Länge in ms). */
     val intros: Map<String, IntroMark> = emptyMap(),
     val remotePin: String = "",
+
+    // Wiedergabe
+    val buffer: Buffer = Buffer.BALANCED,
+    val liveFormat: LiveFormat = LiveFormat.TS,
+    /** Bildwiederholrate des Bildschirms an Sender und Film anpassen (50 Hz, 24 Hz …). */
+    val matchFrameRate: Boolean = false,
+    /** Gemessene Bildrate je Sender/Film: Beim nächsten Mal schaltet der Bildschirm schon beim Laden um. */
+    val frameRates: Map<String, Double> = emptyMap(),
+    val deinterlace: Deinterlace = Deinterlace.AUTO,
+    val hardwareDecoding: Boolean = true,
+    val pictureFit: PictureFit = PictureFit.FIT,
+    val userAgent: String = "",
+    // Ton
+    val audioOutput: AudioOutput = AudioOutput.AUTO,
+    val audioMode: AudioMode = AudioMode.NORMAL,
+    val normalizeVolume: Boolean = false,
+    /** Ton später (+) oder früher (−), z. B. für eine Soundbar mit Verzögerung. */
+    val audioDelayMs: Long = 0,
+    val audioLanguage: String = "de",
+    val volume: Int = 100,
+    // Untertitel
+    val subtitlesAuto: Boolean = false,
+    val subtitleSize: SubtitleSize = SubtitleSize.NORMAL,
+    val subtitleColor: SubtitleColor = SubtitleColor.WHITE,
+    val subtitleBackground: SubtitleBackground = SubtitleBackground.OUTLINE,
+    val subtitlePosition: SubtitlePosition = SubtitlePosition.NORMAL,
+    /** Untertitel aus dem Internet am Ton ausrichten. */
+    val subtitleAlign: Boolean = true,
+    /** Fehlen Untertitel in der Sprache: vorhandene mit DeepL übersetzen. */
+    val translateSubtitles: Boolean = true,
+    // Bedienung
+    val zapWithUpDown: Boolean = true,
+    val autoNextEpisode: Boolean = true,
+    val autoSkipIntro: Boolean = false,
+    val resumeLastChannel: Boolean = false,
+    val startMaximized: Boolean = false,
+    val guideShiftHours: Int = 0,
+    val theme: Theme = Theme.STANDARD,
 )

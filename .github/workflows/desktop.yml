@@ -99,7 +99,8 @@ jobs:
           New-Item -ItemType Directory -Force $dst | Out-Null
           Copy-Item "$($src.FullName)/libvlc.dll", "$($src.FullName)/libvlccore.dll" $dst
           Copy-Item "$($src.FullName)/plugins" $dst -Recurse
-          # Plugin-Zwischenspeicher neu anlegen lassen (schnellerer Start).
+          # Der Plugin-Zwischenspeicher des ZIPs passt nach der Installation nicht mehr (Dateizeiten);
+          # die App legt ihn beim ersten Start selbst an (VideoPlayer.cacheOptions).
           Remove-Item "$dst/plugins/plugins.dat" -ErrorAction SilentlyContinue
 
       - name: Installer bauen
@@ -117,6 +118,14 @@ jobs:
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "Selbsttest hängt" }
           Get-Content $out
           if (-not (Select-String -Path $out -Pattern "^result=OK" -Quiet)) { throw "Selbsttest fehlgeschlagen" }
+          # Zweiter Programmstart: Jetzt liegt der Plugin-Zwischenspeicher vor, VLC muss schnell starten.
+          $out2 = Join-Path $env:RUNNER_TEMP "selftest2.txt"
+          $p2 = Start-Process $exe -ArgumentList "--selftest", "`"$out2`"" -PassThru
+          if (-not $p2.WaitForExit(120000)) { $p2.Kill(); throw "Selbsttest (zweiter Start) hängt" }
+          Get-Content $out2
+          Write-Host "plugins.dat vorhanden: $(Test-Path (Join-Path $app.FullName 'app/resources/vlc/plugins/plugins.dat'))"
+          $line = Select-String -Path $out2 -Pattern "first=(\d+)" | Select-Object -First 1
+          if ($line -and [int]$line.Matches[0].Groups[1].Value -gt 3000) { throw "VLC startet zu langsam: $($line.Line)" }
 
       - name: Dateien benennen
         shell: pwsh

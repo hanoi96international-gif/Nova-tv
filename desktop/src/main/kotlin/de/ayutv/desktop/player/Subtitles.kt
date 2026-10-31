@@ -125,6 +125,35 @@ class Subtitles(private val http: OkHttpClient, private val dir: File) {
         return out
     }
 
+    /** DeepL-Schlüssel prüfen: verbrauchte und erlaubte Zeichen in diesem Monat. */
+    suspend fun deeplUsage(key: String): String = withContext(Dispatchers.IO) {
+        if (key.isBlank()) throw IOException("Kein DeepL-Schlüssel eingetragen.")
+        val base = if (key.trim().endsWith(":fx")) "https://api-free.deepl.com" else "https://api.deepl.com"
+        val request = Request.Builder().url("$base/v2/usage").header("Authorization", "DeepL-Auth-Key ${key.trim()}").build()
+        http.newCall(request).execute().use { response ->
+            val body = response.body.string()
+            if (response.code == 403) throw IOException("DeepL lehnt den Schlüssel ab.")
+            if (!response.isSuccessful) throw IOException("DeepL: HTTP ${response.code}")
+            val o = Json.parseToJsonElement(body).jsonObject
+            val used = o["character_count"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0
+            val limit = o["character_limit"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0
+            val f = java.text.NumberFormat.getIntegerInstance(java.util.Locale.GERMAN)
+            "Schlüssel gültig · diesen Monat ${f.format(used)} von ${f.format(limit)} Zeichen verbraucht"
+        }
+    }
+
+    /** OpenSubtitles-Zugang prüfen (eine kleine Suche). */
+    suspend fun checkOpenSubtitles(openSubtitlesKey: String): String = withContext(Dispatchers.IO) {
+        val apiKey = openSubtitlesKey.ifBlank { builtInKey() }
+        if (apiKey.isBlank()) throw IOException("Kein OpenSubtitles-Schlüssel.")
+        search(apiKey, Query("Tatort", null, null, null), "de")
+        if (openSubtitlesKey.isBlank()) "Eingebauter Zugang funktioniert" else "Eigener Schlüssel funktioniert"
+    }
+
+    /** Größe der gespeicherten Untertitel (Bytes) und löschen. */
+    fun cacheBytes(): Long = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    fun clearCache() { dir.listFiles()?.forEach { it.deleteRecursively() } }
+
     private fun api(apiKey: String) = Request.Builder()
         .header("Api-Key", apiKey)
         .header("User-Agent", "DnATV-Windows v1")

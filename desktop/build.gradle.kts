@@ -26,12 +26,16 @@ kotlin {
 val keyResources = layout.buildDirectory.dir("generated/keys")
 val writeKeys by tasks.registering {
     val key = providers.environmentVariable("OPENSUBTITLES_API_KEY").orElse("")
+    val versionName = appVersionName
     inputs.property("keyHash", key.map { it.trim().hashCode() })
+    inputs.property("version", versionName)
     outputs.dir(keyResources)
     doLast {
         val file = keyResources.get().file("opensubtitles.key").asFile
         file.parentFile.mkdirs()
         file.writeText(key.get().trim())
+        // Versionsnummer für „Nach Updates suchen“.
+        keyResources.get().file("version.txt").asFile.writeText(versionName)
     }
 }
 
@@ -80,7 +84,8 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "de.ayutv.desktop.MainKt"
-        jvmArgs += listOf("-Xmx1g", "-Dfile.encoding=UTF-8")
+        // Abstürze von VLC oder der Grafik als hs_err-Datei neben dem Programm ablegen (zur Fehlersuche).
+        jvmArgs += listOf("-Xmx2g", "-Dfile.encoding=UTF-8", "-XX:ErrorFile=\$APPDIR/../dna-tv-absturz-%p.log")
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "DnA-TV"

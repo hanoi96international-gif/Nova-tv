@@ -174,6 +174,8 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
         open(url).use { raw ->
             val input = if (url.endsWith(".gz")) GZIPInputStream(raw) else raw
             val parser = XmltvParser(org.kxml2.io.KXmlParser())
+            // Zeitverschiebung aus den Einstellungen (falls „Jetzt läuft“ beim Anbieter nicht stimmt).
+            val shift = store.user.value.guideShiftHours * 3_600_000L
             // Die Sender stehen im XMLTV vor den Sendungen: Bei der ersten Sendung einmal zuordnen.
             var byGuideId: Map<String, List<String>>? = null
             parser.parse(input, wanted = { id, start, stop ->
@@ -187,7 +189,7 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                 stop > from && start < until && id in map
             }) { p ->
                 val keys = byGuideId?.get(p.channelId).orEmpty()
-                val programme = Programme(p.start, p.stop, p.title, p.subtitle, p.description, p.category, p.flags)
+                val programme = Programme(p.start + shift, p.stop + shift, p.title, p.subtitle, p.description, p.category, p.flags)
                 for (key in keys) guide.getOrPut(key) { ArrayList() } += programme
             }
         }

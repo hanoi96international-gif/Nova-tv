@@ -42,11 +42,19 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.parse.IntroSkip
+import de.ayutv.desktop.data.AudioMode
+import de.ayutv.desktop.data.Choice
+import de.ayutv.desktop.data.Deinterlace
 import de.ayutv.desktop.data.IntroMark
+import de.ayutv.desktop.data.PictureFit
+import de.ayutv.desktop.data.SubtitleBackground
+import de.ayutv.desktop.data.SubtitleColor
+import de.ayutv.desktop.data.SubtitlePosition
+import de.ayutv.desktop.data.SubtitleSize
+import de.ayutv.desktop.data.languageName
+import de.ayutv.desktop.player.DisplayRate
 import kotlinx.coroutines.delay
 
 /**
@@ -57,14 +65,14 @@ import kotlinx.coroutines.delay
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
+fun PlayerScreen(app: AppState, playback: Playback) {
     val player = app.player
     val guide by app.store.guide.collectAsState()
     val focus = remember { FocusRequester() }
     var lastInput by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var osd by remember { mutableStateOf(true) }
     var menu by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
-    val fullscreen = window.placement == WindowPlacement.Fullscreen
+    val fullscreen = app.fullscreen
     var subtitleDelay by remember(playback) { mutableLongStateOf(0L) }
 
     fun shiftSubtitles(deltaMs: Long) {
@@ -78,9 +86,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
         osd = true
     }
 
-    fun toggleFullscreen() {
-        window.placement = if (fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
-    }
+    fun toggleFullscreen() = app.changeFullscreen(!app.fullscreen)
 
     fun zap(delta: Int) {
         val live = playback as? Playback.Live ?: return
@@ -141,7 +147,55 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
         }
     }
 
-    BackHandler(app, enabled = fullscreen && menu == null) { window.placement = WindowPlacement.Floating }
+    val user by app.store.user.collectAsState()
+    val zapKeys = user.zapWithUpDown
+
+    // Intro automatisch überspringen (Einstellung), sobald die Stelle für die Serie bekannt ist.
+    LaunchedEffect(introVisible) {
+        if (introVisible && learned != null && user.autoSkipIntro) {
+            skipIntro()
+            app.toast("Intro übersprungen")
+        }
+    }
+
+    fun close() {
+        menu = null
+        runCatching { focus.requestFocus() }
+    }
+
+    /** Auswahl aus einer Einstellung (✓ = aktuell), danach zurück ins Bild. */
+    fun <T : Choice> pick(title: String, current: T, options: List<T>, apply: (T) -> Unit) {
+        menu = { MenuDialog(app, title, options.map { o -> MenuItem((if (o == current) "✓  " else "     ") + o.label) { apply(o) } }, onDismiss = ::close) }
+    }
+
+    /** Player-Menü (☰, Menütaste, Tab): Spuren, Untertitel, Ton und Bild wie auf dem Fire TV. */
+    fun playerMenu() {
+        val u = app.store.user.value
+        val vod = playback as? Playback.Vod
+        val items = buildList {
+            if (player.audioTracks.isNotEmpty()) add(MenuItem("🔊  Tonspur …") { trackMenu(audio = true) })
+            add(MenuItem("💬  Untertitel-Spur …") { trackMenu(audio = false) })
+            if (vod != null) add(MenuItem("💬  Untertitel aus dem Internet (${languageName(u.subtitleLanguage.ifBlank { "de" })})") { app.loadSubtitles(vod) })
+            add(MenuItem("💬  Untertitel früher (−0,25 s)") { shiftSubtitles(-250) })
+            add(MenuItem("💬  Untertitel später (+0,25 s)") { shiftSubtitles(250) })
+            add(MenuItem("Aa  Untertitel-Größe: ${u.subtitleSize.label}") { pick("Untertitel-Größe", u.subtitleSize, SubtitleSize.entries) { v -> app.updateSettings { it.copy(subtitleSize = v) } } })
+            add(MenuItem("Aa  Untertitel-Farbe: ${u.subtitleColor.label}") { pick("Untertitel-Farbe", u.subtitleColor, SubtitleColor.entries) { v -> app.updateSettings { it.copy(subtitleColor = v) } } })
+            add(MenuItem("Aa  Untertitel-Hintergrund: ${u.subtitleBackground.label}") { pick("Untertitel-Hintergrund", u.subtitleBackground, SubtitleBackground.entries) { v -> app.updateSettings { it.copy(subtitleBackground = v) } } })
+            add(MenuItem("Aa  Untertitel-Position: ${u.subtitlePosition.label}") { pick("Untertitel-Position", u.subtitlePosition, SubtitlePosition.entries) { v -> app.updateSettings { it.copy(subtitlePosition = v) } } })
+            add(MenuItem("🎚  Klang: ${u.audioMode.label}") { pick("Klang", u.audioMode, AudioMode.entries) { v -> app.updateSettings { it.copy(audioMode = v) } } })
+            add(MenuItem("⏱  Ton-Versatz: ${if (u.audioDelayMs == 0L) "keiner" else "%+.2f s".format(java.util.Locale.GERMAN, u.audioDelayMs / 1000.0)}") {
+                menu = { DelayDialog(app, onDismiss = ::close) }
+            })
+            add(MenuItem("🖼  Bildformat: ${u.pictureFit.label}") { pick("Bildformat", u.pictureFit, PictureFit.entries) { v -> app.updateSettings { it.copy(pictureFit = v) } } })
+            add(MenuItem("🖼  Halbbilder: ${u.deinterlace.label}") { pick("Halbbilder (Deinterlacing)", u.deinterlace, Deinterlace.entries) { v -> app.updateSettings { it.copy(deinterlace = v) } } })
+            if (DisplayRate.supported) add(MenuItem("🖥  Bildwiederholrate anpassen: ${if (u.matchFrameRate) "an" else "aus"}") { app.updateSettings { it.copy(matchFrameRate = !it.matchFrameRate) } })
+            add(MenuItem(if (fullscreen) "⤢  Vollbild verlassen" else "⤢  Vollbild") { toggleFullscreen() })
+        }
+        menu = { MenuDialog(app, "Menü", items, onDismiss = ::close) }
+    }
+
+    // Vollbild von selbst (Einstellung): Esc führt direkt zurück zur Liste; sonst verlässt Esc zuerst das Vollbild.
+    BackHandler(app, enabled = fullscreen && menu == null && !app.autoFullscreen) { app.changeFullscreen(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
     // Leiste nach 4 Sekunden ohne Eingabe ausblenden (nicht bei Pause oder Fehler).
     LaunchedEffect(lastInput, player.playing) {
@@ -150,7 +204,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
     }
     // Stand von Filmen regelmäßig merken; am Ende einer Folge die nächste.
     LaunchedEffect(playback) {
-        player.onFinished = { if (nextEpisode != null) playNext() else app.stopPlayback() }
+        player.onFinished = { if (nextEpisode != null && app.store.user.value.autoNextEpisode) playNext() else app.stopPlayback() }
         while (playback is Playback.Vod) {
             delay(15_000)
             app.savePosition()
@@ -167,8 +221,11 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
                 val step = if (e.isShiftPressed) 60_000L else 10_000L
                 poke()
                 when (e.key) {
-                    Key.DirectionUp, Key.PageUp, Key.ChannelUp -> { if (live) zap(-1) else player.changeVolume(5); true }
-                    Key.DirectionDown, Key.PageDown, Key.ChannelDown -> { if (live) zap(1) else player.changeVolume(-5); true }
+                    Key.DirectionUp -> { if (live && zapKeys) zap(-1) else player.changeVolume(5); true }
+                    Key.DirectionDown -> { if (live && zapKeys) zap(1) else player.changeVolume(-5); true }
+                    Key.PageUp, Key.ChannelUp -> { if (live) zap(-1) else player.changeVolume(5); true }
+                    Key.PageDown, Key.ChannelDown -> { if (live) zap(1) else player.changeVolume(-5); true }
+                    Key.Menu, Key.Tab -> { playerMenu(); true }
                     Key.DirectionLeft, Key.MediaRewind -> { if (!live) seek(-step); true }
                     Key.DirectionRight, Key.MediaFastForward -> { if (!live) seek(step); true }
                     Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> {
@@ -210,7 +267,12 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
     ) {
         val frame = player.frame
         if (frame != null) {
-            Image(frame, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+            val scale = when (user.pictureFit) {
+                PictureFit.FIT -> ContentScale.Fit
+                PictureFit.ZOOM -> ContentScale.Crop
+                PictureFit.STRETCH -> ContentScale.FillBounds
+            }
+            Image(frame, null, Modifier.fillMaxSize(), contentScale = scale, filterQuality = FilterQuality.Low)
         }
 
         val problem = player.error ?: if (!player.available) "VLC wurde nicht gefunden. Bitte DnA-TV neu installieren." else null
@@ -241,6 +303,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
                     TextButton("💬 $language laden", { app.loadSubtitles(playback) })
                     Spacer(Modifier.width(8.dp))
                 }
+                TextButton("☰ Menü", { playerMenu() })
+                Spacer(Modifier.width(8.dp))
                 TextButton(if (fullscreen) "⤢ Fenster" else "⤢ Vollbild", { toggleFullscreen() })
                 Spacer(Modifier.width(8.dp))
                 TextButton("✕", { app.stopPlayback() })

@@ -23,11 +23,14 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -45,24 +48,72 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.ayutv.desktop.data.Theme
 
-/** Farben wie in der Fire-TV-App (Standard-Design). */
+/** Farben eines Designs (wie in der Fire-TV-App). */
+class Colors(
+    val background: Color,
+    val surface: Color,
+    val raised: Color,
+    val accent: Color,
+    val accentSoft: Color,
+    val live: Color,
+    val text: Color,
+    val secondary: Color,
+    /** Hintergrund der Menüs (Verlauf). */
+    val backdrop: Brush,
+)
+
+/** Farben des gewählten Designs ([use] schaltet um, alles zeichnet sich dann neu). */
 object Palette {
-    val background = Color(0xFF0B0F14)
-    val surface = Color(0xFF151B23)
-    val raised = Color(0xFF1E2631)
-    val accent = Color(0xFF3DA9FC)
-    val accentSoft = Color(0xFF235F8E)
-    val live = Color(0xFFE5484D)
-    val text = Color(0xFFF2F5F8)
-    val secondary = Color(0xFF9AA7B4)
+    private val STANDARD = Colors(
+        background = Color(0xFF0B0F14), surface = Color(0xFF151B23), raised = Color(0xFF1E2631),
+        accent = Color(0xFF3DA9FC), accentSoft = Color(0xFF235F8E), live = Color(0xFFE5484D),
+        text = Color(0xFFF2F5F8), secondary = Color(0xFF9AA7B4),
+        backdrop = Brush.verticalGradient(listOf(Color(0xFF101823), Color(0xFF0B0F14))),
+    )
+    /** Nordlicht: Nachthimmel in Tiefblau bis Violett, Polarlicht in Türkis. */
+    private val NORDLICHT = Colors(
+        background = Color(0xFF070912), surface = Color(0xFF121628), raised = Color(0xFF1C2244),
+        accent = Color(0xFF5EEAD4), accentSoft = Color(0xFF4F46E5), live = Color(0xFFFF4D6D),
+        text = Color(0xFFF4F6FF), secondary = Color(0xFFA3AAC8),
+        backdrop = Brush.linearGradient(listOf(Color(0xFF0E1330), Color(0xFF15124A), Color(0xFF0B2A33), Color(0xFF05060C))),
+    )
+    /** Hannover 96: Stadionabend, tiefrot nach schwarz. */
+    private val HANNOVER = Colors(
+        background = Color(0xFF0C0909), surface = Color(0xFF1A1213), raised = Color(0xFF2A1A1C),
+        accent = Color(0xFFFF3B3F), accentSoft = Color(0xFFB0141B), live = Color(0xFFFF5A3C),
+        text = Color(0xFFFFF7F5), secondary = Color(0xFFBFAEAD),
+        backdrop = Brush.verticalGradient(listOf(Color(0xFF45090E), Color(0xFF1A0709), Color(0xFF0C0909))),
+    )
+
+    private var current by mutableStateOf(STANDARD)
+
+    fun use(theme: Theme) {
+        current = when (theme) {
+            Theme.STANDARD -> STANDARD
+            Theme.NORDLICHT -> NORDLICHT
+            Theme.HANNOVER -> HANNOVER
+        }
+    }
+
+    val background get() = current.background
+    val surface get() = current.surface
+    val raised get() = current.raised
+    val accent get() = current.accent
+    val accentSoft get() = current.accentSoft
+    val live get() = current.live
+    val text get() = current.text
+    val secondary get() = current.secondary
+    val backdrop get() = current.backdrop
 }
 
 object Type {
-    val title = TextStyle(color = Palette.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-    val heading = TextStyle(color = Palette.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-    val body = TextStyle(color = Palette.text, fontSize = 15.sp)
-    val small = TextStyle(color = Palette.secondary, fontSize = 13.sp)
+    val title get() = TextStyle(color = Palette.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+    val heading get() = TextStyle(color = Palette.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+    val body get() = TextStyle(color = Palette.text, fontSize = 15.sp)
+    val small get() = TextStyle(color = Palette.secondary, fontSize = 13.sp)
+    val value get() = TextStyle(color = Palette.accent, fontSize = 15.sp, fontWeight = FontWeight.Medium)
 }
 
 @Composable

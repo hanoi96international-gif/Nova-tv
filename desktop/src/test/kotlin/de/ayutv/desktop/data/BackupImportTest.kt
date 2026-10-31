@@ -90,7 +90,19 @@ class BackupImportTest {
         val store = Store(Files.createTempDirectory("dna-import").toFile())
         val error = runCatching { BackupImport(store).import(wrapped, null) }.exceptionOrNull()
         assertTrue(error?.message.orEmpty().contains("Passwort"))
-        assertEquals(2, BackupImport(store).import(wrapped, "pw").playlists)
+        val result = BackupImport(store).import(wrapped, "pw")
+        assertEquals(2, result.playlists)
+        assertTrue(result.encrypted && !result.summary.contains("ohne Passwort –"))
+        assertTrue(BackupImport(Store(Files.createTempDirectory("dna-import").toFile())).import(plain, null).summary.startsWith("Sicherung ohne Passwort"))
+    }
+
+    @Test
+    fun explainsWrongFireTvAddress() {
+        assertEquals("http://192.168.1.110:8095/402970", BackupImport.setupAddress("192.168.1.110:8095/402970/"))
+        val remote = runCatching { BackupImport.setupAddress("http://192.168.1.110:8096") }.exceptionOrNull()?.message.orEmpty()
+        assertTrue(remote, remote.contains("Handy-Fernbedienung") && remote.contains("8095"))
+        val noPin = runCatching { BackupImport.setupAddress("http://192.168.1.110:8095") }.exceptionOrNull()?.message.orEmpty()
+        assertTrue(noPin, noPin.contains("Zahl am Ende"))
     }
 
     @Test

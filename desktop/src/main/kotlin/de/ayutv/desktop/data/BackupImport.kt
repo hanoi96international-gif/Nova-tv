@@ -14,9 +14,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import okhttp3.FormBody
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 /**
  * Sicherung der Fire-TV-App übernehmen: Playlists (mit Passwörtern, wenn die Sicherung ein Passwort hat), Favoriten,
@@ -24,19 +26,49 @@ import java.io.IOException
  * Fire TV (Adresse aus „Einrichtung per Handy“) oder aus einer gespeicherten Datei.
  */
 class BackupImport(private val store: Store) {
-    data class Result(val playlists: Int, val favorites: Int, val groups: Int, val missingPasswords: Int) {
+    /** [proxy]: null = kein Proxy in der Sicherung, sonst ob das Proxy-Passwort dabei war. */
+    data class Result(
+        val playlists: Int,
+        val favorites: Int,
+        val groups: Int,
+        val missingPasswords: Int,
+        val proxy: Boolean? = null,
+        /** Die Sicherung war mit Passwort verschlüsselt (nur dann enthält sie Passwörter und Schlüssel). */
+        val encrypted: Boolean = true,
+    ) {
         val summary: String
-            get() = "Übernommen: $playlists Playlists, $favorites Favoriten, $groups eigene Gruppen" +
+            get() = (if (encrypted) "" else "Sicherung ohne Passwort – darin stehen keine Passwörter und Schlüssel. ") +
+                "Übernommen: $playlists Playlists, $favorites Favoriten, $groups eigene Gruppen" +
+                when (proxy) {
+                    null -> ""
+                    true -> ", Proxy mit Passwort"
+                    false -> ", Proxy ohne Passwort (bitte unter Einstellungen → Proxy eintragen)"
+                } +
                 if (missingPasswords > 0) ". Bei $missingPasswords Playlist(s) fehlt das Passwort (Sicherung ohne Passwort): bitte in den Einstellungen eintragen." else "."
     }
 
-    /** Vom Fire TV laden: [setupUrl] wie dort angezeigt („http://192.168.x.y:8095/123456“), [password] für die Sicherung. */
-    suspend fun fromFireTv(http: OkHttpClient, setupUrl: String, password: String): Result = withContext(Dispatchers.IO) {
-        val base = setupUrl.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
+    /**
+     * Vom Fire TV laden: [setupUrl] wie dort angezeigt („http://192.168.x.y:8095/123456“). Ohne [given] wählt die
+     * App selbst eines für die Übertragung: Nur verschlüsselt enthält die Sicherung Playlist- und Proxy-Passwörter
+     * und die Schlüssel, so kommen sie immer mit.
+     */
+    suspend fun fromFireTv(http: OkHttpClient, setupUrl: String, given: String = ""): Result = withContext(Dispatchers.IO) {
+        val password = given.ifEmpty { transferPassword() }
+        val base = setupAddress(setupUrl)
         val request = Request.Builder().url("$base/backup").post(FormBody.Builder().add("backup_password", password).build()).build()
-        val text = http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException("Fire TV antwortet mit HTTP ${response.code}. Stimmt die Adresse aus „Einrichtung per Handy“?")
-            response.body.string()
+        val quick = http.newBuilder().connectTimeout(8, TimeUnit.SECONDS).build()
+        val text = try {
+            quick.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("Fire TV antwortet mit HTTP ${response.code}. Stimmt die Adresse aus „Einrichtung per Handy“ (mit der Zahl am Ende)?")
+                response.body.string()
+            }
+        } catch (e: IOException) {
+            if (e is java.net.SocketTimeoutException || e is java.net.ConnectException || e is java.net.NoRouteToHostException) throw IOException(UNREACHABLE, e)
+            throw e
+        }
+        // Mit Passwort angefragt, aber unverschlüsselt erhalten: dann kam das Passwort beim Fire TV nicht an.
+        if (password.isNotEmpty() && !text.contains("\"encrypted\"")) {
+            throw IOException("Der Fire TV hat die Sicherung ohne Verschlüsselung geschickt, also ohne Passwörter. Bitte die Fire-TV-App aktualisieren oder den Weg über das Handy nehmen.")
         }
         import(text, password.ifEmpty { null })
     }
@@ -45,6 +77,7 @@ class BackupImport(private val store: Store) {
     fun import(text: String, password: String?): Result {
         var root = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull()
             ?: throw IllegalArgumentException("Das ist keine DnA-TV-Sicherung.")
+        val encrypted = root["encrypted"] is JsonObject
         if (root.str("format") != FORMAT) throw IllegalArgumentException("Das ist keine DnA-TV-Sicherung.")
         (root["encrypted"] as? JsonObject)?.let { e ->
             if (password.isNullOrEmpty()) throw IllegalArgumentException("Diese Sicherung ist mit einem Passwort geschützt – bitte Passwort eingeben.")
@@ -116,6 +149,9 @@ class BackupImport(private val store: Store) {
         // Schlüssel aus den Einstellungen (alle Gruppen durchsuchen).
         val settings = (root["settings"] as? JsonObject)?.values?.mapNotNull { it as? JsonObject }.orEmpty()
         fun setting(key: String) = settings.firstNotNullOfOrNull { it[key]?.jsonPrimitive?.contentOrNull?.takeIf { v -> v.isNotBlank() } }
+        fun flag(key: String) = setting(key)?.toBooleanStrictOrNull()
+        fun <T : Enum<T>> choice(key: String, current: T): T =
+            setting(key)?.let { name -> current.declaringJavaClass.enumConstants.firstOrNull { it.name == name } } ?: current
 
         // Proxy (Fire TV: Einstellungen → Proxy). Das Passwort steht nur in Sicherungen mit Passwort.
         val proxyIds = settings.firstNotNullOfOrNull { it["proxy_playlists"] as? JsonArray }.orEmpty()
@@ -141,9 +177,35 @@ class BackupImport(private val store: Store) {
                 openSubtitlesKey = setting("opensubtitles_key") ?: u.openSubtitlesKey,
                 deeplKey = setting("deepl_key") ?: u.deeplKey,
                 subtitleLanguage = setting("subtitle_language_code") ?: u.subtitleLanguage,
+                // Einstellungen, die es auch unter Windows gibt (gleiche Namen wie in der Fire-TV-App).
+                buffer = choice("buffer_profile", u.buffer),
+                liveFormat = choice("live_format", u.liveFormat),
+                matchFrameRate = flag("match_frame_rate") ?: u.matchFrameRate,
+                userAgent = setting("user_agent") ?: u.userAgent,
+                zapWithUpDown = flag("zap_up_down") ?: u.zapWithUpDown,
+                guideShiftHours = setting("epg_shift_hours")?.toIntOrNull() ?: u.guideShiftHours,
+                subtitlesAuto = flag("subtitles_auto_on") ?: u.subtitlesAuto,
+                subtitleSize = choice("subtitle_size", u.subtitleSize),
+                subtitleColor = choice("subtitle_color", u.subtitleColor),
+                subtitleBackground = choice("subtitle_background", u.subtitleBackground),
+                subtitlePosition = choice("subtitle_position", u.subtitlePosition),
+                audioMode = choice("audio_mode", u.audioMode),
+                normalizeVolume = flag("loudness_level") ?: u.normalizeVolume,
+                autoNextEpisode = flag("auto_next_episode") ?: u.autoNextEpisode,
+                theme = when (setting("ui_theme")) {
+                    "NORDLICHT" -> Theme.NORDLICHT
+                    "HANNOVER" -> Theme.HANNOVER
+                    "CLASSIC" -> Theme.STANDARD
+                    else -> u.theme
+                },
             )
         }
-        return Result(ids.size, added, groups, missing)
+        return Result(ids.size, added, groups, missing, proxy?.let { it.password.isNotEmpty() || it.user.isEmpty() }, encrypted)
+    }
+
+    private fun transferPassword(): String {
+        val bytes = ByteArray(18).also { java.security.SecureRandom().nextBytes(it) }
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 
     private fun JsonObject.str(key: String) = this[key]?.jsonPrimitive?.contentOrNull
@@ -153,6 +215,28 @@ class BackupImport(private val store: Store) {
 
     companion object {
         const val FORMAT = "dna-tv-backup"
+
+        private const val UNREACHABLE = "Fire TV nicht erreichbar. Auf dem Fire TV muss Einstellungen → Playlists offen sein " +
+            "(Kasten „Einrichtung per Handy“). PC und Fire TV im selben Netz? Ein VPN am PC (z. B. NordVPN, Proton VPN) " +
+            "sperrt oft das Heimnetz: kurz pausieren oder „Lokales Netzwerk erlauben“ einschalten."
+
+        /**
+         * Adresse aus „Einrichtung per Handy“ prüfen: Sie endet auf eine Zahl (PIN), Port 8095. Die Adresse der
+         * Handy-Fernbedienung (Port 8096) ist eine andere und kann keine Sicherung liefern.
+         */
+        fun setupAddress(input: String): String {
+            val base = input.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
+            val url = base.toHttpUrlOrNull() ?: throw IllegalArgumentException("Das ist keine gültige Adresse.")
+            if (url.port == 8096) throw IllegalArgumentException(
+                "Das ist die Adresse der Handy-Fernbedienung (Port 8096). Gebraucht wird die aus „Einrichtung per Handy“ " +
+                    "(Fire TV: Einstellungen → Playlists), z. B. http://${url.host}:8095/123456.",
+            )
+            if (url.pathSegments.none { it.isNotEmpty() }) throw IllegalArgumentException(
+                "Es fehlt die Zahl am Ende der Adresse: Sie steht auf dem Fire TV unter Einstellungen → Playlists → „Einrichtung per Handy“, " +
+                    "z. B. http://${url.host}:${url.port}/123456.",
+            )
+            return base
+        }
 
         /** Schlüssel beginnen mit der Playlist-Nummer („3:c:1234“): auf die neue Nummer umschreiben. */
         fun remapKey(key: String, ids: Map<Long, Long>): String? {
