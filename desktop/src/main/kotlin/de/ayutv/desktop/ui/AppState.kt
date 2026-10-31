@@ -39,6 +39,7 @@ enum class Screen(val label: String, val icon: String) {
     MOVIES("Filme", "🎬"),
     SERIES("Serien", "🎞"),
     SEARCH("Suche", "🔍"),
+    APPS("Apps", "▦"),
     SETTINGS("Einstellungen", "⚙"),
 }
 

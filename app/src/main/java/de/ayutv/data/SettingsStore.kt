@@ -109,6 +109,9 @@ data class AppSettings(
     val livePreview: Boolean = true,
     /** Flüssige Bedienung: ohne Überblendungen und mit sparsamem Hintergrund (wie auf schwachen Sticks automatisch). */
     val smoothUi: Boolean = false,
+    /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen, mit Komma getrennt). */
+    val appsOrder: String = "",
+    val appsHidden: String = "",
     /** Korrektur für EPGs mit falscher Zeitzone, in Stunden. */
     val epgShiftHours: Int = 0,
     /** Sender ohne Programm beim Anbieter aus einem freien EPG (Deutschland, Österreich, Schweiz) ergänzen. */
@@ -229,6 +232,8 @@ class SettingsStore(private val context: Context) {
         val showGuide = booleanPreferencesKey("show_guide")
         val livePreview = booleanPreferencesKey("live_preview")
         val smoothUi = booleanPreferencesKey("smooth_ui")
+        val appsOrder = stringPreferencesKey("apps_order")
+        val appsHidden = stringPreferencesKey("apps_hidden")
         val subLang = stringPreferencesKey("subtitle_language_code")
         val subAuto = booleanPreferencesKey("subtitles_auto_on")
         val provider = stringPreferencesKey("translation_provider")
@@ -365,6 +370,8 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.showGuide] = next.showGuide
             prefs[Keys.livePreview] = next.livePreview
             prefs[Keys.smoothUi] = next.smoothUi
+            prefs[Keys.appsOrder] = next.appsOrder
+            prefs[Keys.appsHidden] = next.appsHidden
             prefs[Keys.subLang] = next.subtitleLanguage
             prefs[Keys.subAuto] = next.subtitlesAutoOn
             prefs[Keys.provider] = next.translationProvider.name
@@ -424,6 +431,8 @@ class SettingsStore(private val context: Context) {
         showGuide = this[Keys.showGuide] ?: true,
         livePreview = this[Keys.livePreview] ?: true,
         smoothUi = this[Keys.smoothUi] ?: false,
+        appsOrder = this[Keys.appsOrder] ?: "",
+        appsHidden = this[Keys.appsHidden] ?: "",
         subtitleLanguage = this[Keys.subLang]?.takeIf { Languages.of(it) != null } ?: "en",
         subtitlesAutoOn = this[Keys.subAuto] ?: false,
         translationProvider = enumOrDefault(this[Keys.provider], TranslationProvider.ON_DEVICE),

@@ -16,7 +16,7 @@ DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.43)
+## Funktionen (Version 0.44)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`), Xtream Codes API (Live, Filme, Serien, EPG)
 - **TV-Guide automatisch:** Ohne Eintrag kommt das EPG vom Anbieter: bei Xtream `xmltv.php`, bei einer M3U alle Adressen aus `url-tvg`, und kommt die M3U von einem Xtream-Server (`get.php?username=…`), dessen `xmltv.php`. Eigene EPG-Adressen (mehrere mit Komma) gehen vor; jede weitere Quelle füllt nur Sender, für die noch nichts da ist. Was dann noch fehlt (oft Sky und DAZN), ergänzt DnA-TV aus dem freien EPG von [epgshare01](https://epgshare01.online) für Deutschland, Österreich und die Schweiz (abschaltbar unter *Einstellungen → Anzeige*, höchstens einmal am Tag geladen). Unter *Einstellungen → Playlists* steht, wie viele Sender ein Programm haben und welche nicht. Sender werden auch mit Zusätzen erkannt: „DE: RTL 4K“, „|DE| RTL HD+“, „RTL ᵁᴴᴰ“, „Pro7 FHD“ oder „ARD HD“ finden „RTL“, „ProSieben“ und „Das Erste“ im EPG, auch wenn die Kennung der Playlist im EPG fehlt
@@ -43,6 +43,7 @@ DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Profile und Kindersicherung:** eigene Favoriten und Verlauf je Profil, Gruppen mit PIN sperren
 - **Updates in der App** und **Abgleich mit Handy und Windows** (Favoriten, Weiter schauen, eigene und ausgeblendete Gruppen): Jedes Gerät hat so eine Kopie; gehen die eigenen Gruppen auf einem verloren, bringt der nächste Abgleich sie zurück. Wer denselben Zugang noch einmal eingibt (auch per Handy), aktualisiert den vorhandenen statt einen zweiten anzulegen.
 - **Konferenz und Multiview:** zweiter Sender als kleines Bild oder nebeneinander gleich groß (☰ → „Nebeneinander“), ⏩ tauscht, der Ton folgt dem Hauptbild
+- **Reiter „Apps“:** Netflix, YouTube, Prime Video und Spotify mit einem Klick: Fire TV startet die Fire-TV-App, das Handy die Handy-App (nicht installiert: Appstore), Windows die Webseite im Standard-Browser. Zurück bzw. Browser schließen führt wieder zu DnA-TV. OK halten: Reihenfolge, ausblenden
 - **Mini-Vorschau:** In Live TV läuft der ausgewählte Sender nach kurzer Zeit stumm in der Detailspalte (abschaltbar unter *Einstellungen → Anzeige*)
 
 - **4K und Stabilität:** asynchrone Ansteuerung der Hardware-Decoder (mehr Reserven bei 4K, automatischer Rückfall bei Problemen), Speicher-Obergrenze für den Puffer (kein Absturz nach langem 4K-Schauen auf Sticks mit wenig RAM), Watchdog, Tunneling-Rückfall, Erkennung von HDR10/HLG/Dolby Vision.
@@ -94,6 +95,8 @@ Außerdem wie auf dem Fire TV: Startseite mit „Weiter schauen“, „Zuletzt g
 **4K und HDR:** Das Bild kommt von VLC so, wie die Hardware-Dekodierung es liefert (NV12, bei HDR und 10-Bit-HEVC P010 mit voller 10-Bit-Genauigkeit, also ohne Farbstufen in Verläufen), und wird auf der Grafikkarte umgerechnet. Falls eine Grafikkarte damit Probleme hat: *Einstellungen → Wiedergabe → Videoweg → Kompatibel*. Mit HDR-Monitor: *Direktausgabe* einschalten, dann zeigt VLC das Bild selbst im Vollbild und HDR10 kommt unverändert an (Windows-HDR an). HDR10 und HLG werden für normale Bildschirme angepasst statt blass gezeigt (*Einstellungen → Wiedergabe → HDR-Anpassung*, auch im ☰-Menü), SD-Sender erscheinen im richtigen Seitenverhältnis. Bei Problemen: *Einstellungen → Bedienung → Protokoll öffnen*.
 
 **Multiview:** im Player ☰ → „Multiview“: bis zu vier Sender im 2×2-Raster, Steuerkreuz wählt das Feld, OK holt den Ton dorthin (noch einmal OK: Vollbild), Sender ± zappt im Feld. In der Senderliste läuft der ausgewählte Sender nach kurzer Zeit stumm als **Mini-Vorschau** (abschaltbar). Die Installer werden signiert, sobald ein Code-Signing-Zertifikat als Secret hinterlegt ist (`WINDOWS_SIGN_CERT`, `WINDOWS_SIGN_PASSWORD`).
+
+**TV-Modus (optional, für einen Mini-PC am Fernseher):** *Einstellungen → TV-Modus*: DnA-TV startet mit Windows direkt im Vollbild, der Mauszeiger verschwindet, PC schlafen legen oder ausschalten aus der App. Standard bleibt die normale Fensterbedienung.
 
 Bedienung mit Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur (Pfeile, Enter, Esc/Rücktaste, Kontextmenü-Taste, Leertaste, F11; Vollbild wird gemerkt) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
 
