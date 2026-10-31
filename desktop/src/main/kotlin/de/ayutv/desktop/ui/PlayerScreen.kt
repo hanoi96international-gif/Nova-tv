@@ -86,7 +86,7 @@ fun PlayerScreen(app: AppState, playback: Playback) {
         osd = true
     }
 
-    fun toggleFullscreen() = app.setFullscreen(!app.fullscreen)
+    fun toggleFullscreen() = app.changeFullscreen(!app.fullscreen)
 
     fun zap(delta: Int) {
         val live = playback as? Playback.Live ?: return
@@ -195,7 +195,7 @@ fun PlayerScreen(app: AppState, playback: Playback) {
     }
 
     // Vollbild von selbst (Einstellung): Esc führt direkt zurück zur Liste; sonst verlässt Esc zuerst das Vollbild.
-    BackHandler(app, enabled = fullscreen && menu == null && !app.autoFullscreen) { app.setFullscreen(false) }
+    BackHandler(app, enabled = fullscreen && menu == null && !app.autoFullscreen) { app.changeFullscreen(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
     // Leiste nach 4 Sekunden ohne Eingabe ausblenden (nicht bei Pause oder Fehler).
     LaunchedEffect(lastInput, player.playing) {

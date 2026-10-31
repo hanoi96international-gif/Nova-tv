@@ -88,7 +88,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     /** Hauptfenster (für den Bildschirm, auf dem das Vollbild erscheint, und für Tasten vom Handy). */
     @Volatile var mainWindow: java.awt.Window? = null
 
-    fun setFullscreen(on: Boolean) {
+    fun changeFullscreen(on: Boolean) {
         fullscreen = on
         autoFullscreen = false
     }
@@ -204,7 +204,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
     fun stopPlayback() {
         stopAligning()
         rateJob?.cancel()
-        if (autoFullscreen) setFullscreen(false)
+        if (autoFullscreen) changeFullscreen(false)
         savePosition()
         player.stop()
         playing = null
