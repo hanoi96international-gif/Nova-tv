@@ -300,7 +300,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 // Dazu die echte Geschwindigkeit vom Anbieter: ein Film wird nicht in Echtzeit, sondern so schnell wie möglich geliefert.
                                 val movie = runCatching { container.db.vod().search("", 1).firstOrNull() }.getOrNull()
                                 val provider = movie?.let { check.provider(it.url, settings.userAgent) }
-                                if (live != null && provider != null) result = live.copy(providerKbps = provider)
+                                // Proxy aktiv: denselben Film auch am Proxy vorbei laden – zeigt, ob der Proxy bremst.
+                                val direct = if (provider != null && de.ayutv.data.net.AppProxy.current.active) {
+                                    movie?.let { check.provider(it.url, settings.userAgent, direct = true) }
+                                } else null
+                                val uhd = channel?.let { de.ayutv.data.parse.ChannelQuality.height(it.key, it.name) >= 2_000 } == true
+                                if (live != null) result = live.copy(providerKbps = provider, directKbps = direct, uhd = uhd)
                                 running = false
                             }
                         }
@@ -850,6 +855,15 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 running = false
                             }
                         }
+                    }
+                    if (settings.proxyMode != de.ayutv.data.net.ProxyMode.OFF) item {
+                        SettingRow(
+                            "Videostreams über den Proxy",
+                            onOff(settings.proxyStreams),
+                            "Aus: Nur Anmeldung, Listen und TV-Guide laufen über den Proxy, die Videos direkt. Viele Proxys liefern nur " +
+                                "10–20 Mbit/s – zu wenig für 4K (Bild hängt, Puffer leer). Der Leitungs-Check zeigt beide Wege im Vergleich. " +
+                                "Hinweis: Der Anbieter sieht beim direkten Weg deine eigene Adresse.",
+                        ) { update { it.copy(proxyStreams = !it.proxyStreams) } }
                     }
                     if (settings.proxyMode == de.ayutv.data.net.ProxyMode.SELECTED) {
                         item {

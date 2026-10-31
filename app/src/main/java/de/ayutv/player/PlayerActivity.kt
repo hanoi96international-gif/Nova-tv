@@ -741,6 +741,7 @@ class PlayerActivity : ComponentActivity() {
     fun routeLabel(): String {
         val host = de.ayutv.data.net.AppProxy.hostOf(originalUrl())
         if (!de.ayutv.data.net.AppProxy.proxies(host)) return "Weg: direkt"
+        if (!settings.proxyStreams) return "Weg: direkt (Proxy nur für Listen und Anmeldung)"
         val seen = de.ayutv.data.net.ProxyCheck.last?.proxied
         return "Weg: über Proxy" + (seen?.let { " (${it.country} · ${it.ip})" } ?: "")
     }

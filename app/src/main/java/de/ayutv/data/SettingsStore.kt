@@ -184,6 +184,11 @@ data class AppSettings(
     val proxyPassword: String = "",
     /** IDs der Playlists, die über den Proxy laufen (bei [ProxyMode.SELECTED]). */
     val proxyPlaylists: Set<String> = emptySet(),
+    /**
+     * Videostreams über den Proxy (Standard). Aus: nur Anmeldung, Listen und TV-Guide laufen über den Proxy, die Videos
+     * direkt. Viele Proxys liefern nur 10–20 Mbit/s, zu wenig für 4K.
+     */
+    val proxyStreams: Boolean = true,
     /** Eigener DeepL-API-Schlüssel (Free endet auf „:fx“). */
     val deeplKey: String = "",
 ) {
@@ -271,6 +276,7 @@ class SettingsStore(private val context: Context) {
         val proxyUser = stringPreferencesKey("proxy_user")
         val proxyPassword = stringPreferencesKey("proxy_password")
         val proxyPlaylists = stringSetPreferencesKey("proxy_playlists")
+        val proxyStreams = booleanPreferencesKey("proxy_streams")
         val deeplKey = stringPreferencesKey("deepl_key")
 
         /** Verschlüsselt gespeicherte Werte (in Sicherungen im Klartext, der Schlüssel gilt nur auf diesem Gerät). */
@@ -408,6 +414,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.proxyUser] = next.proxyUser.trim()
             prefs[Keys.proxyPassword] = Credentials.protect(next.proxyPassword).orEmpty()
             prefs[Keys.proxyPlaylists] = next.proxyPlaylists
+            prefs[Keys.proxyStreams] = next.proxyStreams
             prefs[Keys.deeplKey] = Credentials.protect(next.deeplKey.trim()).orEmpty()
         }
     }
@@ -463,6 +470,7 @@ class SettingsStore(private val context: Context) {
         loudnessLevel = this[Keys.loudnessLevel] ?: false,
         fireTvHome = this[Keys.fireTvHome] ?: true,
         proxyMode = enumOrDefault(this[Keys.proxyMode], ProxyMode.OFF),
+        proxyStreams = this[Keys.proxyStreams] ?: true,
         proxyType = enumOrDefault(this[Keys.proxyType], ProxyType.HTTP),
         proxyHost = this[Keys.proxyHost].orEmpty(),
         proxyPort = this[Keys.proxyPort] ?: 0,

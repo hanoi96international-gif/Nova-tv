@@ -77,6 +77,8 @@ object PlayerFactory {
         // Eigener, kurzer Lese-Timeout für Streams: Ein hängender Server wird nach 8 s (Live) bzw.
         // 12 s (Film) erkannt statt nach 30 s; dann verbindet der Player sofort neu.
         val streamClient = http.newBuilder()
+            // Streams am Proxy vorbei (Einstellung): Anmeldung, Listen und TV-Guide laufen weiter über ihn.
+            .apply { if (!settings.proxyStreams) proxy(java.net.Proxy.NO_PROXY) }
             .readTimeout(if (live) 8L else 12L, TimeUnit.SECONDS)
             .connectTimeout(8, TimeUnit.SECONDS)
             // Großer Empfangspuffer: WLAN-Aussetzer werden schon im Netzwerk abgefedert.
