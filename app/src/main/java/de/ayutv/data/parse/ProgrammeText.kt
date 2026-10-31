@@ -1,14 +1,15 @@
 package de.ayutv.data.parse
 
-import de.ayutv.data.db.ProgrammeEntity
-import de.ayutv.data.db.ProgrammeFlags
-
 /**
  * Titel einer Sendung für die Anzeige. Sport-EPGs nennen im Titel nur den Wettbewerb („Fußball: Bundesliga“),
  * die Paarung steht im Untertitel („Borussia Dortmund – Eintracht Frankfurt, Topspiel, 7. Spieltag“). Dann
  * kommt die Paarung nach vorn, damit sie auch in einzeiligen Listen zu sehen ist; sonst „Titel – Untertitel“.
  */
 object ProgrammeText {
+    // Gleiche Werte wie de.ayutv.data.db.ProgrammeFlags (ohne Datenbank-Abhängigkeit, auch für die Windows-App).
+    private const val REPEAT = 1
+    private const val LIVE = 2
+
     /** „A – B“, „A - B“, „A vs. B“, „A v B“, „A gegen B“. */
     private val PAIRING = Regex("""\S\s+(?:[–—-]|vs\.?|v\.?|gegen)\s+\S""")
     /** Sender, auf denen eine Paarung oder „Live“ für ein Spiel genügt, auch ohne Sport-Kategorie im TV-Guide. */
@@ -82,8 +83,8 @@ object ProgrammeText {
      * Wiederholung, Zusammenfassung oder Vorberichterstattung ist.
      */
     fun isLive(title: String, subtitle: String?, category: String?, flags: Int, sportChannel: Boolean = false): Boolean {
-        if (flags and ProgrammeFlags.REPEAT != 0) return false
-        if (flags and ProgrammeFlags.LIVE != 0) return true
+        if (flags and REPEAT != 0) return false
+        if (flags and LIVE != 0) return true
         val text = title + " " + subtitle.orEmpty()
         if (NOT_LIVE.containsMatchIn(text) || NOT_LIVE.containsMatchIn(category.orEmpty())) return false
         if (LIVE_WORD.containsMatchIn(text)) return true
@@ -93,7 +94,7 @@ object ProgrammeText {
     /** Wie [isLive], die Paarung darf auch am Anfang der Beschreibung stehen. */
     fun isLive(title: String, subtitle: String?, category: String?, flags: Int, sportChannel: Boolean, description: String?): Boolean =
         isLive(title, subtitle, category, flags, sportChannel) ||
-            (flags and ProgrammeFlags.REPEAT == 0 && !NOT_LIVE.containsMatchIn(title + " " + subtitle.orEmpty()) &&
+            (flags and REPEAT == 0 && !NOT_LIVE.containsMatchIn(title + " " + subtitle.orEmpty()) &&
                 (sportChannel || isSport(title, subtitle, category)) && descriptionPairing(description) != null)
 
     /** Sportsender nach Namen (Sky Sport, DAZN, Eurosport, Servus TV, MagentaSport …). */
@@ -124,13 +125,3 @@ object ProgrammeText {
     /** Beschreibung ohne angehängtes „(Senderinfo).“ der Programmzeitschriften. */
     fun description(text: String?): String? = text?.replace(NOISE, "")?.trim()?.takeIf { it.isNotEmpty() }
 }
-
-fun ProgrammeEntity.headline(): String = ProgrammeText.headline(title, subtitle)
-fun ProgrammeEntity.isLive(): Boolean = ProgrammeText.isLive(title, subtitle, category, flags)
-fun ProgrammeEntity.isSportEvent(sportChannel: Boolean = false): Boolean =
-    (sportChannel || ProgrammeText.isSport(title, subtitle, category)) && ProgrammeText.isLive(title, subtitle, category, flags, sportChannel, description)
-fun ProgrammeEntity.sportHeadline(): String = ProgrammeText.sportHeadline(title, subtitle, description)
-fun ProgrammeEntity.pairing(): String? = ProgrammeText.pairing(title, subtitle, description)
-
-/** Titel mit „LIVE“-Kennzeichen davor, wenn die Sendung live läuft. */
-fun ProgrammeEntity.headlineWithBadge(): String = (if (isLive()) "🔴 LIVE  " else "") + headline()

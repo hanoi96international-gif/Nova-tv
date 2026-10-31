@@ -1,0 +1,327 @@
+package de.ayutv.desktop.ui
+
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowState
+import de.ayutv.data.parse.Episodes
+import de.ayutv.data.parse.IntroSkip
+import de.ayutv.desktop.data.IntroMark
+import kotlinx.coroutines.delay
+
+/**
+ * Vollbild-Wiedergabe. Tastatur/Fernbedienung: ↑/↓ Sender wechseln (Live) bzw. Lautstärke (Film), ←/→ spulen,
+ * Enter/Leertaste Info bzw. Pause, Esc zurück, F Vollbild, M Ton aus, T Tonspur, U Untertitel, L Untertitel laden
+ * (OpenSubtitles/DeepL), G/H Untertitel früher/später, N nächste Folge.
+ * Maus: Bewegen zeigt die Leiste, Klick Pause/Info, Doppelklick Vollbild, Mausrad Lautstärke.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
+    val player = app.player
+    val guide by app.store.guide.collectAsState()
+    val focus = remember { FocusRequester() }
+    var lastInput by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var osd by remember { mutableStateOf(true) }
+    var menu by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    val fullscreen = window.placement == WindowPlacement.Fullscreen
+    var subtitleDelay by remember(playback) { mutableLongStateOf(0L) }
+
+    fun shiftSubtitles(deltaMs: Long) {
+        subtitleDelay += deltaMs
+        player.subtitleDelay(subtitleDelay)
+        app.toast("Untertitel ${if (subtitleDelay >= 0) "+" else ""}${subtitleDelay / 1000.0} s")
+    }
+
+    fun poke() {
+        lastInput = System.currentTimeMillis()
+        osd = true
+    }
+
+    fun toggleFullscreen() {
+        window.placement = if (fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
+    }
+
+    fun zap(delta: Int) {
+        val live = playback as? Playback.Live ?: return
+        val list = live.list
+        if (list.size < 2) return
+        val at = list.indexOfFirst { it.key == live.channel.key }.coerceAtLeast(0)
+        app.play(live.copy(channel = list[(at + delta).mod(list.size)]))
+        poke()
+    }
+
+    val nextEpisode = (playback as? Playback.Vod)?.let { vod ->
+        val id = vod.episodeId ?: return@let null
+        Episodes.next(vod.episodes.map { it.first }, id)?.let { next -> vod.episodes.first { it.first.id == next.id } }
+    }
+
+    fun playNext() {
+        val vod = playback as? Playback.Vod ?: return
+        val (episode, url) = nextEpisode ?: return
+        val series = vod.series ?: return
+        app.savePosition()
+        app.play(vod.copy(key = Episodes.key(series.key, episode.id), title = Episodes.title(series.name, episode), url = url, startMs = 0, episodeId = episode.id))
+    }
+
+    // Intro überspringen (Serien): Knopf am Anfang, gelernte Stelle je Serie; Spulen kurz danach korrigiert sie.
+    val series = (playback as? Playback.Vod)?.series
+    val learned = series?.let { s -> app.store.user.value.intros[s.key]?.let { IntroSkip.Intro(it.startMs, it.lengthMs) } }
+    var skippedFrom by remember(playback) { mutableLongStateOf(-1L) }
+    var skippedAt by remember(playback) { mutableLongStateOf(0L) }
+    val introVisible = series != null && skippedFrom < 0 && IntroSkip.visible(player.positionMs, learned)
+
+    fun skipIntro() {
+        val from = player.positionMs
+        skippedFrom = from
+        skippedAt = System.currentTimeMillis()
+        player.seekTo(IntroSkip.target(from, learned))
+    }
+
+    fun seek(delta: Long) {
+        player.seekBy(delta)
+        val s = series ?: return
+        if (skippedFrom >= 0 && System.currentTimeMillis() - skippedAt < IntroSkip.LEARN_WINDOW_MS) {
+            skippedAt = System.currentTimeMillis()
+            val target = (player.positionMs + delta).coerceAtLeast(0)
+            IntroSkip.learn(skippedFrom, target)?.let { intro ->
+                app.store.updateUser { it.copy(intros = it.intros + (s.key to IntroMark(intro.startMs, intro.lengthMs))) }
+            }
+        }
+    }
+
+    fun trackMenu(audio: Boolean) {
+        val tracks = if (audio) player.audioTracks else player.subtitleTracks
+        menu = {
+            MenuDialog(
+                app, if (audio) "Tonspur" else "Untertitel",
+                tracks.map { (id, name) -> MenuItem(name) { if (audio) player.selectAudio(id) else player.selectSubtitle(id) } },
+                onDismiss = { menu = null; runCatching { focus.requestFocus() } },
+            )
+        }
+    }
+
+    BackHandler(app, enabled = fullscreen && menu == null) { window.placement = WindowPlacement.Floating }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    // Leiste nach 4 Sekunden ohne Eingabe ausblenden (nicht bei Pause oder Fehler).
+    LaunchedEffect(lastInput, player.playing) {
+        delay(4_000)
+        if (player.playing && player.error == null) osd = false
+    }
+    // Stand von Filmen regelmäßig merken; am Ende einer Folge die nächste.
+    LaunchedEffect(playback) {
+        player.onFinished = { if (nextEpisode != null) playNext() else app.stopPlayback() }
+        while (playback is Playback.Vod) {
+            delay(15_000)
+            app.savePosition()
+        }
+    }
+
+    Box(
+        Modifier.fillMaxSize().background(Color.Black)
+            .focusRequester(focus)
+            .focusable()
+            .onKeyEvent { e ->
+                if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+                val live = playback is Playback.Live
+                val step = if (e.isShiftPressed) 60_000L else 10_000L
+                poke()
+                when (e.key) {
+                    Key.DirectionUp, Key.PageUp, Key.ChannelUp -> { if (live) zap(-1) else player.changeVolume(5); true }
+                    Key.DirectionDown, Key.PageDown, Key.ChannelDown -> { if (live) zap(1) else player.changeVolume(-5); true }
+                    Key.DirectionLeft, Key.MediaRewind -> { if (!live) seek(-step); true }
+                    Key.DirectionRight, Key.MediaFastForward -> { if (!live) seek(step); true }
+                    Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> {
+                        when {
+                            introVisible -> skipIntro()
+                            !live && osd -> player.togglePause()
+                        }
+                        true
+                    }
+                    Key.I -> { if (introVisible) skipIntro(); true }
+                    Key.Spacebar, Key.MediaPlayPause -> { player.togglePause(); true }
+                    Key.MediaNext -> { if (live) zap(1) else playNext(); true }
+                    Key.MediaPrevious -> { if (live) zap(-1); true }
+                    Key.F -> { toggleFullscreen(); true }
+                    Key.M, Key.VolumeMute -> { player.toggleMute(); true }
+                    Key.Plus, Key.NumPadAdd, Key.VolumeUp -> { player.changeVolume(5); true }
+                    Key.Minus, Key.NumPadSubtract, Key.VolumeDown -> { player.changeVolume(-5); true }
+                    Key.T -> { trackMenu(audio = true); true }
+                    Key.U -> { trackMenu(audio = false); true }
+                    Key.N -> { playNext(); true }
+                    Key.L -> { (playback as? Playback.Vod)?.let { app.loadSubtitles(it) }; true }
+                    Key.G -> { shiftSubtitles(-250); true }
+                    Key.H -> { shiftSubtitles(250); true }
+                    else -> false
+                }
+            }
+            .onPointerEvent(PointerEventType.Move) { poke() }
+            .onPointerEvent(PointerEventType.Scroll) { e ->
+                val dy = e.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                if (dy != 0f) player.changeVolume(if (dy < 0) 5 else -5)
+                poke()
+            }
+            .pointerInput(playback) {
+                detectTapGestures(
+                    onDoubleTap = { toggleFullscreen() },
+                    onTap = { if (playback is Playback.Vod && osd) player.togglePause(); poke(); focus.requestFocus() },
+                )
+            },
+    ) {
+        val frame = player.frame
+        if (frame != null) {
+            Image(frame, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+        }
+
+        val problem = player.error ?: if (!player.available) "VLC wurde nicht gefunden. Bitte DnA-TV neu installieren." else null
+        if (problem != null) {
+            Box(Modifier.align(Alignment.Center).background(Palette.surface, RoundedCornerShape(10.dp)).padding(18.dp)) {
+                Label(problem, Type.heading, maxLines = 3)
+            }
+        } else if (player.buffering && frame == null) {
+            Box(Modifier.align(Alignment.Center)) { Label("Lädt …", Type.heading) }
+        }
+
+        if (osd || problem != null) {
+            Box(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xDD000000))))
+                    .padding(start = 32.dp, end = 32.dp, top = 48.dp, bottom = 24.dp),
+            ) {
+                when (playback) {
+                    is Playback.Live -> LiveBar(playback, guide[playback.channel.key].orEmpty(), player.volume)
+                    is Playback.Vod -> VodBar(playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, ::playNext) { player.seekTo(it) }
+                }
+            }
+            Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                if (player.audioTracks.size > 1) { TextButton("🔊 Ton", { trackMenu(audio = true) }); Spacer(Modifier.width(8.dp)) }
+                if (player.subtitleTracks.size > 1) { TextButton("💬 Untertitel", { trackMenu(audio = false) }); Spacer(Modifier.width(8.dp)) }
+                if (playback is Playback.Vod) {
+                    val language = app.store.user.value.subtitleLanguage.ifBlank { "de" }.uppercase()
+                    TextButton("💬 $language laden", { app.loadSubtitles(playback) })
+                    Spacer(Modifier.width(8.dp))
+                }
+                TextButton(if (fullscreen) "⤢ Fenster" else "⤢ Vollbild", { toggleFullscreen() })
+                Spacer(Modifier.width(8.dp))
+                TextButton("✕", { app.stopPlayback() })
+            }
+        }
+        if (introVisible) {
+            Box(Modifier.align(Alignment.BottomEnd).padding(end = 32.dp, bottom = if (osd) 150.dp else 40.dp)) {
+                TextButton("⏭ Intro überspringen (Enter)", { skipIntro() }, primary = true)
+            }
+        }
+        menu?.invoke()
+    }
+}
+
+@Composable
+private fun LiveBar(live: Playback.Live, programmes: List<de.ayutv.desktop.data.Programme>, volume: Int) {
+    val now = System.currentTimeMillis()
+    val current = programmes.firstOrNull { it.start <= now && it.stop > now }
+    val next = programmes.firstOrNull { it.start >= (current?.stop ?: now) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Logo(live.channel.logo, 56)
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            val number = live.list.indexOfFirst { it.key == live.channel.key } + 1
+            Label("${if (number > 0) "$number  " else ""}${live.channel.name}", Type.title)
+            if (current != null) {
+                Label("${clock(current.start)} – ${clock(current.stop)}  ${current.title}", Type.heading)
+                Spacer(Modifier.height(6.dp))
+                Progress((now - current.start).toFloat() / (current.stop - current.start))
+            }
+            next?.let { Label("Danach ${clock(it.start)}  ${it.title}", Type.small) }
+        }
+        Spacer(Modifier.width(16.dp))
+        Label("🔊 $volume %   ↑/↓ Sender wechseln", Type.small)
+    }
+}
+
+@Composable
+private fun VodBar(
+    vod: Playback.Vod,
+    position: Long,
+    duration: Long,
+    playing: Boolean,
+    volume: Int,
+    hasNext: Boolean,
+    onNext: () -> Unit,
+    onSeek: (Long) -> Unit,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Label(vod.title, Type.title, Modifier.weight(1f))
+            // Gegen Ende (Abspann) die nächste Folge anbieten.
+            if (hasNext && duration > 0 && duration - position < 3 * 60_000) TextButton("⏭ Nächste Folge", onNext, primary = true)
+        }
+        Spacer(Modifier.height(8.dp))
+        SeekBar(position, duration, onSeek)
+        Spacer(Modifier.height(4.dp))
+        Row {
+            Label("${if (playing) "▶" else "⏸"}  ${duration(position)} / ${duration(duration)}", Type.body, Modifier.weight(1f))
+            Label("🔊 $volume %   ←/→ 10 s (Umschalt: 1 min)", Type.small)
+        }
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun SeekBar(position: Long, duration: Long, onSeek: (Long) -> Unit) {
+    var width by remember { mutableStateOf(1) }
+    Box(
+        Modifier.fillMaxWidth().height(14.dp)
+            .onSizeChanged { width = it.width.coerceAtLeast(1) }
+            .pointerInput(duration) {
+                detectTapGestures { offset -> if (duration > 0) onSeek((offset.x / width * duration).toLong()) }
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Progress(if (duration > 0) position.toFloat() / duration else 0f)
+    }
+}
+
+fun duration(ms: Long): String {
+    val s = ms / 1000
+    return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
+}
