@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,8 +42,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.parse.IntroSkip
 import de.ayutv.desktop.data.IntroMark
@@ -58,14 +55,14 @@ import kotlinx.coroutines.delay
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
+fun PlayerScreen(app: AppState, playback: Playback) {
     val player = app.player
     val guide by app.store.guide.collectAsState()
     val focus = remember { FocusRequester() }
     var lastInput by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var osd by remember { mutableStateOf(true) }
     var menu by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
-    val fullscreen = window.placement == WindowPlacement.Fullscreen
+    val fullscreen = app.fullscreen
     var subtitleDelay by remember(playback) { mutableLongStateOf(0L) }
 
     fun shiftSubtitles(deltaMs: Long) {
@@ -79,9 +76,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
         osd = true
     }
 
-    fun toggleFullscreen() {
-        window.placement = if (fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
-    }
+    fun toggleFullscreen() = app.setFullscreen(!app.fullscreen)
 
     fun zap(delta: Int) {
         val live = playback as? Playback.Live ?: return
@@ -142,15 +137,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState) {
         }
     }
 
-    // Im Vollbild schauen (Einstellung, Standard an); beim Verlassen des Players wieder das Fenster wie vorher.
-    // Dann führt Esc direkt zurück zur Liste, sonst verlässt Esc zuerst das Vollbild.
-    val autoFullscreen = remember { app.store.user.value.fullscreenPlayback && window.placement != WindowPlacement.Fullscreen }
-    BackHandler(app, enabled = fullscreen && menu == null && !autoFullscreen) { window.placement = WindowPlacement.Floating }
+    // Vollbild von selbst (Einstellung): Esc führt direkt zurück zur Liste; sonst verlässt Esc zuerst das Vollbild.
+    BackHandler(app, enabled = fullscreen && menu == null && !app.autoFullscreen) { app.setFullscreen(false) }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    DisposableEffect(Unit) {
-        if (autoFullscreen) window.placement = WindowPlacement.Fullscreen
-        onDispose { if (autoFullscreen) window.placement = WindowPlacement.Floating }
-    }
     // Leiste nach 4 Sekunden ohne Eingabe ausblenden (nicht bei Pause oder Fehler).
     LaunchedEffect(lastInput, player.playing) {
         delay(4_000)

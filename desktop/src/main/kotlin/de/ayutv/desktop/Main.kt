@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
@@ -50,6 +52,7 @@ import de.ayutv.desktop.ui.LibraryScreen
 import de.ayutv.desktop.ui.ListRow
 import de.ayutv.desktop.ui.LiveScreen
 import de.ayutv.desktop.ui.Palette
+import de.ayutv.desktop.ui.Playback
 import de.ayutv.desktop.ui.PlayerScreen
 import de.ayutv.desktop.ui.Screen
 import de.ayutv.desktop.ui.SearchScreen
@@ -62,6 +65,7 @@ import kotlinx.coroutines.withContext
 fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
+    CrashLog.install(Store.defaultDir())
     application {
         val window = rememberWindowState(size = DpSize(1280.dp, 780.dp))
         val scope = rememberCoroutineScope()
@@ -88,9 +92,61 @@ fun main(args: Array<String>) {
             if (ready == null) {
                 Starting(failure)
             } else {
-                // Tasten vom Handy gehen an dieses Fenster.
-                LaunchedEffect(ready) { ready.remote.window = this@Window.window }
+                // Tasten vom Handy gehen an dieses Fenster (im Vollbild an das Vollbild-Fenster).
+                LaunchedEffect(ready) {
+                    ready.mainWindow = this@Window.window
+                    ready.remote.window = this@Window.window
+                }
                 App(ready, window)
+            }
+        }
+        val ready = app
+        val playing = ready?.playing
+        if (ready != null && playing != null && ready.fullscreen) FullscreenPlayer(ready, playing)
+    }
+}
+
+/**
+ * Vollbild als eigenes, randloses Fenster über den ganzen Bildschirm. Das Hauptfenster bleibt unverändert: Das
+ * Umschalten des Hauptfensters ins Vollbild baut es unter Windows neu auf, und das stürzte beim laufenden Video ab.
+ */
+@Composable
+private fun FullscreenPlayer(app: AppState, playing: Playback) {
+    val bounds = remember {
+        (app.mainWindow?.graphicsConfiguration ?: java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration).bounds
+    }
+    val state = rememberWindowState(
+        position = WindowPosition(bounds.x.dp, bounds.y.dp),
+        size = DpSize(bounds.width.dp, bounds.height.dp),
+    )
+    Window(
+        onCloseRequest = { app.setFullscreen(false) },
+        state = state,
+        title = "DnA-TV",
+        undecorated = true,
+        resizable = false,
+        alwaysOnTop = true,
+        icon = remember { appIcon() },
+    ) {
+        DisposableEffect(Unit) {
+            app.remote.window = window
+            onDispose { app.remote.window = app.mainWindow }
+        }
+        Box(
+            Modifier.fillMaxSize().background(Palette.background).onKeyEvent { e ->
+                if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+                when (e.key) {
+                    Key.Escape, Key.Back -> app.back()
+                    Key.F11 -> { app.setFullscreen(false); true }
+                    else -> false
+                }
+            },
+        ) {
+            PlayerScreen(app, playing)
+            app.message?.let { line ->
+                Box(Modifier.align(Alignment.BottomCenter).padding(24.dp).background(Palette.raised, RoundedCornerShape(10.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
+                    Label(line, Type.body, maxLines = 3)
+                }
             }
         }
     }
@@ -127,7 +183,10 @@ fun App(app: AppState, window: WindowState) {
     Box(
         Modifier.fillMaxSize().background(Palette.background).onPreviewKeyEvent { e ->
             // F11 immer, auch während ein Eingabefeld den Fokus hat.
-            if (e.key == Key.F11 && e.type == KeyEventType.KeyDown) { toggleFullscreen(window); true } else false
+            if (e.key != Key.F11 || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            // Im Player: Vollbild-Fenster; sonst das Hauptfenster maximieren.
+            if (app.playing != null) app.setFullscreen(!app.fullscreen) else toggleMaximized(window)
+            true
         }.onKeyEvent { e ->
             // Was kein Element selbst nutzt: Pfeiltasten wechseln den Fokus, Esc/Zurück geht eine Ebene zurück.
             if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -142,8 +201,13 @@ fun App(app: AppState, window: WindowState) {
         },
     ) {
         val playing = app.playing
-        if (playing != null) {
-            PlayerScreen(app, playing, window)
+        if (playing != null && app.fullscreen) {
+            // Das Bild läuft im Vollbild-Fenster.
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Label("Läuft im Vollbild – Esc oder Doppelklick beendet es.", Type.body)
+            }
+        } else if (playing != null) {
+            PlayerScreen(app, playing)
         } else {
             Row(Modifier.fillMaxSize()) {
                 Sidebar(app, window)
@@ -184,11 +248,11 @@ private fun Sidebar(app: AppState, window: WindowState) {
             Spacer(Modifier.height(2.dp))
         }
         Spacer(Modifier.weight(1f))
-        val full = window.placement == WindowPlacement.Fullscreen
-        ListRow(if (full) "⛶  Fenster (F11)" else "⛶  Vollbild (F11)", onClick = { toggleFullscreen(window) })
+        val big = window.placement == WindowPlacement.Maximized
+        ListRow(if (big) "⛶  Kleiner (F11)" else "⛶  Großes Fenster (F11)", onClick = { toggleMaximized(window) })
     }
 }
 
-fun toggleFullscreen(window: WindowState) {
-    window.placement = if (window.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
+fun toggleMaximized(window: WindowState) {
+    window.placement = if (window.placement == WindowPlacement.Maximized) WindowPlacement.Floating else WindowPlacement.Maximized
 }

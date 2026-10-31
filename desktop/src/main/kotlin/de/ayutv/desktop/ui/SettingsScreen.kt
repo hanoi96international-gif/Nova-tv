@@ -135,7 +135,7 @@ fun SettingsScreen(app: AppState) {
             ListRow(
                 (if (user.fullscreenPlayback) "☑" else "☐") + "  Sender und Filme im Vollbild starten",
                 onClick = { app.store.updateUser { it.copy(fullscreenPlayback = !it.fullscreenPlayback) } },
-                subtitle = "Vollbild jederzeit: F11, Doppelklick ins Bild oder „⛶ Vollbild“ links unten. Esc verlässt das Vollbild.",
+                subtitle = "Im Player jederzeit: Doppelklick ins Bild, F oder F11. Esc verlässt das Vollbild.",
             )
         }
 

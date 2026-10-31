@@ -77,6 +77,17 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
 
     var screen by mutableStateOf(if (store.playlists.value.isEmpty()) Screen.SETTINGS else Screen.LIVE)
     var playing by mutableStateOf<Playback?>(null); private set
+    /** Player im eigenen, randlosen Fenster über den ganzen Bildschirm (das Hauptfenster bleibt, wie es ist). */
+    var fullscreen by mutableStateOf(false); private set
+    /** Vollbild kam von selbst mit dem Start (Einstellung): dann führt Esc direkt zurück und schließt es wieder. */
+    var autoFullscreen = false; private set
+    /** Hauptfenster (für den Bildschirm, auf dem das Vollbild erscheint, und für Tasten vom Handy). */
+    @Volatile var mainWindow: java.awt.Window? = null
+
+    fun setFullscreen(on: Boolean) {
+        fullscreen = on
+        autoFullscreen = false
+    }
     /** Geöffnete Serie (Folgenansicht), auch aus der Suche heraus. */
     var openSeries by mutableStateOf<Series?>(null)
     var message by mutableStateOf<String?>(null); private set
@@ -105,6 +116,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
         stopAligning()
         // Ton nur abgreifen, wenn Untertitel ausgerichtet werden sollen (sonst gibt VLC den Ton selbst aus).
         player.tapAudio = false
+        if (playing == null && store.user.value.fullscreenPlayback && !fullscreen) {
+            fullscreen = true
+            autoFullscreen = true
+        }
         playing = playback
         when (playback) {
             is Playback.Live -> {
@@ -117,6 +132,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
 
     fun stopPlayback() {
         stopAligning()
+        if (autoFullscreen) setFullscreen(false)
         savePosition()
         player.stop()
         playing = null

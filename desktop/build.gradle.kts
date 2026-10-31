@@ -80,7 +80,8 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "de.ayutv.desktop.MainKt"
-        jvmArgs += listOf("-Xmx1g", "-Dfile.encoding=UTF-8")
+        // Abstürze von VLC oder der Grafik als hs_err-Datei neben dem Programm ablegen (zur Fehlersuche).
+        jvmArgs += listOf("-Xmx2g", "-Dfile.encoding=UTF-8", "-XX:ErrorFile=\$APPDIR/../dna-tv-absturz-%p.log")
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "DnA-TV"

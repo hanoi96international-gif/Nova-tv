@@ -66,9 +66,16 @@ class VideoPlayer {
     /** Gezeigte Bilder (für den Selbsttest). */
     val framesRendered = java.util.concurrent.atomic.AtomicLong()
 
-    private var bitmap: Bitmap? = null
-    private var info: ImageInfo? = null
-    private var pixels = ByteArray(0)
+    // Bild-Übergabe von VLC an die Oberfläche: VLC kopiert nur Bytes (zwei Puffer im Wechsel), das Skia-Bild wird
+    // ausschließlich im Oberflächen-Thread befüllt (zwei Bitmaps im Wechsel). So schreibt nie ein Thread in ein Bild,
+    // das gerade gezeichnet wird (das ließ die App vor allem im Vollbild abstürzen).
+    @Volatile private var info: ImageInfo? = null
+    private val buffers = arrayOf(ByteArray(0), ByteArray(0))
+    private var writeIndex = 0
+    private val bitmaps = arrayOf(Bitmap(), Bitmap())
+    private var bitmapIndex = 0
+    /** Die Oberfläche hat das letzte Bild noch nicht übernommen: weitere Bilder bis dahin auslassen. */
+    private val pending = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun prepare(p: EmbeddedMediaPlayer) {
         val f = factory ?: return
@@ -161,6 +168,7 @@ class VideoPlayer {
         player?.controls()?.stop()
         tap.close()
         frame = null
+        pending.set(false)
         playing = false
     }
 
@@ -182,8 +190,6 @@ class VideoPlayer {
     private inner class Format : BufferFormatCallback {
         override fun getBufferFormat(sourceWidth: Int, sourceHeight: Int): BufferFormat {
             info = ImageInfo(sourceWidth, sourceHeight, ColorType.BGRA_8888, ColorAlphaType.PREMUL)
-            pixels = ByteArray(sourceWidth * sourceHeight * 4)
-            bitmap = Bitmap().apply { allocPixels(info!!) }
             return RV32BufferFormat(sourceWidth, sourceHeight)
         }
 
@@ -196,16 +202,28 @@ class VideoPlayer {
         override fun unlock(mediaPlayer: MediaPlayer) = Unit
 
         override fun display(mediaPlayer: MediaPlayer, nativeBuffers: Array<out ByteBuffer>, bufferFormat: BufferFormat, displayWidth: Int, displayHeight: Int) {
-            val target = bitmap ?: return
             val imageInfo = info ?: return
+            if (pending.get()) return
+            val size = imageInfo.width * imageInfo.height * 4
+            val index = writeIndex
+            if (buffers[index].size != size) buffers[index] = ByteArray(size)
+            val target = buffers[index]
             val buffer = nativeBuffers[0]
             buffer.rewind()
-            if (buffer.remaining() < pixels.size) return
-            buffer.get(pixels)
-            target.installPixels(imageInfo, pixels, imageInfo.width * 4)
-            val image = target.asComposeImageBitmap()
+            if (buffer.remaining() < size) return
+            buffer.get(target)
+            writeIndex = 1 - index
+            pending.set(true)
             framesRendered.incrementAndGet()
-            ui { frame = image }
+            ui {
+                try {
+                    val bitmap = bitmaps[bitmapIndex]
+                    bitmapIndex = 1 - bitmapIndex
+                    if (bitmap.installPixels(imageInfo, target, imageInfo.width * 4)) frame = bitmap.asComposeImageBitmap()
+                } finally {
+                    pending.set(false)
+                }
+            }
         }
     }
 
