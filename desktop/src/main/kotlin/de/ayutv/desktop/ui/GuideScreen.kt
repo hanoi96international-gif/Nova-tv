@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -160,6 +161,12 @@ private fun GuideRow(app: AppState, channel: Channel, list: List<Channel>, progr
                     onMenu = { onOpen(p) },
                     selected = running,
                 ) {
+                    // Farbstreifen nach Art der Sendung (wie auf dem Fire TV).
+                    val genre = remember(p, channel.name) { de.ayutv.data.parse.ProgrammeGenre.of(p.title, p.category, channel.name) }
+                    if (genre != de.ayutv.data.parse.ProgrammeGenre.OTHER) {
+                        Box(Modifier.width(4.dp).height(34.dp).background(androidx.compose.ui.graphics.Color(genre.argb), RoundedCornerShape(2.dp)))
+                        Spacer(Modifier.width(8.dp))
+                    }
                     Column {
                         val archived = p.stop <= now && channel.catchupDays > 0 && app.store.archiveUrl(channel, p.start, p.stop, now) != null
                         Label((if (archived) "⏪ " else "") + p.title, Type.body)
