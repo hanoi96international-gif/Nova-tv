@@ -18,9 +18,20 @@ import java.util.concurrent.atomic.AtomicLong
  * zweimal halbdurchsichtig, das schafft der Grafikchip nicht ohne Ruckeln.
  */
 object UiPerformance {
-    /** Weniger Bewegung (schwaches Gerät oder vom System als Gerät mit wenig Speicher gemeldet). */
-    @Volatile var reduced: Boolean = false
+    /**
+     * Weniger Bewegung: schwaches Gerät, vom System als Gerät mit wenig Speicher gemeldet, oder vom Nutzer gewählt
+     * (*Einstellungen → Anzeige → Flüssige Bedienung*). Als Compose-Zustand: Umschalten wirkt sofort.
+     */
+    var reduced: Boolean by androidx.compose.runtime.mutableStateOf(false)
         private set
+    @Volatile private var automatic = false
+    @Volatile private var chosen = false
+
+    /** Einstellung „Flüssige Bedienung“. */
+    fun setSmooth(on: Boolean) {
+        chosen = on
+        reduced = automatic || on
+    }
 
     /** Nur für Tests: wie auf einem schwachen Stick (ohne Übergänge, Hintergrund kleiner gezeichnet). */
     @androidx.annotation.VisibleForTesting
@@ -30,7 +41,8 @@ object UiPerformance {
 
     fun init(context: Context) {
         val lowRam = runCatching { context.getSystemService(ActivityManager::class.java).isLowRamDevice }.getOrDefault(false)
-        reduced = lowRam || de.ayutv.data.DeviceInfo.isWeak(context)
+        automatic = lowRam || de.ayutv.data.DeviceInfo.isWeak(context)
+        reduced = automatic || chosen
     }
 
     // ------------------------------------------------------------------ Ruckel-Messung

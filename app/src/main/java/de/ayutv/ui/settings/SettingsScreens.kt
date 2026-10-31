@@ -627,6 +627,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Der ausgewählte Sender läuft nach kurzer Zeit stumm in der Detailspalte. Beim Abspielen wird sie vorher beendet (auch bei Konten mit nur einer Verbindung).",
                         ) { update { it.copy(livePreview = !it.livePreview) } }
                     }
+                    item {
+                        SettingRow(
+                            "Flüssige Bedienung",
+                            onOff(settings.smoothUi),
+                            "Ohne Überblendungen zwischen den Bereichen und mit sparsamerem Hintergrund: Die Menüs reagieren schneller, " +
+                                "vor allem auf älteren Sticks (dort automatisch an).",
+                        ) { update { it.copy(smoothUi = !it.smoothUi) } }
+                    }
                     if (showAdvanced) item {
                         SettingRow(
                             "Hoch/Runter schaltet um",
