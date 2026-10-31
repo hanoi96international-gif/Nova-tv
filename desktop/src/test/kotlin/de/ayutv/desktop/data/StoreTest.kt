@@ -200,6 +200,20 @@ class StoreTest {
     }
 
     @Test
+    fun customGroupsSurviveNewStreamAddresses() {
+        val s = store()
+        s.savePlaylist(Playlist(1, "M3U", PlaylistType.M3U, "http://x"))
+        fun ch(id: String, token: String, name: String) = Channel("1:c:$id:http://a/$id.ts?t=$token", 1, name, "DE | Sport", url = "http://a/$id.ts?t=$token", epgId = id)
+        s.setContent(1, Store.Content(listOf(ch("dazn1", "alt", "DAZN 1 HD"), ch("sky", "alt", "Sky Sport 1"))))
+        val group = s.createGroup("Mein Sport", listOf("1:c:dazn1:http://a/dazn1.ts?t=alt"))
+        s.toggleFavorite("1:c:sky:http://a/sky.ts?t=alt")
+        // Neu geladen: der Anbieter hat die Tokens geändert.
+        s.setContent(1, Store.Content(listOf(ch("dazn1", "neu", "DAZN 1 HD"), ch("sky", "neu", "Sky Sport 1"))))
+        assertEquals(listOf("DAZN 1 HD"), s.inCustom(group).map { it.name })
+        assertEquals(listOf("Sky Sport 1"), s.favorites().map { it.name })
+    }
+
+    @Test
     fun reorderPutsShownKeysFirst() {
         assertEquals(listOf("c", "a", "b", "d"), Ordering.reorder(listOf("a", "b", "c", "d"), listOf("c", "a", "b")))
         assertEquals(listOf("x", "y"), Ordering.apply(listOf("y", "x"), listOf("x")) { it })

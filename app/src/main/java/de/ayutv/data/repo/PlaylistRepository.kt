@@ -6,6 +6,7 @@ import android.util.Xml
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.SettingsStore
 import de.ayutv.data.db.ChannelEntity
+import de.ayutv.data.db.ChannelRef
 import de.ayutv.data.db.EpgChannel
 import de.ayutv.data.db.AyuDatabase
 import de.ayutv.data.db.PlaylistEntity
@@ -14,6 +15,7 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.data.db.SeriesEntity
 import de.ayutv.data.db.VodEntity
 import de.ayutv.data.parse.EpgMatcher
+import de.ayutv.data.parse.KeyRescue
 import de.ayutv.data.parse.EpgSources
 import de.ayutv.data.parse.M3uParser
 import de.ayutv.data.parse.XmltvParser
@@ -248,10 +250,27 @@ class PlaylistRepository(
         if (ok && withEpg) syncEpg(playlistId)
     }
 
+    /**
+     * Eigene Gruppen, Favoriten und Reihenfolgen behalten ihre Sender, auch wenn der Anbieter beim neuen Laden
+     * Adresse, Token oder Stream-Nummer geändert hat (sonst sähen eigene Gruppen nach dem Aktualisieren leer aus).
+     */
+    private fun rescueKeys(before: List<ChannelRef>, playlistId: Long) {
+        if (before.isEmpty()) return
+        fun ChannelRef.ref() = KeyRescue.Ref(key, name, epgId, groupTitle)
+        val moves = KeyRescue.remap(before.map { it.ref() }, db.channels().refs(playlistId).map { it.ref() })
+        for ((old, new) in moves) {
+            db.channels().moveFavorite(old, new)
+            db.channels().moveCustomItem(old, new)
+            db.channels().moveOrder(old, new)
+        }
+        if (moves.isNotEmpty()) Log.i(TAG, "${moves.size} Einträge in Favoriten/eigenen Gruppen neuen Sendern zugeordnet")
+    }
+
     private fun importM3u(playlist: PlaylistEntity): PlaylistEntity {
         var detectedEpg: String? = null
         val source = fetch(playlist.url, "playlist-${playlist.id}.m3u")
         try { db.runInTransaction(Runnable {
+            val referenced = db.channels().referenced(playlist.id)
             db.channels().deleteForPlaylist(playlist.id)
             db.vod().deleteForPlaylist(playlist.id)
             val channels = ArrayList<ChannelEntity>(BATCH)
@@ -295,6 +314,7 @@ class PlaylistRepository(
             }
             db.channels().insertAll(channels)
             db.vod().insertAll(vod)
+            rescueKeys(referenced, playlist.id)
         }) } finally { discard(source) }
         return playlist.copy(lastSync = System.currentTimeMillis(), epgUrl = playlist.epgUrl ?: detectedEpg)
     }
@@ -316,6 +336,7 @@ class PlaylistRepository(
             .onFailure { Log.w(TAG, "Serien konnten nicht geladen werden", it) }.getOrNull()
 
         try { db.runInTransaction(Runnable {
+            val referenced = db.channels().referenced(playlist.id)
             db.channels().deleteForPlaylist(playlist.id)
 
             val channels = ArrayList<ChannelEntity>(BATCH)
@@ -336,6 +357,7 @@ class PlaylistRepository(
                 if (channels.size >= BATCH) db.channels().insertAll(channels.drain())
             } }
             db.channels().insertAll(channels)
+            rescueKeys(referenced, playlist.id)
 
             if (vodFile != null) {
                 db.vod().deleteForPlaylist(playlist.id)

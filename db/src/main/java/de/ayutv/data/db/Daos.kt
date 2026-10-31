@@ -127,6 +127,26 @@ interface ChannelDao {
     @Query("SELECT * FROM ($LISTED_CHANNELS_SQL) WHERE epgId IN (:epgIds)")
     suspend fun allByEpgIds(epgIds: List<String>): List<ChannelEntity>
 
+    /** Sender dieser Playlist, auf die Favoriten, eigene Gruppen oder eigene Reihenfolgen zeigen (vor dem Neuladen). */
+    @Query(
+        """SELECT `key`, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId
+           AND (`key` IN (SELECT `key` FROM favorites) OR `key` IN (SELECT `key` FROM custom_group_items) OR `key` IN (SELECT `key` FROM group_order))"""
+    )
+    fun referenced(playlistId: Long): List<ChannelRef>
+
+    @Query("SELECT `key`, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId")
+    fun refs(playlistId: Long): List<ChannelRef>
+
+    /** Favorit, eigene Gruppen und Reihenfolge von Schlüssel [old] auf [new] umschreiben (schon vorhandene bleiben). */
+    @Query("UPDATE OR IGNORE favorites SET `key` = :new WHERE `key` = :old")
+    fun moveFavorite(old: String, new: String)
+
+    @Query("UPDATE OR IGNORE custom_group_items SET `key` = :new WHERE `key` = :old")
+    fun moveCustomItem(old: String, new: String)
+
+    @Query("UPDATE OR IGNORE group_order SET `key` = :new WHERE `key` = :old")
+    fun moveOrder(old: String, new: String)
+
     @Query("SELECT id, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
     suspend fun forEpg(playlistId: Long): List<EpgChannel>
 
@@ -349,6 +369,10 @@ interface CustomGroupDao {
     @Query("DELETE FROM custom_groups")
     suspend fun clearGroups()
 
+    /** Einträge in eigenen Gruppen, deren Sender es nicht mehr gibt (für den Fehlerbericht). */
+    @Query("SELECT COUNT(*) FROM custom_group_items WHERE `key` NOT IN (SELECT `key` FROM channels)")
+    suspend fun orphanItems(): Int
+
     @Query("DELETE FROM custom_group_items")
     suspend fun clearItems()
 }
@@ -487,7 +511,9 @@ private const val SPORT_BETWEEN_SQL = """SELECT * FROM programmes WHERE stop > ?
            OR title LIKE '%NBA%' OR title LIKE '%NHL%' OR title LIKE '%UFC%' OR title LIKE '%box%' OR subtitle LIKE '% – %'
            OR subtitle LIKE '% - %' OR title LIKE '% – %' OR title LIKE '% - %' OR title LIKE '% vs%' OR subtitle LIKE '% vs%'
            OR title LIKE '% v %' OR subtitle LIKE '% v %' OR title LIKE '% gegen %' OR subtitle LIKE '% gegen %'
+           OR title LIKE '%konferenz%' OR subtitle LIKE '%konferenz%' OR title LIKE '%multiview%' OR title LIKE '%ᴸᶦᵛᵉ%'
            OR channelEpgId IN (SELECT epgId FROM ($LISTED_CHANNELS_SQL) WHERE name LIKE '%sport%' OR name LIKE '%dazn%'
-              OR name LIKE '%servus%' OR name LIKE '%magenta%' OR name LIKE '%eleven%' OR name LIKE '%laola%'))
+              OR name LIKE '%servus%' OR name LIKE '%magenta%' OR name LIKE '%eleven%' OR name LIKE '%laola%'
+              OR name LIKE '%bundesliga%' OR name LIKE '%liga%' OR name LIKE '%football%' OR name LIKE '%fussball%' OR name LIKE '%fußball%'))
            AND channelEpgId IN (SELECT epgId FROM ($LISTED_CHANNELS_SQL) WHERE epgId IS NOT NULL AND epgId != '')
            ORDER BY start LIMIT ?"""

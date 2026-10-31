@@ -47,6 +47,13 @@ object Diagnostics {
 
         out.append("DnA-TV Fehlerbericht ").append(SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY).format(Date())).append('\n')
         out.append("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
+        // Wann zuerst installiert und zuletzt aktualisiert: Liegt „installiert“ beim letzten Update, wurde die App neu
+        // installiert (vorher deinstalliert) und alle eigenen Daten waren deshalb weg.
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            val format = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY)
+            out.append("Installiert ${format.format(Date(info.firstInstallTime))}, zuletzt aktualisiert ${format.format(Date(info.lastUpdateTime))}\n")
+        }
         out.append("Gerät ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) · ${Build.SUPPORTED_ABIS.joinToString()}\n")
         runCatching {
             val memory = ActivityManager.MemoryInfo()
@@ -80,10 +87,21 @@ object Diagnostics {
             for (p in container.db.playlists().all()) {
                 val status = container.playlists.epgStatus(p.id)
                 val limit = container.accountLimits.maxConnections(p.id)
-                out.append("${p.name}: ${p.type}, ${if (p.enabled) "an" else "aus"}, Server ${host(p.url)}" +
+                out.append("${p.name} (Nr. ${p.id}): ${p.type}, ${if (p.enabled) "an" else "aus"}, Server ${host(p.url)}" +
                     (limit?.let { ", höchstens $it Verbindungen" } ?: "") +
                     (status?.let { ", TV-Guide ${it.withGuide}/${it.total} Sender (${it.sources.joinToString { s -> "${s.first} ${s.second}" }})" } ?: "") + '\n')
             }
+        }
+
+        section("Eigene Daten")
+        runCatching {
+            val db = container.db
+            val items = db.customGroups().allItems()
+            out.append("Favoriten ${db.favorites().keys().size}, eigene Gruppen ${db.customGroups().groups().size} mit ${items.size} Sendern" +
+                " (davon ohne passenden Sender ${db.customGroups().orphanItems()}), ausgeblendete Gruppen ${db.hiddenGroups().all().size}\n")
+            // Schlüssel beginnen mit der Playlist-Nummer: zeigt, ob Einträge zu einer Playlist gehören, die es nicht mehr gibt.
+            val prefixes = (items.map { it.key } + db.favorites().keys()).map { it.substringBefore(':') }.groupingBy { it }.eachCount()
+            if (prefixes.isNotEmpty()) out.append("Einträge je Playlist-Nr.: ${prefixes.entries.joinToString { "${it.key}: ${it.value}" }}\n")
         }
 
         section("Übersetzer")
