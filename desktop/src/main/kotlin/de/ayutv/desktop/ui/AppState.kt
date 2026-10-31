@@ -117,6 +117,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     /** Pufferprofil aus den Einstellungen an den Player geben. */
     fun applyBuffer() {
         player.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
+        player.hdrMode = store.user.value.hdrMode
     }
 
     fun toast(text: String) {

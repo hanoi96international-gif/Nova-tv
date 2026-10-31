@@ -35,6 +35,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isShiftPressed
@@ -166,6 +168,14 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 if (nextEpisode != null) add(MenuItem("⏭ Nächste Folge") { playNext() })
             }
             add(MenuItem(if (tech) "Stream-Info ausblenden" else "Stream-Info zeigen") { tech = !tech; show() })
+            if (player.gpuVideo) {
+                val next = HDR_MODES[(HDR_MODES.indexOfFirst { it.first == user.hdrMode } + 1).mod(HDR_MODES.size)]
+                add(MenuItem("HDR-Anpassung: ${hdrLabel(user.hdrMode)} → ${next.second}") {
+                    store.updateUser { it.copy(hdrMode = next.first) }
+                    app.applyBuffer()
+                    app.toast("HDR-Anpassung: ${next.second}")
+                })
+            }
             add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
         }
         menu = {
@@ -320,9 +330,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 )
             },
     ) {
-        val frame = player.frame
-        if (frame != null) {
-            Image(frame, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+        val hasFrame = player.hasFrame
+        if (hasFrame) {
+            VideoView(player, Modifier.fillMaxSize())
         } else if (live != null && !player.hasVideo) {
             Box(Modifier.align(Alignment.Center)) { Logo(live.channel.logo, 160) }
         }
@@ -338,7 +348,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     Label(if (live != null) "↑/↓ anderer Sender · OK Senderliste · Zurück beendet" else "Zurück beendet", Type.small)
                 }
             }
-            player.buffering && frame == null -> Box(Modifier.align(Alignment.Center)) { Label("Lädt …", Type.heading) }
+            player.buffering && !hasFrame -> Box(Modifier.align(Alignment.Center)) { Label("Lädt …", Type.heading) }
         }
         if (player.paused && layer == Layer.NONE) {
             Box(Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(50)).padding(20.dp)) { Label("⏸", Type.title) }
@@ -605,8 +615,30 @@ fun duration(ms: Long): String {
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
 
+/** HDR-Anpassung: Wert und Anzeige. */
+val HDR_MODES = listOf("AUTO" to "Automatisch", "PQ" to "HDR10", "HLG" to "HLG", "OFF" to "Aus")
+fun hdrLabel(mode: String) = HDR_MODES.firstOrNull { it.first == mode }?.second ?: "Automatisch"
+
 /** Anteil der Sendung, der schon gelaufen ist. */
 fun Programme.fraction(now: Long = System.currentTimeMillis()): Float =
     if (stop > start) ((now - start).toFloat() / (stop - start)).coerceIn(0f, 1f) else 0f
 
 fun nowOf(list: List<Programme>, at: Long = System.currentTimeMillis()): Programme? = list.firstOrNull { it.start <= at && it.stop > at }
+
+/**
+ * Das Videobild. Neue Bilder lösen nur Neuzeichnen aus (nicht den ganzen Player-Bildschirm): [VideoPlayer.frameTick]
+ * wird erst beim Zeichnen gelesen. Schneller Weg: YUV-Ebenen + Shader; sonst das RGB-Bild wie früher.
+ */
+@Composable
+fun VideoView(player: de.ayutv.desktop.player.VideoPlayer, modifier: Modifier = Modifier) {
+    if (player.gpuVideo) {
+        androidx.compose.foundation.Canvas(modifier) {
+            player.frameTick // Neuzeichnen bei jedem Bild
+            val frame = player.currentFrame() ?: return@Canvas
+            drawIntoCanvas { canvas -> frame.draw(canvas.nativeCanvas, size.width, size.height) }
+        }
+    } else {
+        val frame = player.frame ?: return
+        Image(frame, null, modifier, contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+    }
+}

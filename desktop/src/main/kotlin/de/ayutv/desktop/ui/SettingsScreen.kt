@@ -109,6 +109,19 @@ fun SettingsScreen(app: AppState) {
             }
             Label(BufferProfile.of(user.bufferProfile).hint, Type.small)
             Spacer(Modifier.height(8.dp))
+            Label("HDR-Anpassung (HDR10/HLG auf normalem Bildschirm)", Type.body)
+            Row(Modifier.padding(vertical = 4.dp)) {
+                HDR_MODES.forEach { (value, label) ->
+                    Selectable({ app.store.updateUser { it.copy(hdrMode = value) }; app.applyBuffer() }, selected = user.hdrMode == value) { Label(label) }
+                    Spacer(Modifier.width(6.dp))
+                }
+            }
+            Label(
+                if (app.player.gpuVideo) "Videoausgabe: Grafikkarte (schnell, auch für 4K). Automatisch: HEVC/AV1 mit 10 Bit in 4K gilt als HDR10."
+                else "Videoausgabe: RGB (kompatibel; die Grafik kann den schnellen Weg nicht). HDR wird nicht angepasst.",
+                Type.small, maxLines = 2,
+            )
+            Spacer(Modifier.height(8.dp))
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
             }

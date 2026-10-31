@@ -134,6 +134,8 @@ data class UserData(
     val fullscreen: Boolean = false,
     /** Im Bild schalten ↑/↓ um (wie auf dem Fire TV); aus = ↑/↓ öffnen die Senderliste. */
     val zapWithUpDown: Boolean = true,
+    /** HDR-Anpassung: AUTO (HEVC/AV1 10 Bit in 4K = HDR10), PQ (HDR10), HLG, OFF. */
+    val hdrMode: String = "AUTO",
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */
