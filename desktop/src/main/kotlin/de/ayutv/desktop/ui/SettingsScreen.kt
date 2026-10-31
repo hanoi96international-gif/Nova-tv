@@ -173,6 +173,12 @@ fun SettingsScreen(app: AppState) {
                     Spacer(Modifier.width(6.dp))
                 }
             }
+            Toggle(
+                "KI-Hochrechnung der Grafikkarte (NVIDIA RTX Video Super Resolution / Intel VSR): Full-HD- und HD-Sender werden " +
+                    "mit KI auf die Bildschirmauflösung gerechnet – schärfer und mit weniger Kompressionsfehlern. Nutzt immer die " +
+                    "Direktausgabe. Bei NVIDIA zusätzlich in der NVIDIA-App unter „RTX Video Enhancement“ → „Super Resolution“ einschalten.",
+                user.aiUpscale,
+            ) { app.store.updateUser { it.copy(aiUpscale = !it.aiUpscale) }; app.applyBuffer() }
             Label(
                 "VLC dekodiert und zeigt das Bild komplett auf der Grafikkarte – der schnellste Weg, flüssig auch bei 4K mit 50 Bildern, und mit HDR-Bildschirm kommt HDR10 unverändert an. Menüs und Senderliste erscheinen wie gewohnt; solange sie offen sind, ist das Bild ausgeblendet. „Bei 4K“ wechselt automatisch, sobald ein Sender 4K liefert.",
                 Type.small, maxLines = 4,
