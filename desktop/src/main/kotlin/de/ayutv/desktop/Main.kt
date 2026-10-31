@@ -192,6 +192,7 @@ fun App(app: AppState, window: WindowState) {
                         Screen.MOVIES -> LibraryScreen(app, series = false)
                         Screen.SERIES -> LibraryScreen(app, series = true)
                         Screen.SEARCH -> SearchScreen(app)
+                        Screen.APPS -> de.ayutv.desktop.ui.AppsScreen(app)
                         Screen.SETTINGS -> SettingsScreen(app)
                     }
                 }

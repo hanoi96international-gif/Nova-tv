@@ -26,6 +26,18 @@
         </intent>
         <!-- „In VLC öffnen“ im Player-Menü, wenn VLC installiert ist. -->
         <package android:name="org.videolan.vlc" />
+        <!-- Reiter „Apps“: prüfen, welche Streaming-Apps installiert sind (Liste wie in StreamingApps). -->
+        <package android:name="com.netflix.ninja" />
+        <package android:name="com.netflix.mediaclient" />
+        <package android:name="com.amazon.firetv.youtube" />
+        <package android:name="com.google.android.youtube.tv" />
+        <package android:name="com.google.android.youtube.googletv" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.amazon.avod" />
+        <package android:name="com.amazon.amazonvideo.livingroom" />
+        <package android:name="com.amazon.avod.thirdpartyclient" />
+        <package android:name="com.spotify.tv.android" />
+        <package android:name="com.spotify.music" />
     </queries>
 
     <application

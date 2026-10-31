@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
@@ -93,6 +94,7 @@ enum class Section(val label: String, val icon: ImageVector) {
     MOVIES("Filme", Icons.Filled.PlayArrow),
     SERIES("Serien", Icons.Filled.Star),
     SEARCH("Suche", Icons.Filled.Search),
+    APPS("Apps", Icons.AutoMirrored.Filled.ExitToApp),
     SETTINGS("Einstellungen", Icons.Filled.Settings),
 }
 
@@ -185,6 +187,7 @@ fun AyuRoot() {
                             Section.MOVIES -> MoviesScreen()
                             Section.SERIES -> SeriesScreen(openSeries = openSeries, onOpenSeries = { openSeries = it })
                             Section.SEARCH -> SearchScreen(onOpenSeries = { openSeries = it; section = Section.SERIES })
+                            Section.APPS -> de.ayutv.ui.apps.AppsScreen()
                             Section.SETTINGS -> SettingsScreen(
                                 onAddPlaylist = { addingPlaylist = true },
                                 onManageGroups = { managingGroups = it },

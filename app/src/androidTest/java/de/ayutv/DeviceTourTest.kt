@@ -273,6 +273,7 @@ class DeviceTourTest {
             next("05_movies")
             next("05b_series")
             next("06_search")
+            next("06b_apps")
             next("07_settings")
         } }
 
