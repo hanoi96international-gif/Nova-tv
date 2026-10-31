@@ -124,6 +124,30 @@ jobs:
           Get-Content $out
           if (-not (Select-String -Path $out -Pattern "^result=OK" -Quiet)) { throw "Selbsttest fehlgeschlagen" }
 
+      # Signieren, sobald ein Code-Signing-Zertifikat hinterlegt ist (Repository → Settings → Secrets → Actions:
+      # WINDOWS_SIGN_CERT = PFX-Datei als Base64, WINDOWS_SIGN_PASSWORD = Passwort). Dann warnt Windows nicht mehr vor
+      # „Unbekannter Herausgeber“. Ohne Zertifikat bleibt alles unsigniert wie bisher.
+      - name: Signieren (nur mit Zertifikat)
+        shell: pwsh
+        env:
+          SIGN_CERT: ${{ secrets.WINDOWS_SIGN_CERT }}
+          SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
+        run: |
+          if (-not $env:SIGN_CERT) { Write-Host "Kein Zertifikat hinterlegt – Installer bleiben unsigniert."; exit 0 }
+          $pfx = Join-Path $env:RUNNER_TEMP "sign.pfx"
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGN_CERT))
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          $files = @(
+            (Get-ChildItem desktop/build/compose/binaries/main/app/DnA-TV/DnA-TV.exe).FullName,
+            (Get-ChildItem desktop/build/compose/binaries/main/msi/*.msi | Select-Object -First 1).FullName,
+            (Get-ChildItem desktop/build/compose/binaries/main/exe/*.exe | Select-Object -First 1).FullName
+          )
+          try {
+            & $signtool.FullName sign /f $pfx /p $env:SIGN_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $files
+            if ($LASTEXITCODE -ne 0) { throw "signtool fehlgeschlagen ($LASTEXITCODE)" }
+            & $signtool.FullName verify /pa $files
+          } finally { Remove-Item $pfx -ErrorAction SilentlyContinue }
+
       - name: Dateien benennen
         shell: pwsh
         run: |
