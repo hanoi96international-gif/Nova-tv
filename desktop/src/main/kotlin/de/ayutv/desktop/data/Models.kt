@@ -197,6 +197,9 @@ data class UserData(
     val appsHidden: Set<String> = emptySet(),
     /** TV-Modus (Mini-PC am Fernseher): mit Windows starten, immer Vollbild, Mauszeiger ausblenden. */
     val tvMode: Boolean = false,
+    /** Design (STANDARD, OLED) und Akzentfarbe (Palette.ACCENTS). */
+    val uiTheme: String = "STANDARD",
+    val accent: String = "BLAU",
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */

@@ -1,6 +1,8 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -164,6 +166,33 @@ fun SettingsScreen(app: AppState) {
             }
             Toggle("Im Bild schalten ↑/↓ um (aus: ↑/↓ öffnen die Senderliste)", user.zapWithUpDown) {
                 app.store.updateUser { u -> u.copy(zapWithUpDown = !u.zapWithUpDown) }
+            }
+        }
+
+        item { Section("Aussehen") }
+        item {
+            Column {
+                Label("Design", Type.body)
+                Row(Modifier.padding(vertical = 4.dp)) {
+                    Palette.THEMES.forEach { (value, label) ->
+                        Selectable({ app.store.updateUser { it.copy(uiTheme = value) } }, selected = user.uiTheme == value) { Label(label) }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                }
+                Label("Akzentfarbe (Auswahlrahmen, Fortschritt, Hervorhebungen)", Type.body)
+                Row(Modifier.padding(vertical = 4.dp)) {
+                    Palette.ACCENTS.forEach { (value, label, colors) ->
+                        Selectable({ app.store.updateUser { it.copy(accent = value) } }, selected = user.accent == value) {
+                            androidx.compose.foundation.layout.Box(
+                                Modifier.size(14.dp).background(colors.first, androidx.compose.foundation.shape.RoundedCornerShape(7.dp)),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Label(label)
+                        }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                }
+                Label("OLED-Schwarz: echtes Schwarz statt Dunkelblau – auf OLED-Fernsehern ohne Grauschleier.", Type.small)
             }
         }
 

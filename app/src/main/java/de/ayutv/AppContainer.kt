@@ -122,7 +122,7 @@ class AppContainer(val context: Context) {
         Translators.remote = de.ayutv.data.translate.RemoteTranslator(context.applicationContext)
         Translators.withPhone = de.ayutv.data.translate.HelperAwareTranslator(Translators.remote, http)
         // Aussehen gleich anwenden (Menüs und Player lesen die Farben aus de.ayutv.ui.theme.AyuColors).
-        scope.launch { runCatching { de.ayutv.ui.theme.AyuColors.use(settings.current().uiTheme) } }
+        scope.launch { runCatching { settings.current().let { de.ayutv.ui.theme.AyuColors.use(it.uiTheme, it.accent) } } }
         // Senderqualität: Gemessenes laden, Filter und Vorlieben aus den Einstellungen übernehmen.
         scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.load(qualityFile) }
         scope.launch {

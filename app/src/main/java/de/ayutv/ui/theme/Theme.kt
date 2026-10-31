@@ -31,6 +31,23 @@ enum class UiTheme(val label: String) {
     NORDLICHT("Nordlicht"),
     HANNOVER("Hannover 96"),
     CLASSIC("Standard"),
+    OLED("OLED-Schwarz"),
+}
+
+/**
+ * Akzentfarbe (Fokusrahmen, Fortschritt, Hervorhebungen), unabhängig vom Design wählbar. DESIGN = die Farbe,
+ * die zum gewählten Design gehört.
+ */
+enum class AccentChoice(val label: String, val accent: Long, val soft: Long) {
+    DESIGN("Passend zum Design", 0, 0),
+    TUERKIS("Türkis", 0xFF5EEAD4, 0xFF0F766E),
+    BLAU("Blau", 0xFF3DA9FC, 0xFF235F8E),
+    VIOLETT("Violett", 0xFFA78BFA, 0xFF5B21B6),
+    GRUEN("Grün", 0xFF4ADE80, 0xFF15803D),
+    ORANGE("Orange", 0xFFFB923C, 0xFFC2410C),
+    PINK("Pink", 0xFFF472B6, 0xFFBE185D),
+    GOLD("Gold", 0xFFFACC15, 0xFFA16207),
+    ROT("Rot", 0xFFFF4D4F, 0xFFB0141B),
 }
 
 /** Farben eines Aussehens. */
@@ -90,10 +107,29 @@ data class Palette(
             progress = Color(0xFF1FB45A),
         )
 
+        /** Echtes Schwarz: auf OLED-Fernsehern leuchten dort keine Bildpunkte (kein Grauschleier, kein Einbrennen). */
+        val OLED = Palette(
+            background = Color(0xFF000000),
+            surface = Color(0xFF0E0E10),
+            surfaceRaised = Color(0xFF1A1A1E),
+            accent = Color(0xFF3DA9FC),
+            accentSoft = Color(0xFF1F4F7A),
+            live = Color(0xFFE5484D),
+            textPrimary = Color(0xFFF2F2F4),
+            textSecondary = Color(0xFF9A9AA4),
+            progress = Color(0xFF3DA9FC),
+        )
+
         fun of(theme: UiTheme) = when (theme) {
             UiTheme.HANNOVER -> HANNOVER
             UiTheme.NORDLICHT -> NORDLICHT
             UiTheme.CLASSIC -> CLASSIC
+            UiTheme.OLED -> OLED
+        }
+
+        fun of(theme: UiTheme, accent: AccentChoice): Palette = of(theme).let { base ->
+            if (accent == AccentChoice.DESIGN) base
+            else base.copy(accent = Color(accent.accent), accentSoft = Color(accent.soft), progress = Color(accent.accent))
         }
     }
 }
@@ -107,9 +143,13 @@ object AyuColors {
     var theme by mutableStateOf(UiTheme.NORDLICHT)
         private set
 
-    fun use(next: UiTheme) {
+    var accent by mutableStateOf(AccentChoice.DESIGN)
+        private set
+
+    fun use(next: UiTheme, nextAccent: AccentChoice = accent) {
         theme = next
-        palette = Palette.of(next)
+        accent = nextAccent
+        palette = Palette.of(next, nextAccent)
     }
 
     val Background get() = palette.background
@@ -192,7 +232,7 @@ fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit
                         val image = rasterize { StadiumNight(it).draw(this) }
                         onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
                     }
-                    UiTheme.CLASSIC -> Modifier
+                    UiTheme.CLASSIC, UiTheme.OLED -> Modifier
                 }
             )
     ) {

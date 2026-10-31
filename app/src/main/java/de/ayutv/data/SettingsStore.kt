@@ -175,6 +175,7 @@ data class AppSettings(
     val fireTvHome: Boolean = true,
     /** Aussehen der Menüs. */
     val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.NORDLICHT,
+    val accent: de.ayutv.ui.theme.AccentChoice = de.ayutv.ui.theme.AccentChoice.DESIGN,
     /** Proxy nur für DnA-TV: aus, für alles oder nur für ausgewählte Playlists. */
     val proxyMode: ProxyMode = ProxyMode.OFF,
     val proxyType: ProxyType = ProxyType.HTTP,
@@ -260,6 +261,7 @@ class SettingsStore(private val context: Context) {
         // Neuer Schlüssel (0.36): Vorbereiten im Hintergrund ist für alle erst einmal aus, auch wer es nie umgestellt hat.
         val pretranslate = booleanPreferencesKey("pretranslate_on")
         val uiTheme = stringPreferencesKey("ui_theme")
+        val accent = stringPreferencesKey("accent")
         val minQuality = stringPreferencesKey("min_quality")
         val preferUhd = booleanPreferencesKey("prefer_uhd")
         val hideBroken = booleanPreferencesKey("hide_broken_channels")
@@ -399,6 +401,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.lastTranslationTarget] = next.lastTranslationTarget
             prefs[Keys.pretranslate] = next.pretranslate
             prefs[Keys.uiTheme] = next.uiTheme.name
+            prefs[Keys.accent] = next.accent.name
             prefs[Keys.minQuality] = next.minQuality.name
             prefs[Keys.preferUhd] = next.preferUhd
             prefs[Keys.hideBroken] = next.hideBrokenChannels
@@ -461,6 +464,7 @@ class SettingsStore(private val context: Context) {
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
         pretranslate = this[Keys.pretranslate] ?: false,
         uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.NORDLICHT),
+        accent = enumOrDefault(this[Keys.accent], de.ayutv.ui.theme.AccentChoice.DESIGN),
         minQuality = enumOrDefault(this[Keys.minQuality], MinQuality.ALL),
         preferUhd = this[Keys.preferUhd] ?: false,
         hideBrokenChannels = this[Keys.hideBroken] ?: false,

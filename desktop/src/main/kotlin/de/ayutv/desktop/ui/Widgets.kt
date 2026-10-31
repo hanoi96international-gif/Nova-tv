@@ -52,12 +52,37 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Farben wie in der Fire-TV-App (Standard-Design). */
+/**
+ * Farben der Oberfläche. Design (Standard oder OLED-Schwarz) und Akzentfarbe sind wählbar (Einstellungen → Anzeige);
+ * als beobachteter Zustand, damit ein Wechsel sofort überall wirkt.
+ */
 object Palette {
-    val background = Color(0xFF0B0F14)
-    val surface = Color(0xFF151B23)
-    val raised = Color(0xFF1E2631)
-    val accent = Color(0xFF3DA9FC)
-    val accentSoft = Color(0xFF235F8E)
+    /** Akzentfarben: Kennung, Name, Farbe, abgedunkelte Fokusfläche. */
+    val ACCENTS = listOf(
+        Triple("BLAU", "Blau", Color(0xFF3DA9FC) to Color(0xFF235F8E)),
+        Triple("TUERKIS", "Türkis", Color(0xFF5EEAD4) to Color(0xFF0F766E)),
+        Triple("VIOLETT", "Violett", Color(0xFFA78BFA) to Color(0xFF5B21B6)),
+        Triple("GRUEN", "Grün", Color(0xFF4ADE80) to Color(0xFF15803D)),
+        Triple("ORANGE", "Orange", Color(0xFFFB923C) to Color(0xFFC2410C)),
+        Triple("PINK", "Pink", Color(0xFFF472B6) to Color(0xFFBE185D)),
+        Triple("GOLD", "Gold", Color(0xFFFACC15) to Color(0xFFA16207)),
+        Triple("ROT", "Rot", Color(0xFFFF4D4F) to Color(0xFFB0141B)),
+    )
+    val THEMES = listOf("STANDARD" to "Standard (Dunkelblau)", "OLED" to "OLED-Schwarz")
+
+    private var oled by androidx.compose.runtime.mutableStateOf(false)
+    private var accentPair by androidx.compose.runtime.mutableStateOf(ACCENTS.first().third)
+
+    fun use(theme: String, accent: String) {
+        oled = theme == "OLED"
+        accentPair = (ACCENTS.firstOrNull { it.first == accent } ?: ACCENTS.first()).third
+    }
+
+    val background get() = if (oled) Color(0xFF000000) else Color(0xFF0B0F14)
+    val surface get() = if (oled) Color(0xFF0E0E10) else Color(0xFF151B23)
+    val raised get() = if (oled) Color(0xFF1A1A1E) else Color(0xFF1E2631)
+    val accent get() = accentPair.first
+    val accentSoft get() = accentPair.second
     val live = Color(0xFFE5484D)
     val text = Color(0xFFF2F5F8)
     val secondary = Color(0xFF9AA7B4)

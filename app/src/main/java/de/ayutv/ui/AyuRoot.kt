@@ -136,7 +136,7 @@ fun AyuRoot() {
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
     val sectionState = rememberSaveableStateHolder()
 
-    LaunchedEffect(appSettings?.uiTheme) { appSettings?.uiTheme?.let { AyuColors.use(it) } }
+    LaunchedEffect(appSettings?.uiTheme, appSettings?.accent) { appSettings?.let { AyuColors.use(it.uiTheme, it.accent) } }
 
     de.ayutv.ui.theme.AppBackground {
         val list = playlists

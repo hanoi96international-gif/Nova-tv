@@ -569,11 +569,23 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Design",
                             settings.uiTheme.label,
                             "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett. Hannover 96: Stadionabend mit Flutlicht, " +
-                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Standard: schlichtes Dunkelblau. OK wechselt.",
+                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Standard: schlichtes Dunkelblau. OLED-Schwarz: echtes Schwarz " +
+                                "für OLED-Fernseher. OK wechselt.",
                         ) {
                             val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
-                            de.ayutv.ui.theme.AyuColors.use(next)
+                            de.ayutv.ui.theme.AyuColors.use(next, settings.accent)
                             update { it.copy(uiTheme = next) }
+                        }
+                    }
+                    item {
+                        SettingRow(
+                            "Akzentfarbe",
+                            settings.accent.label,
+                            "Farbe von Auswahlrahmen, Fortschritt und Hervorhebungen – zu jedem Design frei wählbar. OK wechselt.",
+                        ) {
+                            val next = de.ayutv.ui.theme.AccentChoice.entries[(settings.accent.ordinal + 1) % de.ayutv.ui.theme.AccentChoice.entries.size]
+                            de.ayutv.ui.theme.AyuColors.use(settings.uiTheme, next)
+                            update { it.copy(accent = next) }
                         }
                     }
                     if (de.ayutv.data.FireTvHome.supported(context)) item {
