@@ -22,16 +22,17 @@ kotlin {
     }
 }
 
-// OpenSubtitles-Schlüssel der App: aus dem CI-Geheimnis in die Ressourcen, nie in den Quelltext.
+// Nur die Versionsnummer (für die Update-Prüfung) in die Ressourcen. Bewusst KEINE Schlüssel oder Zugangsdaten:
+// die App enthält keine; sie kommen nur vom Nutzer oder aus seiner übertragenen Sicherung.
 val keyResources = layout.buildDirectory.dir("generated/keys")
 val writeKeys by tasks.registering {
-    val key = providers.environmentVariable("OPENSUBTITLES_API_KEY").orElse("")
-    inputs.property("keyHash", key.map { it.trim().hashCode() })
+    val versionName = appVersionName
+    inputs.property("version", versionName)
     outputs.dir(keyResources)
     doLast {
-        val file = keyResources.get().file("opensubtitles.key").asFile
+        val file = keyResources.get().file("app.version").asFile
         file.parentFile.mkdirs()
-        file.writeText(key.get().trim())
+        file.writeText(versionName)
     }
 }
 
@@ -49,6 +50,9 @@ sourceSets {
             "de/ayutv/data/parse/EpgMatcher.kt",
             "de/ayutv/data/parse/Episodes.kt",
             "de/ayutv/data/parse/ChannelVariants.kt",
+            "de/ayutv/data/parse/Countries.kt",
+            "de/ayutv/data/parse/CatchupUrls.kt",
+            "de/ayutv/data/remote/SyncMerge.kt",
             "de/ayutv/data/parse/OpenSubtitlesParsing.kt",
             "de/ayutv/data/parse/Srt.kt",
             "de/ayutv/data/parse/ProgrammeText.kt",
@@ -71,6 +75,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.11.0")
     implementation("uk.co.caprica:vlcj:4.12.1")
+    // Fire-TV-Fernbedienung: Windows-Schnittstellen (Raw Input, Tastatur-Hook). Dieselbe Version, die vlcj mitbringt.
+    implementation("net.java.dev.jna:jna-jpms:5.16.0")
+    implementation("net.java.dev.jna:jna-platform-jpms:5.16.0")
     // XmlPullParser gibt es unter Android eingebaut, hier aus kxml2.
     implementation("net.sf.kxml:kxml2:2.3.0")
     testImplementation(kotlin("test"))

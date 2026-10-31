@@ -16,7 +16,16 @@ object SelfTest {
         val lines = ArrayList<String>()
         var ok = false
         try {
+            // Fire-TV-Fernbedienung: Raw Input und Tastatur-Hook unter Windows einrichten (ohne Taste zu drücken).
+            if (de.ayutv.desktop.input.WindowsRemote.isWindows) {
+                val remote = de.ayutv.desktop.input.WindowsRemote(onButton = { _, _, _ -> }, isForeground = { false })
+                remote.start()
+                Thread.sleep(1_500)
+                lines += "remote=" + (remote.problem?.let { "FEHLER $it" } ?: if (remote.running) "OK" else "beendet")
+                remote.stop()
+            }
             val player = VideoPlayer()
+            lines += "video=" + if (player.gpuVideo) "gpu" else "rgb"
             lines += "vlc=${player.vlcVersion ?: "fehlt"} ${player.error.orEmpty()}".trim()
             if (player.available) {
                 val image = File.createTempFile("dna-tv-test", ".png")
@@ -30,6 +39,21 @@ object SelfTest {
                 Thread.sleep(300)
                 lines += "frames=${player.framesRendered.get()} playing=${player.playing} error=${player.error}"
                 ok = player.framesRendered.get() > 0
+                // Schneller Weg: das Testbild (Blau 3DA9FC) über den Shader zeichnen und die Farbe prüfen.
+                if (player.gpuVideo) {
+                    // Auf dem Oberflächen-Thread zeichnen, wie in der App (dort werden alte Bilder freigegeben).
+                    var color: Triple<Int, Int, Int>? = null
+                    javax.swing.SwingUtilities.invokeAndWait { color = player.currentFrame()?.let { f ->
+                        val info = org.jetbrains.skia.ImageInfo(64, 36, org.jetbrains.skia.ColorType.RGBA_8888, org.jetbrains.skia.ColorAlphaType.PREMUL)
+                        val surface = org.jetbrains.skia.Surface.makeRaster(info)
+                        f.draw(surface.canvas, 64f, 36f)
+                        val px = org.jetbrains.skia.Bitmap.makeFromImage(surface.makeImageSnapshot()).readPixels(info, 64 * 4, 0, 0)
+                        px?.let { val at = (18 * 64 + 32) * 4; Triple(it[at].toInt() and 0xFF, it[at + 1].toInt() and 0xFF, it[at + 2].toInt() and 0xFF) }
+                    } }
+                    val c = color
+                    lines += "pixel=${c?.toList()} (erwartet etwa [61, 169, 252])"
+                    ok = ok && c != null && kotlin.math.abs(c.first - 61) < 25 && kotlin.math.abs(c.second - 169) < 25 && kotlin.math.abs(c.third - 252) < 25
+                }
                 player.release()
                 image.delete()
             }

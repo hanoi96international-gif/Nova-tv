@@ -11,6 +11,7 @@ on:
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
       - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/src/main/java/de/ayutv/data/net/**"
+      - "app/src/main/java/de/ayutv/data/remote/SyncMerge.kt"
       - "app/src/main/java/de/ayutv/player/SpeechSync.kt"
       - "app/src/main/java/de/ayutv/player/SubtitleSync.kt"
       - "app/build.gradle.kts"
@@ -23,6 +24,7 @@ on:
       - "app/src/main/java/de/ayutv/ui/live/BlockMove.kt"
       - "app/src/main/java/de/ayutv/data/sport/LiveScores.kt"
       - "app/src/main/java/de/ayutv/data/net/**"
+      - "app/src/main/java/de/ayutv/data/remote/SyncMerge.kt"
       - "app/src/main/java/de/ayutv/player/SpeechSync.kt"
       - "app/src/main/java/de/ayutv/player/SubtitleSync.kt"
       - "app/build.gradle.kts"
@@ -103,8 +105,6 @@ jobs:
           Remove-Item "$dst/plugins/plugins.dat" -ErrorAction SilentlyContinue
 
       - name: Installer bauen
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ./gradlew -p desktop packageMsi packageExe createDistributable --console=plain
 
       - name: Starttest (VLC laden, Fenster öffnen)
@@ -115,6 +115,12 @@ jobs:
           $out = Join-Path $env:RUNNER_TEMP "selftest.txt"
           $p = Start-Process $exe -ArgumentList "--selftest", "`"$out`"" -PassThru
           if (-not $p.WaitForExit(120000)) { $p.Kill(); throw "Selbsttest hängt" }
+          if (-not (Test-Path $out)) {
+            # Abgestürzt, bevor ein Ergebnis geschrieben wurde: Exit-Code und JVM-Absturzprotokoll zeigen.
+            Write-Host "Kein Ergebnis, Exit-Code $($p.ExitCode)"
+            Get-ChildItem -Recurse -Filter "hs_err_pid*.log" $app.FullName, (Get-Location), $env:TEMP -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "== $($_.FullName)"; Get-Content $_.FullName -TotalCount 80 }
+            throw "Selbsttest ohne Ergebnis"
+          }
           Get-Content $out
           if (-not (Select-String -Path $out -Pattern "^result=OK" -Quiet)) { throw "Selbsttest fehlgeschlagen" }
 

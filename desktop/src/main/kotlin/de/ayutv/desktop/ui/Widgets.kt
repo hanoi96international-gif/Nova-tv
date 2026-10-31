@@ -26,9 +26,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import de.ayutv.desktop.input.RemoteButton
+import de.ayutv.desktop.input.remote
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -59,6 +64,7 @@ object Palette {
 }
 
 object Type {
+    val display = TextStyle(color = Palette.text, fontSize = 40.sp, fontWeight = FontWeight.Bold)
     val title = TextStyle(color = Palette.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
     val heading = TextStyle(color = Palette.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
     val body = TextStyle(color = Palette.text, fontSize = 15.sp)
@@ -70,8 +76,10 @@ fun Label(text: String, style: TextStyle = Type.body, modifier: Modifier = Modif
     BasicText(text, modifier, style = if (color != null) style.copy(color = color) else style, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 
 /**
- * Wählbares Element für alle Eingaben: Maus (Klick, Rechtsklick = [onMenu]), Tastatur und Bluetooth-Fernbedienung
- * (Pfeiltasten wechseln den Fokus, Enter = OK, Menü-/Kontexttaste oder lange Enter = [onMenu]).
+ * Wählbares Element für alle Eingaben: Maus (Klick, Rechtsklick = [onMenu]), Tastatur und Fire-TV-Fernbedienung
+ * (Pfeiltasten wechseln den Fokus, OK/Enter wählt, ☰ Menü, Kontextmenü-Taste oder OK lange drücken = [onMenu]).
+ * OK zählt erst beim Loslassen und nur, wenn es auf diesem Element auch gedrückt wurde (sonst würde das Loslassen
+ * nach einem Seitenwechsel gleich das nächste Element auslösen).
  */
 @Composable
 fun Selectable(
@@ -97,29 +105,33 @@ fun Selectable(
         modifier
             .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
             .onPreviewKeyEvent { e ->
-                when (e.key) {
-                    Key.Enter, Key.NumPadEnter, Key.DirectionCenter -> {
+                when (e.remote()) {
+                    RemoteButton.OK -> {
                         if (e.type == KeyEventType.KeyDown) {
                             if (downAt[0] == 0L) downAt[0] = System.currentTimeMillis()
                         } else if (e.type == KeyEventType.KeyUp) {
-                            val held = System.currentTimeMillis() - downAt[0]
+                            val pressedAt = downAt[0]
                             downAt[0] = 0L
-                            if (held >= LONG_PRESS_MS && onMenu != null) onMenu() else onClick()
+                            if (pressedAt != 0L) {
+                                val held = System.currentTimeMillis() - pressedAt
+                                if (held >= LONG_PRESS_MS && onMenu != null) onMenu() else onClick()
+                            }
                         }
                         true
                     }
-                    Key.Menu -> {
-                        if (e.type == KeyEventType.KeyUp) onMenu?.invoke()
+                    RemoteButton.MENU -> {
+                        if (e.type == KeyEventType.KeyDown) onMenu?.invoke()
                         onMenu != null
                     }
                     else -> false
                 }
             }
+            .onFocusChanged { if (!it.isFocused) downAt[0] = 0L }
             .onPointerEvent(PointerEventType.Press) { e ->
                 if (onMenu != null && e.buttons.isSecondaryPressed) onMenu()
             }
             .background(background, shape)
-            .border(if (focused) 2.dp else 0.dp, if (focused) Palette.accent else Color.Transparent, shape)
+            .border(if (focused) 3.dp else 0.dp, if (focused) Palette.accent else Color.Transparent, shape)
             .hoverable(interaction)
             .clickable(interaction, indication = null, onClick = onClick)
             .focusable(interactionSource = interaction)
@@ -176,6 +188,7 @@ fun Field(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val focusManager = LocalFocusManager.current
     Column(modifier.fillMaxWidth().padding(vertical = 4.dp)) {
         Label(label, Type.small)
         Spacer(Modifier.height(2.dp))
@@ -190,9 +203,13 @@ fun Field(
             modifier = Modifier.fillMaxWidth()
                 .let { if (focusRequester != null) it.focusRequester(focusRequester) else it }
                 .onPreviewKeyEvent { e ->
-                    if (onSubmit != null && e.type == KeyEventType.KeyUp && (e.key == Key.Enter || e.key == Key.NumPadEnter)) {
-                        onSubmit(); true
-                    } else false
+                    when {
+                        onSubmit != null && e.type == KeyEventType.KeyUp && (e.key == Key.Enter || e.key == Key.NumPadEnter) -> { onSubmit(); true }
+                        // ↑/↓ verlassen das Feld (sonst bliebe man mit der Fernbedienung darin hängen).
+                        e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+                        e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+                        else -> false
+                    }
                 }
                 .background(Palette.raised, RoundedCornerShape(6.dp))
                 .border(if (focused) 2.dp else 1.dp, if (focused) Palette.accent else Palette.surface, RoundedCornerShape(6.dp))
@@ -210,3 +227,64 @@ fun FocusOnShow(requester: FocusRequester, key: Any? = Unit) {
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) =
     Box(modifier.background(Palette.surface, RoundedCornerShape(12.dp)).padding(12.dp)) { content() }
+
+@Composable
+fun Progress(fraction: Float, modifier: Modifier = Modifier, height: Int = 4) {
+    Box(modifier.fillMaxWidth().height(height.dp).background(Palette.raised, RoundedCornerShape((height / 2).dp))) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(height.dp).background(Palette.accent, RoundedCornerShape((height / 2).dp)))
+    }
+}
+
+/** Kopfzeile einer Seite: Titel, optional Hinweis rechts (z. B. Tastenhilfe). */
+@Composable
+fun ScreenHeader(title: String, hint: String? = null) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Label(title, Type.title, Modifier.weight(1f))
+        if (hint != null) Label(hint, Type.small, maxLines = 2)
+    }
+}
+
+/**
+ * Kachel für die Startseite (Sender, Film, Serie): Bild, Titel, Zeile darunter, optional Fortschritt.
+ * Fokus und Mausrahmen wie bei [Selectable].
+ */
+@Composable
+fun Tile(
+    title: String,
+    subtitle: String?,
+    image: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    progress: Float? = null,
+    wide: Boolean = true,
+    onMenu: (() -> Unit)? = null,
+    focusRequester: FocusRequester? = null,
+) {
+    val width = if (wide) 240.dp else 150.dp
+    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
+        Column(Modifier.fillMaxWidth()) {
+            val picture = rememberImage(image)
+            Box(
+                Modifier.fillMaxWidth().height(if (wide) 110.dp else 210.dp).background(Palette.raised, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (picture != null) {
+                    androidx.compose.foundation.Image(
+                        picture, null,
+                        Modifier.fillMaxWidth().height(if (wide) 110.dp else 210.dp).padding(if (wide) 18.dp else 0.dp),
+                        contentScale = if (wide) androidx.compose.ui.layout.ContentScale.Fit else androidx.compose.ui.layout.ContentScale.Crop,
+                    )
+                } else {
+                    Label(title.take(18), Type.heading, Modifier.padding(8.dp), maxLines = 2)
+                }
+            }
+            if (progress != null) {
+                Spacer(Modifier.height(4.dp))
+                Progress(progress)
+            }
+            Spacer(Modifier.height(6.dp))
+            Label(title, Type.body)
+            if (!subtitle.isNullOrEmpty()) Label(subtitle, Type.small)
+        }
+    }
+}

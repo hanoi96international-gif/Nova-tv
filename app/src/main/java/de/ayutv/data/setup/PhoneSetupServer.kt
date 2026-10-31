@@ -242,7 +242,7 @@ class PhoneSetupServer(private val container: AppContainer) {
             Kostenloses Konto auf <a href="https://www.opensubtitles.com" target=_blank>opensubtitles.com</a> anlegen,
             dann <a href="https://www.opensubtitles.com/consumers" target=_blank>opensubtitles.com/consumers</a> →
             „New consumer“ → Name z. B. „DnA-TV“ → API-Key kopieren.</p>
-            <label>API-Key<input name=os_key autocomplete=off placeholder="${if (settings.openSubtitlesApiKey.isNotBlank()) "eingebaut – nur für einen eigenen Schlüssel ausfüllen" else "API-Key einfügen"}"></label>
+            <label>API-Key<input name=os_key autocomplete=off placeholder="${if (settings.openSubtitlesApiKey.isNotBlank()) "gespeichert – zum Ändern neu einfügen" else "API-Key einfügen"}"></label>
             <label>Benutzername (empfohlen: 20 statt 5 Downloads pro Tag)<input name=os_user autocomplete=username value="${esc(settings.openSubtitlesUser)}"></label>
             <label>Passwort<input name=os_password type=password autocomplete=current-password placeholder="${if (settings.openSubtitlesPassword.isNotEmpty()) "gespeichert" else ""}"></label>
 

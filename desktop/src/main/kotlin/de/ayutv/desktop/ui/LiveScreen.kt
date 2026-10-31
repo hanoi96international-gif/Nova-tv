@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -55,8 +56,10 @@ fun LiveScreen(app: AppState) {
     val guide by store.guide.collectAsState()
     val playlists by store.playlists.collectAsState()
 
-    var group by remember { mutableStateOf<GroupRef>(if (user.favorites.isNotEmpty()) GroupRef.Favorites else GroupRef.All) }
-    var focusedKey by remember { mutableStateOf<String?>(null) }
+    var group by remember { mutableStateOf(app.liveGroup ?: if (user.favorites.isNotEmpty()) GroupRef.Favorites else GroupRef.All) }
+    var focusedKey by remember { mutableStateOf(app.liveFocus) }
+    LaunchedEffect(group) { app.liveGroup = group }
+    LaunchedEffect(focusedKey) { app.liveFocus = focusedKey }
     // Auswahl für Mehrfachauswahl; Verschieben bewegt die ausgewählten (oder den einen) Sender.
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
@@ -153,6 +156,12 @@ fun LiveScreen(app: AppState) {
                             if (group == ref) group = GroupRef.All
                             app.toast("„${ref.name}“ ausgeblendet. Sender in Favoriten und eigenen Gruppen bleiben.")
                         },
+                        MenuItem("🔒 Mit PIN sperren") {
+                            if (user.parentalPin.isEmpty()) return@MenuItem app.toast("Zuerst unter Einstellungen → Kindersicherung eine PIN festlegen")
+                            store.setLocked(de.ayutv.desktop.data.GroupKind.LIVE, ref.name, lock = true)
+                            if (group == ref) group = GroupRef.All
+                            app.toast("„${ref.name}“ gesperrt. Entsperren: Einstellungen → Kindersicherung")
+                        },
                     )
                     else -> emptyList()
                 },
@@ -215,7 +224,7 @@ fun LiveScreen(app: AppState) {
                 if (shown.isEmpty()) {
                     Empty(
                         when (group) {
-                            GroupRef.Favorites -> "Noch keine Favoriten. Rechtsklick (oder Enter lange drücken) auf einen Sender → „Zu Favoriten“."
+                            GroupRef.Favorites -> "Noch keine Favoriten. ☰ oder Rechtsklick (oder OK lange drücken) auf einen Sender → „Zu Favoriten“."
                             is GroupRef.Custom -> "Die Gruppe ist leer. Rechtsklick auf einen Sender → „Zu Gruppe hinzufügen“."
                             else -> "Keine Sender. Unter „Einstellungen“ die Playlist neu laden."
                         },
@@ -223,6 +232,16 @@ fun LiveScreen(app: AppState) {
                 } else {
                     val listState = rememberLazyListState()
                     val firstRow = remember { FocusRequester() }
+                    // Zurück aus dem Player: beim zuletzt gewählten Sender weitermachen.
+                    val restoreKey = remember { app.liveFocus?.takeIf { k -> shown.any { it.key == k } } }
+                    val restore = remember { FocusRequester() }
+                    LaunchedEffect(Unit) {
+                        val at = shown.indexOfFirst { it.key == restoreKey }
+                        if (at < 0) return@LaunchedEffect
+                        listState.scrollToItem((at - 3).coerceAtLeast(0))
+                        withFrameNanos { }
+                        runCatching { restore.requestFocus() }
+                    }
                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().onPreviewKeyEvent { e ->
                         val list = moving
                         if (list == null || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -246,7 +265,11 @@ fun LiveScreen(app: AppState) {
                                 subtitle = programme?.let { "${clock(it.start)}  ${it.title}" },
                                 trailing = if (group == GroupRef.All || group == GroupRef.Favorites || group is GroupRef.Custom) channel.group else null,
                                 selected = channel.key == focusedKey || (moving != null && channel.key in selected),
-                                focusRequester = if (index == 0) firstRow else null,
+                                focusRequester = when {
+                                    channel.key == restoreKey -> restore
+                                    index == 0 -> firstRow
+                                    else -> null
+                                },
                                 onMenu = { if (moving == null) channelMenu(channel) },
                                 onClick = {
                                     when {
@@ -276,7 +299,7 @@ fun LiveScreen(app: AppState) {
             val focused = focusedKey?.let { k -> shown.firstOrNull { it.key == k } }
             Panel(Modifier.width(320.dp).fillMaxHeight()) {
                 if (focused == null) {
-                    Label("Sender auswählen: Pfeiltasten oder Maus, Enter/Klick spielt ab. Rechtsklick oder Enter lange drücken öffnet das Menü.", Type.small, maxLines = 6)
+                    Label("Sender auswählen: Steuerkreuz, Pfeiltasten oder Maus. OK/Klick spielt ab, ☰, Rechtsklick oder OK lange drücken öffnet das Menü (Favorit, Gruppe, Verschieben).", Type.small, maxLines = 6)
                 } else {
                     ChannelInfo(focused, guide[focused.key].orEmpty())
                 }
@@ -317,13 +340,6 @@ fun ChannelInfo(channel: Channel, programmes: List<Programme>) {
             Label("DANACH", Type.small)
             next.forEach { p -> Label("${clock(p.start)}  ${p.title}", Type.body) }
         }
-    }
-}
-
-@Composable
-fun Progress(fraction: Float, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(4.dp).background(Palette.raised, RoundedCornerShape(2.dp))) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f)).height(4.dp).background(Palette.accent, RoundedCornerShape(2.dp)))
     }
 }
 

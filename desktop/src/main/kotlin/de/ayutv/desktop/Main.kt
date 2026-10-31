@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -23,6 +26,9 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusable
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -40,7 +46,13 @@ import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Store
 import de.ayutv.desktop.data.Sync
 import de.ayutv.desktop.player.VideoPlayer
+import de.ayutv.desktop.input.RemoteButton
+import de.ayutv.desktop.input.RemoteInput
+import de.ayutv.desktop.input.remote
 import de.ayutv.desktop.ui.AppState
+import de.ayutv.desktop.ui.CountryDialog
+import de.ayutv.desktop.ui.HomeScreen
+import de.ayutv.desktop.ui.clock
 import de.ayutv.desktop.ui.GuideScreen
 import de.ayutv.desktop.ui.Label
 import de.ayutv.desktop.ui.LibraryScreen
@@ -53,25 +65,44 @@ import de.ayutv.desktop.ui.SearchScreen
 import de.ayutv.desktop.ui.SettingsScreen
 import de.ayutv.desktop.ui.SportScreen
 import de.ayutv.desktop.ui.Type
+import java.awt.event.WindowEvent
+import java.awt.event.WindowFocusListener
 
 fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
     val store = Store(Store.defaultDir())
+    Log.init(store.dir)
     // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
     Network.apply(store)
+    // Fire-TV-Fernbedienung so früh wie möglich lesen (eigener Thread, nur unter Windows).
+    val input = RemoteInput().also { it.start() }
     application {
-        val window = rememberWindowState(size = DpSize(1280.dp, 780.dp))
+        val window = rememberWindowState(
+            size = DpSize(1280.dp, 780.dp),
+            placement = if (store.user.value.fullscreen) WindowPlacement.Fullscreen else WindowPlacement.Floating,
+        )
         val scope = rememberCoroutineScope()
-        val app = remember { AppState(store, Sync(store), scope) }
+        val app = remember { AppState(store, Sync(store), scope, input) }
         Window(
             onCloseRequest = { app.close(); exitApplication() },
             state = window,
             title = "DnA-TV",
             icon = remember { appIcon() },
         ) {
-            // Tasten vom Handy gehen an dieses Fenster.
-            LaunchedEffect(Unit) { app.remote.window = this@Window.window }
+            val awt = this.window
+            DisposableEffect(awt) {
+                // Tasten von Fire-TV- und Handy-Fernbedienung gehen an dieses Fenster, solange es vorn ist.
+                app.remote.window = awt
+                input.window = awt
+                input.foreground = awt.isFocused
+                val listener = object : WindowFocusListener {
+                    override fun windowGainedFocus(e: WindowEvent?) { input.foreground = true }
+                    override fun windowLostFocus(e: WindowEvent?) { input.foreground = false }
+                }
+                awt.addWindowFocusListener(listener)
+                onDispose { awt.removeWindowFocusListener(listener) }
+            }
             App(app, window)
         }
     }
@@ -86,40 +117,66 @@ private fun appIcon(): BitmapPainter? = runCatching {
 fun App(app: AppState, window: WindowState) {
     val focus = LocalFocusManager.current
     val status by app.sync.status.collectAsState()
+    val root = remember { FocusRequester() }
+    var rootFocused by remember { mutableStateOf(false) }
+    var rootHasFocus by remember { mutableStateOf(false) }
+    val source = app.input.source
 
-    // Beim Start: Playlists auffrischen, wenn der letzte Abgleich älter als 12 Stunden ist.
-    LaunchedEffect(Unit) {
-        val stale = app.store.playlists.value.any { it.enabled && System.currentTimeMillis() - it.lastSync > 12 * 3_600_000L }
-        if (stale) app.syncNow()
-        else if (app.store.guide.value.isEmpty() && app.store.playlists.value.isNotEmpty()) runCatching { app.sync.syncGuide() }
+    fun toggleFullscreen() {
+        val full = window.placement != WindowPlacement.Fullscreen
+        window.placement = if (full) WindowPlacement.Fullscreen else WindowPlacement.Floating
+        app.store.updateUser { it.copy(fullscreen = full) }
+    }
+
+    // Erste Taste der Fire-TV-Fernbedienung: kurz bestätigen, dass sie erkannt wurde.
+    LaunchedEffect(source?.deviceName) { if (source != null) app.toast("✓ ${source.label} erkannt") }
+    // Beim Start etwas auswählen, damit Pfeiltasten und Fernbedienung sofort wirken. Geht die Auswahl verloren
+    // (ausgewähltes Element verschwindet: Player oder Menü geschlossen), fängt die Oberfläche sie wieder auf –
+    // sonst kämen Tasten der Fernbedienung nirgends an, bis jemand mit der Maus klickt.
+    LaunchedEffect(rootHasFocus) {
+        if (rootHasFocus) return@LaunchedEffect
+        kotlinx.coroutines.delay(120)
+        if (!rootHasFocus) runCatching { root.requestFocus() }
     }
 
     Box(
-        Modifier.fillMaxSize().background(Palette.background).onKeyEvent { e ->
-            // Was kein Element selbst nutzt: Pfeiltasten wechseln den Fokus, Esc/Zurück geht eine Ebene zurück.
-            if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
-            when (e.key) {
-                Key.DirectionUp -> focus.moveFocus(FocusDirection.Up)
-                Key.DirectionDown -> focus.moveFocus(FocusDirection.Down)
-                Key.DirectionLeft -> focus.moveFocus(FocusDirection.Left)
-                Key.DirectionRight -> focus.moveFocus(FocusDirection.Right)
-                Key.Escape, Key.Back -> app.back()
-                Key.F11 -> {
-                    window.placement = if (window.placement == WindowPlacement.Fullscreen) WindowPlacement.Floating else WindowPlacement.Fullscreen
-                    true
+        Modifier.fillMaxSize().background(Palette.background)
+            .focusRequester(root)
+            .onFocusChanged { rootFocused = it.isFocused; rootHasFocus = it.hasFocus }
+            .focusable()
+            .onKeyEvent { e ->
+                // Was kein Element selbst nutzt: Pfeiltasten wechseln den Fokus, Zurück geht eine Ebene zurück,
+                // Home zur Startseite, Suche/Einstellungen/Guide direkt.
+                if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+                if (e.key == Key.F11) { toggleFullscreen(); return@onKeyEvent true }
+                fun move(direction: FocusDirection): Boolean {
+                    // Noch nichts ausgewählt: ins erste Element springen.
+                    if (rootFocused) return focus.moveFocus(FocusDirection.Enter) || focus.moveFocus(FocusDirection.Next)
+                    return focus.moveFocus(direction)
                 }
-                else -> false
-            }
-        },
+                when (e.remote()) {
+                    RemoteButton.UP -> move(FocusDirection.Up)
+                    RemoteButton.DOWN -> move(FocusDirection.Down)
+                    RemoteButton.LEFT -> move(FocusDirection.Left)
+                    RemoteButton.RIGHT -> move(FocusDirection.Right)
+                    RemoteButton.BACK -> app.backToHome()
+                    RemoteButton.HOME -> { app.goHome(); true }
+                    RemoteButton.SEARCH -> { if (app.playing == null) app.screen = Screen.SEARCH; true }
+                    RemoteButton.SETTINGS -> { if (app.playing == null) app.screen = Screen.SETTINGS; true }
+                    RemoteButton.GUIDE -> { if (app.playing == null) app.screen = Screen.GUIDE; true }
+                    else -> false
+                }
+            },
     ) {
         val playing = app.playing
         if (playing != null) {
-            PlayerScreen(app, playing, window)
+            PlayerScreen(app, playing, window, ::toggleFullscreen)
         } else {
             Row(Modifier.fillMaxSize()) {
                 Sidebar(app)
-                Box(Modifier.weight(1f).fillMaxHeight().padding(16.dp)) {
+                Box(Modifier.weight(1f).fillMaxHeight().padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp)) {
                     when (app.screen) {
+                        Screen.HOME -> HomeScreen(app)
                         Screen.LIVE -> LiveScreen(app)
                         Screen.GUIDE -> GuideScreen(app)
                         Screen.SPORT -> SportScreen(app)
@@ -130,7 +187,10 @@ fun App(app: AppState, window: WindowState) {
                     }
                 }
             }
+            if (app.askCountries) CountryDialog(app, first = true, onDismiss = { app.askCountries = false })
+            if (app.choosingProfile) de.ayutv.desktop.ui.ProfileDialog(app, onDismiss = { app.choosingProfile = false })
         }
+        app.dueReminder?.let { r -> de.ayutv.desktop.ui.ReminderDialog(app, r) }
         val line = app.message ?: status
         if (line != null) {
             Box(Modifier.align(Alignment.BottomCenter).padding(24.dp).background(Palette.raised, RoundedCornerShape(10.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
@@ -140,19 +200,44 @@ fun App(app: AppState, window: WindowState) {
     }
 }
 
+/** Navigation links: immer erreichbar mit ◀, Maus oder Home-Taste. Uhrzeit oben wie auf dem Fernseher. */
 @Composable
 private fun Sidebar(app: AppState) {
-    val first = remember { FocusRequester() }
-    Column(Modifier.width(200.dp).fillMaxHeight().background(Palette.surface).padding(10.dp)) {
-        Label("DnA-TV", Type.title, Modifier.padding(start = 12.dp, top = 8.dp, bottom = 16.dp))
-        Screen.entries.forEachIndexed { index, screen ->
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            kotlinx.coroutines.delay(15_000)
+        }
+    }
+    Column(Modifier.width(210.dp).fillMaxHeight().background(Palette.surface).padding(10.dp)) {
+        Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
+            Label("DnA-TV", Type.title, Modifier.weight(1f))
+            Label(clock(now), Type.small)
+        }
+        val profiles by app.store.profiles.collectAsState()
+        val profileId by app.store.profile.collectAsState()
+        if (profiles.size > 1) {
+            ListRow("👤  ${profiles.firstOrNull { it.id == profileId }?.name ?: "Profil"}", onClick = { app.choosingProfile = true })
+            Spacer(Modifier.height(8.dp))
+        }
+        Screen.entries.forEach { screen ->
             ListRow(
-                "${screen.icon}  ${screen.label}",
+                "${screen.icon}   ${screen.label}",
                 onClick = { app.screen = screen },
                 selected = app.screen == screen,
-                focusRequester = if (index == 0) first else null,
             )
             Spacer(Modifier.height(2.dp))
         }
+        Spacer(Modifier.weight(1f))
+        if (app.updater.state is de.ayutv.desktop.update.Updater.State.Available) {
+            ListRow("⬆  Update verfügbar", onClick = { app.screen = Screen.SETTINGS })
+            Spacer(Modifier.height(6.dp))
+        }
+        val source = app.input.source
+        Label(
+            if (source != null) "🎮 ${source.label} verbunden" else "Fernbedienung, Tastatur oder Maus",
+            Type.small, Modifier.padding(start = 12.dp, bottom = 6.dp), maxLines = 2,
+        )
     }
 }

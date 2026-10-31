@@ -40,7 +40,7 @@ fun SearchScreen(app: AppState) {
         delay(250)
         result = withContext(Dispatchers.Default) {
             val now = System.currentTimeMillis()
-            val channels = app.store.channels()
+            val channels = app.store.listedChannels()
             val byKey = channels.associateBy { it.key }
             Results(
                 channels = channels.filter { fold(it.name).contains(q) }.take(50),

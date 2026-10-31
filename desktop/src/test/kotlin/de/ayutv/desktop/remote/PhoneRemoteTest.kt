@@ -26,7 +26,7 @@ class PhoneRemoteTest {
         store.savePlaylist(Playlist(1, "P", PlaylistType.XTREAM, "http://x"))
         store.setContent(1, Store.Content(listOf(Channel("1:c:1", 1, "Das Erste HD", "DE", url = "u"), Channel("1:c:2", 1, "ZDF", "DE", url = "u"))))
         var played: String? = null
-        val remote = PhoneRemote(store) { played = it }
+        val remote = PhoneRemote(store, de.ayutv.desktop.input.RemoteInput()) { played = it }
         remote.start()
         try {
             val base = "http://127.0.0.1:${PhoneRemote.PORT}"

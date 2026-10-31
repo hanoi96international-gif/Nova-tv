@@ -106,12 +106,13 @@ class BackupImport(private val store: Store) {
             Triple(o.str("scope") ?: return@mapNotNull null, remapKey(o.str("key") ?: return@mapNotNull null, ids) ?: return@mapNotNull null, o.int("position") ?: 0)
         }.groupBy({ it.first }, { it.second to it.third }).mapValues { (_, list) -> list.sortedBy { it.second }.map { it.first } }
 
-        val hidden = root["hiddenGroups"]?.jsonArray.orEmpty().mapNotNull { item ->
+        // Ausgeblendete Gruppen je Art: Live, Filme (VOD), Serien.
+        val hiddenByKind = root["hiddenGroups"]?.jsonArray.orEmpty().mapNotNull { item ->
             val o = item.jsonObject
-            if (o.str("kind") != "LIVE") return@mapNotNull null
             val playlist = ids[o.long("playlistId") ?: return@mapNotNull null] ?: return@mapNotNull null
-            "$playlist|${o.str("name") ?: return@mapNotNull null}"
-        }
+            (o.str("kind") ?: "LIVE") to "$playlist|${o.str("name") ?: return@mapNotNull null}"
+        }.groupBy({ it.first }, { it.second })
+        val hidden = hiddenByKind["LIVE"].orEmpty()
 
         // Schlüssel aus den Einstellungen (alle Gruppen durchsuchen).
         val settings = (root["settings"] as? JsonObject)?.values?.mapNotNull { it as? JsonObject }.orEmpty()
@@ -138,6 +139,8 @@ class BackupImport(private val store: Store) {
                 proxy = proxy ?: u.proxy,
                 groupOrder = u.groupOrder + order,
                 hiddenGroups = u.hiddenGroups + hidden,
+                hiddenMovieGroups = u.hiddenMovieGroups + hiddenByKind["VOD"].orEmpty(),
+                hiddenSeriesGroups = u.hiddenSeriesGroups + hiddenByKind["SERIES"].orEmpty(),
                 openSubtitlesKey = setting("opensubtitles_key") ?: u.openSubtitlesKey,
                 deeplKey = setting("deepl_key") ?: u.deeplKey,
                 subtitleLanguage = setting("subtitle_language_code") ?: u.subtitleLanguage,

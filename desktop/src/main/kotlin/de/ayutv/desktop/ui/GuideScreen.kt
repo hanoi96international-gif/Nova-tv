@@ -1,5 +1,10 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import de.ayutv.desktop.input.RemoteButton
+import de.ayutv.desktop.input.remote
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -64,7 +69,16 @@ fun GuideScreen(app: AppState) {
         is GroupRef.Provider -> g.name
     }
 
-    Box(Modifier.fillMaxSize()) {
+    // Wie auf dem Fire TV: ⏪/⏩ verschieben das Zeitfenster, ⏯ springt auf jetzt.
+    Box(Modifier.fillMaxSize().onKeyEvent { e ->
+        if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+        when (e.remote()) {
+            RemoteButton.REWIND -> { start -= 2 * HOUR; true }
+            RemoteButton.FAST_FORWARD -> { start += 2 * HOUR; true }
+            RemoteButton.PLAY_PAUSE -> { start = System.currentTimeMillis() / (HOUR / 2) * (HOUR / 2); true }
+            else -> false
+        }
+    }) {
         Column(Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton("▤ $groupName", {
@@ -87,6 +101,8 @@ fun GuideScreen(app: AppState) {
                 TextButton("+1 Tag", { start += 24 * HOUR })
                 Spacer(Modifier.width(16.dp))
                 Label(DAY_LABEL.format(Instant.ofEpochMilli(start)), Type.heading)
+                Spacer(Modifier.width(16.dp))
+                Label("⏪/⏩ 2 Std. · ⏯ jetzt · OK Sendung", Type.small)
             }
             Spacer(Modifier.height(10.dp))
             if (channels.isEmpty()) {
@@ -145,7 +161,8 @@ private fun GuideRow(app: AppState, channel: Channel, list: List<Channel>, progr
                     selected = running,
                 ) {
                     Column {
-                        Label(p.title, Type.body)
+                        val archived = p.stop <= now && channel.catchupDays > 0 && app.store.archiveUrl(channel, p.start, p.stop, now) != null
+                        Label((if (archived) "⏪ " else "") + p.title, Type.body)
                         Label("${clock(p.start)} – ${clock(p.stop)}", Type.small)
                     }
                 }
@@ -164,8 +181,26 @@ private fun ProgrammeDialog(app: AppState, channel: Channel, list: List<Channel>
             p.category?.let { Label(it, Type.small) }
             p.description?.let { Spacer(Modifier.height(8.dp)); Label(it, Type.body, maxLines = 14) }
             Spacer(Modifier.height(12.dp))
+            val now = System.currentTimeMillis()
+            val archive = p.start < now && app.store.archiveUrl(channel, p.start, p.stop, now) != null
             Row {
-                TextButton("▶ Sender einschalten", { onDismiss(); app.play(Playback.Live(channel, list)) }, primary = true)
+                if (archive) {
+                    TextButton(if (p.stop > now) "⏮ Von Anfang" else "⏪ Aus dem Archiv", { onDismiss(); app.playArchive(channel, p) }, primary = true)
+                    Spacer(Modifier.width(8.dp))
+                }
+                TextButton("▶ Sender einschalten", { onDismiss(); app.play(Playback.Live(channel, list)) }, primary = !archive)
+                if (p.stop > now) {
+                    Spacer(Modifier.width(8.dp))
+                    TextButton("⏺ Aufnehmen", { onDismiss(); app.record(channel, p) })
+                }
+                if (p.start > now) {
+                    Spacer(Modifier.width(8.dp))
+                    val set = app.store.hasReminder(channel, p.start)
+                    TextButton(if (set) "⏰ Erinnerung entfernen" else "⏰ Erinnern", {
+                        onDismiss()
+                        app.toast(if (app.store.toggleReminder(channel, p)) "Erinnerung um ${clock(p.start)}: ${p.title}" else "Erinnerung entfernt")
+                    })
+                }
                 Spacer(Modifier.width(8.dp))
                 TextButton("Schließen", onDismiss)
             }

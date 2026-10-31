@@ -111,7 +111,7 @@ interface ChannelDao {
     suspend fun inCustom(groupId: Long): List<ChannelEntity>
 
     @Query(
-        """SELECT * FROM visible_channels WHERE name LIKE '%' || :query || '%'
+        """SELECT * FROM ($LISTED_CHANNELS_SQL) WHERE name LIKE '%' || :query || '%'
            ORDER BY CASE WHEN name LIKE :query || '%' THEN 0 ELSE 1 END, length(name), number
            LIMIT :limit"""
     )
@@ -120,11 +120,11 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE groupTitle IN (:groups) AND `key` NOT IN (:exclude) ORDER BY playlistId, number, id LIMIT :limit")
     suspend fun inGroupsExcluding(groups: List<String>, exclude: List<String>, limit: Int): List<ChannelEntity>
 
-    @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds) GROUP BY epgId")
+    @Query("SELECT * FROM ($LISTED_CHANNELS_SQL) WHERE epgId IN (:epgIds) GROUP BY epgId")
     suspend fun byEpgIds(epgIds: List<String>): List<ChannelEntity>
 
-    /** Alle Sender (auch alle Fassungen) mit diesen EPG-Kennungen. */
-    @Query("SELECT * FROM visible_channels WHERE epgId IN (:epgIds)")
+    /** Alle Sender (auch alle Fassungen) mit diesen EPG-Kennungen, auch aus Favoriten und eigenen Gruppen. */
+    @Query("SELECT * FROM ($LISTED_CHANNELS_SQL) WHERE epgId IN (:epgIds)")
     suspend fun allByEpgIds(epgIds: List<String>): List<ChannelEntity>
 
     @Query("SELECT id, name, epgId, groupTitle FROM channels WHERE playlistId = :playlistId ORDER BY number, id")
@@ -475,7 +475,7 @@ interface LockedGroupDao {
     suspend fun clear()
 }
 
-/** Mögliche Sportsendungen im Zeitraum auf sichtbaren Sendern (grob; genau prüft ProgrammeText.isSportEvent). */
+/** Mögliche Sportsendungen im Zeitraum auf sichtbaren Sendern (auch aus Favoriten und eigenen Gruppen) (grob; genau prüft ProgrammeText.isSportEvent). */
 suspend fun ProgrammeDao.sportBetween(from: Long, to: Long, limit: Int): List<ProgrammeEntity> =
     rawProgrammes(SimpleSQLiteQuery(SPORT_BETWEEN_SQL, arrayOf<Any>(from, to, limit)))
 
@@ -487,7 +487,7 @@ private const val SPORT_BETWEEN_SQL = """SELECT * FROM programmes WHERE stop > ?
            OR title LIKE '%NBA%' OR title LIKE '%NHL%' OR title LIKE '%UFC%' OR title LIKE '%box%' OR subtitle LIKE '% – %'
            OR subtitle LIKE '% - %' OR title LIKE '% – %' OR title LIKE '% - %' OR title LIKE '% vs%' OR subtitle LIKE '% vs%'
            OR title LIKE '% v %' OR subtitle LIKE '% v %' OR title LIKE '% gegen %' OR subtitle LIKE '% gegen %'
-           OR channelEpgId IN (SELECT epgId FROM visible_channels WHERE name LIKE '%sport%' OR name LIKE '%dazn%'
+           OR channelEpgId IN (SELECT epgId FROM ($LISTED_CHANNELS_SQL) WHERE name LIKE '%sport%' OR name LIKE '%dazn%'
               OR name LIKE '%servus%' OR name LIKE '%magenta%' OR name LIKE '%eleven%' OR name LIKE '%laola%'))
-           AND channelEpgId IN (SELECT epgId FROM visible_channels WHERE epgId IS NOT NULL AND epgId != '')
+           AND channelEpgId IN (SELECT epgId FROM ($LISTED_CHANNELS_SQL) WHERE epgId IS NOT NULL AND epgId != '')
            ORDER BY start LIMIT ?"""

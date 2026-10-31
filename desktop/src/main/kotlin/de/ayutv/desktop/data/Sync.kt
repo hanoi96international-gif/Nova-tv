@@ -36,6 +36,23 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
         runCatching { syncGuide() }
     }
 
+    /**
+     * Was fällig ist, im Hintergrund nachladen (wie auf dem Fire TV): Playlists alle 12 Stunden, TV-Guide alle
+     * 8 Stunden (und sofort, wenn noch keiner da ist). Liefert die Fehler (Playlist → Meldung), leer = alles gut.
+     */
+    suspend fun refreshDue(now: Long = System.currentTimeMillis()): List<String> {
+        val problems = ArrayList<String>()
+        var loaded = false
+        for (p in store.playlists.value.filter { it.enabled && now - it.lastSync > PLAYLIST_EVERY }) {
+            runCatching { syncPlaylist(p.id); loaded = true }.onFailure { problems += "${p.name}: ${it.message}" }
+        }
+        val guideDue = now - store.user.value.guideSyncedAt > GUIDE_EVERY || store.guide.value.isEmpty()
+        if (store.playlists.value.any { it.enabled } && (loaded || guideDue)) {
+            runCatching { syncGuide() }.onFailure { problems += "TV-Guide: ${it.message}" }
+        }
+        return problems
+    }
+
     suspend fun syncPlaylist(id: Long) = mutex.withLock {
         val playlist = store.playlists.value.firstOrNull { it.id == id } ?: return@withLock
         try {
@@ -47,7 +64,11 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                 }
             }
             store.setContent(playlist.id, content)
-            store.savePlaylist(playlist.copy(lastSync = System.currentTimeMillis(), epgUrl = playlist.epgUrl ?: epg))
+            // Zeitzone des Servers (Xtream): die Archiv-Adressen rechnen in Serverzeit.
+            val timezone = if (playlist.type == PlaylistType.XTREAM) {
+                runCatching { withContext(Dispatchers.IO) { Xtream(playlist).let { api -> api.get(api.info(), XtreamParsing::account)?.timezone } } }.getOrNull()
+            } else null
+            store.savePlaylist(playlist.copy(lastSync = System.currentTimeMillis(), epgUrl = playlist.epgUrl ?: epg, timezone = timezone ?: playlist.timezone))
         } finally {
             _status.value = null
         }
@@ -73,6 +94,8 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                         epgId = entry.tvgId,
                         number = entry.number ?: position,
                         catchupDays = entry.catchupDays,
+                        catchupType = entry.catchupType,
+                        catchupSource = entry.catchupSource,
                     )
                 }
             }
@@ -155,7 +178,7 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                         PlaylistType.XTREAM -> EpgSources.forXtream(p.epgUrl, Xtream(p).guide())
                         PlaylistType.M3U -> EpgSources.forM3u(p.epgUrl, p.url)
                     }
-                }.distinct() + EpgSources.PUBLIC
+                }.distinct() + if (store.user.value.publicEpg) EpgSources.PUBLIC else emptyList()
                 for (url in sources) {
                     val missing = channels.filter { it.key !in guide }
                     if (missing.isEmpty()) break
@@ -165,6 +188,7 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                 guide.mapValues { (_, list) -> list.sortedBy { it.start }.distinctBy { it.start } }
             }
             store.setGuide(result)
+            store.updateUser { it.copy(guideSyncedAt = System.currentTimeMillis()) }
         } finally {
             _status.value = null
         }
@@ -217,6 +241,10 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
             return builder.build().toString()
         }
 
+        /** Anmeldung und Server-Angaben (Zeitzone). */
+        fun info(): String = "$base/player_api.php".toHttpUrl().newBuilder()
+            .addQueryParameter("username", user).addQueryParameter("password", pass).build().toString()
+
         fun live(id: String) = "$base/live/${enc(user)}/${enc(pass)}/$id.ts"
         fun movie(id: String, extension: String) = "$base/movie/${enc(user)}/${enc(pass)}/$id.$extension"
         fun episode(id: String, extension: String) = "$base/series/${enc(user)}/${enc(pass)}/$id.$extension"
@@ -230,5 +258,7 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
     companion object {
         const val USER_AGENT = "DnA-TV/Windows"
         private const val DAY = 24 * 3_600_000L
+        const val PLAYLIST_EVERY = 12 * 3_600_000L
+        const val GUIDE_EVERY = 8 * 3_600_000L
     }
 }

@@ -16,7 +16,7 @@ DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 | Suche nur nach Sendernamen | Eine Suche über Sender, laufende und kommende Sendungen, Filme und Serien |
 | Keine Empfehlungen | Die Startseite zeigt „Weiter schauen“, „Zuletzt gesehen“, Favoriten mit aktuellem Programm und „Mehr aus …“ für deine meistgeschauten Gruppen. Alles wird lokal berechnet, ohne Cloud |
 
-## Funktionen (Version 0.6)
+## Funktionen (Version 0.42)
 
 - **Quellen:** M3U/M3U8 (URL, gzip), XMLTV-EPG (auch `.xml.gz`), Xtream Codes API (Live, Filme, Serien, EPG)
 - **TV-Guide automatisch:** Ohne Eintrag kommt das EPG vom Anbieter: bei Xtream `xmltv.php`, bei einer M3U alle Adressen aus `url-tvg`, und kommt die M3U von einem Xtream-Server (`get.php?username=…`), dessen `xmltv.php`. Eigene EPG-Adressen (mehrere mit Komma) gehen vor; jede weitere Quelle füllt nur Sender, für die noch nichts da ist. Was dann noch fehlt (oft Sky und DAZN), ergänzt DnA-TV aus dem freien EPG von [epgshare01](https://epgshare01.online) für Deutschland, Österreich und die Schweiz (abschaltbar unter *Einstellungen → Anzeige*, höchstens einmal am Tag geladen). Unter *Einstellungen → Playlists* steht, wie viele Sender ein Programm haben und welche nicht. Sender werden auch mit Zusätzen erkannt: „DE: RTL 4K“, „|DE| RTL HD+“, „RTL ᵁᴴᴰ“, „Pro7 FHD“ oder „ARD HD“ finden „RTL“, „ProSieben“ und „Das Erste“ im EPG, auch wenn die Kennung der Playlist im EPG fehlt
@@ -37,6 +37,11 @@ DnA-TV ist ein reiner Player. Sender, Filme und Serien kommen aus deinem eigenen
 - **Stabilität:** Ein Watchdog erkennt eingefrorene Streams (Dauer-Puffern, stehendes Bild) und verbindet automatisch neu. Stürzt der Decoder bei aktivem Tunneling ab, wird Tunneling für diesen Stream abgeschaltet und neu gestartet. Kurzer Lese-Timeout (12 s), damit tote Verbindungen schnell auffallen. Bei Fehlern gibt es bis zu drei Wiederholungen, HLS ohne Endung wird automatisch erkannt.
 - **Filme und Serien:** Kategorien, Poster-Raster, Staffeln und Episoden (Xtream), Fortsetzen an der letzten Position
 - **Automatische Aktualisierung:** Playlists alle 12 Stunden, EPG alle 8 Stunden
+- **Catch-up und Timeshift:** vergangene Sendungen aus dem Archiv des Anbieters (Xtream `tv_archive`, M3U `catchup`), laufende Sendung von Anfang, Live anhalten und zeitversetzt weiterschauen
+- **Aufnahmen und Downloads:** Sendungen aus dem TV-Guide aufnehmen, Filme herunterladen; läuft im Hintergrund weiter, auch wenn die App zu ist
+- **Erinnerungen:** an Sendungen und an Spiele gefolgter Vereine, mit Umschalten auf Knopfdruck
+- **Profile und Kindersicherung:** eigene Favoriten und Verlauf je Profil, Gruppen mit PIN sperren
+- **Updates in der App** und **Abgleich mit dem Handy** (Favoriten, Weiter schauen)
 
 - **4K und Stabilität:** asynchrone Ansteuerung der Hardware-Decoder (mehr Reserven bei 4K, automatischer Rückfall bei Problemen), Speicher-Obergrenze für den Puffer (kein Absturz nach langem 4K-Schauen auf Sticks mit wenig RAM), Watchdog, Tunneling-Rückfall, Erkennung von HDR10/HLG/Dolby Vision.
 - **Alle Tonformate, auch ohne AV-Receiver:** eingebaute FFmpeg-Tondecoder (in der CI aus dem Media3-Quellcode gebaut) für DTS, Dolby TrueHD, Dolby Digital (Plus), FLAC, ALAC, Opus, Vorbis, MP3. Was das Gerät selbst kann oder an den Receiver durchreicht, bleibt beim Gerät. Meldet eine Soundbar Formate, die sie nicht abspielt, schaltet DnA-TV automatisch auf Dekodierung im Gerät um (auch fest einstellbar). Die Stream-Info zeigt den aktiven Ton-Decoder.
@@ -80,7 +85,13 @@ Einrichten: *Einstellungen → Sicherung übernehmen …* holt Playlists, Favori
 
 Untertitel (Taste L oder „💬 DE laden“ im Player) kommen von OpenSubtitles oder per DeepL übersetzt und richten sich wie auf dem Fire TV nach rund 1,5 Minuten Gespräch selbst am Ton aus (auch bei anderer Bildrate); die Ausrichtung wird je Film gemerkt.
 
-Bedienung: Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur oder Bluetooth-Fernbedienung (Pfeiltasten, Enter, Esc) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
+**Fire-TV-Fernbedienung am PC:** In Windows unter *Einstellungen → Bluetooth und Geräte → Gerät hinzufügen* koppeln (auf der Fernbedienung Home 10 Sekunden halten). DnA-TV erkennt sie selbst und belegt sie wie auf dem Fire TV: Steuerkreuz und OK (lange = Menü), Zurück, Home (Startseite), ☰ Menü, ⏯, ⏪/⏩ (gehalten schneller). Im Live-TV schaltet ▲/▼ um, OK öffnet die Senderliste, ◀ springt zum letzten Sender, ▶ zeigt Programm- und Stream-Info, ☰ Ton, Untertitel und Favorit. Solange DnA-TV vorn ist, öffnen Home und Zurück nicht den Browser und ⏯ pausiert nicht Spotify. *Einstellungen → Fernbedienung* zeigt, welche Taste ankommt.
+
+Außerdem wie auf dem Fire TV: Startseite mit „Weiter schauen“, „Zuletzt gesehen“, Favoriten und „Mehr aus …“, doppelte Sender zusammengefasst (mit automatischem Ausweichen auf die nächste Fassung), Gruppen und Länder ein- und ausblenden (Live, Filme, Serien), Watchdog für eingefrorene Streams, Stream-Info, Pufferprofile, Zifferntasten, Playlists alle 12 und TV-Guide alle 8 Stunden automatisch neu, Catch-up (⏪ im TV-Guide und im Bild), Live anhalten und zeitversetzt weiter, Aufnahmen, Erinnerungen (auch „Verein folgen“), Profile, Kindersicherung, Updates in der App und Abgleich von Favoriten und Verlauf mit dem Fire TV (*Einstellungen → Abgleich mit dem Fire TV*).
+
+**4K und HDR:** Das Bild kommt von VLC im YUV-Format und wird auf der Grafikkarte umgerechnet (bei 4K etwa siebenmal weniger Kopierarbeit je Bild als über RGB). HDR10 und HLG werden für normale Bildschirme angepasst statt blass gezeigt (*Einstellungen → Wiedergabe → HDR-Anpassung*, auch im ☰-Menü), SD-Sender erscheinen im richtigen Seitenverhältnis. Bei Problemen: *Einstellungen → Bedienung → Protokoll öffnen*.
+
+Bedienung mit Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur (Pfeile, Enter, Esc/Rücktaste, Kontextmenü-Taste, Leertaste, F11; Vollbild wird gemerkt) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
 
 Gebaut wird sie aus `desktop/` (Kotlin + Compose Desktop, Wiedergabe über VLC) mit denselben Lesern für M3U, Xtream, TV-Guide und Sicherung wie die Fire-TV-App: `./gradlew -p desktop run` bzw. `./gradlew -p desktop packageMsi`.
 
@@ -126,8 +137,5 @@ app/src/main/java/de/ayutv/
 
 ## Geplant
 
-- Catch-up / Timeshift (Xtream `tv_archive`)
 - Mini-Vorschau in der Senderliste
 - Multiview (2–4 Sender gleichzeitig)
-- Aufnahmen
-- Mehrere Profile und Kindersicherung
