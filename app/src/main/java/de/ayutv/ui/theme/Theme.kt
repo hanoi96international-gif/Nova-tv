@@ -125,6 +125,26 @@ object AyuColors {
 
 }
 
+/**
+ * Scrollen mit dem Steuerkreuz wie auf der Fire-TV-Startseite: Die Auswahl bleibt bei rund 30 % der Höhe (bzw. Breite)
+ * stehen und die Liste läuft bei jedem Druck gleichmäßig um eine Zeile weiter. Vorher wanderte die Auswahl bis an den
+ * Rand und die Liste sprang dann ruckartig nach; bei gehaltener Taste stauten sich solche Sprünge.
+ * Am Anfang und Ende einer Liste hält sie wie gewohnt an. Touch-Bedienung (Handy) ist davon nicht betroffen.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private val PivotScroll = object : androidx.compose.foundation.gestures.BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        // Passt der Inhalt ganz in den sichtbaren Bereich nicht (größer als der Container): nur so weit, dass der Anfang zu sehen ist.
+        if (size >= containerSize) return offset
+        val pivot = containerSize * PIVOT
+        // Unterhalb des Fixpunkts wäre zu wenig Platz: so weit, dass das Element ganz zu sehen ist.
+        val target = if (containerSize - pivot < size) containerSize - size else pivot
+        return offset - target
+    }
+}
+
+private const val PIVOT = 0.3f
+
 @Composable
 fun AyuTheme(content: @Composable () -> Unit) {
     MaterialTheme(
@@ -142,7 +162,11 @@ fun AyuTheme(content: @Composable () -> Unit) {
         ),
     ) {
         // Ohne umgebende Surface wäre Text sonst schwarz auf dunklem Hintergrund.
-        CompositionLocalProvider(LocalContentColor provides AyuColors.TextPrimary, content = content)
+        CompositionLocalProvider(
+            LocalContentColor provides AyuColors.TextPrimary,
+            androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides PivotScroll,
+            content = content,
+        )
     }
 }
 

@@ -392,10 +392,13 @@ private fun GuideRow(
                     // Nach Sendung geschlüsselt: Beim Verschieben des Zeitfensters bleibt der Fokus auf ihr.
                     key(p.id) {
                         val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
+                        // Titel einmal je Sendung erkennen (reguläre Ausdrücke), nicht bei jedem Neuzeichnen des Rasters.
+                        val upcoming = p.stop > now
+                        val headline = remember(p, upcoming) { (if (upcoming) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" } }
                         GuideCell(
                             title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
                                 (if ("${channel.key}@${p.start}" in recordingIds) "⏺ " else "") +
-                                (if (p.stop > now) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" },
+                                headline,
                             time = "${formatTime(p.start)} – ${formatTime(p.stop)}",
                             width = cell.width,
                             live = p.start <= now && p.stop > now,
