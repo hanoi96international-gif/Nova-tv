@@ -69,14 +69,25 @@ object SelfTest {
                 if (de.ayutv.desktop.input.WindowsRemote.isWindows && !java.awt.GraphicsEnvironment.isHeadless()) {
                     runCatching {
                         javax.swing.SwingUtilities.invokeAndWait { player.directWindow = de.ayutv.desktop.player.DirectWindow({ null }, {}, {}) }
-                        player.direct = true
+                        player.directMode = "ALWAYS"
                         val before = player.framesRendered.get()
                         javax.swing.SwingUtilities.invokeAndWait { player.play(image.absolutePath, null, 0, ":image-duration=10") }
                         val until = System.currentTimeMillis() + 15_000
                         while (player.framesRendered.get() <= before && System.currentTimeMillis() < until) Thread.sleep(200)
                         lines += "direct: running=${player.framesRendered.get() > before} playing=${player.playing} error=${player.error}"
                         javax.swing.SwingUtilities.invokeAndWait { player.stop() }
-                        player.direct = false
+                        player.directMode = "AUTO"
+                        // 4K-Bild auf dem normalen Weg: muss von selbst auf die Direktausgabe wechseln.
+                        val uhd = File.createTempFile("dna-tv-uhd", ".png")
+                        val big = BufferedImage(3840, 2160, BufferedImage.TYPE_INT_RGB)
+                        big.createGraphics().apply { color = Color(0x3DA9FC); fillRect(0, 0, 3840, 2160); dispose() }
+                        ImageIO.write(big, "png", uhd)
+                        javax.swing.SwingUtilities.invokeAndWait { player.play(uhd.absolutePath, null, 0, ":image-duration=10") }
+                        val until4k = System.currentTimeMillis() + 15_000
+                        while (!player.isDirect && System.currentTimeMillis() < until4k) Thread.sleep(200)
+                        lines += "auto4k: direct=${player.isDirect} error=${player.error}"
+                        javax.swing.SwingUtilities.invokeAndWait { player.stop() }
+                        uhd.delete()
                     }.onFailure { lines += "direct: FEHLER $it" }
                 }
                 player.release()

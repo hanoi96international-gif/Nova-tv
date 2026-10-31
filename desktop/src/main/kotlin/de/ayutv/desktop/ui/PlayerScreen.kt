@@ -182,8 +182,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 })
             }
             if (live != null) add(MenuItem("◫ Multiview (bis zu 4 Sender gleichzeitig)") { app.openMultiview() })
-            add(MenuItem(if (user.directOutput) "HDR-Bildschirm: Direktausgabe ausschalten" else "HDR-Bildschirm: Direktausgabe (Vollbild, HDR unverändert)") {
-                store.updateUser { it.copy(directOutput = !it.directOutput) }
+            val nextDirect = DIRECT_MODES[(DIRECT_MODES.indexOfFirst { it.first == user.directMode } + 1).mod(DIRECT_MODES.size)]
+            add(MenuItem("Direktausgabe: ${directLabel(user.directMode)} → ${nextDirect.second}") {
+                store.updateUser { it.copy(directMode = nextDirect.first) }
                 app.applyBuffer()
                 app.restartPlayback()
             })
@@ -637,6 +638,10 @@ fun duration(ms: Long): String {
     val s = ms / 1000
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%d:%02d".format(s / 60, s % 60)
 }
+
+/** Direktausgabe: Wert und Anzeige. */
+val DIRECT_MODES = listOf("AUTO" to "Bei 4K (empfohlen)", "ALWAYS" to "Immer", "OFF" to "Aus")
+fun directLabel(mode: String) = DIRECT_MODES.firstOrNull { it.first == mode }?.second ?: "Bei 4K (empfohlen)"
 
 /** HDR-Anpassung: Wert und Anzeige. */
 val HDR_MODES = listOf("AUTO" to "Automatisch", "PQ" to "HDR10", "HLG" to "HLG", "OFF" to "Aus")

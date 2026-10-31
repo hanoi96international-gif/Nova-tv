@@ -55,15 +55,37 @@ class VideoPlayer {
     private var player: EmbeddedMediaPlayer? = normal
 
     /**
-     * Direktausgabe für HDR-Bildschirme (Einstellung): VLC zeichnet selbst in ein Vollbildfenster ([DirectWindow]),
-     * HDR10 kommt unverändert am Bildschirm an. Gilt ab dem nächsten [play]; nicht beim Ausrichten von Untertiteln.
+     * Direktausgabe ([DirectWindow]): VLC dekodiert und zeigt das Bild komplett auf der Grafikkarte (Direct3D 11, ohne
+     * Umweg über den Hauptspeicher). OFF = nie, AUTO = bei 4K (Standard: sonst kommt der PC bei 4K mit 50 Bildern nicht
+     * hinterher und das Bild läuft wie in Zeitlupe), ALWAYS = immer (z. B. HDR-Bildschirm). Nicht beim Ausrichten von
+     * Untertiteln am Ton.
      */
-    @Volatile var direct = false
+    @Volatile var directMode = "AUTO"
+    /** Vom Aufrufer vor [play]: Der Stream ist bekanntlich 4K (früher gemessen oder „4K/UHD“ im Namen). */
+    @Volatile var expectUhd = false
     /** Fenster für die Direktausgabe (von der App gesetzt, kennt das Hauptfenster). */
     var directWindow: DirectWindow? = null
     private var directPlayer: EmbeddedMediaPlayer? = null
     /** Läuft gerade über die Direktausgabe. */
     val isDirect: Boolean get() = player != null && player === directPlayer
+    /** Letzter Start (für den Wechsel auf die Direktausgabe, sobald 4K erkannt wird). */
+    private var lastStart: Triple<String, String?, Array<out String>>? = null
+    @Volatile private var switching = false
+
+    /** Läuft auf dem normalen Weg, ist aber 4K: auf die Direktausgabe wechseln (an derselben Stelle). */
+    private fun switchToDirect() {
+        if (directMode != "AUTO" || isDirect || tapAudio || directWindow == null || switching) return
+        val (url, agent, extra) = lastStart ?: return
+        switching = true
+        try {
+            de.ayutv.desktop.Log.info("4K erkannt: wechsle auf die Direktausgabe")
+            val at = player?.status()?.time()?.takeIf { durationMs > 0 && it > 0 } ?: 0L
+            expectUhd = true
+            play(url, agent, at, *extra)
+        } finally {
+            switching = false
+        }
+    }
 
     private fun directPlayer(): EmbeddedMediaPlayer? {
         directPlayer?.let { return it }
@@ -176,7 +198,10 @@ class VideoPlayer {
     val available: Boolean get() = player != null
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
-        val useDirect = direct && !tapAudio && directWindow != null
+        lastStart = Triple(url, userAgent, extra)
+        val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd)
+        expectUhd = false
+        val useDirect = wantDirect && !tapAudio && directWindow != null
         val next = (if (useDirect) directPlayer() else if (tapAudio) tappedPlayer() else normal) ?: return
         if (next !== player) runCatching { player?.controls()?.stop() }
         player = next
@@ -233,7 +258,7 @@ class VideoPlayer {
                 corrupted = stats?.demuxCorrupted() ?: 0,
                 startupMs = startupMs,
                 cacheMs = networkCacheMs,
-                output = if (p === directPlayer) "Direkt (VLC, Direct3D 11; HDR unverändert, wenn Windows-HDR an ist)" else (if (gpuVideo) "Grafikkarte (" + when (layout) {
+                output = if (p === directPlayer) "Direkt über die Grafikkarte (VLC, Direct3D 11, Hardware-Dekodierung)" else (if (gpuVideo) "Grafikkarte (" + when (layout) {
                     YuvVideo.Layout.I420 -> "I420"
                     YuvVideo.Layout.NV12 -> "NV12"
                     YuvVideo.Layout.P010 -> "P010, 10 Bit"
@@ -399,6 +424,8 @@ class VideoPlayer {
             aspect = if (sourceHeight > 0) sourceWidth.toFloat() / sourceHeight else 16f / 9f
             planeWidth = sourceWidth
             planeHeight = sourceHeight
+            // 4K auf dem normalen Weg: gleich auf die Direktausgabe wechseln (bevor ruckelnde Bilder zu sehen sind).
+            if (sourceHeight >= UHD_HEIGHT && directMode == "AUTO" && directWindow != null && !tapAudio) ui { switchToDirect() }
             if (gpuVideo) {
                 // YUV wie vom Dekoder: VLC rechnet nichts in RGB um. NV12/P010 liefert die Hardware-Dekodierung direkt.
                 val chosen = chooseLayout(sourceHeight)
@@ -510,6 +537,8 @@ class VideoPlayer {
 
     companion object {
         const val NETWORK_CACHE_MS = 2_500
+        /** Ab dieser Bildhöhe gilt ein Stream als 4K. */
+        const val UHD_HEIGHT = 1_600
         /** So viele ersetzte Bilder bleiben kurz erhalten, bevor ihr Speicher frei wird. */
         private const val RETIRED_FRAMES = 3
         private val VLC_OPTIONS = arrayOf(

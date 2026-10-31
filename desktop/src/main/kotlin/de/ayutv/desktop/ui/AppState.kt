@@ -207,7 +207,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         player.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
         player.hdrMode = store.user.value.hdrMode
         player.videoLayout = store.user.value.videoLayout
-        player.direct = store.user.value.directOutput
+        player.directMode = store.user.value.directMode
     }
 
     fun toast(text: String) {
@@ -349,6 +349,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     private fun start(playback: Playback, atMs: Long? = null) = when (playback) {
         is Playback.Live -> {
             store.rememberWatched(playback.channel.key)
+            // Schon als 4K bekannt (gemessen oder „4K/UHD“ im Namen): gleich über die Direktausgabe starten.
+            player.expectUhd = de.ayutv.data.parse.ChannelQuality.height(playback.channel.key, playback.channel.name) >= de.ayutv.desktop.player.VideoPlayer.UHD_HEIGHT
             player.play(playback.channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(playback.channel.url).toTypedArray())
             // Direktausgabe: Die Infoleiste liegt im verdeckten Hauptfenster, deshalb den Namen ins Bild schreiben.
             player.osd(playback.channel.name + (store.guide.value[playback.channel.key]?.let { nowOf(it) }?.let { "  ·  ${it.title}" } ?: ""))

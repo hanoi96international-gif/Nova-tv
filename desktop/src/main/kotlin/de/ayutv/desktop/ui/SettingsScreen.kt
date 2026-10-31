@@ -144,11 +144,17 @@ fun SettingsScreen(app: AppState) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Toggle("HDR-Bildschirm: Direktausgabe (VLC zeigt das Bild selbst im Vollbild, HDR10 kommt unverändert an; Windows-HDR muss an sein)", user.directOutput) {
-                app.store.updateUser { u -> u.copy(directOutput = !u.directOutput) }
-                app.applyBuffer()
+            Label("Direktausgabe über die Grafikkarte", Type.body)
+            Row(Modifier.padding(vertical = 4.dp)) {
+                DIRECT_MODES.forEach { (value, label) ->
+                    Selectable({ app.store.updateUser { it.copy(directMode = value) }; app.applyBuffer() }, selected = user.directMode == value) { Label(label) }
+                    Spacer(Modifier.width(6.dp))
+                }
             }
-            if (user.directOutput) Label("Menüs und Senderliste erscheinen wie gewohnt; solange sie offen sind, ist das Bild ausgeblendet. Mausklick ins Bild öffnet das Menü.", Type.small, maxLines = 2)
+            Label(
+                "VLC dekodiert und zeigt das Bild komplett auf der Grafikkarte – der schnellste Weg, flüssig auch bei 4K mit 50 Bildern, und mit HDR-Bildschirm kommt HDR10 unverändert an. Menüs und Senderliste erscheinen wie gewohnt; solange sie offen sind, ist das Bild ausgeblendet. „Bei 4K“ wechselt automatisch, sobald ein Sender 4K liefert.",
+                Type.small, maxLines = 4,
+            )
             Spacer(Modifier.height(8.dp))
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }
