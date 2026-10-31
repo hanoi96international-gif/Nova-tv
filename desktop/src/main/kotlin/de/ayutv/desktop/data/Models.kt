@@ -85,6 +85,9 @@ data class ProxySettings(
 )
 
 @Serializable
+data class TimingMark(val ratio: Double, val offsetMs: Long)
+
+@Serializable
 data class IntroMark(val startMs: Long, val lengthMs: Long)
 
 /** Eigene Sendergruppe (Sender aus allen Playlists, in eigener Reihenfolge). */
@@ -113,6 +116,8 @@ data class UserData(
     val phoneRemote: Boolean = false,
     /** Proxy wie in der Fire-TV-App (aus der Sicherung übernehmbar). */
     val proxy: ProxySettings = ProxySettings(),
+    /** Am Ton gefundene Ausrichtung der Untertitel je Film/Folge (Schlüssel → Faktor und Versatz). */
+    val subtitleTimings: Map<String, TimingMark> = emptyMap(),
     /** Gelerntes Intro je Serie (Serienschlüssel → Beginn und Länge in ms). */
     val intros: Map<String, IntroMark> = emptyMap(),
     val remotePin: String = "",

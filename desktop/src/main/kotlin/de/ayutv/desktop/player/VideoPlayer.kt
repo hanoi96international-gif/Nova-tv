@@ -18,6 +18,7 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
+import de.ayutv.player.SpeechActivity
 import java.io.File
 import java.nio.ByteBuffer
 import javax.swing.SwingUtilities
@@ -42,7 +43,23 @@ class VideoPlayer {
 
     private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
         .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
-    private val player: EmbeddedMediaPlayer? = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()
+    // Vor den Playern anlegen: [prepare] braucht sie schon beim Anlegen von [normal].
+    private val format = Format()
+    private val render = Render()
+
+    /** Normaler Player: VLC gibt den Ton selbst aus (auch Raumklang/Durchreichen). */
+    private val normal: EmbeddedMediaPlayer? = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also(::prepare)
+    /** Player mit abgegriffenem Ton ([AudioTap]), für das Ausrichten der Untertitel; erst bei Bedarf angelegt. */
+    private var tapped: EmbeddedMediaPlayer? = null
+    /** Der gerade benutzte der beiden. */
+    private var player: EmbeddedMediaPlayer? = normal
+
+    /** Sprechpausen aus dem Ton (nur, solange [tapAudio] an ist). */
+    val speech = SpeechActivity()
+    private val tap = AudioTap(speech) { player?.status()?.time() ?: 0L }
+
+    /** Ton für die Auswertung abgreifen (gilt ab dem nächsten [play]). */
+    var tapAudio = false
 
     /** VLC-Version (null = VLC nicht geladen). */
     val vlcVersion: String? = runCatching { factory?.application()?.version() }.getOrNull()
@@ -53,22 +70,33 @@ class VideoPlayer {
     private var info: ImageInfo? = null
     private var pixels = ByteArray(0)
 
-    init {
-        val p = player
-        if (p != null && factory != null) {
-            p.videoSurface().set(factory.videoSurfaces().newVideoSurface(Format(), Render(), true))
-            p.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
-                override fun playing(mediaPlayer: MediaPlayer) = ui { playing = true; buffering = false; error = null; readTracks() }
-                override fun paused(mediaPlayer: MediaPlayer) = ui { playing = false }
-                override fun stopped(mediaPlayer: MediaPlayer) = ui { playing = false }
-                override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { buffering = newCache < 100f }
-                override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { positionMs = newTime }
-                override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { durationMs = newLength }
-                override fun error(mediaPlayer: MediaPlayer) = ui { error = "Der Stream lässt sich nicht abspielen"; playing = false }
-                override fun finished(mediaPlayer: MediaPlayer) = ui { playing = false; onFinished?.invoke() }
-                override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.media.TrackType, id: Int) = ui { readTracks() }
-            })
-        }
+    private fun prepare(p: EmbeddedMediaPlayer) {
+        val f = factory ?: return
+        p.videoSurface().set(f.videoSurfaces().newVideoSurface(format, render, true))
+        p.events().addMediaPlayerEventListener(object : MediaPlayerEventAdapter() {
+            // Nur Meldungen des gerade benutzten Players zählen (der andere ist gestoppt).
+            private fun mine(mediaPlayer: MediaPlayer) = mediaPlayer === player
+            override fun playing(mediaPlayer: MediaPlayer) = ui {
+                if (!mine(mediaPlayer)) return@ui
+                playing = true; buffering = false; error = null; readTracks()
+                // Lautstärke gilt je Player: beim Wechsel mitnehmen.
+                if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
+            }
+            override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
+            override fun stopped(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
+            override fun buffering(mediaPlayer: MediaPlayer, newCache: Float) = ui { if (mine(mediaPlayer)) buffering = newCache < 100f }
+            override fun timeChanged(mediaPlayer: MediaPlayer, newTime: Long) = ui { if (mine(mediaPlayer)) positionMs = newTime }
+            override fun lengthChanged(mediaPlayer: MediaPlayer, newLength: Long) = ui { if (mine(mediaPlayer)) durationMs = newLength }
+            override fun error(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { error = "Der Stream lässt sich nicht abspielen"; playing = false } }
+            override fun finished(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; onFinished?.invoke() } }
+            override fun elementaryStreamAdded(mediaPlayer: MediaPlayer, type: uk.co.caprica.vlcj.media.TrackType, id: Int) = ui { if (mine(mediaPlayer)) readTracks() }
+        })
+    }
+
+    private fun tappedPlayer(): EmbeddedMediaPlayer? = tapped ?: factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also { p ->
+        prepare(p)
+        p.audio().callback(AudioTap.FORMAT, AudioTap.RATE, AudioTap.CHANNELS, tap, true)
+        tapped = p
     }
 
     /** Wird am Ende eines Films aufgerufen. */
@@ -77,7 +105,14 @@ class VideoPlayer {
     val available: Boolean get() = player != null
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
-        val p = player ?: return
+        val next = (if (tapAudio) tappedPlayer() else normal) ?: return
+        if (next !== player) runCatching { player?.controls()?.stop() }
+        player = next
+        val p = next
+        if (tapAudio) {
+            speech.clear()
+            tap.restart()
+        }
         error = null
         buffering = true
         positionMs = startMs
@@ -124,13 +159,17 @@ class VideoPlayer {
 
     fun stop() {
         player?.controls()?.stop()
+        tap.close()
         frame = null
         playing = false
     }
 
     fun release() {
-        runCatching { player?.controls()?.stop() }
-        runCatching { player?.release() }
+        runCatching { normal?.controls()?.stop() }
+        runCatching { tapped?.controls()?.stop() }
+        tap.close()
+        runCatching { normal?.release() }
+        runCatching { tapped?.release() }
         runCatching { factory?.release() }
     }
 
