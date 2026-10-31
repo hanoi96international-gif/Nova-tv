@@ -139,7 +139,7 @@ private fun FullscreenPlayer(app: AppState, playing: Playback) {
         size = DpSize(bounds.width.dp, bounds.height.dp),
     )
     Window(
-        onCloseRequest = { app.setFullscreen(false) },
+        onCloseRequest = { app.changeFullscreen(false) },
         state = state,
         title = "DnA-TV",
         undecorated = true,
@@ -156,7 +156,7 @@ private fun FullscreenPlayer(app: AppState, playing: Playback) {
                 if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
                 when (e.key) {
                     Key.Escape, Key.Back -> app.back()
-                    Key.F11 -> { app.setFullscreen(false); true }
+                    Key.F11 -> { app.changeFullscreen(false); true }
                     else -> false
                 }
             },
@@ -204,7 +204,7 @@ fun App(app: AppState, window: WindowState) {
             // F11 immer, auch während ein Eingabefeld den Fokus hat.
             if (e.key != Key.F11 || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             // Im Player: Vollbild-Fenster; sonst das Hauptfenster maximieren.
-            if (app.playing != null) app.setFullscreen(!app.fullscreen) else toggleMaximized(window)
+            if (app.playing != null) app.changeFullscreen(!app.fullscreen) else toggleMaximized(window)
             true
         }.onKeyEvent { e ->
             // Was kein Element selbst nutzt: Pfeiltasten wechseln den Fokus, Esc/Zurück geht eine Ebene zurück.
