@@ -416,18 +416,16 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         }
                     }
                     item {
-                        val builtIn = BuildConfig.OPENSUBTITLES_API_KEY.isNotBlank()
                         SettingRow(
                             "Untertitel aus dem Internet",
                             onOff(settings.onlineSubtitles),
-                            if (builtIn) "OpenSubtitles ist eingebaut, kein Konto nötig. Sucht Untertitel, wenn ein Film keine passenden hat."
-                            else "Sucht bei OpenSubtitles, wenn ein Film keine passenden Untertitel hat (API-Key per Handy eintragen).",
+                            "Sucht bei OpenSubtitles, wenn ein Film keine passenden Untertitel hat (eigener API-Key per Handy eintragen oder per Sicherung übertragen).",
                         ) { update { it.copy(onlineSubtitles = !it.onlineSubtitles) } }
                     }
                     item {
                         CredentialField(
                             current = settings.openSubtitlesKey,
-                            label = "Eigener OpenSubtitles API-Key (optional, ersetzt den eingebauten)",
+                            label = "OpenSubtitles API-Key",
                         ) { key -> update { it.copy(openSubtitlesKey = key) } }
                     }
                     item {

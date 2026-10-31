@@ -228,7 +228,7 @@ fun SettingsScreen(app: AppState) {
         item { Section("Untertitel und Übersetzung") }
         item {
             Column(Modifier.width(520.dp)) {
-                Field("Eigener OpenSubtitles-Schlüssel (optional, sonst der der App)", user.openSubtitlesKey, { v -> app.store.updateUser { it.copy(openSubtitlesKey = v.trim()) } }, secret = true)
+                Field("OpenSubtitles-Schlüssel (eigener, kommt auch mit der Sicherung vom Fire TV)", user.openSubtitlesKey, { v -> app.store.updateUser { it.copy(openSubtitlesKey = v.trim()) } }, secret = true)
                 Field("DeepL-Schlüssel", user.deeplKey, { v -> app.store.updateUser { it.copy(deeplKey = v.trim()) } }, secret = true)
                 Field("Untertitel-Sprache (z. B. de)", user.subtitleLanguage, { v -> app.store.updateUser { it.copy(subtitleLanguage = v.trim().lowercase().take(5)) } })
             }

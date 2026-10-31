@@ -87,8 +87,6 @@ jobs:
 
       - name: Tests und Debug-APKs bauen
         if: steps.reuse.outcome != 'success'
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         # Auch die Test-APK: Gerätetest, Handy-Test und ARM-Test nehmen diese APKs, statt neu zu bauen.
         run: ci/gradle-watchdog.sh 40 --no-daemon --console=plain -Pkotlin.compiler.execution.strategy=in-process testDebugUnitTest assembleDebug assembleDebugAndroidTest
 
@@ -138,8 +136,6 @@ jobs:
 
       - name: Release-APK bauen
         if: steps.reuse.outcome != 'success'
-        env:
-          OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
         run: ci/gradle-watchdog.sh 50 --no-daemon --console=plain -Pkotlin.compiler.execution.strategy=in-process assembleRelease assemblePhone
 
       # Handy-Fassung (ohne Installationsrecht) neben die Release-APK legen: ein Artefakt für beide.
