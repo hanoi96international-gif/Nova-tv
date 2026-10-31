@@ -600,7 +600,7 @@ data class StreamInfo(
         "Bildrate" to if (fps > 0) "%.3f fps".format(java.util.Locale.GERMAN, fps).replace(",000", "") else "–",
         "Video" to videoCodec.ifBlank { "–" },
         "Ton" to (audioCodec.ifBlank { "–" } + if (audioChannels > 0) ", ${channelsLabel(audioChannels)}" else ""),
-        "Leitung" to if (inputKbps > 0) mbit(inputKbps) else "–",
+        "Empfangen" to if (inputKbps > 0) mbit(inputKbps) else "–",
         "Datenrate" to if (demuxKbps > 0) mbit(demuxKbps) else "–",
         "Bilder" to "$displayed gezeigt, $lost verworfen" + if (corrupted > 0) ", $corrupted beschädigt" else "",
         "Startzeit" to if (startupMs > 0) "%.2f s".format(java.util.Locale.GERMAN, startupMs / 1000.0) else "–",

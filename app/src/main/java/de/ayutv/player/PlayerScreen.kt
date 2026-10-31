@@ -645,7 +645,7 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, dro
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")
         if (stats.audioDecoder.isNotEmpty()) add("Ton: " + if ("ffmpeg" in stats.audioDecoder.lowercase()) "FFmpeg" else stats.audioDecoder)
         if (stats.decoder.isNotEmpty()) add(stats.decoder)
-        if (stats.bandwidth > 0) add("Leitung %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
+        if (stats.bandwidth > 0) add("Datenrate des Senders %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
         add("Verworfene Frames: ${stats.droppedFrames}")
         if (stats.startupMs > 0) add("Start in ${stats.startupMs} ms")
         if (drops.isNotEmpty()) add(drops)
