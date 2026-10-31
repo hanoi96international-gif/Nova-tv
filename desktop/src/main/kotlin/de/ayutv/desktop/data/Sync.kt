@@ -209,19 +209,34 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
             val parser = XmltvParser(org.kxml2.io.KXmlParser())
             // Die Sender stehen im XMLTV vor den Sendungen: Bei der ersten Sendung einmal zuordnen.
             var byGuideId: Map<String, List<String>>? = null
+            // Zeitversatz-Sender ohne eigenes Programm („Sky Cinema Premieren +24“): Hauptsender, verschoben.
+            var shifted: Map<String, List<Pair<String, Long>>> = emptyMap()
             parser.parse(input, wanted = { id, start, stop ->
                 val map = byGuideId ?: run {
                     val matcher = EpgMatcher()
                     parser.channels.forEach { (gid, names) -> matcher.addGuideChannel(gid, names) }
-                    channels.mapNotNull { c -> matcher.match(c.epgId, c.name)?.let { it to c.key } }
+                    val shifts = ArrayList<Pair<String, Pair<String, Long>>>()
+                    channels.mapNotNull { c ->
+                        matcher.match(c.epgId, c.name)?.let { it to c.key } ?: run {
+                            EpgMatcher.timeShift(c.name)?.let { (hours, base) ->
+                                matcher.match(null, base)?.let { shifts += it to (c.key to hours * 3_600_000L) }
+                            }
+                            null
+                        }
+                    }
                         .groupBy({ it.first }, { it.second })
-                        .also { byGuideId = it }
+                        .also { byGuideId = it; shifted = shifts.groupBy({ it.first }, { it.second }) }
                 }
-                stop > from && start < until && id in map
+                (stop > from && start < until && id in map) ||
+                    shifted[id]?.any { (_, offset) -> stop + offset > from && start + offset < until } == true
             }) { p ->
-                val keys = byGuideId?.get(p.channelId).orEmpty()
                 val programme = Programme(p.start, p.stop, p.title, p.subtitle, p.description, p.category, p.flags)
-                for (key in keys) guide.getOrPut(key) { ArrayList() } += programme
+                if (p.stop > from && p.start < until) for (key in byGuideId?.get(p.channelId).orEmpty()) guide.getOrPut(key) { ArrayList() } += programme
+                shifted[p.channelId]?.forEach { (key, offset) ->
+                    if (p.stop + offset > from && p.start + offset < until) {
+                        guide.getOrPut(key) { ArrayList() } += programme.copy(start = p.start + offset, stop = p.stop + offset)
+                    }
+                }
             }
         }
     }

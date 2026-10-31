@@ -656,6 +656,9 @@ class PlaylistRepository(
         // Welchem EPG-Sender jeder Sender zugeordnet wurde, und welche EPG-Sender im Zeitraum Sendungen haben.
         val matchedGuide = HashMap<Long, String>()
         val withProgrammes = HashSet<String>()
+        // Zeitversatz-Sender ohne eigenes Programm („Sky Cinema Premieren +24“, „RTL +1“): das Programm des Hauptsenders,
+        // verschoben. EPG-Sender → (Kennung, unter der gespeichert wird; Versatz in ms).
+        val shiftedTargets = HashMap<String, MutableList<Pair<String, Long>>>()
         val byLowerId = open.filter { !it.epgId.isNullOrBlank() }.groupBy { it.epgId!!.trim().lowercase() }
         val unknown = HashSet<String>()
         fun storageFor(id: String): List<String>? {
@@ -667,8 +670,21 @@ class PlaylistRepository(
                     matcher.addGuideChannel(guideId, names)
                     guideIndex?.add("${guideId.clean()}\t${(names.firstOrNull() ?: guideId).clean()}\t${sourceLabel.clean()}")
                 }
-                if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { guideId ->
-                    if (channel.id in forced && guideId != channel.epgId) return@let
+                if (!matcher.isEmpty) for (channel in open) {
+                    val guideId = matcher.match(channel.epgId, channel.name)
+                    if (guideId == null) {
+                        val (hours, base) = EpgMatcher.timeShift(channel.name) ?: continue
+                        if (channel.id in forced) continue
+                        val baseId = matcher.match(null, base) ?: continue
+                        val storage = channel.epgId?.takeIf { it.isNotBlank() } ?: "$baseId+${hours}h"
+                        if (storage in taken || storage in owner) continue
+                        shiftedTargets.getOrPut(baseId) { ArrayList(1) } += storage to hours * HOUR
+                        channelsOf.getOrPut(storage) { ArrayList(1) } += channel.id
+                        if (channel.epgId.isNullOrBlank()) assign += channel.id to storage
+                        matchedGuide[channel.id] = baseId
+                        continue
+                    }
+                    if (channel.id in forced && guideId != channel.epgId) continue
                     matchedGuide[channel.id] = guideId
                     link(guideId, channel)
                     if (suspects != null && channel.id !in forced && !channel.epgId.isNullOrBlank() && !matcher.fitsName(guideId, channel.name)) {
@@ -693,15 +709,18 @@ class PlaylistRepository(
                 wanted = { id, start, stop ->
                     val inRange = stop + shift > from && start + shift < until
                     if (inRange) withProgrammes += id
-                    inRange && storageFor(id) != null
+                    // Zuerst zuordnen (auch für die Zeitversatz-Sender, deren Sendungen außerhalb des Zeitraums liegen können).
+                    val own = storageFor(id)
+                    (inRange && own != null) ||
+                        shiftedTargets[id]?.any { (_, offset) -> stop + shift + offset > from && start + shift + offset < until } == true
                 },
             ) { p ->
-                for (storage in storageFor(p.channelId).orEmpty()) {
+                fun emit(storage: String, offset: Long) {
                     batch += ProgrammeEntity(
                         playlistId = playlist.id,
                         channelEpgId = storage,
-                        start = p.start + shift,
-                        stop = p.stop + shift,
+                        start = p.start + shift + offset,
+                        stop = p.stop + shift + offset,
                         title = p.title,
                         description = p.description,
                         category = p.category,
@@ -711,6 +730,12 @@ class PlaylistRepository(
                     )
                     channelsOf[storage]?.let(found::addAll)
                     used += storage
+                }
+                if (p.stop + shift > from && p.start + shift < until) {
+                    for (storage in storageFor(p.channelId).orEmpty()) emit(storage, 0L)
+                }
+                shiftedTargets[p.channelId]?.forEach { (storage, offset) ->
+                    if (p.stop + shift + offset > from && p.start + shift + offset < until) emit(storage, offset)
                 }
                 if (batch.size >= BATCH) {
                     count += batch.size

@@ -165,6 +165,19 @@ class EpgMatcher(private val country: String = "de") {
         private val GLUED_UHD = Regex("""(?:uhd|4k)$""")
         private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
 
+        private val TIME_SHIFT = Regex("""\s*\+\s*(\d{1,2})(?:\s*(?:h|std|stunden?)\b)?(?![\d.])""", RegexOption.IGNORE_CASE)
+
+        /**
+         * Zeitversatz im Namen („Sky Cinema Premieren +24“, „RTL +1 HD“): Stunden und Name ohne die Angabe; null ohne
+         * Versatz. Für Sender, die es im EPG nicht eigens gibt: Sie zeigen das Programm des Hauptsenders später.
+         */
+        fun timeShift(name: String): Pair<Int, String>? {
+            val m = TIME_SHIFT.find(name) ?: return null
+            val hours = m.groupValues[1].toIntOrNull()?.takeIf { it in 1..48 } ?: return null
+            val base = name.removeRange(m.range).trim()
+            return if (base.isEmpty()) null else hours to base
+        }
+
         /** Wie verschieden zwei Namenskerne sind (Bearbeitungsabstand); gleiche zuerst, leere zuletzt. */
         fun editDistance(a: String, b: String): Int {
             if (a.isEmpty() || b.isEmpty()) return 1_000

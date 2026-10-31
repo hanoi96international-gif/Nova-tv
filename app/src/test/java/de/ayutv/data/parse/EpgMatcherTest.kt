@@ -216,4 +216,15 @@ class EpgMatcherTest {
         assertEquals("Sport.1.-.myTeamTV.de", m.match(null, "DE: MYTEAMTV SPORT 1"))
         assertEquals("MagentaSport.de@MagentaTV", m.match(null, "DE: MAGENTA SPORT HD"))
     }
+
+    @Test
+    fun timeShiftedChannels() {
+        assertEquals(24 to "DE: SKY CINEMA PREMIEREN HD", EpgMatcher.timeShift("DE: SKY CINEMA PREMIEREN +24 HD"))
+        assertEquals(1 to "RTL HD", EpgMatcher.timeShift("RTL +1 HD"))
+        assertEquals(null, EpgMatcher.timeShift("SPORT1+ HD"))
+        assertEquals(null, EpgMatcher.timeShift("ANIXE+"))
+        assertEquals(null, EpgMatcher.timeShift("Sky Sport 1"))
+        val m = EpgMatcher().apply { addGuideChannel("Sky.Cinema.Premiere.HD.de", listOf("Sky Cinema Premiere HD")) }
+        assertEquals("Sky.Cinema.Premiere.HD.de", m.match(null, EpgMatcher.timeShift("DE: SKY CINEMA PREMIEREN +24 HD")!!.second))
+    }
 }
