@@ -406,6 +406,30 @@ class Store(val dir: File) {
         save(PLAYLISTS, ListSerializer(Playlist.serializer()), _playlists.value)
     }
 
+    /**
+     * Favoriten, eigene Gruppen, Reihenfolgen und Verlauf behalten ihre Sender, wenn der Anbieter beim neuen Laden
+     * Adresse, Token oder Stream-Nummer geändert hat (wie auf dem Fire TV, gleiche Regeln in KeyRescue).
+     */
+    private fun rescueKeys(before: List<Channel>, after: List<Channel>) {
+        if (before.isEmpty() || after.isEmpty()) return
+        val u = _user.value
+        val used = (u.favorites + u.customGroups.flatMap { it.keys } + u.groupOrder.values.flatten() + u.recent).toHashSet()
+        val referenced = before.filter { it.key in used }
+        if (referenced.isEmpty()) return
+        fun Channel.ref() = de.ayutv.data.parse.KeyRescue.Ref(key, name, epgId, group)
+        val moves = de.ayutv.data.parse.KeyRescue.remap(referenced.map { it.ref() }, after.map { it.ref() })
+        if (moves.isEmpty()) return
+        fun List<String>.moved() = map { moves[it] ?: it }.distinct()
+        updateUser { x ->
+            x.copy(
+                favorites = x.favorites.moved(),
+                customGroups = x.customGroups.map { it.copy(keys = it.keys.moved()) },
+                groupOrder = x.groupOrder.mapValues { (_, keys) -> keys.moved() },
+                recent = x.recent.moved(),
+            )
+        }
+    }
+
     fun deletePlaylist(id: Long) {
         _playlists.update { list -> list.filterNot { it.id == id } }
         _content.update { it - id }
@@ -414,6 +438,7 @@ class Store(val dir: File) {
     }
 
     fun setContent(playlistId: Long, content: Content) {
+        rescueKeys(_content.value[playlistId]?.channels.orEmpty(), content.channels)
         _content.update { it + (playlistId to content) }
         save("content-$playlistId.json.gz", Content.serializer(), content)
     }

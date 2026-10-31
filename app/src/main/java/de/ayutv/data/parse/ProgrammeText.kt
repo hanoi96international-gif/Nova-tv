@@ -13,7 +13,7 @@ object ProgrammeText {
     /** „A – B“, „A - B“, „A vs. B“, „A v B“, „A gegen B“. */
     private val PAIRING = Regex("""\S\s+(?:[–—-]|vs\.?|v\.?|gegen)\s+\S""")
     /** Sender, auf denen eine Paarung oder „Live“ für ein Spiel genügt, auch ohne Sport-Kategorie im TV-Guide. */
-    private val SPORT_CHANNEL = Regex("""(?i)sport|dazn|servus|magenta|eleven|laola|bein|espn|\bran\b|motorvision|arena""")
+    private val SPORT_CHANNEL = Regex("""(?i)sport|dazn|servus|magenta|eleven|laola|bein|espn|\bran\b|motorvision|arena|bundesliga|\bliga\b|premier league|champions league|fu(ß|ss)ball|football""")
     private val NOISE = Regex("""\s*\(Senderinfo\)\.?\s*$""")
 
     fun headline(title: String, subtitle: String?): String {
@@ -36,7 +36,12 @@ object ProgrammeText {
             """snooker|wrestling|ufc|mma|leichtathletik|\bBL\b|konferenz|football|soccer|premier league|serie a|la ?liga|ligue 1|""" +
             """eredivisie|pokal|league cup|\bcup\b"""
     )
-    private val LIVE_WORD = Regex("""\b(Live|LIVE|live)\b""")
+    private val LIVE_WORD = Regex("""\b(Live|LIVE|live)\b|ᴸᶦᵛᵉ|ᴸᴵⱽᴱ|🔴""")
+    /**
+     * Übertragungen ohne Paarung, die trotzdem live sind: Konferenz (DAZN, Sky: alle Spiele im Wechsel), Multiview.
+     * Zusammenfassungen davon („Highlights der Konferenz“) fängt [NOT_LIVE] vorher ab.
+     */
+    private val LIVE_FORMAT = Regex("""(?i)(?<!presse)konferenz|multi-?view|einzelspiel(e)? live|matchday live""")
     private val NOT_LIVE = Regex(
         """(?i)highlights?|zusammenfassung|alle spiele|alle tore|rückblick|re-?live|classics|kompakt|countdown|magazin|""" +
             """spieltags-sprint|wiederholung|aufzeichnung|reportage|doku|analyse|talk|stammtisch|pur\b|sportschau club|es folgt|sendepause"""
@@ -88,6 +93,7 @@ object ProgrammeText {
         val text = title + " " + subtitle.orEmpty()
         if (NOT_LIVE.containsMatchIn(text) || NOT_LIVE.containsMatchIn(category.orEmpty())) return false
         if (LIVE_WORD.containsMatchIn(text)) return true
+        if ((sportChannel || isSport(title, subtitle, category)) && LIVE_FORMAT.containsMatchIn(text)) return true
         return (sportChannel || isSport(title, subtitle, category)) && pairing(title, subtitle) != null
     }
 

@@ -57,6 +57,9 @@ data class ChannelKeyId(val id: Long, val key: String)
 /** Was der EPG-Abgleich von einem Sender braucht (kleiner als die ganze Zeile). */
 data class EpgChannel(val id: Long, val name: String, val epgId: String?, val groupTitle: String = "")
 
+/** Sender kurz gefasst, um Favoriten und eigene Gruppen nach neuem Laden wieder zuzuordnen. */
+data class ChannelRef(val key: String, val name: String, val epgId: String?, val groupTitle: String)
+
 @Entity(
     tableName = "programmes",
     indices = [Index(value = ["channelEpgId", "start"]), Index("playlistId"), Index("stop")],

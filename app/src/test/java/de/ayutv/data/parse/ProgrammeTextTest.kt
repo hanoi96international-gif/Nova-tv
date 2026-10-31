@@ -99,4 +99,23 @@ class ProgrammeTextTest {
         assertEquals(false, ProgrammeText.isSportEvent("Es folgt: LIVE Basketball NBA", null, null, 0, sportChannel = true))
         assertEquals(true, ProgrammeText.isSportEvent("Live PL: Crystal Palace - FC Fulham, 19. Spieltag", null, null, 0, sportChannel = true))
     }
+
+    @Test
+    fun conferenceAndMultiviewAreLive() {
+        fun dazn(title: String, sub: String?, cat: String?, flags: Int = 0) = ProgrammeText.isSportEvent(title, sub, cat, flags, sportChannel = ProgrammeText.isSportChannel("DAZN 1 HD"))
+        // DAZN/Sky: Konferenz ohne Paarung und ohne „Live“ im Titel ist trotzdem live.
+        assertEquals(true, dazn("Die Konferenz", "Bundesliga, 12. Spieltag", null))
+        assertEquals(true, dazn("Bundesliga", "Konferenz am Samstag", "Fußball"))
+        assertEquals(true, dazn("UEFA Champions League – Die Konferenz", null, null))
+        assertEquals(true, ProgrammeText.isSportEvent("2. Bundesliga Konferenz", null, "Fußball", 0))
+        assertEquals(true, dazn("NFL RedZone Multiview", null, null))
+        assertEquals(true, ProgrammeText.isSportEvent("Bundesliga ᴸᶦᵛᵉ", "FC Bayern München", null, 0, sportChannel = true))
+        // Zusammenfassungen, Wiederholungen und Pressekonferenzen bleiben draußen.
+        assertEquals(false, dazn("Highlights der Konferenz", "Bundesliga", null))
+        assertEquals(false, dazn("Die Konferenz", "Bundesliga", null, flags = de.ayutv.data.db.ProgrammeFlags.REPEAT))
+        assertEquals(false, ProgrammeText.isSportEvent("Pressekonferenz", null, "Nachrichten", 0))
+        // Sky Bundesliga gilt als Sportsender.
+        assertEquals(true, ProgrammeText.isSportChannel("Sky Bundesliga 1 HD"))
+        assertEquals(true, ProgrammeText.isSportEvent("Konferenz", null, null, 0, sportChannel = ProgrammeText.isSportChannel("Sky Bundesliga 1 HD")))
+    }
 }
