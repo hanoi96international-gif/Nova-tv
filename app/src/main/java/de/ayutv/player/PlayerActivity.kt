@@ -1930,7 +1930,15 @@ class PlayerActivity : ComponentActivity() {
         externalJob?.cancel()
         externalJob = lifecycleScope.launch {
             while (true) {
-                val at = subtitleTimeAt(player?.currentPosition ?: 0L)
+                val position = player?.currentPosition ?: 0L
+                // Zeilen-Abgleich ohne Anker in der Nähe (gerade weit gesprungen): lieber kurz nichts als falsche Zeilen,
+                // bis die Einblendungen dort gelesen und neu ausgerichtet sind (dauert wenige Sekunden).
+                if (!elasticCovers(position)) {
+                    translatedCue = null
+                    delay(100)
+                    continue
+                }
+                val at = subtitleTimeAt(position)
                 val shown = externalTexts
                 translatedCue = cues.indices.filter { cues[it].start <= at && cues[it].end > at }
                     .takeIf { it.isNotEmpty() }
@@ -1964,6 +1972,10 @@ class PlayerActivity : ComponentActivity() {
             speechSyncInfo = "Von den schon ausgerichteten Untertiteln (${Languages.label(other)}) übernommen, wird am Ton nachgeprüft"
         }
     }
+
+    /** Gibt es beim Zeilen-Abgleich einen Anker in der Nähe von [position]? (Ohne Zeilen-Abgleich immer.) */
+    private fun elasticCovers(position: Long): Boolean =
+        elasticTiming?.let { it.distanceTo(position - subtitleDelayMs) <= ELASTIC_COVER_MS } ?: true
 
     /** Filmposition → Zeit in der geladenen Datei (automatische und manuelle Verschiebung eingerechnet). */
     private fun subtitleTimeAt(position: Long): Long =
@@ -2027,7 +2039,16 @@ class PlayerActivity : ComponentActivity() {
                         if (compareCandidates(language, references, result?.percent ?: 0)) return@launch
                     }
                 }
-                delay(if (elasticTiming == null) 1_000 else 30_000)
+                // Ausgerichtet und Anker in der Nähe: selten nachprüfen. Nach einem Sprung (kein Anker in der Nähe): sofort
+                // mit den dort neu gelesenen Einblendungen weiter ausrichten.
+                delay(1_000)
+                if (elasticTiming != null) {
+                    var waited = 1_000L
+                    while (waited < 30_000 && isActive && elasticCovers(player?.currentPosition ?: 0L)) {
+                        delay(1_000)
+                        waited += 1_000
+                    }
+                }
             }
         }
     }
@@ -3922,6 +3943,8 @@ class PlayerActivity : ComponentActivity() {
         private const val EARLY_MISS_PERCENT = 40
         /** Zeilen-Abgleich: ab so viel Prozent übernehmen, darunter vergleichen. */
         private const val ELASTIC_MIN_PERCENT = 50
+        /** Weiter als so weit vom nächsten Anker weg gilt der Zeilen-Abgleich dort als ungeklärt. */
+        private const val ELASTIC_COVER_MS = 90_000L
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
         private const val COMPARE_REFERENCES = 40
         private const val SPEECH_CHECK_MS = 20_000L
