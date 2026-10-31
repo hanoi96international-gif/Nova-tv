@@ -267,10 +267,11 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         // Leitungs-Check: zuletzt geschauter Sender (sonst ein Favorit) einige Sekunden laden und messen.
                         var running by remember { mutableStateOf(false) }
                         var result by remember { mutableStateOf<de.ayutv.data.repo.LineCheck.Result?>(null) }
+                        var variants by remember { mutableStateOf<String?>(null) }
                         SettingRow(
                             "Leitungs-Check",
                             if (running) "misst …" else "Jetzt messen",
-                            result?.let { r -> r.summary + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
+                            result?.let { r -> r.summary + (variants?.let { "\n$it" } ?: "") + "\nEmpfehlung: Puffer „${r.recommendation.label}“" }
                                 ?: "Lädt den zuletzt geschauten Sender 10 Sekunden (ohne Bild) und misst Antwortzeit und Aussetzer, dann kurz einen Film für die Höchstgeschwindigkeit vom Anbieter.",
                         ) {
                             if (running) return@SettingRow
@@ -280,8 +281,27 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                     ?: container.db.favorites().keys().firstOrNull()?.let { container.db.channels().byKey(it) }
                                     ?: container.db.channels().all().firstOrNull()
                                 val check = de.ayutv.data.repo.LineCheck(container.http)
+                                variants = null
                                 val live = channel?.let { check.run(it, it.userAgent ?: settings.userAgent) }
                                 result = live
+                                // Andere Fassungen desselben Senders je 5 s messen: Welche schickt der Anbieter mit der höchsten
+                                // Datenrate? Die Messung fließt in die Wahl der besten Fassung ein (bei gleicher Auflösung gewinnt mehr).
+                                if (channel != null && live != null && live.failed == null) {
+                                    de.ayutv.data.parse.ChannelQuality.recordBitrate(channel.key, live.kbps)
+                                    val others = runCatching { container.content.variantsOf(channel) }.getOrDefault(emptyList()).take(5)
+                                    if (others.isNotEmpty()) {
+                                        val measured = listOf(channel to live.kbps) + others.map { v ->
+                                            val r = check.run(v, v.userAgent ?: settings.userAgent, seconds = 5)
+                                            if (r.failed == null) de.ayutv.data.parse.ChannelQuality.recordBitrate(v.key, r.kbps)
+                                            v to (if (r.failed == null) r.kbps else -1)
+                                        }
+                                        val best = measured.maxByOrNull { it.second }
+                                        variants = "Fassungen: " + measured.sortedByDescending { it.second }.joinToString(" · ") { (v, kbps) ->
+                                            v.name + ": " + (if (kbps < 0) "kein Empfang" else "%.1f Mbit/s".format(kbps / 1000.0)) + (if (v === best?.first && kbps > 0) " ✓" else "")
+                                        } + (if (best != null && best.first.key != channel.key && best.second > live.kbps * 11 / 10)
+                                            "\nSchärfer: „${best.first.name}“ – wird ab jetzt bei doppelten Sendern bevorzugt." else "")
+                                    }
+                                }
                                 // Dazu die echte Geschwindigkeit vom Anbieter: ein Film wird nicht in Echtzeit, sondern so schnell wie möglich geliefert.
                                 val movie = runCatching { container.db.vod().search("", 1).firstOrNull() }.getOrNull()
                                 val provider = movie?.let { check.provider(it.url, settings.userAgent) }

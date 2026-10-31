@@ -801,6 +801,9 @@ class PlayerActivity : ComponentActivity() {
         if (!isLive || watchStartedAt == 0L) return
         val watched = SystemClock.elapsedRealtime() - watchStartedAt
         watchStartedAt = 0L
+        // Datenrate des Senders merken (ab 20 s Schauen ist die Schätzung eingeschwungen): Bei doppelten Sendern gewinnt
+        // bei gleicher Auflösung die Fassung, die der Anbieter mit mehr Daten (schärfer) schickt.
+        if (watched >= 20_000 && stats.bandwidth > 0) de.ayutv.data.parse.ChannelQuality.recordBitrate(channel.key, (stats.bandwidth / 1000).toInt())
         if (watched < 60_000) return
         de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
     }

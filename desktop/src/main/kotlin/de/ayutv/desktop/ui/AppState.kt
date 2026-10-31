@@ -269,7 +269,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         }
         lastPlaybackAt = System.currentTimeMillis()
         (playing as? Playback.Live)?.let { previous ->
-            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) }
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) ; de.ayutv.data.parse.ChannelQuality.recordBitrate(previous.channel.key, info.inputKbps) }
         }
         playing = playback
         start(playback)
@@ -639,7 +639,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         lastPlaybackAt = System.currentTimeMillis()
         (playing as? Playback.Live)?.let { live ->
             // Beim Schauen gemessen: Auflösung und Startzeit fließen in die Wahl der besten Fassung ein.
-            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(live.channel.key, info.height, info.startupMs) }
+            player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(live.channel.key, info.height, info.startupMs) ; de.ayutv.data.parse.ChannelQuality.recordBitrate(live.channel.key, info.inputKbps) }
             channelCheck.save()
         }
         stopAligning()

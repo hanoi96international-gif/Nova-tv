@@ -80,4 +80,24 @@ class ChannelQualityTest {
         assertEquals(ChannelQuality.Info(720, 1200, 0, 5, 600_000, 1), ChannelQuality.info("k1"))
         file.delete()
     }
+
+    @Test
+    fun sameResolutionHigherBitrateWins() {
+        ChannelQuality.preferUhd = true
+        // Zwei 4K-Fassungen: die mit mehr Daten (schärfer) gewinnt, eine Full-HD-Fassung mit viel Daten nicht gegen 4K.
+        ChannelQuality.recordPlayback("a", 2160, 900)
+        ChannelQuality.recordPlayback("b", 2160, 900)
+        ChannelQuality.recordPlayback("c", 1080, 900)
+        ChannelQuality.recordBitrate("a", 10_000)
+        ChannelQuality.recordBitrate("b", 22_000)
+        ChannelQuality.recordBitrate("c", 40_000)
+        assertEquals("DE: SKY SPORT UHD (EVENT)", best(Ch("a", "DE: SKY SPORT UHD"), Ch("b", "DE: SKY SPORT UHD (EVENT)"), Ch("c", "DE: SKY SPORT FHD")))
+        // Gespeichert und wieder geladen.
+        val file = java.io.File.createTempFile("quality", ".tsv")
+        ChannelQuality.saveIfChanged(file)
+        ChannelQuality.clear()
+        ChannelQuality.load(file)
+        assertEquals(22_000, ChannelQuality.info("b")?.kbps)
+        file.delete()
+    }
 }
