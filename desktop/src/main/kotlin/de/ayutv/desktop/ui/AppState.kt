@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.desktop.data.BackupImport
 import de.ayutv.desktop.data.Channel
+import de.ayutv.desktop.data.numberOf
 import de.ayutv.desktop.data.GroupRef
 import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Series
@@ -661,7 +662,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         val live = playing as? Playback.Live ?: return
         typedNumber = (typedNumber + digit).takeLast(4)
         val typed = typedNumber
-        val numbers = live.list.mapIndexed { i, c -> (c.number.takeIf { it > 0 } ?: (i + 1)) to c }
+        val user = store.user.value
+        // Eigene Sendernummern zuerst (auch für Sender außerhalb der aktuellen Liste), dann die der Liste.
+        val custom = user.channelNumbers.mapNotNull { (key, n) -> (live.list.firstOrNull { it.key == key } ?: store.channel(key))?.let { n to it } }
+        val numbers = custom + live.list.mapIndexed { i, c -> user.numberOf(c, i + 1) to c }
         val canGrow = numbers.any { (n, _) -> n.toString().let { it.length > typed.length && it.startsWith(typed) } }
         numberJob?.cancel()
         numberJob = scope.launch {

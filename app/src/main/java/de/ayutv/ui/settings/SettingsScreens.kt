@@ -81,6 +81,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRestorer
+import de.ayutv.ui.components.keepVerticalFocus
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.tv.material3.Border
 import androidx.compose.foundation.BorderStroke
@@ -179,7 +180,11 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             // focusRestorer: Von rechts zurück landet der Fokus auf dem gewählten Bereich, nicht auf dem
             // gerade daneben liegenden (der sonst sofort umschalten würde).
             // fallback: Beim ersten Betreten (noch nichts gemerkt) auf den gewählten Bereich, nicht auf den nächstgelegenen.
-            Modifier.width(if (isPortrait) 170.dp else 250.dp).fillMaxHeight().focusRestorer(pageFocus.getValue(page))
+            Modifier.width(if (isPortrait) 170.dp else 250.dp).fillMaxHeight()
+                // ▲/▼ am Ende bleiben in der Spalte (sprangen sonst in die Seitenleiste oder nach rechts).
+                .keepVerticalFocus()
+                .focusRestorer(pageFocus.getValue(page))
+                .verticalScroll(rememberScrollState())
                 .background(AyuColors.Surface.copy(alpha = 0.5f)).padding(vertical = 32.dp, horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -193,12 +198,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     onClick = { pendingPage = null; page = entry },
                 )
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(12.dp))
             Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
         }
         // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
         key(page) { LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
+            // Am Listenende nicht in die linke Spalte (würde den Bereich wechseln) oder die Seitenleiste springen.
+            modifier = Modifier.weight(1f).fillMaxHeight().keepVerticalFocus(),
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -1139,7 +1145,7 @@ private fun TranslationProvider.next(): TranslationProvider = TranslationProvide
 private fun LanguageList(selected: String, onSelect: (String) -> Unit) {
     val focus = remember { FocusRequester() }
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().keepVerticalFocus(),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

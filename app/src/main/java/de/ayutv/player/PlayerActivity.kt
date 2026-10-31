@@ -1148,14 +1148,19 @@ class PlayerActivity : ComponentActivity() {
         numberJob?.cancel()
         // Kann keine Sendernummer mit dieser Eingabe weitergehen, sofort umschalten statt 1,5 s zu warten.
         val typed = numberInput
-        val canGrow = channels.isEmpty() || channels.any { c ->
-            c.number.toString().let { it.length > typed.length && it.startsWith(typed) }
+        val custom = container.channelNumbers.all.value.values.map { it.number }
+        val canGrow = channels.isEmpty() || (channels.map { it.number } + custom).any { n ->
+            n.toString().let { it.length > typed.length && it.startsWith(typed) }
         }
         numberJob = lifecycleScope.launch {
             if (canGrow) delay(1_500)
             val number = numberInput.toIntOrNull()
             numberInput = ""
-            val target = number?.let { n -> channels.firstOrNull { it.number == n } ?: container.content.channelByNumber(n) }
+            // Eigene Sendernummern zuerst: Die Playlist kann dieselbe Nummer noch für einen anderen Sender haben.
+            val target = number?.let { n ->
+                container.channelNumbers.keyFor(n)?.let { key -> channels.firstOrNull { it.key == key } ?: container.content.channel(key) }
+                    ?: channels.firstOrNull { it.number == n } ?: container.content.channelByNumber(n)
+            }
             if (target != null) playChannel(target) else message = "Kein Sender mit Nummer $number"
         }
     }

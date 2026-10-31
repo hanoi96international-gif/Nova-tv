@@ -54,6 +54,7 @@ import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.parse.IntroSkip
 import de.ayutv.desktop.data.Channel
+import de.ayutv.desktop.data.numberOf
 import de.ayutv.desktop.data.IntroMark
 import de.ayutv.desktop.data.Programme
 import de.ayutv.desktop.input.RemoteButton
@@ -445,7 +446,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                                 kotlinx.coroutines.delay(2_000)
                             }
                         }
-                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs, badges)
+                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs, badges, user.channelNumbers[shown.key])
                     }
                     is Playback.Vod -> VodBar(
                         playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
@@ -602,7 +603,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
         LazyColumn(state = state) {
             itemsIndexed(channels, key = { _, c -> c.key }) { index, channel ->
                 val programme = guide[channel.key]?.let(::nowOf)
-                val number = channel.number.takeIf { it > 0 } ?: (index + 1)
+                val number = user.numberOf(channel, index + 1)
                 Selectable(
                     onClick = { onPick(channel, channels) },
                     onMenu = { app.toast(if (store.toggleFavorite(channel.key)) "★ ${channel.name} zu Favoriten" else "${channel.name} aus Favoriten entfernt") },
@@ -628,7 +629,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
 }
 
 @Composable
-private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long, badges: List<String> = emptyList()) {
+private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long, badges: List<String> = emptyList(), customNumber: Int? = null) {
     val now = System.currentTimeMillis()
     val current = programmes.firstOrNull { it.start <= now && it.stop > now }
     val next = programmes.firstOrNull { it.start >= (current?.stop ?: now) }
@@ -638,7 +639,7 @@ private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Prog
             Spacer(Modifier.width(18.dp))
             Column(Modifier.weight(1f)) {
                 val index = live.list.indexOfFirst { it.key == channel.key }
-                val number = channel.number.takeIf { it > 0 } ?: (index + 1)
+                val number = customNumber ?: channel.number.takeIf { it > 0 } ?: (index + 1)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Label("${if (number > 0) "$number  " else ""}${channel.name}${if (favorite) "  ★" else ""}", Type.title)
                     badges.forEach { b ->

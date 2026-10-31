@@ -132,6 +132,8 @@ data class CustomGroup(val id: Long, val name: String, val keys: List<String> = 
 @Serializable
 data class UserData(
     val favorites: List<String> = emptyList(),
+    /** Eigene Sendernummern: Senderschlüssel → Nummer (jede Nummer nur einmal). */
+    val channelNumbers: Map<String, Int> = emptyMap(),
     val customGroups: List<CustomGroup> = emptyList(),
     /** Eigene Reihenfolge in Gruppen des Anbieters: Gruppenname → Senderschlüssel. */
     val groupOrder: Map<String, List<String>> = emptyMap(),
@@ -207,3 +209,7 @@ data class UserData(
     /** TV-Guide um Stunden verschieben (Anbieter mit falscher Zeitzone), −12 … +12. */
     val epgShiftHours: Int = 0,
 )
+
+/** Nummer eines Senders: eigene Nummer, sonst die der Playlist, sonst die Position in der Liste ([fallback]). */
+fun UserData.numberOf(channel: Channel, fallback: Int): Int =
+    channelNumbers[channel.key] ?: channel.number.takeIf { it > 0 } ?: fallback

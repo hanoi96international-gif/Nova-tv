@@ -128,7 +128,7 @@ fun CategoryColumn(
         onSelect(id as String?)
     }
     LazyColumn(
-        modifier = modifier.width(width).fillMaxHeight().focusRestorer(),
+        modifier = modifier.width(width).fillMaxHeight().keepVerticalFocus().focusRestorer(),
         contentPadding = PaddingValues(vertical = 24.dp, horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {

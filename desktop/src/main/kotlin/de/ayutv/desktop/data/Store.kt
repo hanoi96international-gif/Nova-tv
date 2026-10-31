@@ -281,6 +281,14 @@ class Store(val dir: File) {
         save(userFile(_profile.value), UserData.serializer(), _user.value)
     }
 
+    /** Eigene Sendernummer setzen ([number] null: entfernen). Eine schon vergebene Nummer wird dem anderen Sender genommen. */
+    fun setChannelNumber(key: String, number: Int?) {
+        updateUser { u ->
+            val rest = u.channelNumbers.filter { (k, n) -> k != key && n != number }
+            u.copy(channelNumbers = if (number == null || number <= 0) rest else rest + (key to number))
+        }
+    }
+
     fun toggleFavorite(key: String): Boolean {
         var now = false
         updateUser { u ->

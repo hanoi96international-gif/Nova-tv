@@ -44,9 +44,13 @@ class AppContainer(val context: Context) {
 
     val epgOverrides = de.ayutv.data.EpgOverrides(context)
     val accountLimits = de.ayutv.data.AccountLimits(context)
+    /** Eigene Sendernummern (OK lange auf einem Sender → „Sendernummer festlegen“). */
+    val channelNumbers = de.ayutv.data.ChannelNumbers(context)
     val playlists = PlaylistRepository(db, http, settings, context.cacheDir, epgOverrides, accountLimits).also { repo ->
         // Nach jedem Laden einer Playlist kurz die wichtigsten Sender prüfen: „Best of“ ist so gleich gefüllt.
         repo.onImported = {
+            // Eigene Sendernummern wieder eintragen (der Import schreibt die Nummern der Playlist).
+            scope.launch { runCatching { channelNumbers.apply(db) } }
             runCatching { de.ayutv.data.repo.ChannelCheckWorker.runQuick(context) }
             // Neue Server der Playlist für den Proxy übernehmen.
             scope.launch { applyProxy() }

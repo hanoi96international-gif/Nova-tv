@@ -269,6 +269,15 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
         label = "dim",
     )
     var enterTick by remember { mutableIntStateOf(0) }
+    // Alle Bereiche sollen ohne Scrollen auf den Bildschirm passen, auch mit großer Schrift oder kleiner Auflösung
+    // (sonst war „Einstellungen“ unten abgeschnitten): Abstand je Eintrag aus der Bildschirmhöhe berechnen.
+    val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+    val rowPadding = remember(screenHeight, fontScale, sections.size) {
+        val fixed = 32f + 40f * fontScale + 8f + 3f * (sections.size + 1)
+        val perRow = (screenHeight - fixed) / sections.size.coerceAtLeast(1)
+        ((perRow - 22f * maxOf(1f, fontScale)) / 2f).coerceIn(2f, 10f).dp
+    }
     val initialFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val touch = isTouchDevice
@@ -352,7 +361,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
                             )
                         } else Modifier)
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .padding(horizontal = 14.dp, vertical = rowPadding),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
