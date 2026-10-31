@@ -50,7 +50,9 @@ object StreamingApps {
         val l = label.trim().lowercase()
         if (app.labels.any { it == l }) return 0
         val others = listOf("kids", "music", "musik", "studio", "create", "direct", "photos")
-        return if (app.labels.any { l.startsWith("$it ") || l.startsWith("$it:") } && others.none { l.contains(it) }) 1 else null
+        // „YouTube TV“ ist ein eigener (US-)Dienst, nicht die YouTube-App.
+        val otherService = app.id == "youtube" && Regex("""\btv\b""").containsMatchIn(l)
+        return if (app.labels.any { l.startsWith("$it ") || l.startsWith("$it:") } && others.none { l.contains(it) } && !otherService) 1 else null
     }
 
     /** Alle Paketnamen (für die Sichtbarkeit unter Android 11+ im Manifest und für Tests). */

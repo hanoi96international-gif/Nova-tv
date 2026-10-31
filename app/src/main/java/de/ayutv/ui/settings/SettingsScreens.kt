@@ -235,6 +235,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
                             onGroups = { onManageGroups(playlist) },
                             onMapGuide = { mappingFor = playlist },
+                            onRename = { name -> container.scope.launch { container.playlists.rename(playlist.id, name) } },
                             onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
                             onDelete = {
                                 if (confirmDelete == playlist.id) {
@@ -586,8 +587,10 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Design",
                             settings.uiTheme.label,
                             "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett. Hannover 96: Stadionabend mit Flutlicht, " +
-                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Standard: schlichtes Dunkelblau. OLED-Schwarz: echtes Schwarz " +
-                                "für OLED-Fernseher. OK wechselt.",
+                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Kino: roter Samtvorhang mit Spotlicht und Gold. Tiefsee: Lichtstrahlen " +
+                                "im dunklen Wasser, Türkis. Abendrot: Retro-Sonne über dem Horizont in Violett und Orange. Graphit: modernes Anthrazit " +
+                                "mit Glanz. Smaragd: Waldnacht mit Glühwürmchen. Neon: Stadt bei Nacht in Magenta und Cyan. Standard: schlichtes " +
+                                "Dunkelblau. OLED-Schwarz: echtes Schwarz für OLED-Fernseher. OK wechselt.",
                         ) {
                             val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
                             de.ayutv.ui.theme.AyuColors.use(next, settings.accent)
@@ -961,11 +964,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Speicher",
                             "Aufräumen",
-                            (usage ?: "wird ermittelt …") + "\nLange nicht benutzte Übersetzungsmodelle (30 Tage) und alte Untertitel (60 Tage) " +
-                                "löscht die App nachts von selbst." + (cleaned?.let { "\nZuletzt: $it" } ?: ""),
+                            (usage ?: "wird ermittelt …") + "\nAufräumen: leert den Bilder-Zwischenspeicher (Logos laden neu), löscht installierte Updates, " +
+                                "verdichtet die Datenbank und entfernt Übersetzungsmodelle, die 7 Tage nicht benutzt wurden. Nachts räumt die App " +
+                                "von selbst auf (Modelle nach 30, Untertitel nach 60 Tagen)." + (cleaned?.let { "\nZuletzt: $it" } ?: ""),
                         ) {
                             scope.launch {
-                                cleaned = withContext(Dispatchers.IO) { de.ayutv.data.StorageCleaner.clean(context) }
+                                cleaned = "räumt auf …"
+                                cleaned = withContext(Dispatchers.IO) { de.ayutv.data.StorageCleaner.clean(context, manual = true, database = container.db) }
                                 usage = withContext(Dispatchers.IO) {
                                     "Frei: " + de.ayutv.data.StorageCleaner.format(de.ayutv.data.StorageCleaner.freeBytes(context)) +
                                         de.ayutv.data.StorageCleaner.usage(context).joinToString("") { "\n${it.label}: ${de.ayutv.data.StorageCleaner.format(it.bytes)}" }
@@ -1212,9 +1217,26 @@ private fun PlaylistRow(
     onToggle: () -> Unit,
     onGroups: () -> Unit,
     onMapGuide: () -> Unit,
+    onRename: (String) -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Umbenennen direkt in der Zeile: Feld mit dem jetzigen Namen, OK/Fertig speichert.
+    var renaming by remember { mutableStateOf(false) }
+    var newName by remember(playlist.name) { mutableStateOf(playlist.name) }
+    val nameField = remember { FocusRequester() }
+    LaunchedEffect(renaming) {
+        if (!renaming) return@LaunchedEffect
+        repeat(10) {
+            if (runCatching { nameField.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(30)
+        }
+    }
+    fun saveName() {
+        val trimmed = newName.trim()
+        if (trimmed.isNotEmpty() && trimmed != playlist.name) onRename(trimmed)
+        renaming = false
+    }
     // Wie viele Sender ein Programm haben, woher es kommt und welche keins haben.
     val container = LocalContainer.current
     val guide by produceState<PlaylistRepository.EpgStatus?>(null, playlist.id, playlist.lastEpgSync) {
@@ -1266,12 +1288,28 @@ private fun PlaylistRow(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedButton(onClick = onGroups) { Text("Gruppen") }
+            OutlinedButton(onClick = { newName = playlist.name; renaming = !renaming }) { Text(if (renaming) "Abbrechen" else "Umbenennen") }
             if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
             OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
             OutlinedButton(
                 onClick = onDelete,
                 colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
             ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
+        }
+        if (renaming) {
+            Row(Modifier.fillMaxWidth().padding(start = 134.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                de.ayutv.ui.components.TvTextField(
+                    value = newName,
+                    onValueChange = { newName = it.take(60) },
+                    label = "Neuer Name der Playlist",
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                    onImeAction = { saveName() },
+                    focusRequester = nameField,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(10.dp))
+                Button(onClick = { saveName() }) { Text("Speichern") }
+            }
         }
     }
 }

@@ -32,6 +32,7 @@ class StreamingAppsTest {
         assertEquals(0, StreamingApps.labelMatch(youtube, "YouTube"))
         assertEquals(null, StreamingApps.labelMatch(youtube, "YouTube Kids"))
         assertEquals(null, StreamingApps.labelMatch(youtube, "YouTube Music"))
+        assertEquals(null, StreamingApps.labelMatch(youtube, "YouTube TV"))
         assertEquals(0, StreamingApps.labelMatch(prime, "Prime Video"))
         assertEquals(0, StreamingApps.labelMatch(prime, "Amazon Prime Video"))
         assertEquals(null, StreamingApps.labelMatch(prime, "Prime Gaming"))

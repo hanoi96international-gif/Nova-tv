@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
                             if (intro) when (de.ayutv.ui.theme.AyuColors.theme) {
                                 de.ayutv.ui.theme.UiTheme.NORDLICHT -> de.ayutv.ui.theme.AuroraIntro { intro = false }
                                 de.ayutv.ui.theme.UiTheme.HANNOVER -> de.ayutv.ui.theme.StadiumIntro { intro = false }
-                                de.ayutv.ui.theme.UiTheme.CLASSIC, de.ayutv.ui.theme.UiTheme.OLED -> Unit
+                                else -> Unit
                             }
                         }
                     }

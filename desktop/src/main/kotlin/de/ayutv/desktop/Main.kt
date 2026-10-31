@@ -153,7 +153,7 @@ fun App(app: AppState, window: WindowState) {
     }
 
     Box(
-        Modifier.fillMaxSize().background(Palette.background)
+        Modifier.fillMaxSize().background(Palette.backdrop)
             .focusRequester(root)
             .onFocusChanged { rootFocused = it.isFocused; rootHasFocus = it.hasFocus }
             .focusable()

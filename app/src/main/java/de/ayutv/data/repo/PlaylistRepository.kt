@@ -133,6 +133,14 @@ class PlaylistRepository(
     }
 
     /** Playlist ein- oder ausschalten. Daten bleiben erhalten; eine nie geladene Playlist wird jetzt geladen. */
+    /** Playlist umbenennen (nur der angezeigte Name; Zugang und Inhalte bleiben). */
+    suspend fun rename(id: Long, name: String) {
+        val trimmed = name.trim().take(60)
+        if (trimmed.isEmpty()) return
+        val playlist = db.playlists().byId(id) ?: return
+        db.playlists().update(playlist.copy(name = trimmed))
+    }
+
     suspend fun setEnabled(id: Long, enabled: Boolean) {
         db.playlists().setEnabled(id, enabled)
         if (!enabled) {
@@ -248,9 +256,9 @@ class PlaylistRepository(
                         PlaylistType.XTREAM -> importXtream(playlist)
                     }
                 }
-                // Während des Imports umgeschaltet? Den aktuellen Schalterstand behalten.
-                val enabled = db.playlists().byId(playlistId)?.enabled ?: updated.enabled
-                db.playlists().update(updated.copy(enabled = enabled))
+                // Während des Imports umgeschaltet oder umbenannt? Den aktuellen Stand behalten.
+                val now = db.playlists().byId(playlistId)
+                db.playlists().update(updated.copy(enabled = now?.enabled ?: updated.enabled, name = now?.name ?: updated.name))
                 _state.value = SyncState.Idle
                 true
             } catch (e: kotlinx.coroutines.CancellationException) {

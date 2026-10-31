@@ -75,6 +75,14 @@ fun SettingsScreen(app: AppState) {
                     dialog = {
                         MenuDialog(app, p.name, listOf(
                             MenuItem("Bearbeiten") { editing = p },
+                            MenuItem("Umbenennen") {
+                                dialog = {
+                                    NameDialog(app, "Playlist umbenennen", p.name, onDone = { name ->
+                                        val trimmed = name.trim().take(60)
+                                        if (trimmed.isNotEmpty()) app.store.savePlaylist(p.copy(name = trimmed))
+                                    }, onDismiss = { dialog = null })
+                                }
+                            },
                             MenuItem("Gruppen ein-/ausblenden …") { groupsOf = p },
                             MenuItem("Jetzt neu laden") { app.scope.launch { runCatching { app.sync.syncPlaylist(p.id) }.onFailure { app.toast("${p.name}: ${it.message}") } } },
                             MenuItem(if (p.enabled) "Ausschalten" else "Einschalten") { app.store.savePlaylist(p.copy(enabled = !p.enabled)) },
@@ -185,10 +193,14 @@ fun SettingsScreen(app: AppState) {
         item {
             Column {
                 Label("Design", Type.body)
-                Row(Modifier.padding(vertical = 4.dp)) {
+                // Viele Designs: in mehreren Zeilen statt aus dem Bild hinaus.
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.padding(vertical = 4.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+                ) {
                     Palette.THEMES.forEach { (value, label) ->
                         Selectable({ app.store.updateUser { it.copy(uiTheme = value) } }, selected = user.uiTheme == value) { Label(label) }
-                        Spacer(Modifier.width(6.dp))
                     }
                 }
                 Label("Akzentfarbe (Auswahlrahmen, Fortschritt, Hervorhebungen)", Type.body)

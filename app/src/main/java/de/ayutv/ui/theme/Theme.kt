@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import kotlinx.coroutines.launch
 import androidx.tv.material3.LocalContentColor
@@ -32,6 +33,12 @@ enum class UiTheme(val label: String) {
     HANNOVER("Hannover 96"),
     CLASSIC("Standard"),
     OLED("OLED-Schwarz"),
+    KINO("Kino"),
+    TIEFSEE("Tiefsee"),
+    ABENDROT("Abendrot"),
+    GRAPHIT("Graphit"),
+    SMARAGD("Smaragd"),
+    NEON("Neon"),
 }
 
 /**
@@ -120,11 +127,95 @@ data class Palette(
             progress = Color(0xFF3DA9FC),
         )
 
+        /** Kino: roter Samtvorhang, warmes Spotlicht, Akzente in Gold. */
+        val KINO = Palette(
+            background = Color(0xFF0B0506),
+            surface = Color(0xFF1A0F11),
+            surfaceRaised = Color(0xFF29171A),
+            accent = Color(0xFFF5C451),
+            accentSoft = Color(0xFF8C2232),
+            live = Color(0xFFFF4D4F),
+            textPrimary = Color(0xFFFFF6EA),
+            textSecondary = Color(0xFFC4AFA4),
+            progress = Color(0xFFF5C451),
+        )
+
+        /** Tiefsee: Licht fällt von oben ins dunkle Wasser, Akzente in leuchtendem Türkis. */
+        val TIEFSEE = Palette(
+            background = Color(0xFF02090F),
+            surface = Color(0xFF0A1822),
+            surfaceRaised = Color(0xFF102634),
+            accent = Color(0xFF38E1F2),
+            accentSoft = Color(0xFF0E6E86),
+            live = Color(0xFFFF5D73),
+            textPrimary = Color(0xFFEFFBFF),
+            textSecondary = Color(0xFF93AFBD),
+            progress = Color(0xFF38E1F2),
+        )
+
+        /** Abendrot: Retro-Sonne über dem Horizont, Verlauf von Violett nach Orange, Akzente in Korallenrot. */
+        val ABENDROT = Palette(
+            background = Color(0xFF0E0718),
+            surface = Color(0xFF1B1028),
+            surfaceRaised = Color(0xFF2A1838),
+            accent = Color(0xFFFF8A5B),
+            accentSoft = Color(0xFFB3306B),
+            live = Color(0xFFFF4D6D),
+            textPrimary = Color(0xFFFFF4F0),
+            textSecondary = Color(0xFFC2A9BF),
+            progress = Color(0xFFFF8A5B),
+        )
+
+        /** Graphit: neutrales Anthrazit mit weichem Glanz, Akzente in hellem Eisblau. Ruhig und modern. */
+        val GRAPHIT = Palette(
+            background = Color(0xFF0E0F11),
+            surface = Color(0xFF1A1C20),
+            surfaceRaised = Color(0xFF25282E),
+            accent = Color(0xFFA5C8FF),
+            accentSoft = Color(0xFF3B4A63),
+            live = Color(0xFFFF5A5F),
+            textPrimary = Color(0xFFF3F4F6),
+            textSecondary = Color(0xFFA0A4AD),
+            progress = Color(0xFFA5C8FF),
+        )
+
+        /** Smaragd: nächtlicher Wald mit Glühwürmchen, Akzente in leuchtendem Grün. */
+        val SMARAGD = Palette(
+            background = Color(0xFF040A07),
+            surface = Color(0xFF0D1A13),
+            surfaceRaised = Color(0xFF15281D),
+            accent = Color(0xFF4ADE80),
+            accentSoft = Color(0xFF15803D),
+            live = Color(0xFFFF5D5D),
+            textPrimary = Color(0xFFF0FFF4),
+            textSecondary = Color(0xFF9DB8A6),
+            progress = Color(0xFF4ADE80),
+        )
+
+        /** Neon: Stadt bei Nacht mit Leuchtreklame in Magenta und Cyan. */
+        val NEON = Palette(
+            background = Color(0xFF07050F),
+            surface = Color(0xFF130F24),
+            surfaceRaised = Color(0xFF1E1838),
+            accent = Color(0xFF22D3EE),
+            accentSoft = Color(0xFFA21CAF),
+            live = Color(0xFFFF2E88),
+            textPrimary = Color(0xFFF5F3FF),
+            textSecondary = Color(0xFFA9A3C9),
+            progress = Color(0xFFFF2E88),
+        )
+
         fun of(theme: UiTheme) = when (theme) {
             UiTheme.HANNOVER -> HANNOVER
             UiTheme.NORDLICHT -> NORDLICHT
             UiTheme.CLASSIC -> CLASSIC
             UiTheme.OLED -> OLED
+            UiTheme.KINO -> KINO
+            UiTheme.TIEFSEE -> TIEFSEE
+            UiTheme.ABENDROT -> ABENDROT
+            UiTheme.GRAPHIT -> GRAPHIT
+            UiTheme.SMARAGD -> SMARAGD
+            UiTheme.NEON -> NEON
         }
 
         fun of(theme: UiTheme, accent: AccentChoice): Palette = of(theme).let { base ->
@@ -232,6 +323,30 @@ fun AppBackground(modifier: Modifier = Modifier, content: @Composable () -> Unit
                         val image = rasterize { StadiumNight(it).draw(this) }
                         onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
                     }
+                    UiTheme.KINO -> Modifier.drawWithCache {
+                        val image = rasterize { CinemaCurtain(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
+                    UiTheme.TIEFSEE -> Modifier.drawWithCache {
+                        val image = rasterize { DeepSea(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
+                    UiTheme.ABENDROT -> Modifier.drawWithCache {
+                        val image = rasterize { Sunset(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
+                    UiTheme.GRAPHIT -> Modifier.drawWithCache {
+                        val image = rasterize { Graphite(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
+                    UiTheme.SMARAGD -> Modifier.drawWithCache {
+                        val image = rasterize { Forest(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
+                    UiTheme.NEON -> Modifier.drawWithCache {
+                        val image = rasterize { NeonCity(it).draw(this) }
+                        onDrawBehind { drawImage(image, dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt())) }
+                    }
                     UiTheme.CLASSIC, UiTheme.OLED -> Modifier
                 }
             )
@@ -262,100 +377,113 @@ private fun androidx.compose.ui.draw.CacheDrawScope.rasterize(
 }
 
 /**
- * Hannover 96: Stadionabend, tiefrot nach schwarz, zwei Flutlichtkegel, eine breite rote Schärpe quer über den
- * Bildschirm mit Linien in Weiß und Grün, eine riesige angeschnittene 96 als Umriss, ein Fanschal-Streifen oben
- * (Schwarz/Weiß/Grün, „HANNOVER 96“, „96“), Glut in der Kurve, Nadelstreifen und unten die Linie in Schwarz-Weiß-Grün.
+ * Hannover 96 – Flutlichtabend im Stadion: Nachthimmel in tiefem Rot nach Schwarz, zwei Flutlichtmasten mit
+ * Lichtkegeln, eine Tribüne mit roten Rängen und vielen kleinen Lichtern (Fans), davor der Rasen mit Mähstreifen und
+ * weißer Seitenlinie. Rechts eine große, dezente „96“, unten die Linie in Schwarz-Weiß-Grün. Oben links, wo Menüs und
+ * Titel stehen, bleibt es dunkel und ruhig; nichts läuft quer durch den Inhalt.
  */
 private class StadiumNight(size: androidx.compose.ui.geometry.Size) {
     private val w = size.width
     private val h = size.height
+    private val red = Color(0xFFD2121A)
     private val green = Color(0xFF1FB45A)
-    private val sky = Brush.verticalGradient(listOf(Color(0xFF45090E), Color(0xFF1A0709), Color(0xFF0C0909)), endY = h)
-    private val cones = listOf(w * 0.08f to 1f, w * 0.92f to -1f).map { (x, dir) ->
-        Triple(
+    private val standTop = h * 0.56f
+    private val pitchTop = h * 0.74f
+    private val sky = Brush.verticalGradient(listOf(Color(0xFF2A0609), Color(0xFF140607), Color(0xFF0A0606)), endY = standTop)
+    private val masts = listOf(w * 0.06f, w * 0.94f)
+    private val cones = masts.map { x ->
+        val dir = if (x < w / 2) 1f else -1f
+        androidx.compose.ui.graphics.Path().apply {
+            moveTo(x, h * 0.05f)
+            lineTo(x + dir * w * 0.50f, pitchTop + h * 0.2f)
+            lineTo(x + dir * w * 0.16f, pitchTop + h * 0.2f)
+            close()
+        }
+    }
+    private val coneLight = Brush.verticalGradient(listOf(Color(0xFFFFF4E0).copy(alpha = 0.10f), Color.Transparent), startY = h * 0.05f, endY = pitchTop + h * 0.2f)
+    private val lampGlow = masts.map { x -> Brush.radialGradient(listOf(Color.White.copy(alpha = 0.55f), Color(0xFFFFE9C4).copy(alpha = 0.15f), Color.Transparent), center = Offset(x, h * 0.05f), radius = h * 0.12f) }
+    /** Tribüne: dunkle Fläche mit Dachkante, rote Ränge in Reihen, viele kleine Lichter. */
+    private val stand = Brush.verticalGradient(listOf(Color(0xFF1A0B0D), Color(0xFF260A0E)), startY = standTop, endY = pitchTop)
+    private val rows: List<Float> = List(6) { i -> standTop + (pitchTop - standTop) * (0.18f + i * 0.13f) }
+    private val fans: List<Triple<Offset, Float, Color>> = kotlin.random.Random(96).let { r ->
+        List(420) {
+            val y = standTop + (pitchTop - standTop) * (0.12f + r.nextFloat() * 0.84f)
+            val c = when (r.nextInt(10)) {
+                0 -> Color.White
+                1, 2 -> Color(0xFF1FB45A)
+                else -> Color(0xFFFF3B3F)
+            }
+            Triple(Offset(r.nextFloat() * w, y), 0.8f + r.nextFloat() * 1.6f, c.copy(alpha = 0.18f + r.nextFloat() * 0.35f))
+        }
+    }
+    /** Rasen: Mähstreifen in Perspektive (nach unten breiter), weiße Seitenlinie und Mittelkreis-Bogen. */
+    private val pitch = Brush.verticalGradient(listOf(Color(0xFF0E3A1E), Color(0xFF082513), Color(0xFF041009)), startY = pitchTop, endY = h)
+    private val stripes: List<androidx.compose.ui.graphics.Path> = run {
+        val count = 14
+        List(count) { i ->
+            val topLeft = w * (i.toFloat() / count)
+            val topRight = w * ((i + 1f) / count)
+            val spread = 1.9f
             androidx.compose.ui.graphics.Path().apply {
-                moveTo(x, -h * 0.02f)
-                lineTo(x + dir * w * 0.42f, h * 1.05f)
-                lineTo(x + dir * w * 0.12f, h * 1.05f)
+                moveTo(topLeft, pitchTop)
+                lineTo(topRight, pitchTop)
+                lineTo(w / 2 + (topRight - w / 2) * spread, h)
+                lineTo(w / 2 + (topLeft - w / 2) * spread, h)
                 close()
-            },
-            Offset(x, 0f),
-            Brush.radialGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent), center = Offset(x, 0f), radius = h * 0.22f),
-        )
+            }
+        }.filterIndexed { i, _ -> i % 2 == 0 }
     }
-    private val coneLight = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.09f), Color.Transparent), startY = 0f, endY = h)
-    private fun sash(offset: Float, thickness: Float) = androidx.compose.ui.graphics.Path().apply {
-        moveTo(-w * 0.1f, h * 1.05f + offset)
-        lineTo(w * 1.1f, h * 0.05f + offset)
-        lineTo(w * 1.1f, h * 0.05f + offset + thickness)
-        lineTo(-w * 0.1f, h * 1.05f + offset + thickness)
-        close()
-    }
-    private val band = h * 0.34f
-    private val sashes = listOf(
-        sash(-band / 2, band) to Color(0xFFD2121A).copy(alpha = 0.42f),
-        sash(-band / 2 - h * 0.018f, h * 0.008f) to Color.White.copy(alpha = 0.55f),
-        sash(band / 2 + h * 0.010f, h * 0.008f) to green.copy(alpha = 0.65f),
-    )
-    private val ember = Brush.radialGradient(listOf(Color(0xFFFF3B1F).copy(alpha = 0.20f), Color.Transparent), center = Offset(w * 0.5f, h * 1.15f), radius = w * 0.6f)
     private val numberFill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.argb(26, 210, 18, 26)
-        textSize = h * 0.95f
+        color = android.graphics.Color.argb(22, 210, 18, 26)
+        textSize = h * 0.62f
         typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD_ITALIC)
         textAlign = android.graphics.Paint.Align.CENTER
     }
     private val numberOutline = android.graphics.Paint(numberFill).apply {
-        color = android.graphics.Color.argb(46, 255, 255, 255)
+        color = android.graphics.Color.argb(40, 255, 255, 255)
         style = android.graphics.Paint.Style.STROKE
-        strokeWidth = h * 0.006f
+        strokeWidth = h * 0.004f
     }
-    private val scarf = h * 0.026f
-    private val scarfLabel = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-        textSize = scarf * 0.72f
-        typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
-        textAlign = android.graphics.Paint.Align.CENTER
-        letterSpacing = 0.25f
-    }
+    private val readable = Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Black.copy(alpha = 0.15f), Color.Transparent), endX = w * 0.65f)
+    private val vignette = Brush.radialGradient(
+        listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)),
+        center = Offset(w * 0.55f, h * 0.45f), radius = maxOf(w, h) * 0.78f,
+    )
 
     fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
-        drawRect(sky)
-        for ((cone, center, glow) in cones) {
-            drawPath(cone, coneLight)
-            drawCircle(glow, radius = h * 0.22f, center = center)
+        drawRect(Color(0xFF0A0606))
+        drawRect(sky, size = androidx.compose.ui.geometry.Size(w, standTop))
+        // Flutlicht
+        for (cone in cones) drawPath(cone, coneLight)
+        for ((i, x) in masts.withIndex()) {
+            drawLine(Color(0xFF2B2224), Offset(x, h * 0.05f), Offset(x, standTop), strokeWidth = w * 0.004f)
+            drawRect(Color(0xFFFFF7E8).copy(alpha = 0.9f), Offset(x - w * 0.018f, h * 0.035f), androidx.compose.ui.geometry.Size(w * 0.036f, h * 0.022f))
+            drawCircle(lampGlow[i], radius = h * 0.12f, center = Offset(x, h * 0.05f))
         }
-        for ((path, color) in sashes) drawPath(path, color)
-        drawCircle(ember, radius = w * 0.6f, center = Offset(w * 0.5f, h * 1.15f))
-        // Trikot-Nadelstreifen
-        rotate(-18f) {
-            var x = -h
-            while (x < w + h) {
-                drawLine(Color.White.copy(alpha = 0.022f), Offset(x, -h), Offset(x, h * 2), strokeWidth = 2f)
-                x += 38f
-            }
-        }
+        // Tribüne
+        drawRect(stand, Offset(0f, standTop), androidx.compose.ui.geometry.Size(w, pitchTop - standTop))
+        drawRect(red.copy(alpha = 0.55f), Offset(0f, standTop), androidx.compose.ui.geometry.Size(w, h * 0.006f))
+        for (y in rows) drawLine(red.copy(alpha = 0.16f), Offset(0f, y), Offset(w, y), strokeWidth = h * 0.010f)
+        for ((p, r, c) in fans) drawCircle(c, radius = r, center = p)
+        // Rasen
+        drawRect(pitch, Offset(0f, pitchTop), androidx.compose.ui.geometry.Size(w, h - pitchTop))
+        for (stripe in stripes) drawPath(stripe, Color.White.copy(alpha = 0.035f))
+        drawLine(Color.White.copy(alpha = 0.45f), Offset(0f, pitchTop + h * 0.035f), Offset(w, pitchTop + h * 0.035f), strokeWidth = h * 0.003f)
+        drawArc(
+            Color.White.copy(alpha = 0.30f), startAngle = 0f, sweepAngle = 180f, useCenter = false,
+            topLeft = Offset(w * 0.5f - w * 0.11f, pitchTop + h * 0.035f - h * 0.06f), size = androidx.compose.ui.geometry.Size(w * 0.22f, h * 0.12f),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = h * 0.003f),
+        )
+        // Große, dezente 96 rechts über der Tribüne
         val native = drawContext.canvas.nativeCanvas
-        // Riesige, angeschnittene 96 rechts
         native.save()
-        native.rotate(-10f, w * 0.82f, h * 0.6f)
-        native.drawText("96", w * 0.86f, h * 0.92f, numberFill)
-        native.drawText("96", w * 0.86f, h * 0.92f, numberOutline)
+        native.rotate(-8f, w * 0.80f, h * 0.45f)
+        native.drawText("96", w * 0.82f, h * 0.58f, numberFill)
+        native.drawText("96", w * 0.82f, h * 0.58f, numberOutline)
         native.restore()
-        // Fanschal oben
-        val block = scarf * 9
-        var x = 0f
-        var i = 0
-        while (x < w) {
-            val (background, text) = when (i % 3) {
-                0 -> Color(0xFF111111) to android.graphics.Color.WHITE
-                1 -> Color(0xFFF2F2F2) to android.graphics.Color.rgb(17, 17, 17)
-                else -> Color(0xFF178F47) to android.graphics.Color.WHITE
-            }
-            drawRect(background.copy(alpha = 0.9f), Offset(x, 0f), androidx.compose.ui.geometry.Size(block, scarf))
-            scarfLabel.color = text
-            native.drawText(if (i % 2 == 0) "HANNOVER 96" else "96", x + block / 2, scarf * 0.76f, scarfLabel)
-            x += block
-            i++
-        }
+        // Lesbarkeit links (Menüs), Rand abdunkeln
+        drawRect(readable)
+        drawRect(vignette)
         // Linie in Schwarz-Weiß-Grün am unteren Rand
         val line = h * 0.006f
         drawRect(Color.Black, Offset(0f, h - line * 3), androidx.compose.ui.geometry.Size(w, line))
@@ -553,4 +681,285 @@ object AyuFocus {
         @Composable get() = ClickableSurfaceDefaults.border(
             focusedBorder = Border(BorderStroke(2.dp, AyuColors.Accent)),
         )
+}
+
+
+/**
+ * Kino: Ein Samtvorhang in tiefem Rot (senkrechte Falten aus hellen und dunklen Bahnen), oben ein goldener Saum,
+ * ein warmes Spotlicht von oben in die Mitte, unten ein dunkler Bühnenrand. Ränder abgedunkelt, damit Schrift
+ * überall gut lesbar bleibt.
+ */
+private class CinemaCurtain(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val base = Brush.verticalGradient(listOf(Color(0xFF2A070C), Color(0xFF14040A), Color(0xFF070203)), endY = h)
+    /** Faltenbahnen: je Falte ein waagerechter Verlauf hell → dunkel. */
+    private val folds: List<Pair<Float, Brush>> = run {
+        val count = 18
+        val width = w / count
+        List(count) { i ->
+            val x = i * width
+            val light = 0.10f + 0.06f * kotlin.math.sin(i * 1.7f).let { it * it }
+            x to Brush.horizontalGradient(
+                listOf(Color.Black.copy(alpha = 0.35f), Color(0xFFB0182A).copy(alpha = light), Color.Black.copy(alpha = 0.45f)),
+                startX = x, endX = x + width,
+            )
+        }
+    }
+    private val foldWidth = w / 18
+    private val valance = Brush.verticalGradient(listOf(Color(0xFF5A0E18), Color(0xFF3A0810)), startY = 0f, endY = h * 0.09f)
+    private val gold = Brush.horizontalGradient(listOf(Color(0xFF8A6A1E), Color(0xFFF5C451), Color(0xFF8A6A1E), Color(0xFFF5C451), Color(0xFF8A6A1E)))
+    private val spot = Brush.radialGradient(
+        listOf(Color(0xFFFFE2A8).copy(alpha = 0.22f), Color(0xFFFFB86B).copy(alpha = 0.07f), Color.Transparent),
+        center = Offset(w * 0.5f, h * 0.08f), radius = h * 0.95f,
+    )
+    private val stage = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)), startY = h * 0.72f, endY = h)
+    private val vignette = Brush.radialGradient(
+        listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+        center = Offset(w * 0.5f, h * 0.45f), radius = maxOf(w, h) * 0.72f,
+    )
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(base)
+        for ((x, brush) in folds) drawRect(brush, Offset(x, 0f), androidx.compose.ui.geometry.Size(foldWidth + 1f, h))
+        drawRect(valance, size = androidx.compose.ui.geometry.Size(w, h * 0.09f))
+        drawRect(gold, Offset(0f, h * 0.09f), androidx.compose.ui.geometry.Size(w, h * 0.006f))
+        drawRect(spot)
+        drawRect(stage)
+        drawRect(vignette)
+    }
+}
+
+/**
+ * Tiefsee: Wasser von Petrol nach Schwarz, schräge Lichtstrahlen von der Oberfläche, eine helle, wellige
+ * Oberflächenkante oben und ein paar aufsteigende Luftbläschen.
+ */
+private class DeepSea(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val water = Brush.verticalGradient(listOf(Color(0xFF0B3A4F), Color(0xFF062132), Color(0xFF020A12), Color(0xFF010407)), endY = h)
+    private val rays: List<Pair<androidx.compose.ui.graphics.Path, Brush>> = kotlin.random.Random(3).let { r ->
+        List(7) {
+            val top = w * (0.05f + r.nextFloat() * 0.9f)
+            val spread = w * (0.03f + r.nextFloat() * 0.05f)
+            val drift = w * (0.10f + r.nextFloat() * 0.12f)
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(top - spread, 0f)
+                lineTo(top + spread, 0f)
+                lineTo(top + drift + spread * 3, h * 0.95f)
+                lineTo(top + drift - spread * 3, h * 0.95f)
+                close()
+            }
+            path to Brush.verticalGradient(
+                listOf(Color(0xFF9AF3FF).copy(alpha = 0.10f + r.nextFloat() * 0.06f), Color.Transparent),
+                startY = 0f, endY = h * 0.95f,
+            )
+        }
+    }
+    private val surfaceGlow = Brush.verticalGradient(listOf(Color(0xFF7FE9F5).copy(alpha = 0.28f), Color.Transparent), startY = 0f, endY = h * 0.18f)
+    private val surfaceLine = androidx.compose.ui.graphics.Path().apply {
+        moveTo(0f, h * 0.02f)
+        val steps = 10
+        for (i in 1..steps) {
+            val x = w * i / steps
+            quadraticTo(x - w / steps / 2, h * (if (i % 2 == 0) 0.005f else 0.035f), x, h * 0.02f)
+        }
+    }
+    private val bubbles: List<Pair<Offset, Float>> = kotlin.random.Random(11).let { r ->
+        List(40) { Offset(r.nextFloat() * w, h * (0.25f + r.nextFloat() * 0.7f)) to (1.5f + r.nextFloat() * 4f) }
+    }
+    private val depth = Brush.radialGradient(
+        listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+        center = Offset(w * 0.5f, h * 0.35f), radius = maxOf(w, h) * 0.75f,
+    )
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(water)
+        for ((path, brush) in rays) drawPath(path, brush)
+        drawRect(surfaceGlow)
+        drawPath(surfaceLine, Color(0xFFB8F7FF).copy(alpha = 0.35f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = h * 0.003f))
+        for ((center, radius) in bubbles) {
+            drawCircle(Color(0xFFBFF6FF).copy(alpha = 0.10f), radius = radius, center = center)
+            drawCircle(Color(0xFFBFF6FF).copy(alpha = 0.22f), radius = radius, center = center, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f))
+        }
+        drawRect(depth)
+    }
+}
+
+/**
+ * Abendrot: Himmel von Nachtviolett über Magenta nach Orange, eine große Sonne mit waagerechten Streifen, die am
+ * Horizont versinkt, darunter ein dunkles Spiegelfeld mit perspektivischen Linien (Retro-Look). Oben bleibt es dunkel,
+ * damit Menüs und Schrift ruhig wirken.
+ */
+private class Sunset(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val horizon = h * 0.70f
+    private val sky = Brush.verticalGradient(
+        listOf(Color(0xFF0A0614), Color(0xFF1E0B33), Color(0xFF5A1450), Color(0xFFB8325A), Color(0xFFF07A4A)),
+        startY = 0f, endY = horizon,
+    )
+    private val sunCenter = Offset(w * 0.68f, horizon - h * 0.02f)
+    private val sunRadius = h * 0.24f
+    private val sun = Brush.verticalGradient(
+        listOf(Color(0xFFFFD27A), Color(0xFFFF8A5B), Color(0xFFE23E7A)),
+        startY = sunCenter.y - sunRadius, endY = sunCenter.y + sunRadius,
+    )
+    private val sunGlow = Brush.radialGradient(
+        listOf(Color(0xFFFF8A5B).copy(alpha = 0.35f), Color.Transparent),
+        center = sunCenter, radius = sunRadius * 2.4f,
+    )
+    private val ground = Brush.verticalGradient(listOf(Color(0xFF14081F), Color(0xFF07040C)), startY = horizon, endY = h)
+    private val darkTop = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent), startY = 0f, endY = h * 0.45f)
+    private val vignette = Brush.radialGradient(
+        listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f)),
+        center = Offset(w * 0.5f, h * 0.5f), radius = maxOf(w, h) * 0.8f,
+    )
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(sky, size = androidx.compose.ui.geometry.Size(w, horizon))
+        drawCircle(sunGlow, radius = sunRadius * 2.4f, center = sunCenter)
+        // Sonne nur oberhalb des Horizonts, mit Lücken („Streifen“), die nach unten breiter werden.
+        clipRect(bottom = horizon) {
+            drawCircle(sun, radius = sunRadius, center = sunCenter)
+            var y = sunCenter.y - sunRadius * 0.1f
+            var gap = sunRadius * 0.03f
+            while (y < horizon) {
+                drawRect(Color(0xFF5A1450), Offset(sunCenter.x - sunRadius, y), androidx.compose.ui.geometry.Size(sunRadius * 2, gap))
+                y += gap + sunRadius * 0.09f
+                gap *= 1.35f
+            }
+        }
+        drawRect(ground, Offset(0f, horizon), androidx.compose.ui.geometry.Size(w, h - horizon))
+        drawLine(Color(0xFFFF8A5B).copy(alpha = 0.8f), Offset(0f, horizon), Offset(w, horizon), strokeWidth = h * 0.003f)
+        // Perspektivisches Gitter im Boden
+        val grid = Color(0xFFE23E7A).copy(alpha = 0.28f)
+        val vanish = Offset(w * 0.5f, horizon)
+        for (i in -12..12) drawLine(grid, vanish, Offset(w * 0.5f + i * w * 0.12f, h), strokeWidth = 1.5f)
+        var t = 0.04f
+        while (t < 1f) {
+            val y = horizon + (h - horizon) * t
+            drawLine(grid, Offset(0f, y), Offset(w, y), strokeWidth = 1.5f)
+            t *= 1.55f
+        }
+        drawRect(darkTop)
+        drawRect(vignette)
+    }
+}
+
+
+/** Graphit: Anthrazit-Verlauf, zwei weiche Lichtflächen wie auf gebürstetem Metall, feine diagonale Struktur. */
+private class Graphite(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val base = Brush.linearGradient(listOf(Color(0xFF1B1D22), Color(0xFF0E0F11), Color(0xFF08090A)), start = Offset(0f, 0f), end = Offset(w, h))
+    private val sheen = Brush.radialGradient(listOf(Color(0xFFA5C8FF).copy(alpha = 0.10f), Color.Transparent), center = Offset(w * 0.85f, h * 0.1f), radius = w * 0.55f)
+    private val sheen2 = Brush.radialGradient(listOf(Color.White.copy(alpha = 0.05f), Color.Transparent), center = Offset(w * 0.15f, h * 0.95f), radius = w * 0.45f)
+    private val glass = androidx.compose.ui.graphics.Path().apply {
+        moveTo(w * 0.55f, 0f); lineTo(w * 0.75f, 0f); lineTo(w * 0.45f, h); lineTo(w * 0.25f, h); close()
+    }
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(base)
+        drawRect(sheen)
+        drawRect(sheen2)
+        drawPath(glass, Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.025f), Color.Transparent), startX = w * 0.25f, endX = w * 0.75f))
+        var x = -h
+        while (x < w) {
+            drawLine(Color.White.copy(alpha = 0.012f), Offset(x, h), Offset(x + h, 0f), strokeWidth = 1f)
+            x += 6f
+        }
+    }
+}
+
+/** Smaragd: Nachthimmel über einem Wald aus Tannen-Silhouetten, Mondlicht oben rechts, Glühwürmchen. */
+private class Forest(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val sky = Brush.verticalGradient(listOf(Color(0xFF0B1F18), Color(0xFF07130E), Color(0xFF030806)), endY = h)
+    private val moon = Brush.radialGradient(listOf(Color(0xFFE8FFF0).copy(alpha = 0.22f), Color(0xFF4ADE80).copy(alpha = 0.05f), Color.Transparent), center = Offset(w * 0.82f, h * 0.14f), radius = h * 0.45f)
+    private fun treeLine(base: Float, height: Float, seed: Int) = androidx.compose.ui.graphics.Path().apply {
+        val r = kotlin.random.Random(seed)
+        moveTo(0f, h)
+        lineTo(0f, base)
+        var x = 0f
+        while (x < w) {
+            val tw = w * (0.025f + r.nextFloat() * 0.03f)
+            val th = height * (0.6f + r.nextFloat() * 0.6f)
+            lineTo(x + tw / 2, base - th)
+            lineTo(x + tw, base)
+            x += tw * (0.7f + r.nextFloat() * 0.3f)
+        }
+        lineTo(w, h)
+        close()
+    }
+    private val far = treeLine(h * 0.80f, h * 0.20f, 5)
+    private val near = treeLine(h * 0.92f, h * 0.26f, 9)
+    private val flies: List<Pair<Offset, Float>> = kotlin.random.Random(21).let { r ->
+        List(55) { Offset(r.nextFloat() * w, h * (0.45f + r.nextFloat() * 0.5f)) to (0.2f + r.nextFloat() * 0.5f) }
+    }
+    private val readable = Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent), endX = w * 0.6f)
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(sky)
+        drawRect(moon)
+        drawPath(far, Color(0xFF0C2418))
+        for ((p, a) in flies) {
+            drawCircle(Color(0xFFD9FF7A).copy(alpha = a * 0.25f), radius = 7f, center = p)
+            drawCircle(Color(0xFFF0FFB0).copy(alpha = a), radius = 1.8f, center = p)
+        }
+        drawPath(near, Color(0xFF04100A))
+        drawRect(readable)
+    }
+}
+
+/** Neon: Skyline-Silhouette mit leuchtenden Fenstern, Neonlinien in Magenta und Cyan, Spiegelung im nassen Boden. */
+private class NeonCity(size: androidx.compose.ui.geometry.Size) {
+    private val w = size.width
+    private val h = size.height
+    private val ground = h * 0.80f
+    private val sky = Brush.verticalGradient(listOf(Color(0xFF07050F), Color(0xFF1A0B33), Color(0xFF3B0A45)), startY = 0f, endY = ground)
+    private val haze = Brush.radialGradient(listOf(Color(0xFFFF2E88).copy(alpha = 0.22f), Color.Transparent), center = Offset(w * 0.3f, ground), radius = w * 0.5f)
+    private val haze2 = Brush.radialGradient(listOf(Color(0xFF22D3EE).copy(alpha = 0.18f), Color.Transparent), center = Offset(w * 0.8f, ground), radius = w * 0.45f)
+    private class Tower(val left: Float, val width: Float, val top: Float)
+    private val towers: List<Tower> = kotlin.random.Random(42).let { r ->
+        val list = ArrayList<Tower>()
+        var x = -w * 0.02f
+        while (x < w) {
+            val bw = w * (0.04f + r.nextFloat() * 0.06f)
+            list += Tower(x, bw, ground - h * (0.12f + r.nextFloat() * 0.38f))
+            x += bw * (0.9f + r.nextFloat() * 0.3f)
+        }
+        list
+    }
+    private val windows: List<Pair<Offset, Color>> = kotlin.random.Random(7).let { r ->
+        towers.flatMap { t ->
+            val cols = (t.width / (w * 0.012f)).toInt().coerceAtLeast(1)
+            val rows = ((ground - t.top) / (h * 0.03f)).toInt()
+            buildList {
+                for (c in 0 until cols) for (row in 0 until rows) if (r.nextFloat() < 0.18f) {
+                    val color = if (r.nextBoolean()) Color(0xFF22D3EE) else Color(0xFFFFC2E5)
+                    add(Offset(t.left + (c + 0.5f) * t.width / cols, t.top + (row + 0.6f) * h * 0.03f) to color.copy(alpha = 0.25f + r.nextFloat() * 0.35f))
+                }
+            }
+        }
+    }
+    private val floor = Brush.verticalGradient(listOf(Color(0xFF14092A), Color(0xFF05030A)), startY = ground, endY = h)
+    private val readable = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent), startY = 0f, endY = h * 0.45f)
+
+    fun draw(scope: androidx.compose.ui.graphics.drawscope.DrawScope) = with(scope) {
+        drawRect(sky, size = androidx.compose.ui.geometry.Size(w, ground))
+        drawRect(haze)
+        drawRect(haze2)
+        for (t in towers) drawRect(Color(0xFF0B0716), Offset(t.left, t.top), androidx.compose.ui.geometry.Size(t.width, ground - t.top))
+        for ((p, c) in windows) drawRect(c, Offset(p.x - 2f, p.y - 2f), androidx.compose.ui.geometry.Size(4f, 5f))
+        drawRect(floor, Offset(0f, ground), androidx.compose.ui.geometry.Size(w, h - ground))
+        drawLine(Color(0xFFFF2E88).copy(alpha = 0.85f), Offset(0f, ground), Offset(w, ground), strokeWidth = h * 0.003f)
+        drawLine(Color(0xFF22D3EE).copy(alpha = 0.45f), Offset(0f, ground + h * 0.012f), Offset(w, ground + h * 0.012f), strokeWidth = h * 0.002f)
+        // Spiegelung der Lichter im nassen Boden
+        for ((p, c) in windows) if (p.y > ground - h * 0.2f) {
+            drawRect(c.copy(alpha = c.alpha * 0.25f), Offset(p.x - 1.5f, ground + (ground - p.y) * 0.6f), androidx.compose.ui.geometry.Size(3f, 8f))
+        }
+        drawRect(readable)
+    }
 }
