@@ -81,7 +81,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope) {
 
     var screen by mutableStateOf(if (store.playlists.value.isEmpty()) Screen.SETTINGS else Screen.LIVE)
     var playing by mutableStateOf<Playback?>(null); private set
-    /** Player im eigenen, randlosen Fenster über den ganzen Bildschirm (das Hauptfenster bleibt, wie es ist). */
+    /** Player im Vollbild (dasselbe Fenster über den ganzen Bildschirm). */
     var fullscreen by mutableStateOf(false); private set
     /** Vollbild kam von selbst mit dem Start (Einstellung): dann führt Esc direkt zurück und schließt es wieder. */
     var autoFullscreen = false; private set

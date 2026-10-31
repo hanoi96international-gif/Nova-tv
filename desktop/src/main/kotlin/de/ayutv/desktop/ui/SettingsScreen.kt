@@ -619,17 +619,17 @@ private fun ImportDialog(app: AppState, onDismiss: () -> Unit) {
             Label(
                 "Auf dem Fire TV: Einstellungen → Playlists öffnen (und offen lassen). Im Kasten „Einrichtung per Handy“ steht die " +
                     "Adresse mit Port 8095 und einer Zahl am Ende – die hier eintragen (nicht die der Handy-Fernbedienung). " +
-                    "Mit Sicherungs-Passwort werden auch die Playlist-Passwörter übernommen.",
+                    "Passwörter von Playlists und Proxy kommen dabei immer mit (verschlüsselt übertragen).",
                 Type.small, maxLines = 4,
             )
             Field("Adresse vom Fire TV (z. B. http://192.168.178.40:8095/123456)", address, { address = it })
-            Field("Sicherungs-Passwort", password, { password = it }, secret = true)
+            Field("Passwort (nur für „Aus Datei“, wenn die Datei eines hat)", password, { password = it }, secret = true)
             Spacer(Modifier.height(12.dp))
             Row {
                 TextButton(if (busy) "Lädt …" else "Vom Fire TV laden", {
                     if (busy || address.isBlank()) return@TextButton
                     busy = true
-                    app.scope.launch { done(runCatching { app.backup.fromFireTv(app.sync.http, address, password) }) }
+                    app.scope.launch { done(runCatching { app.backup.fromFireTv(app.sync.http, address) }) }
                 }, primary = true)
                 Spacer(Modifier.width(8.dp))
                 TextButton("Aus Datei …", {

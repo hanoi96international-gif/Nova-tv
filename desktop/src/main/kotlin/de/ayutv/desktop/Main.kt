@@ -112,61 +112,12 @@ private fun ApplicationScope.Windows() {
         if (ready == null) {
             Starting(failure)
         } else {
-            // Tasten vom Handy gehen an dieses Fenster (im Vollbild an das Vollbild-Fenster).
+            // Tasten vom Handy gehen an dieses Fenster.
             LaunchedEffect(ready) {
                 ready.mainWindow = this@Window.window
                 ready.remote.window = this@Window.window
             }
             App(ready, window)
-        }
-    }
-    val ready = app
-    val playing = ready?.playing
-    if (ready != null && playing != null && ready.fullscreen) FullscreenPlayer(ready, playing)
-}
-
-/**
- * Vollbild als eigenes, randloses Fenster über den ganzen Bildschirm. Das Hauptfenster bleibt unverändert: Das
- * Umschalten des Hauptfensters ins Vollbild baut es unter Windows neu auf, und das stürzte beim laufenden Video ab.
- */
-@Composable
-private fun FullscreenPlayer(app: AppState, playing: Playback) {
-    val bounds = remember {
-        (app.mainWindow?.graphicsConfiguration ?: java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration).bounds
-    }
-    val state = rememberWindowState(
-        position = WindowPosition(bounds.x.dp, bounds.y.dp),
-        size = DpSize(bounds.width.dp, bounds.height.dp),
-    )
-    Window(
-        onCloseRequest = { app.changeFullscreen(false) },
-        state = state,
-        title = "DnA-TV",
-        undecorated = true,
-        resizable = false,
-        alwaysOnTop = true,
-        icon = remember { appIcon() },
-    ) {
-        DisposableEffect(Unit) {
-            app.remote.window = window
-            onDispose { app.remote.window = app.mainWindow }
-        }
-        Box(
-            Modifier.fillMaxSize().background(Palette.background).onKeyEvent { e ->
-                if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
-                when (e.key) {
-                    Key.Escape, Key.Back -> app.back()
-                    Key.F11 -> { app.changeFullscreen(false); true }
-                    else -> false
-                }
-            },
-        ) {
-            PlayerScreen(app, playing)
-            app.message?.let { line ->
-                Box(Modifier.align(Alignment.BottomCenter).padding(24.dp).background(Palette.raised, RoundedCornerShape(10.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
-                    Label(line, Type.body, maxLines = 3)
-                }
-            }
         }
     }
 }
@@ -193,6 +144,17 @@ fun App(app: AppState, window: WindowState) {
     val status by app.sync.status.collectAsState()
 
     // Beim Start: Playlists auffrischen, wenn der letzte Abgleich älter als 12 Stunden ist.
+    // Vollbild im selben Fenster; danach wieder so wie vorher (normal oder maximiert).
+    val before = remember { arrayOf(WindowPlacement.Floating) }
+    LaunchedEffect(app.fullscreen) {
+        if (app.fullscreen) {
+            if (window.placement != WindowPlacement.Fullscreen) before[0] = window.placement
+            window.placement = WindowPlacement.Fullscreen
+        } else if (window.placement == WindowPlacement.Fullscreen) {
+            window.placement = before[0]
+        }
+    }
+
     LaunchedEffect(Unit) {
         val user = app.store.user.value
         if (user.startMaximized) window.placement = WindowPlacement.Maximized
@@ -207,7 +169,7 @@ fun App(app: AppState, window: WindowState) {
         Modifier.fillMaxSize().background(Palette.background).background(Palette.backdrop).onPreviewKeyEvent { e ->
             // F11 immer, auch während ein Eingabefeld den Fokus hat.
             if (e.key != Key.F11 || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-            // Im Player: Vollbild-Fenster; sonst das Hauptfenster maximieren.
+            // Im Player: Vollbild; sonst das Fenster maximieren.
             if (app.playing != null) app.changeFullscreen(!app.fullscreen) else toggleMaximized(window)
             true
         }.onKeyEvent { e ->
@@ -224,12 +186,7 @@ fun App(app: AppState, window: WindowState) {
         },
     ) {
         val playing = app.playing
-        if (playing != null && app.fullscreen) {
-            // Das Bild läuft im Vollbild-Fenster.
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Label("Läuft im Vollbild – Esc oder Doppelklick beendet es.", Type.body)
-            }
-        } else if (playing != null) {
+        if (playing != null) {
             PlayerScreen(app, playing)
         } else {
             Row(Modifier.fillMaxSize()) {
