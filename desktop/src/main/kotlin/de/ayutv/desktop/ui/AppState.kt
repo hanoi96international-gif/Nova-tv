@@ -206,6 +206,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     fun applyBuffer() {
         player.networkCacheMs = BufferProfile.of(store.user.value.bufferProfile).cacheMs
         player.hdrMode = store.user.value.hdrMode
+        player.videoLayout = store.user.value.videoLayout
     }
 
     fun toast(text: String) {

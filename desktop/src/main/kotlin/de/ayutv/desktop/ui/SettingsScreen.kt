@@ -125,6 +125,24 @@ fun SettingsScreen(app: AppState) {
                 else "Videoausgabe: RGB (kompatibel; die Grafik kann den schnellen Weg nicht). HDR wird nicht angepasst.",
                 Type.small, maxLines = 2,
             )
+            if (app.player.gpuVideo) {
+                Spacer(Modifier.height(8.dp))
+                Label("Videoweg", Type.body)
+                Row(Modifier.padding(vertical = 4.dp)) {
+                    listOf("AUTO" to "Automatisch (10 Bit für HDR)", "I420" to "Kompatibel").forEach { (value, label) ->
+                        Selectable({
+                            app.store.updateUser { it.copy(videoLayout = value) }
+                            app.applyBuffer()
+                            app.toast("Videoweg: $label (gilt ab dem nächsten Sender)")
+                        }, selected = user.videoLayout == value) { Label(label) }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                }
+                Label(
+                    "Automatisch übernimmt das Bild so, wie die Hardware-Dekodierung es liefert (weniger Arbeit bei 4K), und HDR/10-Bit-Sender mit voller Genauigkeit (keine Farbstufen in Verläufen). „Kompatibel“ nur, falls das Bild damit fehlerhaft ist.",
+                    Type.small, maxLines = 3,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             Toggle("Doppelte Sender zusammenfassen („RTL HD“, „RTL 4K“, „RTL (Backup)“ einmal, in der besten Fassung; fällt sie aus, nimmt der Player die nächste)", user.mergeVariants) {
                 app.store.updateUser { u -> u.copy(mergeVariants = !u.mergeVariants) }

@@ -174,7 +174,11 @@ class VideoPlayer {
                 corrupted = stats?.demuxCorrupted() ?: 0,
                 startupMs = startupMs,
                 cacheMs = networkCacheMs,
-                output = (if (gpuVideo) "Grafikkarte (YUV)" else "RGB") + when (transfer) {
+                output = (if (gpuVideo) "Grafikkarte (" + when (layout) {
+                    YuvVideo.Layout.I420 -> "I420"
+                    YuvVideo.Layout.NV12 -> "NV12"
+                    YuvVideo.Layout.P010 -> "P010, 10 Bit"
+                } + ")" else "RGB") + when (transfer) {
                     YuvVideo.Transfer.PQ -> ", HDR10 angepasst"
                     YuvVideo.Transfer.HLG -> ", HLG angepasst"
                     YuvVideo.Transfer.SDR -> ""
@@ -266,6 +270,34 @@ class VideoPlayer {
     @Volatile private var planeWidth = 0
     @Volatile private var planeHeight = 0
 
+    /**
+     * Videoweg: AUTO = NV12, bei 10-Bit-Quellen (HDR, HEVC Main 10) P010 mit voller Genauigkeit; I420 = kompatibel wie
+     * bis Version 0.42 (falls eine Grafikkarte mit dem neuen Weg Probleme hat). P010 nur für den Starttest erzwingbar.
+     * Gilt ab dem nächsten [play].
+     */
+    @Volatile var videoLayout = "AUTO"
+    /** Ablage der gerade gelieferten Bilder. */
+    @Volatile var layout = YuvVideo.Layout.I420; private set
+
+    /** Welche Ablage VLC liefern soll. */
+    private fun chooseLayout(sourceHeight: Int): YuvVideo.Layout = when (videoLayout) {
+        "I420" -> YuvVideo.Layout.I420
+        "P010" -> YuvVideo.Layout.P010
+        "NV12" -> YuvVideo.Layout.NV12
+        else -> if (tenBitSource(sourceHeight)) YuvVideo.Layout.P010 else YuvVideo.Layout.NV12
+    }
+
+    /** 10 Bit: HDR erzwungen, HEVC Main 10 oder AV1 in UHD (VLC 3 meldet die Bittiefe nicht direkt). */
+    private fun tenBitSource(sourceHeight: Int): Boolean {
+        if (hdrMode == "PQ" || hdrMode == "HLG") return true
+        if (hdrMode == "OFF") return false
+        val track = runCatching { player?.media()?.info()?.videoTracks()?.firstOrNull() }.getOrNull() ?: return looksHdr
+        val codec = track.codecName().orEmpty().lowercase()
+        val hevcMain10 = (codec.contains("hevc") || codec.contains("h265")) && track.profile() == 2
+        val av1 = codec.contains("av01") || codec.contains("av1")
+        return hevcMain10 || (av1 && sourceHeight >= 2000)
+    }
+
     /** HDR-Art des laufenden Streams (für den Shader); aus Einstellung und Codec bestimmt. */
     @Volatile var transfer = YuvVideo.Transfer.SDR; private set
     /** Einstellung: AUTO (HEVC/AV1 10 Bit ab 4K = HDR10), PQ, HLG, OFF. */
@@ -298,9 +330,11 @@ class VideoPlayer {
             planeWidth = sourceWidth
             planeHeight = sourceHeight
             if (gpuVideo) {
-                // I420: drei Ebenen, VLC rechnet nichts in RGB um (bei Hardware-Dekodierung nur Umsortieren).
-                val (pitches, lines) = YuvVideo.planes(sourceWidth, sourceHeight)
-                return BufferFormat("I420", sourceWidth, sourceHeight, pitches, lines)
+                // YUV wie vom Dekoder: VLC rechnet nichts in RGB um. NV12/P010 liefert die Hardware-Dekodierung direkt.
+                val chosen = chooseLayout(sourceHeight)
+                layout = chosen
+                val (pitches, lines) = YuvVideo.planes(sourceWidth, sourceHeight, chosen)
+                return BufferFormat(chosen.chroma, sourceWidth, sourceHeight, pitches, lines)
             }
             info = ImageInfo(sourceWidth, sourceHeight, ColorType.BGRA_8888, ColorAlphaType.PREMUL)
             pixels = ByteArray(sourceWidth * sourceHeight * 4)
@@ -332,18 +366,21 @@ class VideoPlayer {
         }
 
         private fun showYuv(buffers: Array<out ByteBuffer>, format: BufferFormat, displayWidth: Int, displayHeight: Int) {
-            if (buffers.size < 3) return
+            val l = layout
+            if (buffers.size < l.planes) return
             val w = planeWidth.takeIf { it > 0 } ?: format.width
             val h = planeHeight.takeIf { it > 0 } ?: format.height
             val pitches = format.pitches
+            val ch = (h + 1) / 2
             val frame = runCatching {
                 YuvFrame(
-                    YuvVideo.copyPlane(buffers[0], pitches[0], w, h),
-                    YuvVideo.copyPlane(buffers[1], pitches[1], (w + 1) / 2, (h + 1) / 2),
-                    YuvVideo.copyPlane(buffers[2], pitches[2], (w + 1) / 2, (h + 1) / 2),
+                    YuvVideo.copyPlane(buffers[0], pitches[0], YuvVideo.byteWidth(l, 0, w), h),
+                    YuvVideo.copyPlane(buffers[1], pitches[1], YuvVideo.byteWidth(l, 1, w), ch),
+                    if (l == YuvVideo.Layout.I420) YuvVideo.copyPlane(buffers[2], pitches[2], YuvVideo.byteWidth(l, 2, w), ch) else null,
                     w, h,
                     if (displayWidth > 0 && displayHeight > 0 && (displayWidth != w || displayHeight != h)) displayWidth.toFloat() / displayHeight else aspect,
                     transfer,
+                    layout = l,
                 )
             }.getOrNull() ?: return
             val old = yuv.getAndSet(frame)

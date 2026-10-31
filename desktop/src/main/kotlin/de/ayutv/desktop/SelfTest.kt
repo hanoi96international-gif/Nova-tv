@@ -32,27 +32,38 @@ object SelfTest {
                 val picture = BufferedImage(640, 360, BufferedImage.TYPE_INT_RGB)
                 picture.createGraphics().apply { color = Color(0x3DA9FC); fillRect(0, 0, 640, 360); dispose() }
                 ImageIO.write(picture, "png", image)
-                // Pfad direkt übergeben (VLC versteht unter Windows „file:/D:/…“ nicht, nur „file:///D:/…“).
-                player.play(image.absolutePath, null, 0, ":image-duration=10")
-                val until = System.currentTimeMillis() + 30_000
-                while (player.framesRendered.get() == 0L && System.currentTimeMillis() < until) Thread.sleep(200)
-                Thread.sleep(300)
-                lines += "frames=${player.framesRendered.get()} playing=${player.playing} error=${player.error}"
-                ok = player.framesRendered.get() > 0
-                // Schneller Weg: das Testbild (Blau 3DA9FC) über den Shader zeichnen und die Farbe prüfen.
-                if (player.gpuVideo) {
-                    // Auf dem Oberflächen-Thread zeichnen, wie in der App (dort werden alte Bilder freigegeben).
-                    var color: Triple<Int, Int, Int>? = null
-                    javax.swing.SwingUtilities.invokeAndWait { color = player.currentFrame()?.let { f ->
-                        val info = org.jetbrains.skia.ImageInfo(64, 36, org.jetbrains.skia.ColorType.RGBA_8888, org.jetbrains.skia.ColorAlphaType.PREMUL)
-                        val surface = org.jetbrains.skia.Surface.makeRaster(info)
-                        f.draw(surface.canvas, 64f, 36f)
-                        val px = org.jetbrains.skia.Bitmap.makeFromImage(surface.makeImageSnapshot()).readPixels(info, 64 * 4, 0, 0)
-                        px?.let { val at = (18 * 64 + 32) * 4; Triple(it[at].toInt() and 0xFF, it[at + 1].toInt() and 0xFF, it[at + 2].toInt() and 0xFF) }
-                    } }
-                    val c = color
-                    lines += "pixel=${c?.toList()} (erwartet etwa [61, 169, 252])"
-                    ok = ok && c != null && kotlin.math.abs(c.first - 61) < 25 && kotlin.math.abs(c.second - 169) < 25 && kotlin.math.abs(c.third - 252) < 25
+                // Jeder Videoweg einmal: Automatisch (NV12 bei 8 Bit), 10 Bit (P010) und Kompatibel (I420).
+                val layouts = if (player.gpuVideo) listOf("AUTO", "P010", "I420") else listOf("AUTO")
+                ok = true
+                for (mode in layouts) {
+                    player.videoLayout = mode
+                    val before = player.framesRendered.get()
+                    // Pfad direkt übergeben (VLC versteht unter Windows „file:/D:/…“ nicht, nur „file:///D:/…“).
+                    player.play(image.absolutePath, null, 0, ":image-duration=10")
+                    val until = System.currentTimeMillis() + 30_000
+                    while (player.framesRendered.get() <= before && System.currentTimeMillis() < until) Thread.sleep(200)
+                    Thread.sleep(500)
+                    val frames = player.framesRendered.get() - before
+                    lines += "[$mode] frames=$frames layout=${player.layout} playing=${player.playing} error=${player.error}"
+                    ok = ok && frames > 0
+                    // Schneller Weg: das Testbild (Blau 3DA9FC) über den Shader zeichnen und die Farbe prüfen.
+                    if (player.gpuVideo) {
+                        // Auf dem Oberflächen-Thread zeichnen, wie in der App (dort werden alte Bilder freigegeben).
+                        var color: Triple<Int, Int, Int>? = null
+                        var drawn: String? = null
+                        javax.swing.SwingUtilities.invokeAndWait { color = player.currentFrame()?.let { f ->
+                            drawn = f.layout.name
+                            val info = org.jetbrains.skia.ImageInfo(64, 36, org.jetbrains.skia.ColorType.RGBA_8888, org.jetbrains.skia.ColorAlphaType.PREMUL)
+                            val surface = org.jetbrains.skia.Surface.makeRaster(info)
+                            f.draw(surface.canvas, 64f, 36f)
+                            val px = org.jetbrains.skia.Bitmap.makeFromImage(surface.makeImageSnapshot()).readPixels(info, 64 * 4, 0, 0)
+                            px?.let { val at = (18 * 64 + 32) * 4; Triple(it[at].toInt() and 0xFF, it[at + 1].toInt() and 0xFF, it[at + 2].toInt() and 0xFF) }
+                        } }
+                        val c = color
+                        lines += "[$mode] pixel=${c?.toList()} frame=$drawn (erwartet etwa [61, 169, 252])"
+                        ok = ok && c != null && kotlin.math.abs(c.first - 61) < 25 && kotlin.math.abs(c.second - 169) < 25 && kotlin.math.abs(c.third - 252) < 25
+                    }
+                    player.stop()
                 }
                 player.release()
                 image.delete()

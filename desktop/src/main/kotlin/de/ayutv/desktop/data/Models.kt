@@ -186,6 +186,8 @@ data class UserData(
     val followedTeams: Set<String> = emptySet(),
     /** HDR-Anpassung: AUTO (HEVC/AV1 10 Bit in 4K = HDR10), PQ (HDR10), HLG, OFF. */
     val hdrMode: String = "AUTO",
+    /** Videoweg: AUTO (NV12, bei 10 Bit P010) oder I420 (kompatibel wie bis 0.42). */
+    val videoLayout: String = "AUTO",
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */
