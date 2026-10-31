@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -70,6 +73,9 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         return
     }
 
+    // Großes Hintergrundbild oben: das Bild der gewählten Kachel (Poster, Sendungsbild), sonst das erste vorhandene.
+    var focusedHero by remember { mutableStateOf<Hero?>(null) }
+
     var recentChannels by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var recommendations by remember { mutableStateOf<List<Recommendation>>(emptyList()) }
     var nowMap by remember { mutableStateOf<Map<String, ProgrammeEntity>>(emptyMap()) }
@@ -85,6 +91,16 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val nothingYet = continueWatching.isEmpty() && recentChannels.isEmpty() && favorites.isEmpty() &&
         recentMovies.isEmpty() && recentSeries.isEmpty() && watchMovies.isEmpty() && watchSeries.isEmpty()
 
+    val fallbackHero = remember(continueWatching, watchMovies, recentMovies, recentSeries) {
+        continueWatching.firstOrNull { !it.image.isNullOrBlank() }?.let { Hero(it.image, it.title, it.subtitle) }
+            ?: watchMovies.firstOrNull { !it.poster.isNullOrBlank() }?.let { Hero(it.poster, it.name, "Film") }
+            ?: recentMovies.firstOrNull { !it.poster.isNullOrBlank() }?.let { Hero(it.poster, it.name, "Neu: Film") }
+            ?: recentSeries.firstOrNull { !it.cover.isNullOrBlank() }?.let { Hero(it.cover, it.name, "Neu: Serie") }
+    }
+    val hero: (Hero) -> Unit = { focusedHero = it }
+
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+    HomeBackdrop(focusedHero?.takeIf { !it.image.isNullOrBlank() } ?: fallbackHero)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 48.dp),
@@ -121,6 +137,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             image = entry.image,
                             subtitle = entry.subtitle,
                             progress = if (entry.durationMs > 0) entry.positionMs.toFloat() / entry.durationMs else null,
+                            onFocus = { hero(Hero(entry.image, entry.title, entry.subtitle)) },
                             onClick = {
                                 PlayerActivity.startVod(
                                     context,
@@ -142,6 +159,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = movie.name,
                             image = movie.poster,
                             subtitle = "Film" + (movie.rating?.let { " · ★ $it" } ?: ""),
+                            onFocus = { hero(Hero(movie.poster, movie.name, movie.category)) },
                             onClick = {
                                 PlayerActivity.startVod(context, VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url))
                             },
@@ -153,6 +171,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = series.name,
                             image = series.cover,
                             subtitle = "Serie",
+                            onFocus = { hero(Hero(series.cover, series.name, "Serie")) },
                             onClick = { onOpenSeries(series) },
                             onLongClick = { scope.launch { content.toggleFavorite(series.key) } },
                         )
@@ -169,6 +188,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = r.title,
                             image = r.image,
                             subtitle = recordingStatus(r),
+                            onFocus = { hero(Hero(r.image, r.title, r.subtitle)) },
                             progress = if (r.totalBytes > 0 && r.state == Recording.State.RUNNING) r.bytes.toFloat() / r.totalBytes else null,
                             onClick = {
                                 if (r.state == Recording.State.SCHEDULED || r.bytes == 0L && r.state != Recording.State.DONE) {
@@ -206,7 +226,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         if (recentChannels.isNotEmpty()) {
             item(key = "recent", contentType = "channelRow") {
-                ChannelRow("Zuletzt gesehen", recentChannels, nowMap, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
+                ChannelRow("Zuletzt gesehen", recentChannels, nowMap, hero, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
             }
         }
 
@@ -216,6 +236,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                     "Favoriten",
                     favorites,
                     nowMap,
+                    hero,
                     onPlay = { PlayerActivity.startLive(context, it.key, group = null, favoritesOnly = true) },
                     onLongClick = { channel -> scope.launch { content.toggleFavorite(channel.key) } },
                 )
@@ -224,7 +245,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         recommendations.forEach { rec ->
             item(key = "rec-${rec.title}", contentType = "channelRow") {
-                ChannelRow(rec.title, rec.channels, nowMap, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
+                ChannelRow(rec.title, rec.channels, nowMap, hero, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
             }
         }
 
@@ -236,6 +257,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = movie.name,
                             image = movie.poster,
                             subtitle = movie.rating?.let { "★ $it" },
+                            onFocus = { hero(Hero(movie.poster, movie.name, movie.category)) },
                             onClick = {
                                 PlayerActivity.startVod(
                                     context,
@@ -252,11 +274,12 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
             item(key = "series", contentType = "posterRow") {
                 PosterRow("Neue Serien") {
                     items(recentSeries, key = { it.key }) { series ->
-                        PosterCard(title = series.name, image = series.cover, onClick = { onOpenSeries(series) })
+                        PosterCard(title = series.name, image = series.cover, onClick = { onOpenSeries(series) }, onFocus = { hero(Hero(series.cover, series.name, series.category)) })
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -280,6 +303,7 @@ private fun ChannelRow(
     title: String,
     channels: List<ChannelEntity>,
     nowMap: Map<String, ProgrammeEntity>,
+    onHero: (Hero) -> Unit,
     onPlay: (ChannelEntity) -> Unit,
     onLongClick: ((ChannelEntity) -> Unit)? = null,
 ) {
@@ -291,11 +315,14 @@ private fun ChannelRow(
             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp),
         ) {
             items(channels, key = { it.key }) { channel ->
+                val now = channel.epgId?.let { nowMap[it] }
                 ChannelCard(
                     channel = channel,
-                    now = channel.epgId?.let { nowMap[it] },
+                    now = now,
                     onClick = { onPlay(channel) },
                     onLongClick = onLongClick?.let { callback -> { callback(channel) } },
+                    // Sender ohne Sendungsbild lassen das bisherige Bild stehen (nur ein Logo wäre zu klein).
+                    onFocus = { now?.icon?.takeIf { it.isNotBlank() }?.let { onHero(Hero(it, now.title, channel.name)) } },
                 )
             }
         }
@@ -312,5 +339,63 @@ private fun recordingStatus(r: Recording): String {
             else if (r.totalBytes > 0) "⬇ ${r.bytes * 100 / r.totalBytes} %" else "⬇ ${size(r.bytes)}"
         Recording.State.DONE -> (if (r.kind == Recording.Kind.RECORDING) "${r.subtitle.orEmpty()} · " else "⬇ ") + size(r.bytes)
         Recording.State.FAILED -> "✗ ${r.error ?: "Fehlgeschlagen"}"
+    }
+}
+
+/** Bild und Titel für den großen Hintergrund der Startseite. */
+private data class Hero(val image: String?, val title: String, val subtitle: String?)
+
+/**
+ * Großes Hintergrundbild oben rechts, zu den Seiten hin in den Hintergrund auslaufend, mit Titel. Es wechselt erst,
+ * wenn die Auswahl kurz stehen bleibt (beim schnellen Durchscrollen wird nicht jedes Bild geladen), und auf
+ * schwachen Geräten ohne Überblendung.
+ */
+@Composable
+private fun HomeBackdrop(target: Hero?) {
+    var shown by remember { mutableStateOf(target) }
+    LaunchedEffect(target) {
+        if (shown != null) kotlinx.coroutines.delay(450)
+        shown = target
+    }
+    val hero = shown ?: return
+    val context = coil3.compose.LocalPlatformContext.current
+    val background = AyuColors.Background
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(430.dp)) {
+        androidx.compose.animation.Crossfade(
+            hero,
+            animationSpec = androidx.compose.animation.core.tween(if (de.ayutv.ui.UiPerformance.reduced) 0 else 500),
+            label = "hero",
+        ) { h ->
+            val request = remember(h.image) {
+                coil3.request.ImageRequest.Builder(context).data(h.image).size(960, 540).memoryCacheKey("hero:" + h.image).build()
+            }
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                coil3.compose.AsyncImage(
+                    model = request,
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    alpha = 0.5f,
+                    modifier = Modifier.fillMaxHeight().fillMaxWidth(0.68f).align(androidx.compose.ui.Alignment.TopEnd),
+                )
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxSize().background(
+                        androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            0.25f to background, 0.6f to background.copy(alpha = 0.55f), 1f to background.copy(alpha = 0.1f),
+                        ),
+                    ),
+                )
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxSize().background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(0.45f to androidx.compose.ui.graphics.Color.Transparent, 1f to background),
+                    ),
+                )
+                Column(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end = 48.dp, bottom = 300.dp).fillMaxWidth(0.42f)) {
+                    Text(h.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, color = AyuColors.TextPrimary)
+                    h.subtitle?.takeIf { it.isNotBlank() }?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1, color = AyuColors.TextSecondary)
+                    }
+                }
+            }
+        }
     }
 }

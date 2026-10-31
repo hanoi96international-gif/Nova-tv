@@ -243,6 +243,45 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         }
     }
 
+    // ---------------------------------------------------------------- Schlaf-Timer
+
+    /** Zeitpunkt, an dem die Wiedergabe endet (0 = aus). */
+    var sleepAt by mutableStateOf(0L); private set
+    /** Im TV-Modus danach auch den PC in den Energiesparmodus legen. */
+    var sleepPc by mutableStateOf(false); private set
+    private var sleepJob: Job? = null
+
+    /** Schlaf-Timer: um [at] anhalten (0 = aus); mit [pc] danach den PC schlafen legen. Eine Minute vorher kommt ein Hinweis. */
+    fun setSleepTimer(at: Long, pc: Boolean = false) {
+        sleepJob?.cancel()
+        sleepJob = null
+        sleepAt = at.coerceAtLeast(0)
+        sleepPc = pc && at > 0
+        if (at <= 0) {
+            toast("Schlaf-Timer aus")
+            return
+        }
+        toast("Schlaf-Timer: Ende um ${clockText(at)}" + if (sleepPc) ", danach schläft der PC" else "")
+        sleepJob = scope.launch {
+            var warned = false
+            while (true) {
+                val left = sleepAt - System.currentTimeMillis()
+                if (left <= 0) break
+                if (!warned && left <= 60_000) {
+                    warned = true
+                    toast("Schlaf-Timer: noch 1 Minute (☰ → Schlaf-Timer zum Verlängern)")
+                }
+                delay(minOf(left, 5_000))
+            }
+            val pcToo = sleepPc
+            sleepAt = 0
+            sleepPc = false
+            sleepJob = null
+            stopPlayback()
+            if (pcToo) de.ayutv.desktop.TvMode.sleep()
+        }
+    }
+
     // ---------------------------------------------------------------- Wiedergabe
 
     /** Vorher geschauter Sender (◀ bzw. „Letzter Sender“ springt zurück). */
@@ -840,3 +879,7 @@ fun BackHandler(app: AppState, enabled: Boolean = true, onBack: () -> Unit) {
         onDispose { app.popBack(handler) }
     }
 }
+
+/** Uhrzeit „21:45“ für Hinweise. */
+fun clockText(at: Long): String =
+    java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()))

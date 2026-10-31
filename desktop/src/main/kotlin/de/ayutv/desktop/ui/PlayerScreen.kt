@@ -156,6 +156,24 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
         app.toast(if (store.toggleFavorite(channel.key)) "★ ${channel.name} zu Favoriten hinzugefügt" else "${channel.name} aus Favoriten entfernt")
     }
 
+    /** Schlaf-Timer: feste Zeit oder Ende der Sendung bzw. des Films; im TV-Modus auch „danach PC schlafen legen“. */
+    fun openSleepMenu() {
+        val now = System.currentTimeMillis()
+        val end = if (live != null) guide[live.channel.key]?.let { nowOf(it) }?.stop?.takeIf { it > now }
+        else (player.durationMs - player.positionMs).takeIf { player.durationMs > 0 && it > 0 }?.let { now + it }
+        val pc = user.tvMode && de.ayutv.desktop.TvMode.isWindows
+        val items = buildList {
+            if (app.sleepAt > 0) add(MenuItem("Aus (jetzt bis ${clockText(app.sleepAt)})") { app.setSleepTimer(0) })
+            listOf(15, 30, 45, 60, 90, 120).forEach { m -> add(MenuItem("In $m Minuten") { app.setSleepTimer(now + m * 60_000L) }) }
+            if (end != null) add(MenuItem((if (live != null) "Am Ende der Sendung" else "Am Ende des Films / der Folge") + " (${clockText(end)})") { app.setSleepTimer(end) })
+            if (pc) {
+                add(MenuItem("In 60 Minuten, danach PC schlafen legen") { app.setSleepTimer(now + 60 * 60_000L, pc = true) })
+                if (end != null) add(MenuItem("Am Ende (${clockText(end)}), danach PC schlafen legen") { app.setSleepTimer(end, pc = true) })
+            }
+        }
+        menu = { MenuDialog(app, "Schlaf-Timer", items, onDismiss = { menu = null; refocus() }) }
+    }
+
     /** ☰-Menü: Tonspuren, Untertitel, Untertitel laden/verschieben, bei Live TV Favorit und Stream-Info. */
     fun openMenu() {
         val items = buildList {
@@ -192,6 +210,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 app.applyBuffer()
                 app.restartPlayback()
             })
+            add(MenuItem("😴 Schlaf-Timer: " + (if (app.sleepAt > 0) "bis ${clockText(app.sleepAt)}" else "aus") + " …") { openSleepMenu() })
             add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
         }
         menu = {

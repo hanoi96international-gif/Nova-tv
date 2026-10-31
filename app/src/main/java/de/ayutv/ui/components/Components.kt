@@ -155,11 +155,13 @@ fun ChannelCard(
     now: ProgrammeEntity?,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    onFocus: (() -> Unit)? = null,
 ) {
     Card(
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = Modifier.width(220.dp),
+        modifier = Modifier.width(220.dp)
+            .then(if (onFocus != null) Modifier.onFocusChanged { if (it.hasFocus) onFocus() } else Modifier),
         colors = CardDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.SurfaceRaised),
         border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, AyuColors.Accent))),
     ) {
@@ -199,12 +201,14 @@ fun PosterCard(
     progress: Float? = null,
     subtitle: String? = null,
     onLongClick: (() -> Unit)? = null,
+    onFocus: (() -> Unit)? = null,
 ) {
     Column(modifier.width(150.dp)) {
         Card(
             onClick = onClick,
             onLongClick = onLongClick,
-            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f),
+            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
+                .then(if (onFocus != null) Modifier.onFocusChanged { if (it.hasFocus) onFocus() } else Modifier),
             colors = CardDefaults.colors(containerColor = AyuColors.Surface),
             border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, AyuColors.Accent))),
         ) {
