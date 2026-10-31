@@ -389,39 +389,73 @@ private fun LiveInfoBar(activity: PlayerActivity) {
     val channel = activity.current ?: return
     val now = activity.nowNext.firstOrNull()
     val next = activity.nowNext.getOrNull(1)
+    val stats = activity.stats
+    val badges = remember(stats.height, stats.frameRate, stats.hdr, stats.audioCodec, stats.audioChannels) {
+        de.ayutv.data.parse.StreamBadges.video(stats.height, stats.frameRate, stats.hdr) +
+            listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(stats.audioCodec, stats.audioChannels))
+    }
+    val headline = remember(now) { now?.headlineWithBadge() }
+    val description = remember(now) { now?.let { de.ayutv.data.parse.ProgrammeText.description(it.description) } }
     Column(
-        Modifier.fillMaxWidth().background(bottomScrim).padding(start = 48.dp, end = 48.dp, top = 64.dp, bottom = 32.dp)
+        Modifier.fillMaxWidth().background(bottomScrim).padding(start = 48.dp, end = 48.dp, top = 72.dp, bottom = 28.dp)
     ) {
+        // Kopf: Logo, Nummer und Name, Kennzeichen (was der Sender gerade wirklich liefert), rechts die Uhrzeit.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ChannelLogo(channel.logo, channel.name, Modifier.size(width = 96.dp, height = 60.dp))
+            ChannelLogo(channel.logo, channel.name, Modifier.size(width = 112.dp, height = 68.dp))
             Spacer(Modifier.width(20.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("${channel.number}  ${channel.name}", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    Text("${channel.number}", style = MaterialTheme.typography.titleLarge, color = AyuColors.Accent)
+                    Spacer(Modifier.width(10.dp))
+                    Text(channel.name, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (activity.isFavorite) Text("  ★", color = AyuColors.Accent, fontSize = 22.sp)
-                    activity.stats.resolutionLabel.takeIf { it.isNotEmpty() }?.let { Badge(it) }
-                    activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
                 }
-                Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary)
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary, maxLines = 1)
+                    badges.forEach { Badge(it) }
+                }
             }
-            Text(formatTime(System.currentTimeMillis()), style = MaterialTheme.typography.titleLarge, color = Color.White)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatTime(System.currentTimeMillis()), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text(
+                    java.text.SimpleDateFormat("EEE, d. MMM", Locale.GERMAN).format(java.util.Date()),
+                    color = AyuColors.TextSecondary, fontSize = 13.sp,
+                )
+            }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
         if (now != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${formatTime(now.start)} – ${formatTime(now.stop)}", color = AyuColors.TextSecondary, fontSize = 14.sp)
-                Spacer(Modifier.width(12.dp))
-                Text(now.headlineWithBadge(), color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Spacer(Modifier.height(6.dp))
-            ProgressLine(now.progress())
-            de.ayutv.data.parse.ProgrammeText.description(now.description)?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            if (next != null) {
-                Spacer(Modifier.height(8.dp))
-                Text("Danach ${formatTime(next.start)}  ${next.headline()}", color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 1)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("JETZT", color = AyuColors.Live, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(10.dp))
+                        Text("${formatTime(now.start)} – ${formatTime(now.stop)}", color = AyuColors.TextSecondary, fontSize = 14.sp)
+                        de.ayutv.data.parse.StreamBadges.remaining(now.stop)?.let {
+                            Text("  ·  $it", color = AyuColors.TextSecondary, fontSize = 14.sp)
+                        }
+                    }
+                    Text(headline.orEmpty(), color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(6.dp))
+                    ProgressLine(now.progress())
+                    description?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (next != null) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("DANACH", color = AyuColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(10.dp))
+                            Text("${formatTime(next.start)}  ${next.headline()}", color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                // Bild zur Sendung (wenn der TV-Guide eins hat), rechts daneben.
+                if (!now.icon.isNullOrBlank()) {
+                    Spacer(Modifier.width(24.dp))
+                    de.ayutv.ui.components.ProgrammeImage(now.icon, Modifier.width(208.dp).height(117.dp))
+                }
             }
         } else {
             Text("Keine Programminformationen", color = AyuColors.TextSecondary)
