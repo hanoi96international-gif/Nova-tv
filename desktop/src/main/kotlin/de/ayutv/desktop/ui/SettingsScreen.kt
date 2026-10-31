@@ -167,6 +167,32 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("TV-Modus (Mini-PC am Fernseher)") }
+        item {
+            Toggle("TV-Modus: mit Windows starten, immer Vollbild, Mauszeiger ausblenden", user.tvMode) {
+                val on = !user.tvMode
+                app.store.updateUser { u -> u.copy(tvMode = on, fullscreen = on || u.fullscreen) }
+                val autostart = de.ayutv.desktop.TvMode.setAutostart(on)
+                app.toast(
+                    if (!on) "TV-Modus aus" else if (autostart) "TV-Modus an: DnA-TV startet ab jetzt mit Windows im Vollbild"
+                    else "TV-Modus an (Autostart nur mit der installierten App möglich)",
+                )
+            }
+            Label(
+                "Für einen Mini-PC als TV-Box: DnA-TV startet nach dem Einschalten direkt im Vollbild, Bedienung mit der Fire-TV-Fernbedienung. " +
+                    "Ohne Kennwort-Abfrage beim Start: Windows-Taste + R → „netplwiz“ → Haken bei „Benutzer müssen Benutzernamen und Kennwort eingeben“ entfernen.",
+                Type.small, maxLines = 4,
+            )
+            if (user.tvMode) {
+                Spacer(Modifier.height(8.dp))
+                Row {
+                    TextButton("☾ PC schlafen legen", { de.ayutv.desktop.TvMode.sleep() })
+                    Spacer(Modifier.width(8.dp))
+                    TextButton("⏻ PC ausschalten", { app.close(); de.ayutv.desktop.TvMode.shutdown() })
+                }
+            }
+        }
+
         item { Section("Abgleich mit dem Fire TV") }
         item {
             Column(Modifier.width(560.dp)) {

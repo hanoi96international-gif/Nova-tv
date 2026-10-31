@@ -195,6 +195,8 @@ data class UserData(
     /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen). */
     val appsOrder: List<String> = emptyList(),
     val appsHidden: Set<String> = emptySet(),
+    /** TV-Modus (Mini-PC am Fernseher): mit Windows starten, immer Vollbild, Mauszeiger ausblenden. */
+    val tvMode: Boolean = false,
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */

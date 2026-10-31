@@ -80,7 +80,8 @@ fun main(args: Array<String>) {
     application {
         val window = rememberWindowState(
             size = DpSize(1280.dp, 780.dp),
-            placement = if (store.user.value.fullscreen) WindowPlacement.Fullscreen else WindowPlacement.Floating,
+            // TV-Modus (oder Start mit --tv aus dem Autostart): immer im Vollbild.
+            placement = if (store.user.value.fullscreen || store.user.value.tvMode || "--tv" in args) WindowPlacement.Fullscreen else WindowPlacement.Floating,
         )
         val scope = rememberCoroutineScope()
         val app = remember { AppState(store, Sync(store), scope, input) }
@@ -109,6 +110,9 @@ fun main(args: Array<String>) {
                 )
                 onDispose { awt.removeWindowFocusListener(listener) }
             }
+            // TV-Modus: Mauszeiger verschwindet nach kurzer Ruhe.
+            val tv = app.store.user.collectAsState().value.tvMode
+            LaunchedEffect(tv) { TvMode.hideIdleCursor(awt, tv) }
             App(app, window)
         }
     }

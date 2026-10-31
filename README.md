@@ -96,6 +96,8 @@ Außerdem wie auf dem Fire TV: Startseite mit „Weiter schauen“, „Zuletzt g
 
 **Multiview:** im Player ☰ → „Multiview“: bis zu vier Sender im 2×2-Raster, Steuerkreuz wählt das Feld, OK holt den Ton dorthin (noch einmal OK: Vollbild), Sender ± zappt im Feld. In der Senderliste läuft der ausgewählte Sender nach kurzer Zeit stumm als **Mini-Vorschau** (abschaltbar). Die Installer werden signiert, sobald ein Code-Signing-Zertifikat als Secret hinterlegt ist (`WINDOWS_SIGN_CERT`, `WINDOWS_SIGN_PASSWORD`).
 
+**TV-Modus (optional, für einen Mini-PC am Fernseher):** *Einstellungen → TV-Modus*: DnA-TV startet mit Windows direkt im Vollbild, der Mauszeiger verschwindet, PC schlafen legen oder ausschalten aus der App. Standard bleibt die normale Fensterbedienung.
+
 Bedienung mit Maus (Rechtsklick = Menü, Doppelklick = Vollbild, Mausrad = Lautstärke), Tastatur (Pfeile, Enter, Esc/Rücktaste, Kontextmenü-Taste, Leertaste, F11; Vollbild wird gemerkt) und Handy (*Einstellungen → Handy als Fernbedienung*: Adresse im Handy-Browser öffnen).
 
 Gebaut wird sie aus `desktop/` (Kotlin + Compose Desktop, Wiedergabe über VLC) mit denselben Lesern für M3U, Xtream, TV-Guide und Sicherung wie die Fire-TV-App: `./gradlew -p desktop run` bzw. `./gradlew -p desktop packageMsi`.
