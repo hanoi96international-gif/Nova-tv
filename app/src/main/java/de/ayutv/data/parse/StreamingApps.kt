@@ -17,6 +17,11 @@ object StreamingApps {
         val phonePackages: List<String>,
         val web: String,
         val color: Long,
+        /**
+         * Namen, unter denen die App auf dem Gerät heißt (klein geschrieben). Ist keiner der Paketnamen installiert
+         * (Hersteller und Fire OS nutzen teils eigene), wird die App über ihren Namen unter allen Apps gesucht.
+         */
+        val labels: List<String> = listOf(name.lowercase()),
     )
 
     val ALL = listOf(
@@ -29,12 +34,26 @@ object StreamingApps {
         ),
         App(
             "prime", "Prime Video",
-            listOf("com.amazon.avod", "com.amazon.amazonvideo.livingroom"),
+            listOf("com.amazon.avod", "com.amazon.firebat", "com.amazon.amazonvideo.livingroom"),
             listOf("com.amazon.avod.thirdpartyclient"),
             "https://www.primevideo.com", 0xFF1A98FF,
+            labels = listOf("prime video", "amazon prime video", "primevideo"),
         ),
         App("spotify", "Spotify", listOf("com.spotify.tv.android"), listOf("com.spotify.music"), "https://open.spotify.com", 0xFF1DB954),
     )
+
+    /**
+     * Passt der App-Name [label] (wie auf dem Gerät angezeigt) zu [app]? 0 = genau, 1 = beginnt damit, null = nein.
+     * „YouTube Kids“ oder „YouTube Music“ zählen für YouTube nicht, „Prime Video“ schon für Prime Video.
+     */
+    fun labelMatch(app: App, label: String): Int? {
+        val l = label.trim().lowercase()
+        if (app.labels.any { it == l }) return 0
+        val others = listOf("kids", "music", "musik", "studio", "create", "direct", "photos")
+        // „YouTube TV“ ist ein eigener (US-)Dienst, nicht die YouTube-App.
+        val otherService = app.id == "youtube" && Regex("""\btv\b""").containsMatchIn(l)
+        return if (app.labels.any { l.startsWith("$it ") || l.startsWith("$it:") } && others.none { l.contains(it) } && !otherService) 1 else null
+    }
 
     /** Alle Paketnamen (für die Sichtbarkeit unter Android 11+ im Manifest und für Tests). */
     val packages: List<String> get() = ALL.flatMap { it.tvPackages + it.phonePackages }

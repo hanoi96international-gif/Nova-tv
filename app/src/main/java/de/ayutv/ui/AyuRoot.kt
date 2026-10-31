@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +45,7 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -133,7 +136,7 @@ fun AyuRoot() {
     // Jeder Bereich behält seinen Zustand (gewählte Gruppe, Scrollposition), auch wenn man zwischendurch wechselt.
     val sectionState = rememberSaveableStateHolder()
 
-    LaunchedEffect(appSettings?.uiTheme) { appSettings?.uiTheme?.let { AyuColors.use(it) } }
+    LaunchedEffect(appSettings?.uiTheme, appSettings?.accent) { appSettings?.let { AyuColors.use(it.uiTheme, it.accent) } }
 
     de.ayutv.ui.theme.AppBackground {
         val list = playlists
@@ -266,6 +269,15 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
         label = "dim",
     )
     var enterTick by remember { mutableIntStateOf(0) }
+    // Alle Bereiche sollen ohne Scrollen auf den Bildschirm passen, auch mit großer Schrift oder kleiner Auflösung
+    // (sonst war „Einstellungen“ unten abgeschnitten): Abstand je Eintrag aus der Bildschirmhöhe berechnen.
+    val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp
+    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+    val rowPadding = remember(screenHeight, fontScale, sections.size) {
+        val fixed = 32f + 40f * fontScale + 8f + 3f * (sections.size + 1)
+        val perRow = (screenHeight - fixed) / sections.size.coerceAtLeast(1)
+        ((perRow - 22f * maxOf(1f, fontScale)) / 2f).coerceIn(2f, 10f).dp
+    }
     val initialFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val touch = isTouchDevice
@@ -293,9 +305,22 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
                 )
             )
             .onFocusChanged { expanded = it.hasFocus }
+            // ▲/▼ am Anfang oder Ende der Leiste bleiben in ihr (sprangen sonst schräg in den Inhalt daneben, z. B. von
+            // „Einstellungen“ auf den untersten Bereich der Einstellungen). Hinein geht es mit OK oder ▶.
+            .focusProperties {
+                onExit = {
+                    if (requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Up ||
+                        requestedFocusDirection == androidx.compose.ui.focus.FocusDirection.Down
+                    ) cancelFocusChange()
+                }
+            }
+            // Eigene Gruppe außen herum: focusRestorer setzt sein eigenes onExit und würde das obere sonst ersetzen.
+            .focusGroup()
             .focusRestorer()
-            .padding(vertical = 24.dp, horizontal = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            // Passt sie nicht ganz auf den Bildschirm (viele Bereiche, kleiner Bildschirm), lässt sie sich scrollen.
+            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            .padding(vertical = 16.dp, horizontal = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         Text(
             if (expanded) "DnA-TV" else "DnA",
@@ -303,7 +328,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
             fontSize = if (expanded) 22.sp else 18.sp,
             maxLines = 1,
             color = AyuColors.Accent,
-            modifier = Modifier.padding(start = 12.dp, bottom = 18.dp),
+            modifier = Modifier.padding(start = 12.dp, bottom = 10.dp),
         )
         sections.forEach { item ->
             val isSelected = item == selected
@@ -336,7 +361,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
                                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
                             )
                         } else Modifier)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .padding(horizontal = 14.dp, vertical = rowPadding),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(

@@ -18,6 +18,8 @@ class SportEventsTest {
         val events = SportEvents.of(listOf(sky, skyUhd, zdf), mapOf(sky.key to listOf(game, repeat), skyUhd.key to listOf(game), zdf.key to listOf(news)), favorites = emptySet(), now = now)
         assertEquals(1, events.size)
         assertEquals("Borussia Dortmund – FC Bayern München", events.single().pairing)
-        assertEquals(listOf("Sky Sport Bundesliga UHD"), events.single().alsoOn.map { it.name })
+        // Sport immer in bester Qualität: die UHD-Fassung zuerst, HD als Ausweichsender.
+        assertEquals("Sky Sport Bundesliga UHD", events.single().channel.name)
+        assertEquals(listOf("Sky Sport Bundesliga 1 HD"), events.single().alsoOn.map { it.name })
     }
 }

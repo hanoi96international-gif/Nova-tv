@@ -90,6 +90,10 @@ interface ChannelDao {
     @Query("SELECT * FROM visible_channels WHERE number = :number ORDER BY id LIMIT 1")
     suspend fun byNumber(number: Int): ChannelEntity?
 
+    /** Eigene Sendernummer setzen (oder die der Playlist wiederherstellen). */
+    @Query("UPDATE channels SET number = :number WHERE `key` = :key")
+    suspend fun setNumber(key: String, number: Int): Int
+
     /** Favoriten bleiben, auch wenn ihre Gruppe beim Anbieter ausgeblendet ist ([USABLE_CHANNEL]). */
     @Query("SELECT c.* FROM channels c INNER JOIN favorites f ON f.`key` = c.`key` WHERE $USABLE_CHANNEL ORDER BY f.position, f.addedAt")
     fun observeFavorites(): Flow<List<ChannelEntity>>

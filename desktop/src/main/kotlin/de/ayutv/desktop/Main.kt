@@ -75,6 +75,7 @@ fun main(args: Array<String>) {
     Log.init(store.dir)
     // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
     Network.apply(store)
+    de.ayutv.desktop.ui.Palette.use(store.user.value.uiTheme, store.user.value.accent)
     // Fire-TV-Fernbedienung so früh wie möglich lesen (eigener Thread, nur unter Windows).
     val input = RemoteInput().also { it.start() }
     application {
@@ -113,6 +114,8 @@ fun main(args: Array<String>) {
             // TV-Modus: Mauszeiger verschwindet nach kurzer Ruhe.
             val tv = app.store.user.collectAsState().value.tvMode
             LaunchedEffect(tv) { TvMode.hideIdleCursor(awt, tv) }
+            val look = app.store.user.collectAsState().value.let { it.uiTheme to it.accent }
+            LaunchedEffect(look) { de.ayutv.desktop.ui.Palette.use(look.first, look.second) }
             App(app, window)
         }
     }
@@ -150,7 +153,7 @@ fun App(app: AppState, window: WindowState) {
     }
 
     Box(
-        Modifier.fillMaxSize().background(Palette.background)
+        Modifier.fillMaxSize().background(Palette.backdrop)
             .focusRequester(root)
             .onFocusChanged { rootFocused = it.isFocused; rootHasFocus = it.hasFocus }
             .focusable()

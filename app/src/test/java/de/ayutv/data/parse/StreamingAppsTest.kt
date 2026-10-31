@@ -26,6 +26,19 @@ class StreamingAppsTest {
     }
 
     @Test
+    fun findsAppsByTheirName() {
+        val youtube = StreamingApps.ALL.first { it.id == "youtube" }
+        val prime = StreamingApps.ALL.first { it.id == "prime" }
+        assertEquals(0, StreamingApps.labelMatch(youtube, "YouTube"))
+        assertEquals(null, StreamingApps.labelMatch(youtube, "YouTube Kids"))
+        assertEquals(null, StreamingApps.labelMatch(youtube, "YouTube Music"))
+        assertEquals(null, StreamingApps.labelMatch(youtube, "YouTube TV"))
+        assertEquals(0, StreamingApps.labelMatch(prime, "Prime Video"))
+        assertEquals(0, StreamingApps.labelMatch(prime, "Amazon Prime Video"))
+        assertEquals(null, StreamingApps.labelMatch(prime, "Prime Gaming"))
+    }
+
+    @Test
     fun everyAppHasTvPhoneAndWeb() {
         StreamingApps.ALL.forEach { a ->
             assertTrue(a.name, a.tvPackages.isNotEmpty() && a.phonePackages.isNotEmpty() && a.web.startsWith("https://"))

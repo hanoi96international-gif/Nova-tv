@@ -40,6 +40,8 @@ data class StreamStats(
     val bandwidth: Long = 0,
     val startupMs: Long = 0,
     val hdr: String = "",
+    /** Aktive Bildoptimierung („Fußball“, „Film“ …), leer = aus. */
+    val picture: String = "",
     val frameRateMeasured: Boolean = false,
     val audioDecoder: String = "",
 ) {

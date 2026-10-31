@@ -277,6 +277,35 @@ class DeviceTourTest {
             next("07_settings")
         } }
 
+        // Mini-Vorschau in Live TV: Die Senderliste muss sichtbar bleiben, während der ausgewählte Sender klein mitläuft
+        // (früher ließ die Vorschau die ganze Liste verschwinden).
+        section("live_preview") {
+            runBlocking { container.settings.update { it.copy(livePreview = true) } }
+            ActivityScenario.launch(MainActivity::class.java).use {
+                Thread.sleep(3_000)
+                key(KeyEvent.KEYCODE_DPAD_LEFT, 4)
+                key(KeyEvent.KEYCODE_DPAD_DOWN); key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(1_500)
+                key(KeyEvent.KEYCODE_DPAD_RIGHT); Thread.sleep(5_000)
+                shot("03b_live_preview")
+                fun visible(text: String): Boolean {
+                    var found = false
+                    fun walk(node: android.view.accessibility.AccessibilityNodeInfo?, depth: Int) {
+                        if (node == null || depth > 60 || found) return
+                        if ((node.text?.toString() ?: node.contentDescription?.toString())?.contains(text) == true && node.isVisibleToUser) found = true
+                        for (i in 0 until node.childCount) walk(node.getChild(i), depth + 1)
+                    }
+                    walk(instrumentation.uiAutomation.rootInActiveWindow, 0)
+                    return found
+                }
+                // Welche Gruppe gerade offen ist, ist egal: Es müssen mehrere Sender der Liste zu sehen sein.
+                val names = runBlocking { container.db.channels().all() }.map { it.name }.distinct().take(80)
+                val shown = names.count { visible(it) }
+                log("live_preview: sichtbare Sender=$shown preview=${runBlocking { container.settings.current() }.livePreview}")
+                assertTrue("Senderliste verschwindet bei der Mini-Vorschau", shown >= 2)
+            }
+            runBlocking { container.settings.update { it.copy(livePreview = false) } }
+        }
+
         // Einstellungen → Playlists: Name und Knöpfe müssen sichtbar sein. Früher standen alle Knöpfe neben dem Namen;
         // auf 960 dp Breite blieb dem Namen keine Breite, die Zeile wurde riesig hoch und die Seite wirkte leer.
         section("settings_playlists") { ActivityScenario.launch(MainActivity::class.java).use {

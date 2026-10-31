@@ -133,6 +133,19 @@ fun LiveScreen(app: AppState) {
                     (group as? GroupRef.Custom)?.let { g -> add(MenuItem("Aus dieser Gruppe entfernen") { store.removeFromGroup(g.id, listOf(channel.key)) }) }
                     if (sortable) add(MenuItem("↕ Verschieben") { startMove(setOf(channel.key)) })
                     add(MenuItem("☑ Mehrere auswählen") { selecting = true; selected = setOf(channel.key) })
+                    val own = user.channelNumbers[channel.key]
+                    add(MenuItem("# Sendernummer festlegen …" + (own?.let { " (jetzt $it)" } ?: "")) {
+                        dialog = {
+                            NameDialog(app, "Sendernummer für ${channel.name} (1–9999)", (own ?: channel.number.takeIf { it > 0 })?.toString().orEmpty(), onDone = { text ->
+                                val number = text.filter(Char::isDigit).take(4).toIntOrNull()?.takeIf { it > 0 }
+                                if (number == null) app.toast("Bitte eine Zahl eingeben") else {
+                                    store.setChannelNumber(channel.key, number)
+                                    app.toast("${channel.name} hat jetzt die Nummer $number")
+                                }
+                            }, onDismiss = { dialog = null })
+                        }
+                    })
+                    if (own != null) add(MenuItem("Eigene Nummer entfernen") { store.setChannelNumber(channel.key, null) })
                 },
                 onDismiss = { dialog = null },
             )

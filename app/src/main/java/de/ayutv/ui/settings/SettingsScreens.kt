@@ -81,6 +81,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRestorer
+import de.ayutv.ui.components.keepVerticalFocus
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.tv.material3.Border
 import androidx.compose.foundation.BorderStroke
@@ -179,8 +180,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             // focusRestorer: Von rechts zurück landet der Fokus auf dem gewählten Bereich, nicht auf dem
             // gerade daneben liegenden (der sonst sofort umschalten würde).
             // fallback: Beim ersten Betreten (noch nichts gemerkt) auf den gewählten Bereich, nicht auf den nächstgelegenen.
-            Modifier.width(if (isPortrait) 170.dp else 250.dp).fillMaxHeight().focusRestorer(pageFocus.getValue(page))
-                .background(AyuColors.Surface.copy(alpha = 0.5f)).padding(vertical = 32.dp, horizontal = 14.dp),
+            Modifier.width(if (isPortrait) 170.dp else 250.dp).fillMaxHeight()
+                // ▲/▼ am Ende bleiben in der Spalte (sprangen sonst in die Seitenleiste oder nach rechts).
+                .background(AyuColors.Surface.copy(alpha = 0.5f))
+                .keepVerticalFocus()
+                .focusRestorer(pageFocus.getValue(page))
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 32.dp, horizontal = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text("Einstellungen", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 10.dp, bottom = 18.dp))
@@ -193,12 +199,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     onClick = { pendingPage = null; page = entry },
                 )
             }
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(12.dp))
             Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
         }
         // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
         key(page) { LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
+            // Am Listenende nicht in die linke Spalte (würde den Bereich wechseln) oder die Seitenleiste springen.
+            modifier = Modifier.weight(1f).fillMaxHeight().keepVerticalFocus(),
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -228,6 +235,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             onToggle = { container.scope.launch { container.playlists.setEnabled(playlist.id, !playlist.enabled) } },
                             onGroups = { onManageGroups(playlist) },
                             onMapGuide = { mappingFor = playlist },
+                            onRename = { name -> container.scope.launch { container.playlists.rename(playlist.id, name) } },
                             onRefresh = { container.scope.launch { container.playlists.sync(playlist.id) } },
                             onDelete = {
                                 if (confirmDelete == playlist.id) {
@@ -300,7 +308,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 // Dazu die echte Geschwindigkeit vom Anbieter: ein Film wird nicht in Echtzeit, sondern so schnell wie möglich geliefert.
                                 val movie = runCatching { container.db.vod().search("", 1).firstOrNull() }.getOrNull()
                                 val provider = movie?.let { check.provider(it.url, settings.userAgent) }
-                                if (live != null && provider != null) result = live.copy(providerKbps = provider)
+                                // Proxy aktiv: denselben Film auch am Proxy vorbei laden – zeigt, ob der Proxy bremst.
+                                val direct = if (provider != null && de.ayutv.data.net.AppProxy.current.active) {
+                                    movie?.let { check.provider(it.url, settings.userAgent, direct = true) }
+                                } else null
+                                val uhd = channel?.let { de.ayutv.data.parse.ChannelQuality.height(it.key, it.name) >= 2_000 } == true
+                                if (live != null) result = live.copy(providerKbps = provider, directKbps = direct, uhd = uhd)
                                 running = false
                             }
                         }
@@ -323,6 +336,17 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Bild und Ton laufen direkt in der Hardware synchron: am Fire TV Stick 4K / 4K Max flüssigeres 4K und exakte Lippensynchronität. " +
                                 "Empfohlen für 4K. Ausschalten, falls Ton aussetzt (manche Soundbars) – das Puffer-Polster gegen Hänger ist dabei inaktiv.",
                         ) { update { it.copy(tunneling = !it.tunneling) } }
+                    }
+                    item {
+                        SettingRow(
+                            "Bildoptimierung (Full HD)",
+                            settings.pictureTuning.label,
+                            "Bildverbesserung auf dem Grafikchip nach dem Vorbild der Spiele-Hochrechner (FSR, AMD CAS), sparsam in einem Durchgang: " +
+                                "Sender unter Full HD (z. B. 720p) werden mit Kantenschutz auf 1080p hochgerechnet, Details kontrastabhängig geschärft " +
+                                "(ohne Rauschen und Blockfehler zu verstärken), Farbstufen in Himmel und Rasen geglättet. Je nach Inhalt: Filme natürlich, " +
+                                "Sport schärfer mit mehr Kontrast, Fußball mit kräftigerem Rasengrün. 4K und HDR bleiben unverändert; ruckelt es, " +
+                                "schaltet sie sich ab. Nicht zusammen mit „Tunneling“. Im Bild auch über ☰ → Bild.",
+                        ) { update { it.copy(pictureTuning = it.pictureTuning.next()) } }
                     }
                     item {
                         SettingRow(
@@ -564,11 +588,25 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Design",
                             settings.uiTheme.label,
                             "Nordlicht: Nachthimmel mit Polarlicht in Türkis und Violett. Hannover 96: Stadionabend mit Flutlicht, " +
-                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Standard: schlichtes Dunkelblau. OK wechselt.",
+                                "Schärpe, Fanschal und Linie in Schwarz-Weiß-Grün. Kino: roter Samtvorhang mit Spotlicht und Gold. Tiefsee: Lichtstrahlen " +
+                                "im dunklen Wasser, Türkis. Abendrot: Retro-Sonne über dem Horizont in Violett und Orange. Graphit: modernes Anthrazit " +
+                                "mit Glanz. Smaragd: Waldnacht mit Glühwürmchen. Neon: Stadt bei Nacht in Magenta und Cyan. Standard: schlichtes " +
+                                "Dunkelblau. OLED-Schwarz: echtes Schwarz für OLED-Fernseher. OK wechselt.",
                         ) {
                             val next = de.ayutv.ui.theme.UiTheme.entries[(settings.uiTheme.ordinal + 1) % de.ayutv.ui.theme.UiTheme.entries.size]
-                            de.ayutv.ui.theme.AyuColors.use(next)
+                            de.ayutv.ui.theme.AyuColors.use(next, settings.accent)
                             update { it.copy(uiTheme = next) }
+                        }
+                    }
+                    item {
+                        SettingRow(
+                            "Akzentfarbe",
+                            settings.accent.label,
+                            "Farbe von Auswahlrahmen, Fortschritt und Hervorhebungen – zu jedem Design frei wählbar. OK wechselt.",
+                        ) {
+                            val next = de.ayutv.ui.theme.AccentChoice.entries[(settings.accent.ordinal + 1) % de.ayutv.ui.theme.AccentChoice.entries.size]
+                            de.ayutv.ui.theme.AyuColors.use(settings.uiTheme, next)
+                            update { it.copy(accent = next) }
                         }
                     }
                     if (de.ayutv.data.FireTvHome.supported(context)) item {
@@ -731,7 +769,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 settings.preferInternetGuide -> "Eigener zuerst, Anbieter ergänzt"
                                 else -> "Anbieter zuerst, eigener ergänzt"
                             },
-                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01), richtige Zeiten auch nach " +
+                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, MagentaTV, Dyn-Spielplan), richtige Zeiten auch nach " +
                                 "der Zeitumstellung. Der TV-Guide des Anbieters liegt oft daneben; „Nur eigener“ lädt ihn gar nicht. " +
                                 "Der Guide wird nach dem Umschalten neu geladen.",
                         ) {
@@ -851,6 +889,15 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
+                    if (settings.proxyMode != de.ayutv.data.net.ProxyMode.OFF) item {
+                        SettingRow(
+                            "Videostreams über den Proxy",
+                            onOff(settings.proxyStreams),
+                            "Aus: Nur Anmeldung, Listen und TV-Guide laufen über den Proxy, die Videos direkt. Viele Proxys liefern nur " +
+                                "10–20 Mbit/s – zu wenig für 4K (Bild hängt, Puffer leer). Der Leitungs-Check zeigt beide Wege im Vergleich. " +
+                                "Hinweis: Der Anbieter sieht beim direkten Weg deine eigene Adresse.",
+                        ) { update { it.copy(proxyStreams = !it.proxyStreams) } }
+                    }
                     if (settings.proxyMode == de.ayutv.data.net.ProxyMode.SELECTED) {
                         item {
                             Text(
@@ -918,11 +965,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Speicher",
                             "Aufräumen",
-                            (usage ?: "wird ermittelt …") + "\nLange nicht benutzte Übersetzungsmodelle (30 Tage) und alte Untertitel (60 Tage) " +
-                                "löscht die App nachts von selbst." + (cleaned?.let { "\nZuletzt: $it" } ?: ""),
+                            (usage ?: "wird ermittelt …") + "\nAufräumen: leert den Bilder-Zwischenspeicher (Logos laden neu), löscht installierte Updates, " +
+                                "verdichtet die Datenbank und entfernt Übersetzungsmodelle, die 7 Tage nicht benutzt wurden. Nachts räumt die App " +
+                                "von selbst auf (Modelle nach 30, Untertitel nach 60 Tagen)." + (cleaned?.let { "\nZuletzt: $it" } ?: ""),
                         ) {
                             scope.launch {
-                                cleaned = withContext(Dispatchers.IO) { de.ayutv.data.StorageCleaner.clean(context) }
+                                cleaned = "räumt auf …"
+                                cleaned = withContext(Dispatchers.IO) { de.ayutv.data.StorageCleaner.clean(context, manual = true, database = container.db) }
                                 usage = withContext(Dispatchers.IO) {
                                     "Frei: " + de.ayutv.data.StorageCleaner.format(de.ayutv.data.StorageCleaner.freeBytes(context)) +
                                         de.ayutv.data.StorageCleaner.usage(context).joinToString("") { "\n${it.label}: ${de.ayutv.data.StorageCleaner.format(it.bytes)}" }
@@ -1113,7 +1162,7 @@ private fun TranslationProvider.next(): TranslationProvider = TranslationProvide
 private fun LanguageList(selected: String, onSelect: (String) -> Unit) {
     val focus = remember { FocusRequester() }
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().keepVerticalFocus(),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -1169,9 +1218,26 @@ private fun PlaylistRow(
     onToggle: () -> Unit,
     onGroups: () -> Unit,
     onMapGuide: () -> Unit,
+    onRename: (String) -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Umbenennen direkt in der Zeile: Feld mit dem jetzigen Namen, OK/Fertig speichert.
+    var renaming by remember { mutableStateOf(false) }
+    var newName by remember(playlist.name) { mutableStateOf(playlist.name) }
+    val nameField = remember { FocusRequester() }
+    LaunchedEffect(renaming) {
+        if (!renaming) return@LaunchedEffect
+        repeat(10) {
+            if (runCatching { nameField.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(30)
+        }
+    }
+    fun saveName() {
+        val trimmed = newName.trim()
+        if (trimmed.isNotEmpty() && trimmed != playlist.name) onRename(trimmed)
+        renaming = false
+    }
     // Wie viele Sender ein Programm haben, woher es kommt und welche keins haben.
     val container = LocalContainer.current
     val guide by produceState<PlaylistRepository.EpgStatus?>(null, playlist.id, playlist.lastEpgSync) {
@@ -1223,12 +1289,28 @@ private fun PlaylistRow(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedButton(onClick = onGroups) { Text("Gruppen") }
+            OutlinedButton(onClick = { newName = playlist.name; renaming = !renaming }) { Text(if (renaming) "Abbrechen" else "Umbenennen") }
             if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
             OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
             OutlinedButton(
                 onClick = onDelete,
                 colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
             ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
+        }
+        if (renaming) {
+            Row(Modifier.fillMaxWidth().padding(start = 134.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                de.ayutv.ui.components.TvTextField(
+                    value = newName,
+                    onValueChange = { newName = it.take(60) },
+                    label = "Neuer Name der Playlist",
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+                    onImeAction = { saveName() },
+                    focusRequester = nameField,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(10.dp))
+                Button(onClick = { saveName() }) { Text("Speichern") }
+            }
         }
     }
 }

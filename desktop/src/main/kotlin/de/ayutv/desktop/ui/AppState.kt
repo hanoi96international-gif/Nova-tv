@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import de.ayutv.data.parse.XtreamEpisode
 import de.ayutv.desktop.data.BackupImport
 import de.ayutv.desktop.data.Channel
+import de.ayutv.desktop.data.numberOf
 import de.ayutv.desktop.data.GroupRef
 import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Series
@@ -232,6 +233,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         player.hdrMode = store.user.value.hdrMode
         player.videoLayout = store.user.value.videoLayout
         player.directMode = store.user.value.directMode
+        player.aiUpscale = store.user.value.aiUpscale
     }
 
     fun toast(text: String) {
@@ -240,6 +242,45 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         messageJob = scope.launch {
             delay(4_000)
             message = null
+        }
+    }
+
+    // ---------------------------------------------------------------- Schlaf-Timer
+
+    /** Zeitpunkt, an dem die Wiedergabe endet (0 = aus). */
+    var sleepAt by mutableStateOf(0L); private set
+    /** Im TV-Modus danach auch den PC in den Energiesparmodus legen. */
+    var sleepPc by mutableStateOf(false); private set
+    private var sleepJob: Job? = null
+
+    /** Schlaf-Timer: um [at] anhalten (0 = aus); mit [pc] danach den PC schlafen legen. Eine Minute vorher kommt ein Hinweis. */
+    fun setSleepTimer(at: Long, pc: Boolean = false) {
+        sleepJob?.cancel()
+        sleepJob = null
+        sleepAt = at.coerceAtLeast(0)
+        sleepPc = pc && at > 0
+        if (at <= 0) {
+            toast("Schlaf-Timer aus")
+            return
+        }
+        toast("Schlaf-Timer: Ende um ${clockText(at)}" + if (sleepPc) ", danach schläft der PC" else "")
+        sleepJob = scope.launch {
+            var warned = false
+            while (true) {
+                val left = sleepAt - System.currentTimeMillis()
+                if (left <= 0) break
+                if (!warned && left <= 60_000) {
+                    warned = true
+                    toast("Schlaf-Timer: noch 1 Minute (☰ → Schlaf-Timer zum Verlängern)")
+                }
+                delay(minOf(left, 5_000))
+            }
+            val pcToo = sleepPc
+            sleepAt = 0
+            sleepPc = false
+            sleepJob = null
+            stopPlayback()
+            if (pcToo) de.ayutv.desktop.TvMode.sleep()
         }
     }
 
@@ -370,8 +411,24 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         watch(current)
     }
 
+    /** Bildoptimierung je Inhalt (Film, Serie, Sport, Fußball) für Full HD, wie auf dem Fire TV. */
+    private fun pictureFor(playback: Playback): de.ayutv.data.parse.PictureTuning.Profile? {
+        val mode = de.ayutv.data.parse.PictureTuning.Mode.of(store.user.value.pictureTuning)
+        val content = when (playback) {
+            is Playback.Live -> {
+                val programme = store.guide.value[playback.channel.key]?.let { nowOf(it) }
+                de.ayutv.data.parse.PictureTuning.classify(playback.channel.name, programme?.title, programme?.subtitle, programme?.category)
+            }
+            is Playback.Vod -> de.ayutv.data.parse.PictureTuning.classify(
+                playback.title, vodMovie = playback.series == null, vodEpisode = playback.series != null,
+            )
+        }
+        return de.ayutv.data.parse.PictureTuning.profile(content, mode)
+    }
+
     private fun start(playback: Playback, atMs: Long? = null) = when (playback) {
         is Playback.Live -> {
+            player.picture = pictureFor(playback)
             store.rememberWatched(playback.channel.key)
             // Schon als 4K bekannt (gemessen oder „4K/UHD“ im Namen): gleich über die Direktausgabe starten.
             player.expectUhd = de.ayutv.data.parse.ChannelQuality.height(playback.channel.key, playback.channel.name) >= de.ayutv.desktop.player.VideoPlayer.UHD_HEIGHT
@@ -379,7 +436,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             // Direktausgabe: Die Infoleiste liegt im verdeckten Hauptfenster, deshalb den Namen ins Bild schreiben.
             player.osd(playback.channel.name + (store.guide.value[playback.channel.key]?.let { nowOf(it) }?.let { "  ·  ${it.title}" } ?: ""))
         }
-        is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
+        is Playback.Vod -> {
+            player.picture = pictureFor(playback)
+            player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
+        }
     }
 
     /**
@@ -622,7 +682,10 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         val live = playing as? Playback.Live ?: return
         typedNumber = (typedNumber + digit).takeLast(4)
         val typed = typedNumber
-        val numbers = live.list.mapIndexed { i, c -> (c.number.takeIf { it > 0 } ?: (i + 1)) to c }
+        val user = store.user.value
+        // Eigene Sendernummern zuerst (auch für Sender außerhalb der aktuellen Liste), dann die der Liste.
+        val custom = user.channelNumbers.mapNotNull { (key, n) -> (live.list.firstOrNull { it.key == key } ?: store.channel(key))?.let { n to it } }
+        val numbers = custom + live.list.mapIndexed { i, c -> user.numberOf(c, i + 1) to c }
         val canGrow = numbers.any { (n, _) -> n.toString().let { it.length > typed.length && it.startsWith(typed) } }
         numberJob?.cancel()
         numberJob = scope.launch {
@@ -840,3 +903,7 @@ fun BackHandler(app: AppState, enabled: Boolean = true, onBack: () -> Unit) {
         onDispose { app.popBack(handler) }
     }
 }
+
+/** Uhrzeit „21:45“ für Hinweise. */
+fun clockText(at: Long): String =
+    java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault()))

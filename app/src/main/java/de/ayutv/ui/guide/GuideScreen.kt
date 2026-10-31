@@ -395,7 +395,9 @@ private fun GuideRow(
                         // Titel einmal je Sendung erkennen (reguläre Ausdrücke), nicht bei jedem Neuzeichnen des Rasters.
                         val upcoming = p.stop > now
                         val headline = remember(p, upcoming) { (if (upcoming) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" } }
+                        val genre = remember(p) { de.ayutv.data.parse.ProgrammeGenre.of(p.title, p.category, channel.name) }
                         GuideCell(
+                            genre = genre,
                             title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
                                 (if ("${channel.key}@${p.start}" in recordingIds) "⏺ " else "") +
                                 headline,
@@ -443,6 +445,7 @@ private fun GuideCell(
     onShift: (Int) -> Boolean,
     onFocused: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    genre: de.ayutv.data.parse.ProgrammeGenre = de.ayutv.data.parse.ProgrammeGenre.OTHER,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -475,7 +478,11 @@ private fun GuideCell(
         border = AyuFocus.border,
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
-        Box(Modifier.fillMaxSize().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
+        // Farbstreifen links nach Art der Sendung (Sport grün, Film lila, Serie blau, Nachrichten gelb, Kinder pink …).
+        if (genre != de.ayutv.data.parse.ProgrammeGenre.OTHER) {
+            Box(Modifier.fillMaxHeight().width(4.dp).background(Color(genre.argb).copy(alpha = if (live || focused) 1f else 0.7f)))
+        }
+        Box(Modifier.fillMaxSize().padding(start = if (genre != de.ayutv.data.parse.ProgrammeGenre.OTHER) 12.dp else 8.dp, end = 8.dp), contentAlignment = Alignment.CenterStart) {
             Column {
                 Text(
                     title,

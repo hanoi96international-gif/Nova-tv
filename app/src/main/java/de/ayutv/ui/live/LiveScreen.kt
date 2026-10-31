@@ -1,6 +1,7 @@
 package de.ayutv.ui.live
 
 import de.ayutv.ui.components.isPortrait
+import de.ayutv.ui.components.keepVerticalFocus
 import androidx.compose.runtime.produceState
 import de.ayutv.ui.components.ProgrammeImage
 import de.ayutv.data.parse.headlineWithBadge
@@ -89,12 +90,14 @@ private sealed interface LiveDialog {
     data class SelectionMenu(val keys: List<String>) : LiveDialog
     data class GroupMenu(val group: String, val name: String) : LiveDialog
     data class NameGroup(val group: String?, val current: String, val firstKeys: List<String>) : LiveDialog
+    data class SetNumber(val channel: ChannelEntity) : LiveDialog
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun LiveScreen() {
-    val content = LocalContainer.current.content
+    val container = LocalContainer.current
+    val content = container.content
     val appSettings by LocalContainer.current.settings.settings.collectAsStateWithLifecycle(initialValue = null)
     val merge = appSettings?.mergeVariants != false
     val context = LocalContext.current
@@ -238,7 +241,7 @@ fun LiveScreen() {
             }
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxHeight().focusRestorer().onPreviewKeyEvent { event ->
+                modifier = Modifier.weight(1f).fillMaxHeight().keepVerticalFocus().focusRestorer().onPreviewKeyEvent { event ->
                     val keys = movingKeys ?: return@onPreviewKeyEvent false
                     val list = moving ?: return@onPreviewKeyEvent false
                     val code = event.nativeKeyEvent.keyCode
@@ -333,6 +336,7 @@ fun LiveScreen() {
                 }
             },
             onNewGroup = { dialog = LiveDialog.NameGroup(null, "", listOf(d.channel.key)) },
+            onSetNumber = { dialog = LiveDialog.SetNumber(d.channel) },
             onMove = {
                 dialog = null
                 moving = channels
@@ -407,6 +411,24 @@ fun LiveScreen() {
             },
             onDismiss = { dialog = null },
         )
+        is LiveDialog.SetNumber -> ChannelNumberDialog(
+            channel = d.channel,
+            custom = container.channelNumbers.numberOf(d.channel.key) != null,
+            onSave = { number ->
+                dialog = null
+                scope.launch {
+                    val numbers = container.channelNumbers
+                    val taken = number?.let(numbers::keyFor)?.takeIf { it != d.channel.key }
+                    numbers.set(container.db, d.channel.key, d.channel.name, d.channel.number, number)
+                    notice = when {
+                        number == null -> "${d.channel.name}: wieder Nummer der Playlist"
+                        taken != null -> "${d.channel.name} hat jetzt die $number (vorher vergeben, der andere Sender hat seine alte Nummer zurück)"
+                        else -> "${d.channel.name} hat jetzt die Nummer $number – im Bild einfach $number tippen"
+                    }
+                }
+            },
+            onDismiss = { dialog = null },
+        )
         is LiveDialog.NameGroup -> NameGroupDialog(
             title = if (d.group == null) "Neue Gruppe" else "Gruppe umbenennen",
             initial = d.current,
@@ -441,6 +463,7 @@ private fun ChannelMenuDialog(
     onFavorite: () -> Unit,
     onToggleGroup: (group: String, name: String) -> Unit,
     onNewGroup: () -> Unit,
+    onSetNumber: () -> Unit,
     onMove: () -> Unit,
     onSelectMany: () -> Unit,
     onDismiss: () -> Unit,
@@ -460,6 +483,29 @@ private fun ChannelMenuDialog(
             }
         }
         MenuRow("＋ Neue Gruppe mit diesem Sender …", onClick = onNewGroup)
+        MenuRow("# Sendernummer festlegen … (jetzt ${channel.number})", onClick = onSetNumber)
+    }
+}
+
+/** Eigene Sendernummer eingeben (Zifferntasten der Fernbedienung oder Bildschirmtastatur). */
+@Composable
+private fun ChannelNumberDialog(channel: ChannelEntity, custom: Boolean, onSave: (Int?) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(channel.number.takeIf { it > 0 }?.toString().orEmpty()) }
+    fun save() = text.filter(Char::isDigit).take(4).toIntOrNull()?.takeIf { it > 0 }?.let(onSave)
+    MenuDialog("Sendernummer für ${channel.name}", onDismiss) { first ->
+        de.ayutv.ui.components.TvTextField(
+            value = text,
+            onValueChange = { text = it.filter(Char::isDigit).take(4) },
+            label = "Nummer (1–9999)",
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+            imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+            onImeAction = { save() },
+            focusRequester = first,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        MenuRow("Speichern") { save() }
+        if (custom) MenuRow("Eigene Nummer entfernen (Nummer der Playlist)") { onSave(null) }
+        MenuRow("Abbrechen", onClick = onDismiss)
     }
 }
 
@@ -597,13 +643,14 @@ private fun ChannelDetails(focusedState: State<ChannelEntity?>, modifier: Modifi
         if (channel == null) return@Column
         val player = preview.player
         if (player != null && preview.key == channel.key) {
-            // Mini-Vorschau: der ausgewählte Sender stumm, wie ein kleines Bild.
+            // Mini-Vorschau: der ausgewählte Sender stumm, wie ein kleines Bild. TextureView statt SurfaceView: Eine
+            // SurfaceView stanzt ein Loch ins Fenster und ließ dabei die Senderliste verschwinden.
             androidx.compose.runtime.key(player) {
                 androidx.compose.ui.viewinterop.AndroidView(
                     factory = { context ->
-                        android.view.SurfaceView(context).apply { player.setVideoSurfaceView(this) }
+                        android.view.TextureView(context).apply { player.setVideoTextureView(this) }
                     },
-                    onRelease = { view -> player.clearVideoSurfaceView(view) },
+                    onRelease = { view -> player.clearVideoTextureView(view) },
                     modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(androidx.compose.ui.graphics.Color.Black),
                 )
             }

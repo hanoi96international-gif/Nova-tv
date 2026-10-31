@@ -123,9 +123,9 @@ object ChannelQuality {
      * Wunschgrenze (Full HD, mit [preferUhd] 4K), Fassungen darüber nach den passenden; Ersatz-/Backup-Fassungen
      * und sehr langsam startende etwas weiter hinten. Unbekannte Auflösung zählt wie 720p, knapp dahinter.
      */
-    fun score(key: String, name: String): Int {
+    fun score(key: String, name: String, uhd: Boolean = preferUhd): Int {
         val info = known[key]
-        val cap = if (preferUhd) 2160 else 1080
+        val cap = if (uhd) 2160 else 1080
         val measured = height(key, name)
         val h = if (measured > 0) measured else 700
         var score = 3000 - minOf(h, cap)
@@ -138,6 +138,9 @@ object ChannelQuality {
         if (info != null && info.broken) score += 10_000
         return score
     }
+
+    /** Für Sport: immer die beste Fassung, 4K vor Full HD (ausgefallene und sehr langsame weiterhin hinten). */
+    fun sportScore(key: String, name: String): Int = score(key, name, uhd = true)
 
     /** Erfüllt die Fassung die Mindestqualität (und läuft sie, falls ausgefallene ausgeblendet werden)? */
     fun passes(key: String, name: String): Boolean {

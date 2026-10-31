@@ -54,6 +54,7 @@ import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
 import de.ayutv.data.parse.IntroSkip
 import de.ayutv.desktop.data.Channel
+import de.ayutv.desktop.data.numberOf
 import de.ayutv.desktop.data.IntroMark
 import de.ayutv.desktop.data.Programme
 import de.ayutv.desktop.input.RemoteButton
@@ -96,6 +97,10 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     var info by remember { mutableStateOf<StreamInfo?>(null) }
 
     fun refocus() = runCatching { focus.requestFocus() }
+
+    // Schnellwahl (◀ halten): zuletzt gesehene Sender und Favoriten als Logo-Leiste.
+    var quick by remember { mutableStateOf<List<Channel>?>(null) }
+    var quickOpened by remember { mutableStateOf(false) }
 
     fun show(next: Layer = Layer.INFO) {
         lastInput = System.currentTimeMillis()
@@ -152,6 +157,24 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
         app.toast(if (store.toggleFavorite(channel.key)) "★ ${channel.name} zu Favoriten hinzugefügt" else "${channel.name} aus Favoriten entfernt")
     }
 
+    /** Schlaf-Timer: feste Zeit oder Ende der Sendung bzw. des Films; im TV-Modus auch „danach PC schlafen legen“. */
+    fun openSleepMenu() {
+        val now = System.currentTimeMillis()
+        val end = if (live != null) guide[live.channel.key]?.let { nowOf(it) }?.stop?.takeIf { it > now }
+        else (player.durationMs - player.positionMs).takeIf { player.durationMs > 0 && it > 0 }?.let { now + it }
+        val pc = user.tvMode && de.ayutv.desktop.TvMode.isWindows
+        val items = buildList {
+            if (app.sleepAt > 0) add(MenuItem("Aus (jetzt bis ${clockText(app.sleepAt)})") { app.setSleepTimer(0) })
+            listOf(15, 30, 45, 60, 90, 120).forEach { m -> add(MenuItem("In $m Minuten") { app.setSleepTimer(now + m * 60_000L) }) }
+            if (end != null) add(MenuItem((if (live != null) "Am Ende der Sendung" else "Am Ende des Films / der Folge") + " (${clockText(end)})") { app.setSleepTimer(end) })
+            if (pc) {
+                add(MenuItem("In 60 Minuten, danach PC schlafen legen") { app.setSleepTimer(now + 60 * 60_000L, pc = true) })
+                if (end != null) add(MenuItem("Am Ende (${clockText(end)}), danach PC schlafen legen") { app.setSleepTimer(end, pc = true) })
+            }
+        }
+        menu = { MenuDialog(app, "Schlaf-Timer", items, onDismiss = { menu = null; refocus() }) }
+    }
+
     /** ☰-Menü: Tonspuren, Untertitel, Untertitel laden/verschieben, bei Live TV Favorit und Stream-Info. */
     fun openMenu() {
         val items = buildList {
@@ -188,6 +211,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 app.applyBuffer()
                 app.restartPlayback()
             })
+            add(MenuItem("😴 Schlaf-Timer: " + (if (app.sleepAt > 0) "bis ${clockText(app.sleepAt)}" else "aus") + " …") { openSleepMenu() })
             add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
         }
         menu = {
@@ -200,7 +224,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     LaunchedEffect(Unit) { refocus() }
     LaunchedEffect(menu, layer) { if (menu == null && layer != Layer.CHANNELS) refocus() }
     // Direktausgabe (HDR-Bildschirm): Menü, Senderliste und Stream-Info liegen im Hauptfenster, das Vollbild so lange weg.
-    LaunchedEffect(menu, layer, tech) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech) }
+    LaunchedEffect(menu, layer, tech, quick) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech || quick != null) }
     DisposableEffect(Unit) { onDispose { player.coverDirect(true) } }
     // Info nach 5 Sekunden ohne Eingabe ausblenden (nicht bei Pause, Fehler oder offener Stream-Info).
     LaunchedEffect(lastInput, layer, player.playing, tech) {
@@ -245,11 +269,18 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 val button = e.remote()
                 if (e.type == KeyEventType.KeyUp) {
                     if (button != null && button == holdKey) holdKey = null
+                    // ◀ kurz (beim Loslassen): zum letzten Sender; gehalten hat es die Schnellwahl geöffnet.
+                    if (button == RemoteButton.LEFT && live != null && layer != Layer.CHANNELS && menu == null && quick == null) {
+                        if (!quickOpened && !app.backZap()) show(Layer.CHANNELS)
+                        quickOpened = false
+                        return@onKeyEvent true
+                    }
+                    if (button == RemoteButton.LEFT) quickOpened = false
                     return@onKeyEvent false
                 }
                 if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
                 // Senderliste offen: dort navigiert der Fokus (die Liste fängt OK selbst ab).
-                if (layer == Layer.CHANNELS || menu != null) return@onKeyEvent false
+                if (layer == Layer.CHANNELS || menu != null || quick != null) return@onKeyEvent false
                 val first = button != holdKey
                 if (first) {
                     holdKey = button
@@ -285,7 +316,12 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         RemoteButton.CHANNEL_DOWN, RemoteButton.PREVIOUS -> app.zap(-1)
                         RemoteButton.OK, RemoteButton.GUIDE -> if (first) show(Layer.CHANNELS)
                         // ◀ springt zum vorherigen Sender (und von dort zurück); ohne vorherigen öffnet es die Liste.
-                        RemoteButton.LEFT -> if (first && !app.backZap()) show(Layer.CHANNELS)
+                        RemoteButton.LEFT -> if (!first && !quickOpened && quick == null && System.currentTimeMillis() - holdSince > 450) {
+                            quickOpened = true
+                            quick = (listOfNotNull(app.previousChannel) + store.recentChannels() + store.favorites())
+                                .filter { it.key != live.channel.key }.distinctBy { it.key }.take(16).ifEmpty { null }
+                            if (quick == null) show(Layer.CHANNELS)
+                        }
                         RemoteButton.RIGHT, RemoteButton.INFO -> if (first) { if (layer == Layer.INFO) tech = !tech; show() }
                         RemoteButton.LAST_CHANNEL, RemoteButton.BLUE -> if (first) app.backZap()
                         RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
@@ -395,7 +431,22 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 when (playback) {
                     is Playback.Live -> {
                         val shown = app.zapTarget ?: playback.channel
-                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs)
+                        // Kennzeichen (4K, HDR, 50 fps, Dolby) alle 2 s aus der Stream-Info, solange die Leiste offen ist.
+                        val badges by androidx.compose.runtime.produceState(emptyList<String>(), shown.key) {
+                            while (true) {
+                                value = player.streamInfo()?.let { i ->
+                                    val hdr = when (player.transfer) {
+                                        de.ayutv.desktop.player.YuvVideo.Transfer.PQ -> "HDR10"
+                                        de.ayutv.desktop.player.YuvVideo.Transfer.HLG -> "HLG"
+                                        else -> ""
+                                    }
+                                    de.ayutv.data.parse.StreamBadges.video(i.height, i.fps.toFloat(), hdr) +
+                                        listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(i.audioCodec, i.audioChannels))
+                                }.orEmpty()
+                                kotlinx.coroutines.delay(2_000)
+                            }
+                        }
+                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs, badges, user.channelNumbers[shown.key])
                     }
                     is Playback.Vod -> VodBar(
                         playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
@@ -418,6 +469,43 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 TextButton("⏭ Intro überspringen (OK)", { skipIntro() }, primary = true)
             }
         }
+        quick?.let { list ->
+            val firstTile = remember { FocusRequester() }
+            BackHandler(app) { quick = null; refocus() }
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                    .padding(start = 40.dp, end = 40.dp, top = 48.dp, bottom = 28.dp),
+            ) {
+                Label("Schnellwahl  ·  ◀ ▶ wählen  ·  OK umschalten  ·  Zurück schließen", Type.small)
+                Spacer(Modifier.height(10.dp))
+                androidx.compose.foundation.lazy.LazyRow {
+                    items(list.size, key = { list[it].key }) { i ->
+                        val c = list[i]
+                        Selectable(
+                            { quick = null; live?.let { app.play(Playback.Live(c, it.list)) } },
+                            Modifier.width(150.dp),
+                            focusRequester = if (i == 0) firstTile else null,
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(134.dp)) {
+                                Logo(c.logo, 64)
+                                Spacer(Modifier.height(4.dp))
+                                Label(c.name, Type.small)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                    }
+                }
+            }
+            FocusOnShow(firstTile, list)
+            // Ohne Eingabe schließt sie nach 6 Sekunden.
+            LaunchedEffect(list, lastInput) {
+                kotlinx.coroutines.delay(6_000)
+                quick = null
+            }
+        }
+
         if (layer == Layer.CHANNELS && live != null) {
             ChannelPanel(app, live, Modifier.align(Alignment.CenterStart).fillMaxHeight().width(460.dp)) { picked, list ->
                 if (picked.key != live.channel.key) app.play(Playback.Live(picked, list))
@@ -515,7 +603,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
         LazyColumn(state = state) {
             itemsIndexed(channels, key = { _, c -> c.key }) { index, channel ->
                 val programme = guide[channel.key]?.let(::nowOf)
-                val number = channel.number.takeIf { it > 0 } ?: (index + 1)
+                val number = user.numberOf(channel, index + 1)
                 Selectable(
                     onClick = { onPick(channel, channels) },
                     onMenu = { app.toast(if (store.toggleFavorite(channel.key)) "★ ${channel.name} zu Favoriten" else "${channel.name} aus Favoriten entfernt") },
@@ -541,7 +629,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
 }
 
 @Composable
-private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long) {
+private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Programme>, volume: Int, favorite: Boolean, paused: Boolean, delayMs: Long, badges: List<String> = emptyList(), customNumber: Int? = null) {
     val now = System.currentTimeMillis()
     val current = programmes.firstOrNull { it.start <= now && it.stop > now }
     val next = programmes.firstOrNull { it.start >= (current?.stop ?: now) }
@@ -551,10 +639,18 @@ private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Prog
             Spacer(Modifier.width(18.dp))
             Column(Modifier.weight(1f)) {
                 val index = live.list.indexOfFirst { it.key == channel.key }
-                val number = channel.number.takeIf { it > 0 } ?: (index + 1)
-                Label("${if (number > 0) "$number  " else ""}${channel.name}${if (favorite) "  ★" else ""}", Type.title)
+                val number = customNumber ?: channel.number.takeIf { it > 0 } ?: (index + 1)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Label("${if (number > 0) "$number  " else ""}${channel.name}${if (favorite) "  ★" else ""}", Type.title)
+                    badges.forEach { b ->
+                        Spacer(Modifier.width(8.dp))
+                        Label(b, Type.small, Modifier.background(Palette.accentSoft, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 1.dp), color = Palette.text)
+                    }
+                }
                 if (current != null) {
-                    Label("${clock(current.start)} – ${clock(current.stop)}   ${current.title}", Type.heading)
+                    val rest = de.ayutv.data.parse.StreamBadges.remaining(current.stop)?.let { "  ·  $it" }.orEmpty()
+                    Label("${clock(current.start)} – ${clock(current.stop)}$rest", Type.small, color = Palette.secondary)
+                    Label(current.title, Type.heading)
                     Spacer(Modifier.height(6.dp))
                     Progress(current.fraction())
                 } else {

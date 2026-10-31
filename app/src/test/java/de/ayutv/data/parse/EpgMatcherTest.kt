@@ -186,4 +186,45 @@ class EpgMatcherTest {
         assertEquals("DAZN.1.de", m.match(null, "SPORT+ : DAZN 1 HD"))
         assertNull(m.match(null, "PRIME: ARTE"))
     }
+
+    /** Echte Kennungen aus epgshare01 DE1 (Stand Oktober 2026) und MagentaTV. */
+    @Test
+    fun skyUhdChannelsKeepTheirOwnProgramme() {
+        val m = EpgMatcher().apply {
+            addGuideChannel("Sky.Sport.Bundesliga.de", listOf("Sky Sport Bundesliga"))
+            addGuideChannel("Sky.Sport.Bundesliga.UHD.de", listOf("Sky Sport Bundesliga UHD"))
+            addGuideChannel("Sky.Sport.Bundesliga.2.de", listOf("Sky Sport Bundesliga 2"))
+            addGuideChannel("Sky.Sport.UHD.de", listOf("Sky Sport UHD"))
+            addGuideChannel("Sky.Sport.Top.Event.de", listOf("Sky Sport Top Event"))
+            addGuideChannel("RTL.de", listOf("RTL"))
+            addGuideChannel("UHD1.de", listOf("UHD1"))
+            addGuideChannel("13th.Street.Universal.de", listOf("13th Street Universal"))
+            addGuideChannel("Sport.1.-.myTeamTV.de", listOf("Sport 1 - myTeamTV"))
+            addGuideChannel("MagentaSport.de@MagentaTV", listOf("MagentaSport"))
+        }
+        assertEquals("Sky.Sport.Bundesliga.UHD.de", m.match(null, "DE: SKY SPORT BUNDESLIGA UHD"))
+        assertEquals("Sky.Sport.Bundesliga.UHD.de", m.match(null, "DE: SKY BUNDESLIGA 4K"))
+        assertEquals("Sky.Sport.Bundesliga.de", m.match(null, "DE: SKY SPORT BUNDESLIGA HD"))
+        // Nummerierte Sender in 4K sind dasselbe Programm.
+        assertEquals("Sky.Sport.Bundesliga.2.de", m.match(null, "DE: SKY SPORT BUNDESLIGA 2 UHD"))
+        assertEquals("Sky.Sport.UHD.de", m.match(null, "DE: SKY SPORT 4K"))
+        assertEquals("Sky.Sport.Top.Event.de", m.match(null, "DE: SKY TOP EVENT"))
+        // Ohne eigenen UHD-Sender im EPG: das normale Programm.
+        assertEquals("RTL.de", m.match(null, "DE: RTL UHD"))
+        assertEquals("UHD1.de", m.match(null, "DE: UHD1 BY HD+"))
+        assertEquals("13th.Street.Universal.de", m.match(null, "DE: 13TH STREET HD"))
+        assertEquals("Sport.1.-.myTeamTV.de", m.match(null, "DE: MYTEAMTV SPORT 1"))
+        assertEquals("MagentaSport.de@MagentaTV", m.match(null, "DE: MAGENTA SPORT HD"))
+    }
+
+    @Test
+    fun timeShiftedChannels() {
+        assertEquals(24 to "DE: SKY CINEMA PREMIEREN HD", EpgMatcher.timeShift("DE: SKY CINEMA PREMIEREN +24 HD"))
+        assertEquals(1 to "RTL HD", EpgMatcher.timeShift("RTL +1 HD"))
+        assertEquals(null, EpgMatcher.timeShift("SPORT1+ HD"))
+        assertEquals(null, EpgMatcher.timeShift("ANIXE+"))
+        assertEquals(null, EpgMatcher.timeShift("Sky Sport 1"))
+        val m = EpgMatcher().apply { addGuideChannel("Sky.Cinema.Premiere.HD.de", listOf("Sky Cinema Premiere HD")) }
+        assertEquals("Sky.Cinema.Premiere.HD.de", m.match(null, EpgMatcher.timeShift("DE: SKY CINEMA PREMIEREN +24 HD")!!.second))
+    }
 }

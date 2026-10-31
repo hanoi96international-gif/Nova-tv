@@ -110,7 +110,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String
         ListRow(
             title = (if (p.start <= now) "🔴 " else "") + e.headline + score,
             subtitle = "${clock(p.start)} – ${clock(p.stop)} · ${e.channel.name}$also",
-            onClick = { app.play(Playback.Live(e.channel, listOf(e.channel) + e.alsoOn)) },
+            onClick = {
+                val best = de.ayutv.desktop.data.SportEvents.bestFor(e.channel, app.store.channels())
+                app.play(Playback.Live(best, listOf(best) + e.alsoOn))
+            },
             onMenu = { onMenu(e) },
             leading = { Logo(e.channel.logo) },
         )

@@ -40,14 +40,24 @@ object StorageCleaner {
 
     fun isLow(context: Context): Boolean = freeBytes(context) in 1 until LOW_FREE_BYTES
 
-    /** Aufräumen; liefert, was frei wurde (für Anzeige und Protokoll). */
-    fun clean(context: Context, now: Long = System.currentTimeMillis()): String {
+    /**
+     * Aufräumen; liefert, was frei wurde (für Anzeige und Protokoll). [manual]: Knopf „Aufräumen“ in den Einstellungen –
+     * dann gründlich: Bilder-Zwischenspeicher leeren (Logos und Poster laden bei Bedarf neu), alle Update-Dateien bereits
+     * installierter Versionen, Übersetzungsmodelle nach 7 statt 30 Tagen, Reste vom Zeitversatz und die Datenbank
+     * verdichten ([database]; gelöschte TV-Guide-Daten geben ihren Platz sonst nie frei).
+     */
+    fun clean(
+        context: Context,
+        now: Long = System.currentTimeMillis(),
+        manual: Boolean = false,
+        database: androidx.room.RoomDatabase? = null,
+    ): String {
         val low = isLow(context)
         val files = context.filesDir
         var freed = 0L
         var models = 0
         // Übersetzungsmodelle: 30 Tage unbenutzt (bei wenig Platz 3 Tage).
-        val modelAge = if (low) 3 * DAY else 30 * DAY
+        val modelAge = if (low) 3 * DAY else if (manual) 7 * DAY else 30 * DAY
         File(files, "mt").listFiles().orEmpty().filter { it.isDirectory }.forEach { folder ->
             val used = File(folder, USED_MARK).takeIf { it.isFile }?.lastModified() ?: folder.lastModified()
             if (now - used > modelAge) {
@@ -64,17 +74,67 @@ object StorageCleaner {
                 if (it.delete()) subtitles++
             }
         }
-        // Geladene Updates werden nach der Installation nicht mehr gebraucht.
-        File(context.cacheDir, "update").listFiles().orEmpty().filter { now - it.lastModified() > DAY }.forEach {
-            freed += it.length()
-            it.delete()
+        // Geladene Updates werden nach der Installation nicht mehr gebraucht: sofort weg, wenn die Version schon
+        // installiert ist (oder älter), sonst nach einem Tag. Ein gerade laufender Download ist jünger als 10 Minuten.
+        var updates = 0L
+        File(context.cacheDir, "update").listFiles().orEmpty().forEach { file ->
+            val version = Regex("""(\d+(?:\.\d+)+)""").find(file.name)?.value
+            val installed = version != null && compareVersions(version, de.ayutv.BuildConfig.VERSION_NAME) <= 0
+            if ((installed && now - file.lastModified() > 10 * 60_000L) || now - file.lastModified() > DAY) {
+                updates += file.length()
+                file.delete()
+            }
+        }
+        freed += updates
+        // Reste vom Zeitversatz (Puffer eines beendeten Players).
+        File(context.cacheDir, "timeshift").listFiles().orEmpty().filter { now - it.lastModified() > 3_600_000L }.forEach {
+            freed += size(it)
+            it.deleteRecursively()
+        }
+        var images = 0L
+        var compacted = 0L
+        if (manual) {
+            // Logos und Poster: laden bei Bedarf neu.
+            val before = size(File(context.cacheDir, "images"))
+            runCatching {
+                val loader = coil3.SingletonImageLoader.get(context)
+                loader.memoryCache?.clear()
+                loader.diskCache?.clear()
+            }
+            images = (before - size(File(context.cacheDir, "images"))).coerceAtLeast(0)
+            freed += images
+            // Datenbank verdichten: Nach jedem TV-Guide-Laden werden alte Sendungen gelöscht, die Datei schrumpft aber nicht.
+            if (database != null) {
+                val dbBefore = context.databaseList().sumOf { context.getDatabasePath(it).length() }
+                runCatching {
+                    val db = database.openHelper.writableDatabase
+                    db.query("PRAGMA wal_checkpoint(TRUNCATE)").close()
+                    db.execSQL("VACUUM")
+                }
+                compacted = (dbBefore - context.databaseList().sumOf { context.getDatabasePath(it).length() }).coerceAtLeast(0)
+                freed += compacted
+            }
         }
         if (freed <= 0) return "nichts zu löschen"
         val what = buildList {
+            if (images > 0) add("Bilder ${format(images)}")
+            if (compacted > 0) add("Datenbank ${format(compacted)}")
+            if (updates > 0) add("Updates ${format(updates)}")
             if (models > 0) add(if (models == 1) "1 Übersetzungsmodell" else "$models Übersetzungsmodelle")
             if (subtitles > 0) add("$subtitles Untertitel-Dateien")
         }
         return "${format(freed)} frei geworden" + if (what.isEmpty()) "" else " (${what.joinToString(", ")})"
+    }
+
+    /** Versionsnummern vergleichen („0.44.1“ < „0.45.0“). */
+    fun compareVersions(a: String, b: String): Int {
+        val x = a.split('.').map { it.toIntOrNull() ?: 0 }
+        val y = b.split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(x.size, y.size)) {
+            val d = x.getOrElse(i) { 0 }.compareTo(y.getOrElse(i) { 0 })
+            if (d != 0) return d
+        }
+        return 0
     }
 
     /** Für Anzeige: „1,2 GB“ oder „350 MB“. */

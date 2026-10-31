@@ -106,7 +106,7 @@ data class AppSettings(
     /** Raster-TV-Guide im Menü. Die EPG-Daten werden unabhängig davon für "Jetzt läuft" genutzt. */
     val showGuide: Boolean = true,
     /** Mini-Vorschau: In der Live-TV-Liste läuft der ausgewählte Sender nach kurzer Zeit stumm in der Detailspalte. */
-    val livePreview: Boolean = true,
+    val livePreview: Boolean = false,
     /** Flüssige Bedienung: ohne Überblendungen und mit sparsamem Hintergrund (wie auf schwachen Sticks automatisch). */
     val smoothUi: Boolean = false,
     /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen, mit Komma getrennt). */
@@ -161,6 +161,8 @@ data class AppSettings(
     val minQuality: MinQuality = MinQuality.ALL,
     /** Bei doppelt geführten Sendern 4K statt Full HD bevorzugen. */
     val preferUhd: Boolean = false,
+    /** Bildoptimierung für Full HD je Inhalt (Film, Serie, Sport, Fußball). */
+    val pictureTuning: de.ayutv.data.parse.PictureTuning.Mode = de.ayutv.data.parse.PictureTuning.Mode.AUTO,
     /** Sender, die im Hintergrund-Check wiederholt nicht laufen, ausblenden. */
     val hideBrokenChannels: Boolean = false,
     /** In der Ruhezeit prüfen, welche Fassung doppelter Sender läuft und wie gut. */
@@ -175,6 +177,7 @@ data class AppSettings(
     val fireTvHome: Boolean = true,
     /** Aussehen der Menüs. */
     val uiTheme: de.ayutv.ui.theme.UiTheme = de.ayutv.ui.theme.UiTheme.NORDLICHT,
+    val accent: de.ayutv.ui.theme.AccentChoice = de.ayutv.ui.theme.AccentChoice.DESIGN,
     /** Proxy nur für DnA-TV: aus, für alles oder nur für ausgewählte Playlists. */
     val proxyMode: ProxyMode = ProxyMode.OFF,
     val proxyType: ProxyType = ProxyType.HTTP,
@@ -184,6 +187,11 @@ data class AppSettings(
     val proxyPassword: String = "",
     /** IDs der Playlists, die über den Proxy laufen (bei [ProxyMode.SELECTED]). */
     val proxyPlaylists: Set<String> = emptySet(),
+    /**
+     * Videostreams über den Proxy (Standard). Aus: nur Anmeldung, Listen und TV-Guide laufen über den Proxy, die Videos
+     * direkt. Viele Proxys liefern nur 10–20 Mbit/s, zu wenig für 4K.
+     */
+    val proxyStreams: Boolean = true,
     /** Eigener DeepL-API-Schlüssel (Free endet auf „:fx“). */
     val deeplKey: String = "",
 ) {
@@ -255,8 +263,10 @@ class SettingsStore(private val context: Context) {
         // Neuer Schlüssel (0.36): Vorbereiten im Hintergrund ist für alle erst einmal aus, auch wer es nie umgestellt hat.
         val pretranslate = booleanPreferencesKey("pretranslate_on")
         val uiTheme = stringPreferencesKey("ui_theme")
+        val accent = stringPreferencesKey("accent")
         val minQuality = stringPreferencesKey("min_quality")
         val preferUhd = booleanPreferencesKey("prefer_uhd")
+        val pictureTuning = stringPreferencesKey("picture_tuning")
         val hideBroken = booleanPreferencesKey("hide_broken_channels")
         val channelCheck = booleanPreferencesKey("channel_check")
         val liveScores = booleanPreferencesKey("live_scores")
@@ -271,6 +281,7 @@ class SettingsStore(private val context: Context) {
         val proxyUser = stringPreferencesKey("proxy_user")
         val proxyPassword = stringPreferencesKey("proxy_password")
         val proxyPlaylists = stringSetPreferencesKey("proxy_playlists")
+        val proxyStreams = booleanPreferencesKey("proxy_streams")
         val deeplKey = stringPreferencesKey("deepl_key")
 
         /** Verschlüsselt gespeicherte Werte (in Sicherungen im Klartext, der Schlüssel gilt nur auf diesem Gerät). */
@@ -393,8 +404,10 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.lastTranslationTarget] = next.lastTranslationTarget
             prefs[Keys.pretranslate] = next.pretranslate
             prefs[Keys.uiTheme] = next.uiTheme.name
+            prefs[Keys.accent] = next.accent.name
             prefs[Keys.minQuality] = next.minQuality.name
             prefs[Keys.preferUhd] = next.preferUhd
+            prefs[Keys.pictureTuning] = next.pictureTuning.name
             prefs[Keys.hideBroken] = next.hideBrokenChannels
             prefs[Keys.channelCheck] = next.channelCheck
             prefs[Keys.liveScores] = next.liveScores
@@ -408,6 +421,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.proxyUser] = next.proxyUser.trim()
             prefs[Keys.proxyPassword] = Credentials.protect(next.proxyPassword).orEmpty()
             prefs[Keys.proxyPlaylists] = next.proxyPlaylists
+            prefs[Keys.proxyStreams] = next.proxyStreams
             prefs[Keys.deeplKey] = Credentials.protect(next.deeplKey.trim()).orEmpty()
         }
     }
@@ -429,7 +443,7 @@ class SettingsStore(private val context: Context) {
         asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
-        livePreview = this[Keys.livePreview] ?: true,
+        livePreview = this[Keys.livePreview] ?: false,
         smoothUi = this[Keys.smoothUi] ?: false,
         appsOrder = this[Keys.appsOrder] ?: "",
         appsHidden = this[Keys.appsHidden] ?: "",
@@ -454,8 +468,10 @@ class SettingsStore(private val context: Context) {
         lastTranslationTarget = this[Keys.lastTranslationTarget].orEmpty(),
         pretranslate = this[Keys.pretranslate] ?: false,
         uiTheme = enumOrDefault(this[Keys.uiTheme], de.ayutv.ui.theme.UiTheme.NORDLICHT),
+        accent = enumOrDefault(this[Keys.accent], de.ayutv.ui.theme.AccentChoice.DESIGN),
         minQuality = enumOrDefault(this[Keys.minQuality], MinQuality.ALL),
         preferUhd = this[Keys.preferUhd] ?: false,
+        pictureTuning = de.ayutv.data.parse.PictureTuning.Mode.of(this[Keys.pictureTuning]),
         hideBrokenChannels = this[Keys.hideBroken] ?: false,
         channelCheck = this[Keys.channelCheck] ?: true,
         liveScores = this[Keys.liveScores] ?: true,
@@ -463,6 +479,7 @@ class SettingsStore(private val context: Context) {
         loudnessLevel = this[Keys.loudnessLevel] ?: false,
         fireTvHome = this[Keys.fireTvHome] ?: true,
         proxyMode = enumOrDefault(this[Keys.proxyMode], ProxyMode.OFF),
+        proxyStreams = this[Keys.proxyStreams] ?: true,
         proxyType = enumOrDefault(this[Keys.proxyType], ProxyType.HTTP),
         proxyHost = this[Keys.proxyHost].orEmpty(),
         proxyPort = this[Keys.proxyPort] ?: 0,

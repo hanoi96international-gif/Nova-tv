@@ -251,6 +251,16 @@ fun PlayerScreen(activity: PlayerActivity) {
             LiveInfoBar(activity)
         }
 
+        // Schnellwahl (◀ halten): Logos der zuletzt gesehenen Sender und Favoriten.
+        AnimatedVisibility(
+            visible = activity.quickZap != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            activity.quickZap?.let { QuickZapBar(it, activity.quickIndex) }
+        }
+
         AnimatedVisibility(
             visible = activity.overlay == Overlay.CONTROLS && !activity.isLive,
             enter = fadeIn(),
@@ -389,39 +399,73 @@ private fun LiveInfoBar(activity: PlayerActivity) {
     val channel = activity.current ?: return
     val now = activity.nowNext.firstOrNull()
     val next = activity.nowNext.getOrNull(1)
+    val stats = activity.stats
+    val badges = remember(stats.height, stats.frameRate, stats.hdr, stats.audioCodec, stats.audioChannels) {
+        de.ayutv.data.parse.StreamBadges.video(stats.height, stats.frameRate, stats.hdr) +
+            listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(stats.audioCodec, stats.audioChannels))
+    }
+    val headline = remember(now) { now?.headlineWithBadge() }
+    val description = remember(now) { now?.let { de.ayutv.data.parse.ProgrammeText.description(it.description) } }
     Column(
-        Modifier.fillMaxWidth().background(bottomScrim).padding(start = 48.dp, end = 48.dp, top = 64.dp, bottom = 32.dp)
+        Modifier.fillMaxWidth().background(bottomScrim).padding(start = 48.dp, end = 48.dp, top = 72.dp, bottom = 28.dp)
     ) {
+        // Kopf: Logo, Nummer und Name, Kennzeichen (was der Sender gerade wirklich liefert), rechts die Uhrzeit.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ChannelLogo(channel.logo, channel.name, Modifier.size(width = 96.dp, height = 60.dp))
+            ChannelLogo(channel.logo, channel.name, Modifier.size(width = 112.dp, height = 68.dp))
             Spacer(Modifier.width(20.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("${channel.number}  ${channel.name}", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    Text("${channel.number}", style = MaterialTheme.typography.titleLarge, color = AyuColors.Accent)
+                    Spacer(Modifier.width(10.dp))
+                    Text(channel.name, style = MaterialTheme.typography.headlineSmall, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (activity.isFavorite) Text("  ★", color = AyuColors.Accent, fontSize = 22.sp)
-                    activity.stats.resolutionLabel.takeIf { it.isNotEmpty() }?.let { Badge(it) }
-                    activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
                 }
-                Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary)
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(channel.groupTitle, style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary, maxLines = 1)
+                    badges.forEach { Badge(it) }
+                }
             }
-            Text(formatTime(System.currentTimeMillis()), style = MaterialTheme.typography.titleLarge, color = Color.White)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(formatTime(System.currentTimeMillis()), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Text(
+                    java.text.SimpleDateFormat("EEE, d. MMM", Locale.GERMAN).format(java.util.Date()),
+                    color = AyuColors.TextSecondary, fontSize = 13.sp,
+                )
+            }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
         if (now != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${formatTime(now.start)} – ${formatTime(now.stop)}", color = AyuColors.TextSecondary, fontSize = 14.sp)
-                Spacer(Modifier.width(12.dp))
-                Text(now.headlineWithBadge(), color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Spacer(Modifier.height(6.dp))
-            ProgressLine(now.progress())
-            de.ayutv.data.parse.ProgrammeText.description(now.description)?.let {
-                Spacer(Modifier.height(8.dp))
-                Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            }
-            if (next != null) {
-                Spacer(Modifier.height(8.dp))
-                Text("Danach ${formatTime(next.start)}  ${next.headline()}", color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 1)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("JETZT", color = AyuColors.Live, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.width(10.dp))
+                        Text("${formatTime(now.start)} – ${formatTime(now.stop)}", color = AyuColors.TextSecondary, fontSize = 14.sp)
+                        de.ayutv.data.parse.StreamBadges.remaining(now.stop)?.let {
+                            Text("  ·  $it", color = AyuColors.TextSecondary, fontSize = 14.sp)
+                        }
+                    }
+                    Text(headline.orEmpty(), color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(6.dp))
+                    ProgressLine(now.progress())
+                    description?.let {
+                        Spacer(Modifier.height(8.dp))
+                        Text(it, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (next != null) {
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("DANACH", color = AyuColors.Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(10.dp))
+                            Text("${formatTime(next.start)}  ${next.headline()}", color = AyuColors.TextSecondary, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                // Bild zur Sendung (wenn der TV-Guide eins hat), rechts daneben.
+                if (!now.icon.isNullOrBlank()) {
+                    Spacer(Modifier.width(24.dp))
+                    de.ayutv.ui.components.ProgrammeImage(now.icon, Modifier.width(208.dp).height(117.dp))
+                }
             }
         } else {
             Text("Keine Programminformationen", color = AyuColors.TextSecondary)
@@ -442,10 +486,38 @@ private fun LiveInfoBar(activity: PlayerActivity) {
         Text(
             if (activity.timeshifted) "OK Pause/Weiter   ◀ −10 s   ▶ +30 s (bis zum Ende = Live)   ▲▼ Umschalten   ☰ Ton/Untertitel"
             else "▲▼ Umschalten   OK Senderliste   " + (activity.previousChannel?.let { "◀ zurück zu ${it.name}   " } ?: "") +
-                "▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
+                "◀ halten: Schnellwahl   ▶ Stream-Info   ⏯ Pause   ⏪ Zurückspulen   ☰ Ton/Untertitel/Favorit",
             color = AyuColors.TextSecondary.copy(alpha = 0.7f),
             fontSize = 13.sp,
         )
+    }
+}
+
+/** Schnellwahl: Senderlogos nebeneinander, der gewählte hervorgehoben; ◀ ▶ wählen, OK schaltet um. */
+@Composable
+private fun QuickZapBar(channels: List<de.ayutv.data.db.ChannelEntity>, index: Int) {
+    val state = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(index) { state.animateScrollToItem((index - 2).coerceAtLeast(0)) }
+    Column(Modifier.fillMaxWidth().background(bottomScrim).padding(start = 48.dp, end = 48.dp, top = 56.dp, bottom = 28.dp)) {
+        Text("Schnellwahl  ·  ◀ ▶ wählen  ·  OK umschalten  ·  Zurück schließen", color = AyuColors.TextSecondary, fontSize = 13.sp)
+        Spacer(Modifier.height(10.dp))
+        androidx.compose.foundation.lazy.LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            items(channels.size, key = { channels[it].key }) { i ->
+                val c = channels[i]
+                val selected = i == index
+                Column(
+                    Modifier.width(148.dp)
+                        .border(if (selected) 3.dp else 1.dp, if (selected) AyuColors.Accent else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                        .background(if (selected) AyuColors.AccentSoft.copy(alpha = 0.6f) else Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    ChannelLogo(c.logo, c.name, Modifier.size(width = 120.dp, height = 70.dp))
+                    Spacer(Modifier.height(6.dp))
+                    Text(c.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
     }
 }
 
@@ -645,6 +717,7 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, dro
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")
         if (stats.audioDecoder.isNotEmpty()) add("Ton: " + if ("ffmpeg" in stats.audioDecoder.lowercase()) "FFmpeg" else stats.audioDecoder)
         if (stats.decoder.isNotEmpty()) add(stats.decoder)
+        if (stats.picture.isNotEmpty()) add("Bildoptimierung: ${stats.picture}")
         if (stats.bandwidth > 0) add("Datenrate des Senders %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
         add("Verworfene Frames: ${stats.droppedFrames}")
         if (stats.startupMs > 0) add("Start in ${stats.startupMs} ms")
@@ -856,6 +929,16 @@ private fun TracksOverlay(activity: PlayerActivity) {
         item { MenuHeader("Bild") }
         AspectMode.entries.forEach { mode ->
             item { OptionRow(mode.label, activity.aspect == mode) { activity.chooseAspect(mode) } }
+        }
+        item { MenuHeader("Bildoptimierung (Full HD)") }
+        de.ayutv.data.parse.PictureTuning.Mode.entries.forEach { mode ->
+            item { OptionRow(mode.label, activity.pictureMode == mode) { activity.choosePictureMode(mode) } }
+        }
+        item {
+            MenuHint(
+                activity.pictureLabel.takeIf { it.isNotEmpty() }?.let { "Gerade: $it-Profil (schärfer, je nach Inhalt mehr Kontrast und Farbe). 4K und HDR bleiben unverändert." }
+                    ?: "Schärft und optimiert Full-HD-Bilder je nach Inhalt: Film, Serie, Sport, Fußball. 4K und HDR bleiben unverändert."
+            )
         }
         item { MenuHeader("Schlaf-Timer") }
         if (activity.sleepAt > 0) {

@@ -24,20 +24,29 @@ class LineCheck(private val http: OkHttpClient) {
         val failed: String? = null,
         /** Höchstgeschwindigkeit vom Anbieter (Film-Datei so schnell wie möglich geladen); null = nicht gemessen. */
         val providerKbps: Int? = null,
+        /** Dasselbe am Proxy vorbei (nur gemessen, wenn ein Proxy aktiv ist). */
+        val directKbps: Int? = null,
+        /** Der gemessene Sender ist 4K (gemessen oder laut Name): dann nie „Schnell“ empfehlen. */
+        val uhd: Boolean = false,
     ) {
-        val recommendation: BufferProfile get() = recommend(firstByteMs, stalls, longestGapMs, kbps, failed)
+        val recommendation: BufferProfile get() = recommend(firstByteMs, stalls, longestGapMs, kbps, failed, uhd)
         val summary: String get() = (failed?.let { "$channel: kein Empfang ($it)" }
             ?: "$channel: Antwort nach ${firstByteMs} ms, Datenrate des Senders ${"%.1f".format(kbps / 1000.0)} Mbit/s, " +
                 (if (stalls == 0) "keine Aussetzer" else "$stalls Aussetzer (längster ${"%.1f".format(longestGapMs / 1000.0)} s)")) +
-            (providerKbps?.let { "\nVom Anbieter geladen (Film): bis ${"%.0f".format(it / 1000.0)} Mbit/s – Live-Sender kommen in Echtzeit, nie schneller als ihre Datenrate (kein Limit der App)" } ?: "")
+            (providerKbps?.let { p ->
+                val direct = directKbps
+                if (direct != null) "\nVom Anbieter (Film): über Proxy ${"%.0f".format(p / 1000.0)} Mbit/s · direkt ${"%.0f".format(direct / 1000.0)} Mbit/s" +
+                    (if (direct > p * 2) " – der Proxy bremst: Einstellungen → Proxy → „Videostreams über den Proxy“ aus" else "")
+                else "\nVom Anbieter geladen (Film): bis ${"%.0f".format(p / 1000.0)} Mbit/s – Live-Sender kommen in Echtzeit, nie schneller als ihre Datenrate (kein Limit der App)"
+            } ?: "")
     }
 
     /**
      * Wie schnell liefert der Anbieter überhaupt? Eine Film-Datei wird nicht in Echtzeit geschickt, sondern so schnell
      * es geht: [seconds] Sekunden (höchstens [maxBytes]) laden und die Geschwindigkeit messen. null bei Fehler.
      */
-    suspend fun provider(url: String, userAgent: String, seconds: Int = 6, maxBytes: Long = 300L * 1024 * 1024): Int? = withContext(Dispatchers.IO) {
-        val client = http.newBuilder().readTimeout(8, TimeUnit.SECONDS).build()
+    suspend fun provider(url: String, userAgent: String, seconds: Int = 6, maxBytes: Long = 300L * 1024 * 1024, direct: Boolean = false): Int? = withContext(Dispatchers.IO) {
+        val client = http.newBuilder().readTimeout(8, TimeUnit.SECONDS).apply { if (direct) proxy(java.net.Proxy.NO_PROXY) }.build()
         runCatching {
             client.newCall(Request.Builder().url(url).header("User-Agent", userAgent).build()).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
@@ -160,9 +169,13 @@ class LineCheck(private val http: OkHttpClient) {
         private val BANDWIDTH = Regex("BANDWIDTH=(\\d+)")
 
         /** Puffer-Empfehlung aus den Messwerten. */
-        fun recommend(firstByteMs: Long, stalls: Int, longestGapMs: Long, kbps: Int, failed: String?): BufferProfile = when {
+        fun recommend(firstByteMs: Long, stalls: Int, longestGapMs: Long, kbps: Int, failed: String?, uhd: Boolean = false): BufferProfile = when {
             failed != null -> BufferProfile.STABLE
             stalls >= 2 || longestGapMs > 3_000 || firstByteMs > 3_000 -> BufferProfile.STABLE
+            // 4K: kurze Aussetzer der Leitung überbrückt nur ein großer Puffer.
+            uhd -> BufferProfile.STABLE
+            // Hohe Datenrate (Full HD in guter Qualität): mindestens ausgewogen.
+            kbps >= 8_000 -> BufferProfile.BALANCED
             // Live-Streams kommen in Echtzeit: Die Datenrate zeigt die Stream-Qualität, nicht die Reserve der Leitung.
             stalls == 1 || firstByteMs > 1_200 -> BufferProfile.BALANCED
             else -> BufferProfile.FAST

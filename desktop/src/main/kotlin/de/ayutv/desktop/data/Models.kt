@@ -132,6 +132,8 @@ data class CustomGroup(val id: Long, val name: String, val keys: List<String> = 
 @Serializable
 data class UserData(
     val favorites: List<String> = emptyList(),
+    /** Eigene Sendernummern: Senderschlüssel → Nummer (jede Nummer nur einmal). */
+    val channelNumbers: Map<String, Int> = emptyMap(),
     val customGroups: List<CustomGroup> = emptyList(),
     /** Eigene Reihenfolge in Gruppen des Anbieters: Gruppenname → Senderschlüssel. */
     val groupOrder: Map<String, List<String>> = emptyMap(),
@@ -162,6 +164,8 @@ data class UserData(
     val mergeVariants: Boolean = true,
     /** Fehlendes Programm aus dem freien EPG (epgshare01, DE/AT/CH) ergänzen. */
     val publicEpg: Boolean = true,
+    /** Bildoptimierung für Full HD je Inhalt: "OFF", "AUTO", "STRONG". */
+    val pictureTuning: String = "AUTO",
     /** Länderauswahl nach dem ersten Laden schon gezeigt. */
     val countriesAsked: Boolean = false,
     /** Fenster zuletzt im Vollbild (beim nächsten Start wieder). */
@@ -190,6 +194,11 @@ data class UserData(
     val videoLayout: String = "AUTO",
     /** Direktausgabe (VLC zeigt das Bild selbst über die Grafikkarte): OFF, AUTO (bei 4K), ALWAYS. */
     val directMode: String = "AUTO",
+    /**
+     * KI-Hochrechnung der Grafikkarte (NVIDIA RTX Video Super Resolution, Intel Video Super Resolution) für Sender unter
+     * 4K. Läuft nur in der Direktausgabe; mit an wird deshalb immer direkt ausgegeben.
+     */
+    val aiUpscale: Boolean = false,
     /** Mini-Vorschau des ausgewählten Senders in der Senderliste (stumm). */
     val livePreview: Boolean = true,
     /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen). */
@@ -197,6 +206,9 @@ data class UserData(
     val appsHidden: Set<String> = emptySet(),
     /** TV-Modus (Mini-PC am Fernseher): mit Windows starten, immer Vollbild, Mauszeiger ausblenden. */
     val tvMode: Boolean = false,
+    /** Design (STANDARD, OLED) und Akzentfarbe (Palette.ACCENTS). */
+    val uiTheme: String = "STANDARD",
+    val accent: String = "BLAU",
     /** Pufferprofil (FAST, BALANCED, STABLE). */
     val bufferProfile: String = "BALANCED",
     /** Zuletzt den TV-Guide geladen (für das Nachladen alle 8 Stunden). */
@@ -204,3 +216,7 @@ data class UserData(
     /** TV-Guide um Stunden verschieben (Anbieter mit falscher Zeitzone), −12 … +12. */
     val epgShiftHours: Int = 0,
 )
+
+/** Nummer eines Senders: eigene Nummer, sonst die der Playlist, sonst die Position in der Liste ([fallback]). */
+fun UserData.numberOf(channel: Channel, fallback: Int): Int =
+    channelNumbers[channel.key] ?: channel.number.takeIf { it > 0 } ?: fallback

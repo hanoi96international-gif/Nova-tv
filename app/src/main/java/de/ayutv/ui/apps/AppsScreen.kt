@@ -65,10 +65,34 @@ object AppLauncher {
         val pm = context.packageManager
         return runCatching { pm.getLeanbackLaunchIntentForPackage(pkg) }.getOrNull()
             ?: runCatching { pm.getLaunchIntentForPackage(pkg) }.getOrNull()
+            ?: mainActivity(context, pkg)
     }
 
-    /** Installierte Fassung, null = nicht installiert. */
-    fun installed(context: Context, app: StreamingApps.App): String? = candidates(context, app).firstOrNull { launchIntent(context, it) != null }
+    /** Erste startbare Ansicht eines Pakets, auch ohne Eintrag für den Startbildschirm (manche Fire-OS-Apps). */
+    private fun mainActivity(context: Context, pkg: String): Intent? = runCatching {
+        val info = context.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).setPackage(pkg), 0).firstOrNull()?.activityInfo
+            ?: return@runCatching null
+        Intent(Intent.ACTION_MAIN).setClassName(info.packageName, info.name)
+    }.getOrNull()
+
+    /** Alle Apps mit Eintrag für den Startbildschirm (Fernseher und Handy): Paket und angezeigter Name. */
+    private fun launchable(context: Context): List<Pair<String, String>> {
+        val pm = context.packageManager
+        val categories = listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)
+        return categories.flatMap { category ->
+            runCatching { pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(category), 0) }.getOrDefault(emptyList())
+        }.map { it.activityInfo.packageName to it.loadLabel(pm).toString() }.distinctBy { it.first }
+    }
+
+    /**
+     * Installierte Fassung, null = nicht installiert. Erst die bekannten Paketnamen, dann über den Namen der App
+     * (z. B. heißt YouTube auf manchen Fire-TV-Modellen anders als auf anderen).
+     */
+    fun installed(context: Context, app: StreamingApps.App): String? =
+        candidates(context, app).firstOrNull { launchIntent(context, it) != null }
+            ?: launchable(context).mapNotNull { (pkg, label) -> StreamingApps.labelMatch(app, label)?.let { it to pkg } }
+                .filter { (_, pkg) -> pkg != context.packageName }
+                .minByOrNull { it.first }?.second
 
     fun icon(context: Context, pkg: String): ImageBitmap? = runCatching {
         val pm = context.packageManager
@@ -127,8 +151,16 @@ fun AppsScreen() {
     val apps = remember(order, hidden) { StreamingApps.arrange(order, hidden) }
     // Beim Zurückkommen (z. B. nach einer Installation) neu prüfen, was installiert ist.
     var refresh by remember { mutableStateOf(0) }
-    val installed = remember(apps, refresh) { apps.associate { it.id to AppLauncher.installed(context, it) } }
-    val icons = remember(installed) { installed.mapValues { (_, pkg) -> pkg?.let { AppLauncher.icon(context, it) } } }
+    // Installierte Apps und ihre Bilder im Hintergrund ermitteln (Abfragen beim System dauern auf dem Stick spürbar).
+    var installed by remember { mutableStateOf<Map<String, String?>>(emptyMap()) }
+    var icons by remember { mutableStateOf<Map<String, ImageBitmap?>>(emptyMap()) }
+    LaunchedEffect(apps, refresh) {
+        val found = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { apps.associate { it.id to AppLauncher.installed(context, it) } }
+        if (found != installed) {
+            installed = found
+            icons = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { found.mapValues { (_, pkg) -> pkg?.let { AppLauncher.icon(context, it) } } }
+        }
+    }
     LaunchedEffect(Unit) {
         while (true) {
             delay(5_000)
@@ -159,7 +191,7 @@ fun AppsScreen() {
             items(apps, key = { it.id }) { app ->
                 val pkg = installed[app.id]
                 AppTile(
-                    app, icons[app.id], installed = pkg != null,
+                    app, icons[app.id], installed = pkg != null || !installed.containsKey(app.id),
                     onClick = {
                         if (!AppLauncher.launch(context, app)) {
                             notice = "${app.name} ist nicht installiert – öffne den Appstore …"

@@ -93,6 +93,19 @@ object Diagnostics {
             }
         }
 
+        // Sender ohne TV-Guide (je Gruppe), damit fehlende Zuordnungen gezielt verbessert werden können.
+        section("Sender ohne TV-Guide")
+        runCatching {
+            for (p in container.db.playlists().all()) {
+                val status = container.playlists.epgStatus(p.id) ?: continue
+                if (status.missingChannels.isEmpty()) continue
+                out.append("${p.name} (Nr. ${p.id}): ${status.total - status.withGuide} von ${status.total}\n")
+                status.missingInGroups.groupBy({ it.first }, { it.second }).entries.take(40).forEach { (group, names) ->
+                    out.append("  ${group.ifEmpty { "-" }}: ${names.distinct().take(40).joinToString(", ")}${if (names.size > 40) " … (+${names.size - 40})" else ""}\n")
+                }
+            }
+        }
+
         section("Eigene Daten")
         runCatching {
             val db = container.db

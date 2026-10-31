@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -52,12 +53,70 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** Farben wie in der Fire-TV-App (Standard-Design). */
+/**
+ * Farben der Oberfläche. Design (Standard oder OLED-Schwarz) und Akzentfarbe sind wählbar (Einstellungen → Anzeige);
+ * als beobachteter Zustand, damit ein Wechsel sofort überall wirkt.
+ */
 object Palette {
-    val background = Color(0xFF0B0F14)
-    val surface = Color(0xFF151B23)
-    val raised = Color(0xFF1E2631)
-    val accent = Color(0xFF3DA9FC)
-    val accentSoft = Color(0xFF235F8E)
+    /** Akzentfarben: Kennung, Name, Farbe, abgedunkelte Fokusfläche. */
+    val ACCENTS = listOf(
+        Triple("BLAU", "Blau", Color(0xFF3DA9FC) to Color(0xFF235F8E)),
+        Triple("TUERKIS", "Türkis", Color(0xFF5EEAD4) to Color(0xFF0F766E)),
+        Triple("VIOLETT", "Violett", Color(0xFFA78BFA) to Color(0xFF5B21B6)),
+        Triple("GRUEN", "Grün", Color(0xFF4ADE80) to Color(0xFF15803D)),
+        Triple("ORANGE", "Orange", Color(0xFFFB923C) to Color(0xFFC2410C)),
+        Triple("PINK", "Pink", Color(0xFFF472B6) to Color(0xFFBE185D)),
+        Triple("GOLD", "Gold", Color(0xFFFACC15) to Color(0xFFA16207)),
+        Triple("ROT", "Rot", Color(0xFFFF4D4F) to Color(0xFFB0141B)),
+    )
+    val THEMES = listOf(
+        "STANDARD" to "Standard (Dunkelblau)", "OLED" to "OLED-Schwarz",
+        "KINO" to "Kino", "TIEFSEE" to "Tiefsee", "ABENDROT" to "Abendrot",
+        "GRAPHIT" to "Graphit", "SMARAGD" to "Smaragd", "NEON" to "Neon", "HANNOVER" to "Hannover 96",
+    )
+
+    /** Grundfarben je Design: Hintergrund, Fläche, erhöhte Fläche und Verlauf des Fensterhintergrunds (oben → unten). */
+    private class Look(val background: Color, val surface: Color, val raised: Color, val gradient: List<Color>)
+
+    private val LOOKS = mapOf(
+        "STANDARD" to Look(Color(0xFF0B0F14), Color(0xFF151B23), Color(0xFF1E2631), listOf(Color(0xFF0F1620), Color(0xFF0B0F14))),
+        "OLED" to Look(Color(0xFF000000), Color(0xFF0E0E10), Color(0xFF1A1A1E), listOf(Color(0xFF000000), Color(0xFF000000))),
+        "KINO" to Look(Color(0xFF0B0506), Color(0xFF1A0F11), Color(0xFF29171A), listOf(Color(0xFF3A0810), Color(0xFF1A0508), Color(0xFF070203))),
+        "TIEFSEE" to Look(Color(0xFF02090F), Color(0xFF0A1822), Color(0xFF102634), listOf(Color(0xFF0B3A4F), Color(0xFF062132), Color(0xFF010407))),
+        "ABENDROT" to Look(Color(0xFF0E0718), Color(0xFF1B1028), Color(0xFF2A1838), listOf(Color(0xFF0A0614), Color(0xFF1E0B33), Color(0xFF4A1243))),
+        "GRAPHIT" to Look(Color(0xFF0E0F11), Color(0xFF1A1C20), Color(0xFF25282E), listOf(Color(0xFF1B1D22), Color(0xFF0E0F11), Color(0xFF08090A))),
+        "SMARAGD" to Look(Color(0xFF040A07), Color(0xFF0D1A13), Color(0xFF15281D), listOf(Color(0xFF0B1F18), Color(0xFF07130E), Color(0xFF030806))),
+        "NEON" to Look(Color(0xFF07050F), Color(0xFF130F24), Color(0xFF1E1838), listOf(Color(0xFF07050F), Color(0xFF1A0B33), Color(0xFF3B0A45))),
+        "HANNOVER" to Look(Color(0xFF0C0909), Color(0xFF1A1213), Color(0xFF2A1A1C), listOf(Color(0xFF2A0609), Color(0xFF140607), Color(0xFF0A0606), Color(0xFF082513))),
+    )
+
+    /** Passende Akzentfarbe, wenn „Blau“ (Standard) gewählt ist: Gold im Kino, Türkis in der Tiefsee, Koralle im Abendrot. */
+    private val THEME_ACCENTS = mapOf(
+        "KINO" to (Color(0xFFF5C451) to Color(0xFF8C2232)),
+        "TIEFSEE" to (Color(0xFF38E1F2) to Color(0xFF0E6E86)),
+        "ABENDROT" to (Color(0xFFFF8A5B) to Color(0xFFB3306B)),
+        "GRAPHIT" to (Color(0xFFA5C8FF) to Color(0xFF3B4A63)),
+        "SMARAGD" to (Color(0xFF4ADE80) to Color(0xFF15803D)),
+        "NEON" to (Color(0xFF22D3EE) to Color(0xFFA21CAF)),
+        "HANNOVER" to (Color(0xFFFF3B3F) to Color(0xFFB0141B)),
+    )
+
+    private var look by androidx.compose.runtime.mutableStateOf(LOOKS.getValue("STANDARD"))
+    private var accentPair by androidx.compose.runtime.mutableStateOf(ACCENTS.first().third)
+
+    fun use(theme: String, accent: String) {
+        look = LOOKS[theme] ?: LOOKS.getValue("STANDARD")
+        val chosen = ACCENTS.firstOrNull { it.first == accent } ?: ACCENTS.first()
+        accentPair = if (chosen.first == ACCENTS.first().first) THEME_ACCENTS[theme] ?: chosen.third else chosen.third
+    }
+
+    val background get() = look.background
+    val surface get() = look.surface
+    val raised get() = look.raised
+    /** Fensterhintergrund als Verlauf (Kino: Samtrot, Tiefsee: Petrol, Abendrot: Violett). */
+    val backdrop: androidx.compose.ui.graphics.Brush get() = androidx.compose.ui.graphics.Brush.verticalGradient(look.gradient)
+    val accent get() = accentPair.first
+    val accentSoft get() = accentPair.second
     val live = Color(0xFFE5484D)
     val text = Color(0xFFF2F5F8)
     val secondary = Color(0xFF9AA7B4)
@@ -265,9 +324,11 @@ fun Tile(
     wide: Boolean = true,
     onMenu: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
+    onFocus: (() -> Unit)? = null,
 ) {
     val width = if (wide) 240.dp else 150.dp
-    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
+    val focusWatch = if (onFocus != null) Modifier.onFocusChanged { if (it.hasFocus) onFocus() } else Modifier
+    Selectable(onClick, modifier.width(width).then(focusWatch), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.fillMaxWidth()) {
             val picture = rememberImage(image)
             Box(

@@ -13,8 +13,8 @@ android {
         // Fire OS 6 entspricht API 25: alle Fire TV Sticks ab 2018. ONNX Runtime verlangt API 24.
         minSdk = 24
         targetSdk = 35
-        versionCode = 56
-        versionName = "0.44.0"
+        versionCode = 58
+        versionName = "0.45.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             // Fire TV: ARM (32/64 Bit). x86_64 nur für den Emulator-Test in der CI.
@@ -99,6 +99,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:$media3")
     implementation("androidx.media3:media3-datasource-okhttp:$media3")
     implementation("androidx.media3:media3-ui:$media3")
+    // Bildoptimierung (Nachschärfen, Kontrast, Sättigung auf dem Grafikchip)
+    implementation("androidx.media3:media3-effect:$media3")
     // Chromecast vom Handy aus (nur mit Google-Play-Diensten; auf Fire TV unbenutzt).
     implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
     implementation("androidx.mediarouter:mediarouter:1.7.0")

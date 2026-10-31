@@ -1,7 +1,10 @@
 package de.ayutv.desktop.ui
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -137,6 +140,13 @@ fun HomeScreen(app: AppState) {
     }
 
     val first = remember { FocusRequester() }
+    // Großes Hintergrundbild oben rechts: Poster der gewählten Kachel, sonst das erste Poster der Startseite.
+    var focusedHero by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val fallbackHero = remember(rows) {
+        rows.asSequence().flatMap { it.items }.firstNotNullOfOrNull { heroOf(it) }
+    }
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+    HomeBackdrop(focusedHero ?: fallbackHero)
     LazyColumn(Modifier.fillMaxSize()) {
         item { ScreenHeader("Start", "OK abspielen · ☰ Menü · ◀ Navigation") }
         if (rows.isEmpty()) item { Label("Noch nichts geschaut. Unter „Live TV“ einen Sender wählen.", Type.body) }
@@ -156,6 +166,7 @@ fun HomeScreen(app: AppState) {
                         is HomeItem.Film -> Tile(
                             item.movie.name, item.movie.category, item.movie.poster, onClick = { open(item) }, progress = item.progress,
                             wide = false, onMenu = { menu(item) }, focusRequester = if (rowIndex == 0 && index == 0) first else null,
+                            onFocus = { focusedHero = heroOf(item) },
                         )
                         is HomeItem.Rec -> Tile(
                             item.recording.title,
@@ -166,6 +177,7 @@ fun HomeScreen(app: AppState) {
                         is HomeItem.Show -> Tile(
                             item.series.name, item.series.category, item.series.cover, onClick = { open(item) }, progress = item.progress,
                             wide = false, onMenu = { menu(item) }, focusRequester = if (rowIndex == 0 && index == 0) first else null,
+                            onFocus = { focusedHero = heroOf(item) },
                         )
                     }
                     Spacer(Modifier.width(10.dp))
@@ -173,6 +185,7 @@ fun HomeScreen(app: AppState) {
             }
         }
         item { Spacer(Modifier.height(30.dp)) }
+    }
     }
     if (rows.isNotEmpty()) FocusOnShow(first)
     dialog?.invoke()
@@ -183,4 +196,53 @@ private fun title(item: HomeItem) = when (item) {
     is HomeItem.Live -> item.channel.name
     is HomeItem.Film -> item.movie.name
     is HomeItem.Show -> item.series.name
+}
+
+/** Poster und Titel einer Kachel für den großen Hintergrund (nur Filme und Serien haben ein großes Bild). */
+private fun heroOf(item: HomeItem): Pair<String, String>? = when (item) {
+    is HomeItem.Film -> item.movie.poster?.takeIf { it.isNotBlank() }?.let { it to item.movie.name }
+    is HomeItem.Show -> item.series.cover?.takeIf { it.isNotBlank() }?.let { it to item.series.name }
+    else -> null
+}
+
+/**
+ * Großes Bild oben rechts, das zu den Seiten in den Hintergrund ausläuft. Es wechselt erst, wenn die Auswahl kurz
+ * stehen bleibt, damit beim schnellen Durchblättern nicht jedes Poster geladen wird.
+ */
+@Composable
+private fun HomeBackdrop(target: Pair<String, String>?) {
+    var shown by remember { mutableStateOf(target) }
+    LaunchedEffect(target) {
+        if (shown != null) delay(400)
+        shown = target
+    }
+    val (url, title) = shown ?: return
+    val picture = rememberImage(url)
+    val background = Palette.background
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(380.dp)) {
+        androidx.compose.animation.Crossfade(
+            picture,
+            Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(androidx.compose.ui.Alignment.TopEnd),
+            animationSpec = androidx.compose.animation.core.tween(450),
+            label = "hero",
+        ) { image ->
+            if (image != null) androidx.compose.foundation.Image(
+                image, null,
+                Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alpha = 0.45f,
+            )
+        }
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.horizontalGradient(0.3f to background, 0.65f to background.copy(alpha = 0.5f), 1f to background.copy(alpha = 0.05f)),
+            ),
+        )
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxSize().background(
+                androidx.compose.ui.graphics.Brush.verticalGradient(0.4f to androidx.compose.ui.graphics.Color.Transparent, 1f to background),
+            ),
+        )
+        Label(title, Type.title, Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(top = 40.dp, end = 40.dp).fillMaxWidth(0.4f), maxLines = 2)
+    }
 }
