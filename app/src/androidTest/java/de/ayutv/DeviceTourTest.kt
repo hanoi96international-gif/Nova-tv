@@ -123,6 +123,25 @@ class DeviceTourTest {
             val existing = runBlocking { container.db.playlists().all() }
             log("db_version=$version playlists_before=${existing.size}")
             assertTrue("Datenbank auf Version $version statt ${de.ayutv.data.db.AyuDatabase.VERSION}", version == de.ayutv.data.db.AyuDatabase.VERSION)
+            // In der Vorversion angelegte eigene Daten müssen das Update überstehen (siehe ci/run-device-tour.sh).
+            val seeded = androidx.test.platform.app.InstrumentationRegistry.getArguments().getString("upgradeSeeded") == "true"
+            val db = container.db
+            val group = runBlocking { db.customGroups().groups() }.firstOrNull { it.name == "Upgrade-Test" }
+            val items = runBlocking { db.customGroups().allItems() }.filter { it.groupId == group?.id }
+            val favorite = "99:c:1" in runBlocking { db.favorites().keys() }
+            val hidden = runBlocking { db.hiddenGroups().all() }.any { it.playlistId == 99L && it.name == "Upgrade-Test" }
+            log("upgrade_data seeded=$seeded custom_group=${group != null} items=${items.size} favorite=$favorite hidden=$hidden")
+            if (seeded) {
+                assertTrue("Eigene Gruppe nach dem Update verschwunden", group != null && items.size == 1)
+                assertTrue("Favorit nach dem Update verschwunden", favorite)
+                assertTrue("Ausgeblendete Gruppe nach dem Update wieder sichtbar", hidden)
+            }
+            // Aufräumen, damit der Rest des Rundgangs mit eigenen Daten startet.
+            runBlocking {
+                group?.let { db.customGroups().deleteItems(it.id); db.customGroups().deleteGroup(it.id) }
+                db.favorites().remove("99:c:1")
+                db.hiddenGroups().show(99L, de.ayutv.data.db.GroupKind.LIVE, listOf("Upgrade-Test"))
+            }
         }
 
         // 0b. Textmuster auf Android prüfen (Android nutzt eine andere Regex-Engine als der PC)

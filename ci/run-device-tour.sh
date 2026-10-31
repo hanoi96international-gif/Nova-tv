@@ -9,12 +9,24 @@ if [ -f previous-debug.apk ]; then
   adb shell am start -W -n de.ayutv/.MainActivity
   sleep 10
   adb shell am force-stop de.ayutv
+  # Eigene Daten in der Vorversion anlegen (eigene Gruppe mit Sender, Favorit, ausgeblendete Gruppe). Der Test prüft
+  # nach dem Update, dass alles noch da ist: ein Update über die App darf nichts davon löschen.
+  SEED="INSERT INTO custom_groups(name, position) VALUES('Upgrade-Test', 99);
+INSERT INTO custom_group_items(groupId, [key], position) VALUES((SELECT id FROM custom_groups WHERE name='Upgrade-Test'), '99:c:1', 1);
+INSERT INTO favorites([key], addedAt, position) VALUES('99:c:1', 1, 0);
+INSERT INTO hidden_groups(playlistId, kind, name) VALUES(99, 'LIVE', 'Upgrade-Test');"
+  if echo "$SEED" | adb shell "run-as de.ayutv sqlite3 databases/ayu.db" && \
+     echo "SELECT COUNT(*) FROM custom_groups;" | adb shell "run-as de.ayutv sqlite3 databases/ayu.db" | grep -q '^[1-9]'; then
+    UPGRADE_SEEDED=true
+  else
+    echo "Upgrade-Test: Daten ließen sich in der Vorversion nicht anlegen (sqlite3 fehlt?)"
+  fi
 fi
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb shell dumpsys gfxinfo de.ayutv reset >/dev/null 2>&1 || true
 adb logcat -c
-timeout 2400 adb shell am instrument -w -e class de.ayutv.DeviceTourTest de.ayutv.test/androidx.test.runner.AndroidJUnitRunner | tee ci-out/instrument.txt
+timeout 2400 adb shell am instrument -w -e class de.ayutv.DeviceTourTest -e upgradeSeeded "${UPGRADE_SEEDED:-false}" de.ayutv.test/androidx.test.runner.AndroidJUnitRunner | tee ci-out/instrument.txt
 adb shell dumpsys gfxinfo de.ayutv > ci-out/gfxinfo.txt 2>&1 || true
 adb logcat -d -v time '*:W' AyuSubtitles:I AyuTour:I > ci-out/logcat_warnings.txt 2>&1 || true
 adb exec-out run-as de.ayutv tar c -C files ci | tar x -C ci-out --strip-components=1 || true
