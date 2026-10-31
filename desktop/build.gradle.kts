@@ -47,6 +47,7 @@ sourceSets {
             "de/ayutv/data/parse/XtreamParsing.kt",
             "de/ayutv/data/parse/XmltvParser.kt",
             "de/ayutv/data/parse/EpgSources.kt",
+            "de/ayutv/data/parse/ExtraGuides.kt",
             "de/ayutv/data/parse/EpgMatcher.kt",
             "de/ayutv/data/parse/Episodes.kt",
             "de/ayutv/data/parse/ChannelVariants.kt",

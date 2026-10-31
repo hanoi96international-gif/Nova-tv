@@ -83,6 +83,13 @@ fun SportScreen() {
     var choosing by remember { mutableStateOf<SportEvent?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     val teams = settings?.followedTeams.orEmpty()
+    // Sport immer in der besten Fassung: 4K vor Full HD, auch wenn sonst Full HD bevorzugt wird.
+    fun watch(channel: de.ayutv.data.db.ChannelEntity) {
+        scope.launch {
+            val best = runCatching { container.content.bestForSport(channel) }.getOrDefault(channel)
+            PlayerActivity.startLive(context, best.key, best.groupTitle)
+        }
+    }
 
     LaunchedEffect(minute) { events = container.content.sportEvents(hours = 48) }
     // Spielpläne und Stände (OpenLigaDB), jede Minute: für die Paarung, wenn das EPG nur „Live: 2. BL“ nennt, und
@@ -173,7 +180,7 @@ fun SportScreen() {
                         items(list, key = { "${it.programme.id}-${it.channel.key}" }) { e ->
                             EventRow(
                                 e, now, scoreOf(e), headlineOf(e.programme, pairingOf(e)),
-                                onClick = { PlayerActivity.startLive(context, e.channel.key, e.channel.groupTitle) },
+                                onClick = { watch(e.channel) },
                                 onLongClick = { choosing = e },
                             )
                         }
@@ -199,7 +206,7 @@ fun SportScreen() {
                 },
                 onWatch = { channel ->
                     choosing = null
-                    PlayerActivity.startLive(context, channel.key, channel.groupTitle)
+                    watch(channel)
                 },
                 onDismiss = { choosing = null },
             )

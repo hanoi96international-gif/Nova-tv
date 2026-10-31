@@ -100,6 +100,20 @@ class ContentRepository(
         ChannelVariants.merge(channels.filter { ChannelQuality.passes(it.key, it.name) }, { it.name }, { it.playlistId }, { ChannelQuality.score(it.key, it.name) })
     }
 
+    /**
+     * Für Sport: die beste Fassung dieses Senders (4K vor Full HD vor HD), auch wenn sie im TV-Guide unter einer
+     * anderen Kennung steht oder sonst Full HD bevorzugt wird.
+     */
+    suspend fun bestForSport(channel: ChannelEntity): ChannelEntity = withContext(Dispatchers.Default) {
+        if (ChannelVariants.key(channel.name) == null) return@withContext channel
+        val candidates = listOf(channel) + ChannelVariants.alternatives(
+            channel, db.channels().visibleInPlaylist(channel.playlistId), { it.name }, { it.playlistId },
+            same = { a, b -> a.key == b.key }, score = { ChannelQuality.sportScore(it.key, it.name) },
+        )
+        candidates.filter { ChannelQuality.passes(it.key, it.name) }.ifEmpty { candidates }
+            .minBy { ChannelQuality.sportScore(it.key, it.name) }
+    }
+
     /** Andere Fassungen desselben Senders, beste zuerst (für den Wechsel, wenn eine ausfällt). */
     suspend fun variantsOf(channel: ChannelEntity): List<ChannelEntity> = withContext(Dispatchers.Default) {
         if (ChannelVariants.key(channel.name) == null) return@withContext emptyList()
@@ -135,10 +149,16 @@ class ContentRepository(
                 .filter { (p, c) -> p.isSportEvent(ProgrammeText.isSportChannel(c.name)) }
                 .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to ProgrammeText.sportKey(p.title, p.subtitle, p.description, p.channelEpgId) }
                 .values.map { same ->
-                    val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelQuality.score(it.second.key, it.second.name) })
-                    val (p, c) = same.minWith(best)
                     // Weitere Sender, nicht weitere Fassungen desselben Senders: je Sender die beste Fassung.
                     fun variant(channel: ChannelEntity) = ChannelVariants.key(channel.name) ?: channel.key
+                    // Favorit entscheidet zwischen verschiedenen Sendern, die Qualität zwischen den Fassungen eines
+                    // Senders: Ist „Sky Sport 1 HD“ Favorit, läuft trotzdem „Sky Sport 1 UHD“, wenn es die gibt.
+                    val favoriteVariants = same.filter { it.second.key in favorites }.mapTo(HashSet()) { variant(it.second) }
+                    val best = compareBy<Pair<ProgrammeEntity, ChannelEntity>>(
+                        { if (variant(it.second) in favoriteVariants) 0 else 1 },
+                        { ChannelQuality.sportScore(it.second.key, it.second.name) },
+                    )
+                    val (p, c) = same.minWith(best)
                     val others = same.filter { variant(it.second) != variant(c) }
                         .groupBy { variant(it.second) }.values
                         .map { it.minWith(best).second }

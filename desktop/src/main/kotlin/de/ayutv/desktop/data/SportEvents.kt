@@ -16,8 +16,10 @@ object SportEvents {
 
     fun of(channels: List<Channel>, guide: Map<String, List<Programme>>, favorites: Set<String>, hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> {
         val until = now + hours * HOUR
-        val best = compareBy<Pair<Programme, Channel>>({ if (it.second.key in favorites) 0 else 1 }, { ChannelQuality.score(it.second.key, it.second.name) })
         fun variant(channel: Channel) = ChannelVariants.key(channel.name) ?: channel.key
+        // Favorit entscheidet zwischen Sendern, die Qualität (4K vor Full HD) zwischen den Fassungen eines Senders.
+        val favoriteVariants = channels.filter { it.key in favorites }.mapTo(HashSet()) { variant(it) }
+        val best = compareBy<Pair<Programme, Channel>>({ if (variant(it.second) in favoriteVariants) 0 else 1 }, { ChannelQuality.sportScore(it.second.key, it.second.name) })
         return channels.asSequence()
             .flatMap { c ->
                 val sportChannel = ProgrammeText.isSportChannel(c.name)
@@ -39,5 +41,13 @@ object SportEvents {
                 SportEvent(p, c, others)
             }
             .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
+    }
+
+    /** Beste Fassung dieses Senders für Sport (4K vor Full HD) unter [all], auch wenn die Liste sonst Full HD zeigt. */
+    fun bestFor(channel: Channel, all: List<Channel>): Channel {
+        val key = ChannelVariants.key(channel.name) ?: return channel
+        return (all.filter { it.playlistId == channel.playlistId && ChannelVariants.key(it.name) == key } + channel)
+            .filter { ChannelQuality.passes(it.key, it.name) }.ifEmpty { listOf(channel) }
+            .minBy { ChannelQuality.sportScore(it.key, it.name) }
     }
 }

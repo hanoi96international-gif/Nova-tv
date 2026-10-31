@@ -40,17 +40,22 @@ object EpgSources {
     }
 
     /**
-     * Freies EPG von epgshare01 (täglich aktualisiert) für Sender, die beim Anbieter fehlen, oft Sky und DAZN.
-     * Reihenfolge: Deutschland, Österreich, Schweiz (dort u. a. Sky Bundesliga unter altem Namen).
+     * Freie Programmquellen für Sender, die beim Anbieter fehlen (oft Sky und DAZN). Reihenfolge: epgshare01
+     * Deutschland, dann MagentaTV (rund 330 deutsche Sender: alle Regionalprogramme, Sky Cinema mit den neuen
+     * Namen, Sky Sport Kompakt, MagentaSport, myTeamTV), epgshare01 Österreich und Schweiz (dort u. a. Sky
+     * Bundesliga unter altem Namen) und zuletzt der Spielplan von Dyn (Volleyball, Handball, Basketball, Hockey).
      */
     val PUBLIC = listOf(
         "https://epgshare01.online/epgshare01/epg_ripper_DE1.xml.gz",
+        ExtraGuides.MAGENTA,
         "https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz",
         "https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz",
+        ExtraGuides.DYN,
     )
 
     /** Kurzer Name einer Quelle für die Anzeige ("epgshare01 DE", "tv.example.com"). */
     fun label(url: String): String {
+        ExtraGuides.label(url)?.let { return it }
         Regex("""epg_ripper_([A-Z]{2})\d*\.xml""").find(url)?.let { return "epgshare01 ${it.groupValues[1]}" }
         return runCatching { URI(url.trim()).host }.getOrNull()?.takeIf { it.isNotEmpty() } ?: url.substringAfterLast('/').take(40)
     }

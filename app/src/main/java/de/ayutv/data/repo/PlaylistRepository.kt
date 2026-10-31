@@ -614,6 +614,8 @@ class PlaylistRepository(
         forced: Set<Long> = emptySet(),
         guideIndex: MutableList<String>? = null,
         sourceLabel: String = "",
+        /** Zweiter Durchgang: nur diese EPG-Sender (die mit Sendungen) zuordnen. */
+        onlyGuides: Set<String>? = null,
     ) {
         val now = System.currentTimeMillis()
         // Mit Archiv (Catch-up) auch vergangene Tage behalten, sonst nur die letzten 2 Stunden.
@@ -643,6 +645,9 @@ class PlaylistRepository(
         }
         // <channel> steht in XMLTV vor den Programmen: Beim ersten Programm sind alle Namen bekannt.
         var prepared = false
+        // Welchem EPG-Sender jeder Sender zugeordnet wurde, und welche EPG-Sender im Zeitraum Sendungen haben.
+        val matchedGuide = HashMap<Long, String>()
+        val withProgrammes = HashSet<String>()
         val byLowerId = open.filter { !it.epgId.isNullOrBlank() }.groupBy { it.epgId!!.trim().lowercase() }
         val unknown = HashSet<String>()
         fun storageFor(id: String): List<String>? {
@@ -650,11 +655,13 @@ class PlaylistRepository(
                 prepared = true
                 val matcher = EpgMatcher()
                 for ((guideId, names) in parser.channels) {
+                    if (onlyGuides != null && guideId !in onlyGuides) continue
                     matcher.addGuideChannel(guideId, names)
                     guideIndex?.add("${guideId.clean()}\t${(names.firstOrNull() ?: guideId).clean()}\t${sourceLabel.clean()}")
                 }
                 if (!matcher.isEmpty) for (channel in open) matcher.match(channel.epgId, channel.name)?.let { guideId ->
                     if (channel.id in forced && guideId != channel.epgId) return@let
+                    matchedGuide[channel.id] = guideId
                     link(guideId, channel)
                     if (suspects != null && channel.id !in forced && !channel.epgId.isNullOrBlank() && !matcher.fitsName(guideId, channel.name)) {
                         Log.i(TAG, "Kennung „${channel.epgId}“ passt nicht zu „${channel.name}“ (EPG-Sender $guideId)")
@@ -664,6 +671,7 @@ class PlaylistRepository(
             }
             targets[id]?.let { return it }
             if (id in unknown) return null
+            if (onlyGuides != null) return null.also { unknown += id }
             // Programme eines Senders ohne <channel>-Eintrag: nur über die Kennung.
             byLowerId[id.lowercase()]?.forEach { link(id, it) }
             return targets[id] ?: null.also { unknown += id }
@@ -674,7 +682,11 @@ class PlaylistRepository(
         openFile(source).use { input ->
             parser.parse(
                 input,
-                wanted = { id, start, stop -> stop + shift > from && start + shift < until && storageFor(id) != null },
+                wanted = { id, start, stop ->
+                    val inRange = stop + shift > from && start + shift < until
+                    if (inRange) withProgrammes += id
+                    inRange && storageFor(id) != null
+                },
             ) { p ->
                 for (storage in storageFor(p.channelId).orEmpty()) {
                     batch += ProgrammeEntity(
@@ -701,6 +713,17 @@ class PlaylistRepository(
         }
         db.programmes().insertAll(batch)
         for ((channelId, guideId) in assign) if (channelId in found) db.channels().setEpgId(channelId, guideId)
+        // Einem leeren EPG-Eintrag zugeordnet (z. B. „sky.replay.de“ ohne Sendungen neben „Sky Replay HD“ mit
+        // Programm): noch einmal nur unter den Einträgen mit Sendungen suchen.
+        if (onlyGuides == null) {
+            val retry = open.filter { it.id !in found && it.id !in forced && matchedGuide[it.id]?.let { g -> g !in withProgrammes } == true }
+            if (retry.isNotEmpty() && withProgrammes.isNotEmpty()) {
+                importEpgSource(
+                    playlist, source, retry, shift, taken + used, found, used, null, forced, null, sourceLabel,
+                    onlyGuides = withProgrammes.toHashSet(),
+                )
+            }
+        }
     }
 
     private fun <T> ArrayList<T>.drain(): List<T> = toList().also { clear() }
@@ -753,6 +776,19 @@ class PlaylistRepository(
     /** Freie Quelle aus dem Zwischenspeicher, wenn jünger als [maxAge], sonst neu laden (alte Datei bleibt bei Fehlern). */
     private fun fetchCached(url: String, maxAge: Long): File {
         publicDir.mkdirs()
+        if (de.ayutv.data.parse.ExtraGuides.isExtra(url)) {
+            // MagentaTV und Dyn: über ihre Schnittstellen abgefragt und als XMLTV abgelegt. Dyn öfter (neue Spiele).
+            val target = File(publicDir, de.ayutv.data.parse.ExtraGuides.fileName(url))
+            val age = if (url == de.ayutv.data.parse.ExtraGuides.DYN) minOf(maxAge, 6 * HOUR) else maxAge
+            if (target.length() > 0 && System.currentTimeMillis() - target.lastModified() < age) return target
+            try {
+                de.ayutv.data.parse.ExtraGuides.write(url, importHttp, target)
+            } catch (e: Exception) {
+                if (target.length() > 0) return target
+                throw e as? IOException ?: IOException(e.message, e)
+            }
+            return target
+        }
         val target = File(publicDir, url.substringAfterLast('/'))
         if (target.length() > 0 && System.currentTimeMillis() - target.lastModified() < maxAge) return target
         val downloaded = try {
@@ -795,7 +831,7 @@ class PlaylistRepository(
         private const val MAX_MISSING_LISTED = 20_000
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "5"
+        private const val EPG_MATCH_VERSION = "6"
         /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
         private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }

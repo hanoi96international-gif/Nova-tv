@@ -13,7 +13,8 @@ import java.text.Normalizer
  * Kern ohne Füllwörter ("TV", "Deutschland", "Channel").
  */
 class EpgMatcher(private val country: String = "de") {
-    private class Guide(val id: String, val country: String?)
+    /** [uhd]: eigener UHD-Sender des EPGs („Sky Sport Bundesliga UHD“ zeigt nur ausgewählte Spiele). */
+    private class Guide(val id: String, val country: String?, val uhd: Boolean)
 
     private val exact = HashMap<String, String>()
     private val lower = HashMap<String, String>()
@@ -28,9 +29,10 @@ class EpgMatcher(private val country: String = "de") {
         exact[id] = id
         lower.putIfAbsent(id.lowercase(), id)
         val idKey = analyse(id, isId = true)
-        val guide = Guide(id, idKey.country ?: names.firstNotNullOfOrNull { analyse(it, isId = false).country })
+        val nameKeys = names.map { analyse(it, isId = false) }
+        val guide = Guide(id, idKey.country ?: nameKeys.firstNotNullOfOrNull { it.country }, idKey.uhd || nameKeys.any { it.uhd })
         val keys = keysOf.getOrPut(id) { HashSet() }
-        for (k in listOf(idKey) + names.map { analyse(it, isId = false) }) {
+        for (k in listOf(idKey) + nameKeys) {
             if (k.strong.isNotEmpty()) keys += k.strong
             if (k.weak.isNotEmpty()) keys += k.weak
             if (k.strong.isNotEmpty()) strong.getOrPut(k.strong) { ArrayList() }.addUnique(guide)
@@ -50,19 +52,20 @@ class EpgMatcher(private val country: String = "de") {
         val byName = analyse(name, isId = false)
         val byId = if (id.isNotEmpty()) analyse(id, isId = true) else null
         val wanted = byName.country ?: byId?.country ?: country
-        byId?.let { k -> pick(strong[k.strong], wanted)?.let { return it } }
-        pick(strong[byName.strong], wanted)?.let { return it }
-        pick(weak[byName.weak], wanted)?.let { return it }
-        byId?.let { k -> pick(weak[k.weak], wanted)?.let { return it } }
+        val uhd = byName.uhd || byId?.uhd == true
+        byId?.let { k -> pick(strong[k.strong], wanted, uhd)?.let { return it } }
+        pick(strong[byName.strong], wanted, uhd)?.let { return it }
+        pick(weak[byName.weak], wanted, uhd)?.let { return it }
+        byId?.let { k -> pick(weak[k.weak], wanted, uhd)?.let { return it } }
         // Regionalfenster ("MDR Sachsen", "WDR Köln"): sonst das Hauptprogramm der Anstalt.
-        byName.region?.let { pick(strong[it], wanted)?.let { id -> return id } }
+        byName.region?.let { pick(strong[it], wanted, uhd)?.let { id -> return id } }
         // Eigene Vorsätze des Anbieters ("PRIME: 3SAT", "VIP | ZDF", "Sport+ : DAZN 1"): ohne sie noch einmal.
         val bare = name.replace(ANY_PREFIX, "")
         if (bare != name && bare.isNotBlank()) {
             val k = analyse(bare, isId = false)
-            pick(strong[k.strong], wanted)?.let { return it }
-            pick(weak[k.weak], wanted)?.let { return it }
-            k.region?.let { pick(strong[it], wanted)?.let { id -> return id } }
+            pick(strong[k.strong], wanted, uhd)?.let { return it }
+            pick(weak[k.weak], wanted, uhd)?.let { return it }
+            k.region?.let { pick(strong[it], wanted, uhd)?.let { id -> return id } }
         }
         return null
     }
@@ -82,18 +85,24 @@ class EpgMatcher(private val country: String = "de") {
         return k.weak in keys || bare.weak in keys
     }
 
-    private fun pick(candidates: List<Guide>?, wanted: String): String? {
+    /**
+     * Unter gleich lautenden EPG-Sendern zuerst den mit passender UHD-Angabe: „Sky Sport Bundesliga UHD“ bekommt
+     * den eigenen UHD-Sender, „Sky Sport Bundesliga HD“ das normale Programm. Gibt es nur eine Fassung (bei „RTL UHD“
+     * meist), gilt diese. Danach das gewünschte Land.
+     */
+    private fun pick(candidates: List<Guide>?, wanted: String, uhd: Boolean = false): String? {
         if (candidates.isNullOrEmpty()) return null
-        return (candidates.firstOrNull { it.country == wanted }
-            ?: candidates.firstOrNull { it.country == null }
-            ?: candidates.first()).id
+        val pool = candidates.filter { it.uhd == uhd }.ifEmpty { candidates }
+        return (pool.firstOrNull { it.country == wanted }
+            ?: pool.firstOrNull { it.country == null }
+            ?: pool.first()).id
     }
 
     private fun MutableList<Guide>.addUnique(guide: Guide) {
         if (none { it.id == guide.id }) add(guide)
     }
 
-    class Key(val strong: String, val weak: String, val country: String?, val region: String? = null)
+    class Key(val strong: String, val weak: String, val country: String?, val region: String? = null, val uhd: Boolean = false)
 
     companion object {
         /** Länderkürzel, die als Vorsatz ("DE: ", "|AT| ", "[CH] ") oder Endung ("RTL.de") vorkommen. */
@@ -136,6 +145,9 @@ class EpgMatcher(private val country: String = "de") {
             "tele5" to "tele5", "dmax" to "dmax", "sixx" to "sixx", "kika" to "kika", "kikavonardundzdf" to "kika",
             "orfeins" to "orf1", "orfzwei" to "orf2", "orfiii" to "orf3",
             "nick" to "nickelodeon", "srfeins" to "srf1", "srfzwei" to "srf2", "anixeplus" to "anixeplus",
+            "13thstreetuniversal" to "13thstreet", "uhd1by" to "uhd1", "uhd1byhd" to "uhd1", "skyatlantik" to "skyatlantic",
+            "magentasport" to "magentasport", "magentatvsport" to "magentasport", "telekomsport" to "magentasport",
+            "dazn1bar" to "dazn1", "dazn2bar" to "dazn2", "sportdigital1" to "sportdigital1plus",
         )
 
         private val BRACKETS = Regex("""\[[^\]]*\]|\([^)]*\)|\{[^}]*\}""")
@@ -149,6 +161,8 @@ class EpgMatcher(private val country: String = "de") {
         private val TOKENS = Regex("""[^a-z0-9]+""")
         private val GLUED_NOISE = Regex("""(?:hd|fhd|uhd|4k|8k|hevc|h265)$""")
         private val MARKS = Regex("""\p{M}+""")
+        private val UHD_TOKENS = setOf("uhd", "4k", "2160p", "8k")
+        private val GLUED_UHD = Regex("""(?:uhd|4k)$""")
         private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
 
         /** Wie verschieden zwei Namenskerne sind (Bearbeitungsabstand); gleiche zuerst, leere zuletzt. */
@@ -195,7 +209,10 @@ class EpgMatcher(private val country: String = "de") {
             // Land in Klammern am Ende: "RTL (DE)"
             BRACKETS.findAll(text).forEach { m -> COUNTRIES[m.value.trim('[', ']', '(', ')', '{', '}', ' ').lowercase()]?.let { country = country ?: it } }
             text = text.replace(BRACKETS, " ")
-            val tokens = text.split(TOKENS).filter { it.isNotEmpty() && it !in NOISE }.toMutableList()
+            val allTokens = text.split(TOKENS).filter { it.isNotEmpty() }
+            // UHD-Fassung („Sky Sport Bundesliga UHD“, „RTL 4K“, „Sky Sport UHD“), auch angehängt („ZDF4K“).
+            val uhd = allTokens.any { it in UHD_TOKENS || (it.length > 3 && GLUED_UHD.containsMatchIn(it) && !it.startsWith("uhd")) }
+            val tokens = allTokens.filter { it !in NOISE }.toMutableList()
             // "DE" am Ende ("RTL DE"), aber nicht, wenn der Name nur daraus besteht
             if (tokens.size > 1 && tokens.last() in COUNTRIES && tokens.last().length >= 2) {
                 country = country ?: COUNTRIES[tokens.last()]
@@ -208,19 +225,25 @@ class EpgMatcher(private val country: String = "de") {
             val weak = canonical(if (weakTokens.isEmpty()) tokens.joinToString("") else weakTokens.joinToString(""))
             val first = tokens.firstOrNull()?.let { if (it == "orf" || it == "srf") it + tokens.getOrNull(1).orEmpty() else it }
             val region = first?.takeIf { it in REGIONAL && canonical(it) != strong }
-            return Key(strong, weak, country, region)
+            return Key(strong, weak, country, region, uhd)
         }
 
         /** Umbenennungen bei Sky ("Sky Bundesliga 3" heißt heute "Sky Sport Bundesliga 3"). */
         private val SKY_RENAMES = listOf(
             "skybundesliga" to "skysportbundesliga", "skysports" to "skysport",
             "skysportosterreich" to "skysportaustria", "skyaustria" to "skysportaustria",
+            // „Sky Top Event“, „Sky Premier League“, „Sky F1“: ohne „Sport“ im Namen.
+            "skytop" to "skysporttop", "skypremierleague" to "skysportpremierleague", "skyf1" to "skysportf1",
+            "skytennis" to "skysporttennis", "skygolf" to "skysportgolf", "skymix" to "skysportmix",
         )
+        /** „myTeamTV Sport 1“ heißt im EPG „Sport 1 - myTeamTV“. */
+        private val MYTEAM = Regex("""^myteamtv(sport\d+)$""")
 
         private fun canonical(joined: String): String {
             var key = joined
             // („skysports…“ beginnt selbst mit „skysport“: deshalb nur auf den alten Anfang prüfen.)
             for ((old, new) in SKY_RENAMES) if (key.startsWith(old)) { key = new + key.removePrefix(old); break }
+            MYTEAM.find(key)?.let { key = it.groupValues[1] + "myteamtv" }
             // Angehängt statt getrennt: "RTLHD", "ZDF4K"
             while (key.length > 3) {
                 val stripped = key.replace(GLUED_NOISE, "")
