@@ -51,15 +51,51 @@ class Updater(private val context: Context, private val http: OkHttpClient) {
         if (!force && now - lastCheck < minIntervalMs) return@withContext (state.value as? State.Available)?.release
         lastCheck = now
         _state.value = State.Checking
-        runCatching { latest() }
-            .onSuccess { release ->
-                _state.value = if (release != null && isNewer(release.version, BuildConfig.VERSION_NAME)) State.Available(release) else State.UpToDate
+        // Erst die Schnittstelle von GitHub (mit Größe der Datei), sonst die normale Release-Seite: Die Schnittstelle
+        // erlaubt ohne Anmeldung nur 60 Abfragen je Stunde und Anschluss und antwortet danach mit 403.
+        var failure: Throwable? = null
+        val release = runCatching { latest() }.onFailure { failure = it }.getOrNull()
+            ?: runCatching { latestFromPage() }.onFailure { if (failure == null) failure = it }.getOrNull()
+        _state.value = when {
+            release != null -> if (isNewer(release.version, BuildConfig.VERSION_NAME)) State.Available(release) else State.UpToDate
+            // Automatische Prüfung beim Start: kein roter Hinweis auf der Startseite, beim nächsten Start erneut.
+            !force -> {
+                Log.i(TAG, "Update-Prüfung fehlgeschlagen", failure)
+                lastCheck = 0L
+                State.Idle
             }
-            .onFailure {
-                Log.i(TAG, "Update-Prüfung fehlgeschlagen", it)
-                _state.value = State.Failed("Keine Verbindung zu GitHub")
+            else -> {
+                Log.i(TAG, "Update-Prüfung fehlgeschlagen", failure)
+                State.Failed(describe(failure))
             }
+        }
         (state.value as? State.Available)?.release
+    }
+
+    /** Verständlicher Grund für den Fehlschlag (statt immer „keine Verbindung“). */
+    private fun describe(e: Throwable?): String = when {
+        e is java.net.UnknownHostException -> "keine Internetverbindung (github.com nicht erreichbar)"
+        e is java.net.SocketTimeoutException -> "GitHub antwortet nicht (Zeitüberschreitung) – später erneut versuchen"
+        e?.message?.contains("HTTP 403") == true || e?.message?.contains("HTTP 429") == true ->
+            "GitHub lässt gerade keine Abfrage zu (zu viele in der letzten Stunde) – später erneut versuchen"
+        e?.message?.startsWith("HTTP") == true -> "GitHub meldet ${e.message}"
+        de.ayutv.data.net.AppProxy.lastFailure != null -> "Verbindung über den Proxy gescheitert (${e?.message ?: "unbekannt"})"
+        else -> "keine Verbindung zu GitHub (${e?.message ?: e?.javaClass?.simpleName ?: "unbekannt"})"
+    }
+
+    /**
+     * Ohne Schnittstelle: Die Seite „releases/latest“ leitet auf „releases/tag/v0.45.1“ weiter; daraus die Version, und
+     * die APK liegt immer unter „releases/download/v0.45.1/DnA-TV.apk“.
+     */
+    private fun latestFromPage(): Release? {
+        val request = Request.Builder().url(PAGE_URL).head().build()
+        val finalUrl = http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+            response.request.url.toString()
+        }
+        val tag = finalUrl.substringAfter("/releases/tag/", "").substringBefore('?').takeIf { it.isNotEmpty() } ?: return null
+        val asset = if (browserOnly) PHONE_APK else TV_APK
+        return Release(tag.removePrefix("v"), "$DOWNLOAD_URL/$tag/$asset", 0L, "")
     }
 
     private fun latest(): Release? {
@@ -152,6 +188,8 @@ class Updater(private val context: Context, private val http: OkHttpClient) {
         private const val TAG = "DnAUpdate"
         private const val HOUR = 3_600_000L
         const val LATEST_URL = "https://api.github.com/repos/hanoi96international-gif/Nova-tv/releases/latest"
+        const val PAGE_URL = "https://github.com/hanoi96international-gif/Nova-tv/releases/latest"
+        const val DOWNLOAD_URL = "https://github.com/hanoi96international-gif/Nova-tv/releases/download"
         private val json = Json { ignoreUnknownKeys = true }
 
         /** Release aus der Antwort von GitHub: Version aus dem Tag (v0.26.0), Download der DnA-TV.apk. */
