@@ -1150,7 +1150,16 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun adaptLiveUrl(url: String): String =
-        if (settings.liveFormat == LiveFormat.HLS && "/live/" in url && url.endsWith(".ts")) url.removeSuffix(".ts") + ".m3u8" else url
+        if (settings.liveFormat == LiveFormat.HLS && "/live/" in url && url.endsWith(".ts") &&
+            de.ayutv.data.net.AppProxy.hostOf(url).let { it == null || it !in noHlsHosts }
+        ) url.removeSuffix(".ts") + ".m3u8" else url
+
+    /** Läuft gerade die HLS-Fassung eines eigentlich als MPEG-TS gelieferten Senders (Einstellung „Live-Format: HLS“)? */
+    private fun playingAdaptedHls(p: ExoPlayer): Boolean {
+        val channelUrl = playing?.url ?: return false
+        val now = p.currentMediaItem?.localConfiguration?.uri?.toString() ?: return false
+        return channelUrl.endsWith(".ts") && now.endsWith(".m3u8")
+    }
 
     fun toggleFavorite() {
         val channel = current ?: return
@@ -3600,6 +3609,20 @@ class PlayerActivity : ComponentActivity() {
                     p.seekToDefaultPosition()
                     p.prepare()
                 }
+                // Live-Format HLS eingestellt, der Anbieter liefert diesen Sender aber nicht als HLS (404, kaputte
+                // Liste …): sofort über MPEG-TS, und für diesen Anbieter bis zum App-Neustart gleich so (kein
+                // dreimaliges Wiederholen einer Adresse, die es nicht gibt, und kein „Sender läuft nicht“).
+                isLive && !everReady && playingAdaptedHls(p) && error.errorCode in HLS_MISSING -> {
+                    val channel = playing ?: return
+                    de.ayutv.data.net.AppProxy.hostOf(channel.url)?.let { noHlsHosts += it }
+                    statusHistory += "HLS beim Anbieter nicht verfügbar (${error.errorCodeName}), weiter über MPEG-TS"
+                    val text = "Dein Anbieter liefert diesen Sender nicht als HLS – er läuft über MPEG-TS."
+                    handler.post {
+                        playChannel(channel)
+                        message = text
+                        handler.postDelayed({ if (message == text) message = null }, 6_000)
+                    }
+                }
                 // Viele Playlists liefern HLS ohne .m3u8-Endung. Dann einmal explizit als HLS versuchen,
                 // aber nur vor dem ersten Bild: Später ist ein Lesefehler kaputte Daten, kein falsches Format.
                 !triedHls && !everReady && error.isContainerError() -> {
@@ -4041,6 +4064,18 @@ class PlayerActivity : ComponentActivity() {
         /** Hinweis auf 50 Hz nur einmal pro App-Start, nicht bei jedem Sender. */
         private var afrHintShown = false
         private var dynamicRangeHintShown = false
+        /** Anbieter (Host), die kein HLS liefern: bis zum App-Neustart MPEG-TS (nur im Speicher). */
+        private val noHlsHosts = java.util.Collections.synchronizedSet(HashSet<String>())
+        /** Fehler, an denen man erkennt, dass es die HLS-Fassung nicht gibt (nicht: Netz weg, Zeitüberschreitung). */
+        private val HLS_MISSING = setOf(
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+        )
         private const val MAX_RETRIES = 3
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L

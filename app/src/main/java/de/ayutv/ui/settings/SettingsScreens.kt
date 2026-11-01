@@ -318,7 +318,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                         if (hlsBetter) {
-                            SettingRow("Live-Format auf HLS stellen", "Übernehmen", "Dein Anbieter schickt über HLS eine höhere Datenrate (schärferes Bild) als über MPEG-TS.") {
+                            SettingRow("Live-Format auf HLS stellen", "Übernehmen", "Dein Anbieter schickt über HLS eine höhere Datenrate (schärferes Bild) als über MPEG-TS. Dafür gehen Pause und Zurückspulen im Live-Bild nicht.") {
                                 update { it.copy(liveFormat = LiveFormat.HLS) }
                                 hlsBetter = false
                             }
@@ -358,7 +358,9 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Live-Format (Xtream)",
                             settings.liveFormat.label,
-                            "MPEG-TS startet schneller. HLS ist robuster, falls der Anbieter TS drosselt.",
+                            "MPEG-TS (empfohlen): startet schneller, Pause und Zurückspulen im Live-Bild gehen nur damit. HLS nur, wenn der " +
+                                "Leitungs-Check es vorschlägt (manche Anbieter schicken darüber eine höhere Datenrate). Sender, die der Anbieter " +
+                                "nicht als HLS liefert, laufen automatisch über MPEG-TS weiter.",
                         ) { update { it.copy(liveFormat = if (it.liveFormat == LiveFormat.TS) LiveFormat.HLS else LiveFormat.TS) } }
                     }
                     if (showAdvanced) item {

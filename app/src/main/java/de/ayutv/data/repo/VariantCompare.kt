@@ -24,10 +24,17 @@ class VariantCompare(private val db: AyuDatabase, private val check: LineCheck) 
         /** Die beste ist klar besser (mehr als 10 %) als die gerade geschaute. */
         val better: Candidate? get() = best?.takeIf { b -> current == null || b.kbps > current.kbps * 11 / 10 }
             ?.takeIf { b -> b.channel.key != current?.channel?.key || b.hls != current?.hls }
-        /** HLS ist beim selben Sender klar besser als MPEG-TS: Einstellung „Live-Format“ lohnt sich. */
+        /**
+         * HLS ist beim selben Sender klar besser als MPEG-TS (mindestens 20 % mehr Datenrate, oder TS kommt gar nicht
+         * an): Nur dann lohnt die Einstellung „Live-Format: HLS“ (sie kostet Pause/Zurückspulen im Live-Bild).
+         */
         val hlsWins: Boolean get() {
-            val ts = candidates.filter { !it.hls && it.kbps > 0 }.associateBy { it.channel.key }
-            return candidates.any { it.hls && it.kbps > 0 && (ts[it.channel.key]?.kbps ?: Int.MAX_VALUE) * 12 / 10 < it.kbps }
+            val ts = candidates.filter { !it.hls }.associateBy { it.channel.key }
+            return candidates.any { h ->
+                if (!h.hls || h.kbps <= 0) return@any false
+                val plain = ts[h.channel.key]?.kbps ?: 0
+                plain <= 0 || h.kbps.toLong() * 10 > plain.toLong() * 12
+            }
         }
 
         fun text(): String = if (candidates.size <= 1) "" else
