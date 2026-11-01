@@ -1303,7 +1303,8 @@ class DeviceTourTest {
                 // Ruckel-Messung der Menüs: Bis hierher wurde die Oberfläche bedient, also müssen Bilder gezählt sein.
                 val frames = text.lines().firstOrNull { it.startsWith("Menüs:") }.orEmpty()
                 log("ui_frames: $frames reduced=${de.ayutv.ui.UiPerformance.reduced}")
-                assertTrue("Keine Bilder gemessen: $frames", Regex("Menüs: \\d+ Bilder").containsMatchIn(frames))
+                // Seit 0.45.8 getrennt: „Menüs: ruhig: 226 Bilder … · während Playlist/TV-Guide laden: …“
+                assertTrue("Keine Bilder gemessen: $frames", Regex("""^Menüs: (ruhig|während[^:]*): \d+ Bilder""").containsMatchIn(frames))
                 assertTrue("Bericht unvollständig", code == 200 && "Fehlerbericht" in text && "== Protokoll ==" in text && "== Playlists ==" in text)
                 assertTrue("Passwort im Bericht", leaked.isEmpty() && !Regex("password=(?!\\*)").containsMatchIn(text))
             } finally {
