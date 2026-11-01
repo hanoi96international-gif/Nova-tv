@@ -125,7 +125,25 @@ fun GuideScreen() {
     var windowStart by remember { mutableLongStateOf(System.currentTimeMillis() / HALF_HOUR * HALF_HOUR) }
     val windowEnd = windowStart + WINDOW
     var programmes by remember { mutableStateOf<Map<String, List<ProgrammeEntity>>>(emptyMap()) }
-    LaunchedEffect(channels, windowStart) { programmes = content.programmesInRange(channels, windowStart, windowEnd) }
+    // Titel mit Kennzeichen und Art der Sendung einmal je Sendung im Hintergrund (reguläre Ausdrücke), nicht beim
+    // Scrollen auf dem Haupt-Thread für jede neu sichtbare Zelle.
+    var labels by remember { mutableStateOf<Map<Long, GuideLabel>>(emptyMap()) }
+    LaunchedEffect(channels, windowStart) {
+        val loaded = content.programmesInRange(channels, windowStart, windowEnd)
+        labels = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val names = channels.filter { !it.epgId.isNullOrEmpty() }.associate { it.epgId!! to it.name }
+            val out = HashMap<Long, GuideLabel>()
+            for ((epgId, list) in loaded) for (p in list) {
+                out[p.id] = GuideLabel(
+                    upcoming = p.headlineWithBadge().ifEmpty { "Ohne Titel" },
+                    past = p.headline().ifEmpty { "Ohne Titel" },
+                    genre = de.ayutv.data.parse.ProgrammeGenre.of(p.title, p.category, names[epgId].orEmpty()),
+                )
+            }
+            out
+        }
+        programmes = loaded
+    }
 
     // Mit Archiv lässt sich so weit zurückblättern, wie der Anbieter aufzeichnet (höchstens 7 Tage).
     val archiveDays = remember(channels) { channels.maxOfOrNull { it.catchupDays }?.coerceIn(0, 7) ?: 0 }
@@ -261,6 +279,7 @@ fun GuideScreen() {
                     GuideRow(
                         channel = channel,
                         programmes = channel.epgId?.let { programmes[it] }.orEmpty(),
+                        labels = labels,
                         windowStart = windowStart,
                         windowEnd = windowEnd,
                         now = minute,
@@ -351,6 +370,7 @@ private fun ProgrammePreview(
 private fun GuideRow(
     channel: ChannelEntity,
     programmes: List<ProgrammeEntity>,
+    labels: Map<Long, GuideLabel>,
     windowStart: Long,
     windowEnd: Long,
     now: Long,
@@ -392,10 +412,12 @@ private fun GuideRow(
                     // Nach Sendung geschlüsselt: Beim Verschieben des Zeitfensters bleibt der Fokus auf ihr.
                     key(p.id) {
                         val archive = p.stop <= now && channel.catchupDays > 0 && now - p.start <= channel.catchupDays * DAY
-                        // Titel einmal je Sendung erkennen (reguläre Ausdrücke), nicht bei jedem Neuzeichnen des Rasters.
+                        // Titel und Art kommen fertig aus dem Hintergrund ([GuideLabel]); nur im Ausnahmefall hier.
+                        val label = labels[p.id]
                         val upcoming = p.stop > now
-                        val headline = remember(p, upcoming) { (if (upcoming) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" } }
-                        val genre = remember(p) { de.ayutv.data.parse.ProgrammeGenre.of(p.title, p.category, channel.name) }
+                        val headline = label?.let { if (upcoming) it.upcoming else it.past }
+                            ?: remember(p, upcoming) { (if (upcoming) p.headlineWithBadge() else p.headline()).ifEmpty { "Ohne Titel" } }
+                        val genre = label?.genre ?: de.ayutv.data.parse.ProgrammeGenre.OTHER
                         GuideCell(
                             genre = genre,
                             title = (if (archive) "↺ " else "") + (if ("${channel.key}@${p.start}" in reminderIds) "🔔 " else "") +
@@ -420,10 +442,14 @@ private fun GuideRow(
 
 private class Cell(val programme: ProgrammeEntity?, val width: Dp)
 
+/** Vorbereitete Anzeige einer Sendung im Raster. */
+private class GuideLabel(val upcoming: String, val past: String, val genre: de.ayutv.data.parse.ProgrammeGenre)
+
 private fun layoutCells(programmes: List<ProgrammeEntity>, windowStart: Long, windowEnd: Long, dpPerMinute: Dp): List<Cell> {
     val cells = ArrayList<Cell>()
     var cursor = windowStart
-    for (p in programmes.sortedBy { it.start }) {
+    // Schon nach Beginn sortiert (programmesInRange).
+    for (p in programmes) {
         val start = maxOf(p.start, cursor)
         val end = minOf(p.stop, windowEnd)
         if (end <= start) continue
