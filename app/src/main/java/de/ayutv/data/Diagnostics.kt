@@ -64,6 +64,9 @@ object Diagnostics {
         }
         out.append("Zeitzone ${java.util.TimeZone.getDefault().id}\n")
 
+        section("Netz")
+        out.append("Namensauflösung: ${if (de.ayutv.data.net.SecureDns.enabled) "verschlüsselt (DNS über HTTPS)" else "normal"}, zuletzt ${de.ayutv.data.net.SecureDns.lastPath}\n")
+
         section("Oberfläche")
         out.append("Menüs: ${de.ayutv.ui.UiPerformance.summary()}\n")
 

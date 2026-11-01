@@ -40,6 +40,9 @@ class AppContainer(val context: Context) {
         .proxySelector(AppProxy.selector)
         .proxyAuthenticator(AppProxy.authenticator)
         .addNetworkInterceptor(AppProxy.interceptor)
+        // Verschlüsselt, wo es geht: Namensauflösung über HTTPS, bekannte Dienste nie per http://.
+        .dns(de.ayutv.data.net.SecureDns)
+        .addInterceptor(de.ayutv.data.net.HttpsUpgrade)
         .build()
 
     val epgOverrides = de.ayutv.data.EpgOverrides(context)
@@ -150,7 +153,10 @@ class AppContainer(val context: Context) {
         // Senderqualität: Gemessenes laden, Filter und Vorlieben aus den Einstellungen übernehmen.
         scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.load(qualityFile) }
         scope.launch {
-            settings.settings.collect { s -> de.ayutv.data.parse.ChannelQuality.configure(s.minQuality.height, s.preferUhd, s.hideBrokenChannels) }
+            settings.settings.collect { s ->
+                de.ayutv.data.parse.ChannelQuality.configure(s.minQuality.height, s.preferUhd, s.hideBrokenChannels)
+                de.ayutv.data.net.SecureDns.enabled = s.secureDns
+            }
         }
         // Passwörter älterer Versionen verschlüsseln (einmalig, danach ohne Wirkung).
         scope.launch {

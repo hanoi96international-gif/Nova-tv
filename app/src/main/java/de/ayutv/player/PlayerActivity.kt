@@ -572,6 +572,9 @@ class PlayerActivity : ComponentActivity() {
                 closed >= silent ->
                     "Der Anbieter beendet die Verbindung immer wieder (${recent.size}× in 10 Min.). Das liegt am Anbieter oder an " +
                         "zu vielen Geräten mit demselben Zugang. DnA-TV verbindet jedes Mal neu."
+                routeLabel().startsWith("Weg: über Proxy") ->
+                    "Vom Anbieter kamen mehrmals 8 Sekunden lang keine Daten an (${recent.size}× in 10 Min.). Der Sender läuft über den " +
+                        "Proxy: Meist hakt es auf diesem Weg oder beim Anbieter, nicht im WLAN. DnA-TV verbindet jedes Mal neu."
                 else ->
                     "Vom Anbieter kamen mehrmals 8 Sekunden lang keine Daten an (${recent.size}× in 10 Min.). Meist liegt das am WLAN: " +
                         "LAN-Kabel oder Router näher hilft. DnA-TV verbindet jedes Mal neu."

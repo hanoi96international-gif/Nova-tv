@@ -202,6 +202,8 @@ data class UserData(
     val appsHidden: Set<String> = emptySet(),
     /** TV-Modus (Mini-PC am Fernseher): mit Windows starten, immer Vollbild, Mauszeiger ausblenden. */
     val tvMode: Boolean = false,
+    /** Namensauflösung verschlüsselt (DNS über HTTPS), mit Rückfall auf die normale. */
+    val secureDns: Boolean = true,
     /** Design (STANDARD, OLED) und Akzentfarbe (Palette.ACCENTS). */
     val uiTheme: String = "STANDARD",
     val accent: String = "BLAU",

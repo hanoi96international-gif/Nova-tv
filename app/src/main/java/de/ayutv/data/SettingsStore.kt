@@ -93,7 +93,8 @@ enum class AudioMode(val label: String) {
 data class AppSettings(
     val bufferProfile: BufferProfile = BufferProfile.BALANCED,
     val tunneling: Boolean = false,
-    val matchFrameRate: Boolean = false,
+    /** Standard an (seit 0.45.4): Deutsches TV hat 25/50 Bilder, der Fire TV gibt sonst 60 Hz aus und das Bild läuft ungleichmäßig. */
+    val matchFrameRate: Boolean = true,
     val liveFormat: LiveFormat = LiveFormat.TS,
     val userAgent: String = DEFAULT_USER_AGENT,
     val zapWithUpDown: Boolean = true,
@@ -107,6 +108,8 @@ data class AppSettings(
     val showGuide: Boolean = true,
     /** Mini-Vorschau: In der Live-TV-Liste läuft der ausgewählte Sender nach kurzer Zeit stumm in der Detailspalte. */
     val livePreview: Boolean = false,
+    /** Namensauflösung verschlüsselt (DNS über HTTPS), mit Rückfall auf die normale. */
+    val secureDns: Boolean = true,
     /** Flüssige Bedienung: ohne Überblendungen und mit sparsamem Hintergrund (wie auf schwachen Sticks automatisch). */
     val smoothUi: Boolean = false,
     /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen, mit Komma getrennt). */
@@ -222,7 +225,7 @@ class SettingsStore(private val context: Context) {
     private object Keys {
         val buffer = stringPreferencesKey("buffer_profile")
         val tunneling = booleanPreferencesKey("tunneling")
-        val afr = booleanPreferencesKey("match_frame_rate")
+        val afr = booleanPreferencesKey("match_frame_rate_v2")
         val liveFormat = stringPreferencesKey("live_format")
         val userAgent = stringPreferencesKey("user_agent")
         val zap = booleanPreferencesKey("zap_up_down")
@@ -237,6 +240,7 @@ class SettingsStore(private val context: Context) {
         val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
         val livePreview = booleanPreferencesKey("live_preview")
+        val secureDns = booleanPreferencesKey("secure_dns")
         val smoothUi = booleanPreferencesKey("smooth_ui")
         val appsOrder = stringPreferencesKey("apps_order")
         val appsHidden = stringPreferencesKey("apps_hidden")
@@ -377,6 +381,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.audioOutput] = next.audioOutput.name
             prefs[Keys.showGuide] = next.showGuide
             prefs[Keys.livePreview] = next.livePreview
+            prefs[Keys.secureDns] = next.secureDns
             prefs[Keys.smoothUi] = next.smoothUi
             prefs[Keys.appsOrder] = next.appsOrder
             prefs[Keys.appsHidden] = next.appsHidden
@@ -425,7 +430,7 @@ class SettingsStore(private val context: Context) {
     private fun Preferences.toSettings() = AppSettings(
         bufferProfile = enumOrDefault(this[Keys.buffer], BufferProfile.BALANCED),
         tunneling = this[Keys.tunneling] ?: false,
-        matchFrameRate = this[Keys.afr] ?: false,
+        matchFrameRate = this[Keys.afr] ?: true,
         liveFormat = enumOrDefault(this[Keys.liveFormat], LiveFormat.TS),
         userAgent = this[Keys.userAgent]?.takeIf { it.isNotBlank() } ?: AppSettings.DEFAULT_USER_AGENT,
         zapWithUpDown = this[Keys.zap] ?: true,
@@ -440,6 +445,7 @@ class SettingsStore(private val context: Context) {
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
         livePreview = this[Keys.livePreview] ?: false,
+        secureDns = this[Keys.secureDns] ?: true,
         smoothUi = this[Keys.smoothUi] ?: false,
         appsOrder = this[Keys.appsOrder] ?: "",
         appsHidden = this[Keys.appsHidden] ?: "",

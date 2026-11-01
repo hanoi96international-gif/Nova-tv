@@ -178,7 +178,8 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
                 // neu verbinden wie bei einem Abbruch, statt den Player mit einem Fehler neu starten zu lassen.
                 if (cancelled(e)) throw e
                 error = e
-                if (e is InterruptedIOException) "Anbieter liefert nichts mehr (Zeitüberschreitung)"
+                // Media3 verpackt die Zeitüberschreitung (HttpDataSourceException mit SocketTimeoutException als Ursache).
+                if (e is InterruptedIOException || timedOut(e)) "Anbieter liefert nichts mehr (Zeitüberschreitung)"
                 else e.message?.takeIf { it.isNotBlank() } ?: e.javaClass.simpleName
             }
             if (!f.isTs) {
@@ -223,8 +224,18 @@ class LiveDataSource(private val upstream: DataSource, private val holder: Times
      * Vom Player abgebrochen (Thread unterbrochen). Eine Zeitüberschreitung beim Lesen ist auch eine
      * InterruptedIOException (SocketTimeoutException, bei OkHttp „timeout“), gilt hier aber als Abbruch der Leitung.
      */
-    private fun cancelled(e: IOException): Boolean =
-        e is InterruptedIOException && (Thread.currentThread().isInterrupted || (e !is SocketTimeoutException && e.message != "timeout"))
+    private fun cancelled(e: IOException): Boolean {
+        if (Thread.currentThread().isInterrupted) return true
+        // Auch verpackt (Media3: HttpDataSourceException mit der eigentlichen Ursache).
+        val interrupted = causes(e).firstOrNull { it is InterruptedIOException } ?: return false
+        return interrupted !is SocketTimeoutException && interrupted.message != "timeout"
+    }
+
+    /** Lesezeit überschritten, auch verpackt: Der Anbieter hat eine Weile nichts geschickt. */
+    private fun timedOut(e: IOException): Boolean =
+        causes(e).any { it is SocketTimeoutException || (it is InterruptedIOException && it.message == "timeout") }
+
+    private fun causes(e: Throwable): Sequence<Throwable> = generateSequence(e) { it.cause.takeIf { c -> c !== it } }.take(6)
 
     override fun getUri(): Uri? = active?.uri
 

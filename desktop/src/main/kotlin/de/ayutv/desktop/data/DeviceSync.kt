@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * Favoriten, Verlauf („Weiter schauen“, zuletzt gesehene Sender), eigene Gruppen und ausgeblendete Gruppen. Beide
  * Seiten tauschen ihren Stand aus und übernehmen, was beim anderen neuer ist oder fehlt; entfernt wird nichts. So hat
  * jedes Gerät eine Kopie der eigenen Gruppen (Regeln in SyncMerge, gleich wie auf dem Fire TV).
- * Weg: POST `http://<Fire TV>:8096/<PIN>/sync` (Adresse und PIN unter Fire TV → Einstellungen → Handy als Fernbedienung).
+ * Weg: POST `http://<Fire TV>:8096/s`, Inhalt mit der PIN verschlüsselt (LocalChannel; Adresse und PIN unter Fire TV → Einstellungen → Handy als Fernbedienung).
  */
 class DeviceSync(private val store: Store, http: OkHttpClient) {
     data class Result(val favorites: Int, val history: Int, val groups: Int = 0, val hidden: Int = 0) {
@@ -44,13 +44,20 @@ class DeviceSync(private val store: Store, http: OkHttpClient) {
     suspend fun withFireTv(address: String, pin: String): Result = withContext(Dispatchers.IO) {
         val base = address.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
             .let { if (Regex(""":\d+$""").containsMatchIn(it.substringAfter("://"))) it else "$it:8096" }
-        val url = "$base/${pin.trim()}/sync"
-        val request = Request.Builder().url(url).post(export().toRequestBody("application/json".toMediaType())).build()
-        val answer = http.newCall(request).execute().use { response ->
-            if (response.code == 403 || response.code == 404) throw IOException("Falsche PIN oder Adresse (HTTP ${response.code})")
+        // Verschlüsselt (AES-256-GCM, Schlüssel aus der PIN): Die PIN steht nicht mehr in der Adresse, und Favoriten,
+        // Verlauf und Gruppen gehen nicht lesbar durchs WLAN.
+        val secure = de.ayutv.data.setup.LocalChannel(pin.trim())
+        val request = Request.Builder().url("$base/s")
+            .post(secure.request("/sync", export()).toRequestBody("text/plain; charset=utf-8".toMediaType())).build()
+        val reply = http.newCall(request).execute().use { response ->
+            if (response.code == 403) throw IOException("Falsche PIN – oder DnA-TV auf dem Fire TV ist älter als 0.45.3 (bitte aktualisieren)")
+            if (response.code == 404) throw IOException("Falsche Adresse (HTTP 404)")
             if (!response.isSuccessful) throw IOException("Fire TV antwortet mit HTTP ${response.code}")
-            response.body.string()
+            runCatching { secure.reply(response.body.string()) }.getOrElse { throw IOException("Antwort des Fire TV nicht lesbar (falsche PIN?)") }
         }
+        val code = reply.substringBefore('\n').toIntOrNull() ?: 500
+        val answer = reply.substringAfter('\n', "")
+        if (code !in 200..299) throw IOException("Fire TV antwortet mit $code: ${answer.take(120)}")
         import(answer)
     }
 

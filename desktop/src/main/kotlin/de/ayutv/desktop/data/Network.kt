@@ -26,10 +26,14 @@ object Network {
         .proxySelector(AppProxy.selector)
         .proxyAuthenticator(AppProxy.authenticator)
         .addNetworkInterceptor(AppProxy.interceptor)
+        // Verschlüsselt, wo es geht: Namensauflösung über HTTPS, bekannte Dienste nie per http://.
+        .dns(de.ayutv.data.net.SecureDns)
+        .addInterceptor(de.ayutv.data.net.HttpsUpgrade)
         .build()
 
     /** Proxy-Einstellungen anwenden; bei „Nur ausgewählte Playlists“ deren Server (Playlist, TV-Guide, Streams). */
     fun apply(store: Store) {
+        de.ayutv.data.net.SecureDns.enabled = store.user.value.secureDns
         val config = store.user.value.proxy.config()
         val hosts = if (config.active && config.mode == ProxyMode.SELECTED) buildSet {
             for (p in store.playlists.value.filter { it.id in config.playlists }) {

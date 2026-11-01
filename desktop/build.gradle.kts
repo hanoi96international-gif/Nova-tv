@@ -66,6 +66,7 @@ sourceSets {
             "de/ayutv/data/sport/LiveScores.kt",
             "de/ayutv/data/net/AppProxy.kt",
             "de/ayutv/data/net/ProxyCheck.kt",
+            "de/ayutv/data/net/SecureNet.kt",
             "de/ayutv/player/SpeechSync.kt",
             "de/ayutv/player/SubtitleSync.kt",
             "de/ayutv/data/setup/BackupCrypto.kt",
