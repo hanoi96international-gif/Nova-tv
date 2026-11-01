@@ -64,6 +64,12 @@ object EpgSources {
         Source(EPGSHARE + "epg_ripper_CH1.xml.gz", GERMAN),
         Source(OPEN_EPG + "germany3.xml", GERMAN),
         Source(OPEN_EPG + "germany5.xml", GERMAN),
+        // Nachrecherche Kurzbericht 01.11.2026: Deutschland 1 (334 Sender, u. a. Sky Sport 1–10, Sky Sport Bundesliga
+        // ohne Nummer (UHD-Fassung), Sky Cinema Action/Classics/Family/Highlights, HGTV, Cartoon Network, Warner TV)
+        // und 4 (395 Sender, u. a. GEO Television, HSE, hr-fernsehen, Curiosity Channel, DAZN FAST, AXN). Werden wie
+        // alle freien Quellen nur geladen, wenn noch Sender offen sind, und höchstens einmal am Tag.
+        Source(OPEN_EPG + "germany1.xml", GERMAN),
+        Source(OPEN_EPG + "germany4.xml", GERMAN),
         Source(OPEN_EPG + "austria1.xml", GERMAN),
         Source("https://i.mjh.nz/PlutoTV/de.xml.gz", GERMAN),
         Source("https://i.mjh.nz/SamsungTVPlus/de.xml.gz", GERMAN),
