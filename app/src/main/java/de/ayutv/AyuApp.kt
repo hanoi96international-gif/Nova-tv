@@ -74,8 +74,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         // Kindersicherung: Nach jedem Start ist wieder alles gesperrt (vor allem anderen anwenden).
         container.scope.launch {
             container.parental.applyLocks()
-            container.playlists.syncAll()
-            container.refreshTeamReminders()
+            container.syncWhenIdle()
         }
         // Fernseher: auch im Hintergrund (und nach dem Einschalten) für das Handy erreichbar.
         container.scope.launch {

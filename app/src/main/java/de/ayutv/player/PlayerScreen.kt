@@ -399,10 +399,14 @@ private fun LiveInfoBar(activity: PlayerActivity) {
     val channel = activity.current ?: return
     val now = activity.nowNext.firstOrNull()
     val next = activity.nowNext.getOrNull(1)
-    val stats = activity.stats
-    val badges = remember(stats.height, stats.frameRate, stats.hdr, stats.audioCodec, stats.audioChannels) {
-        de.ayutv.data.parse.StreamBadges.video(stats.height, stats.frameRate, stats.hdr) +
-            listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(stats.audioCodec, stats.audioChannels))
+    // Die Stream-Werte ändern sich mehrmals pro Sekunde (Datenrate, verworfene Bilder): Die Leiste zeichnet nur neu,
+    // wenn sich die Kennzeichen selbst ändern.
+    val badges by remember {
+        androidx.compose.runtime.derivedStateOf {
+            val stats = activity.stats
+            de.ayutv.data.parse.StreamBadges.video(stats.height, stats.frameRate, stats.hdr) +
+                listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(stats.audioCodec, stats.audioChannels))
+        }
     }
     val headline = remember(now) { now?.headlineWithBadge() }
     val description = remember(now) { now?.let { de.ayutv.data.parse.ProgrammeText.description(it.description) } }
@@ -667,8 +671,9 @@ private fun VodControls(activity: PlayerActivity) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(activity.vodTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, modifier = Modifier.weight(1f))
-            activity.stats.resolutionLabel.takeIf { it.isNotEmpty() }?.let { Badge(it) }
-            activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
+            val labels by remember { androidx.compose.runtime.derivedStateOf { activity.stats.resolutionLabel to activity.stats.hdr } }
+            labels.first.takeIf { it.isNotEmpty() }?.let { Badge(it) }
+            labels.second.takeIf { it.isNotEmpty() }?.let { Badge(it) }
         }
         Spacer(Modifier.height(16.dp))
         // Touch: auf den Balken tippen springt dorthin (großzügige Trefferfläche um die dünne Linie).

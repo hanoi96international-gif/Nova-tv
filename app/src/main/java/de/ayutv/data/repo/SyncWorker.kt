@@ -18,6 +18,8 @@ import java.util.concurrent.TimeUnit
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as AyuApp).container
+        // Läuft gerade etwas im Player: später (der Import würde Speicher und Rechner mit der Wiedergabe teilen).
+        if (container.watching && runAttemptCount < 8) return Result.retry()
         return runCatching {
             container.playlists.syncAll()
             container.refreshTeamReminders()

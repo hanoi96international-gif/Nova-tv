@@ -104,6 +104,26 @@ class AppContainer(val context: Context) {
     }
 
     /** Spiele der gefolgten Vereine als Erinnerungen vormerken (nach jedem TV-Guide-Update). */
+    /** Läuft gerade ein Sender oder Film im Player? */
+    val watching: Boolean get() = foreground?.get() is de.ayutv.player.PlayerActivity
+
+    /**
+     * Playlists und TV-Guide auffrischen, ohne das Schauen zu stören: Ein Import schreibt zehntausende Sendungen in
+     * die Datenbank, und das gleichzeitig mit der Live-Pause auf denselben Speicher – auf dem Stick hakt dann das
+     * Bild. Deshalb erst eine Minute nach dem Start und nicht, solange der Player läuft. Sofort nur, wenn noch gar
+     * nichts geladen ist oder der TV-Guide älter als 36 Stunden ist.
+     */
+    suspend fun syncWhenIdle(startDelayMs: Long = 60_000) {
+        val now = System.currentTimeMillis()
+        val urgent = db.playlists().all().filter { it.enabled }.any { it.lastSync == 0L || now - it.lastEpgSync > 36 * 3_600_000L }
+        if (!urgent) {
+            kotlinx.coroutines.delay(startDelayMs)
+            while (watching) kotlinx.coroutines.delay(30_000)
+        }
+        playlists.syncAll()
+        refreshTeamReminders()
+    }
+
     suspend fun refreshTeamReminders() {
         runCatching {
             val current = settings.current()
