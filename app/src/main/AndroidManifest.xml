@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- WLAN-Signal und -Geschwindigkeit für den Kurzbericht (ohne Netzname, ohne Standort) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Hält WLAN und CPU während der Wiedergabe wach (gegen Hänger durch Stromsparmodus). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Erinnerungen an Sendungen: Benachrichtigung und nach Neustart wieder einplanen -->

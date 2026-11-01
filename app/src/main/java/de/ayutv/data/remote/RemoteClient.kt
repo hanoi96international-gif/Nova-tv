@@ -105,7 +105,8 @@ class RemoteClient(private val context: Context, private val container: AppConta
         withContext(Dispatchers.IO) { call(address, pin, "/play", request.encode()) }
 
     /** Fehlerbericht des Fernsehers (ohne Passwörter), zum Weiterschicken vom Handy. */
-    suspend fun report(): String = withContext(Dispatchers.IO) { call(required(), pin!!, "/report", null) }
+    suspend fun report(short: Boolean = false): String =
+        withContext(Dispatchers.IO) { call(required(), pin!!, if (short) "/report-short" else "/report", null) }
 
     private fun required(): String = address ?: throw IOException("Kein Fernseher gekoppelt")
 

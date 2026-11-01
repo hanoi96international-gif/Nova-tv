@@ -1028,7 +1028,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Fehlerbericht",
                             "",
                             if (touch) "Gerät, Übersetzer, letzte Wiedergabe und Protokoll als Text teilen (ohne Passwörter)."
-                            else "Gerät, Übersetzer, letzte Wiedergabe und Protokoll (ohne Passwörter) aufs Handy holen und an den Entwickler schicken.",
+                            else "Kurzbericht (TV-Guide-Lücken, Ruckler, Neuverbindungen, WLAN, Proxy) oder vollen Bericht (ohne Passwörter) aufs Handy holen.",
                         ) {
                             if (touch) scope.launch {
                                 val text = de.ayutv.data.Diagnostics.build(context, container)
@@ -1047,7 +1047,8 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 }
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        if (url != null) "Code mit dem Handy scannen (gleiches WLAN): Dort steht der Bericht zum Kopieren und als Datei."
+                                        if (url != null) "Code mit dem Handy scannen (gleiches WLAN): Dort steht der Kurzbericht (fehlende TV-Guide-Sender, Ruckler, " +
+                                            "Neuverbindungen, WLAN, Proxy der letzten 48 h) mit Taste zum Kopieren, und der volle Bericht als Datei."
                                         else phone.error ?: "Kein Heimnetz gefunden.",
                                         fontSize = 14.sp,
                                     )

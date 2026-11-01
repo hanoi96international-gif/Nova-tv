@@ -107,6 +107,21 @@ fun RemoteScreen(onClose: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             PhoneTranslates(client)
             Spacer(Modifier.height(12.dp))
+            Button(onClick = {
+                send {
+                    status = "Kurzbericht wird geholt …"
+                    val text = client.report(short = true)
+                    val share = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, "DnA-TV Kurzbericht (Fernseher)")
+                        .putExtra(android.content.Intent.EXTRA_TEXT, text)
+                    // Zusätzlich in die Zwischenablage: direkt in den Chat mit Claude einfügen.
+                    context.getSystemService(android.content.ClipboardManager::class.java)
+                        ?.setPrimaryClip(android.content.ClipData.newPlainText("DnA-TV Kurzbericht", text))
+                    context.startActivity(android.content.Intent.createChooser(share, "Kurzbericht senden"))
+                    status = "Kurzbericht kopiert – im Chat mit Claude einfügen oder oben eine App wählen."
+                }
+            }) { Text("📋 Kurzbericht vom Fernseher (für Claude)") }
+            Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = {
                 send {
                     status = "Fehlerbericht wird geholt …"

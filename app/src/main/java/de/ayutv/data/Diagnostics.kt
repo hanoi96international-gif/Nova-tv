@@ -24,6 +24,8 @@ object Diagnostics {
     private const val PLAYER_FILE = "player_session.txt"
     private const val SELFTEST_FILE = "last_selftest.txt"
     private const val CRASH_FILE = "last_crash_report.txt"
+    /** Wiedergabe-Protokoll ([de.ayutv.data.parse.WatchLog]), vom Player geschrieben. */
+    const val WATCH_FILE = "watch_log.tsv"
 
     /** Letzte Wiedergabe für den nächsten Bericht merken (Statusmeldungen, Technik, Abbrüche). */
     fun savePlayerSession(context: Context, title: String, lines: List<String>) {
@@ -40,12 +42,16 @@ object Diagnostics {
         runCatching { File(context.filesDir, CRASH_FILE).writeText(report) }
     }
 
-    suspend fun build(context: Context, container: AppContainer): String = withContext(Dispatchers.IO) {
+    /**
+     * [short] = Kurzbericht: nur was für Verbesserungen zählt (Netz, Einstellungen, TV-Guide-Lücken, Wiedergabe der
+     * letzten 48 h, letzter Absturz), ohne Systemprotokoll – klein genug zum Kopieren in eine Nachricht.
+     */
+    suspend fun build(context: Context, container: AppContainer, short: Boolean = false): String = withContext(Dispatchers.IO) {
         val out = StringBuilder()
         fun section(title: String) = out.append("\n== ").append(title).append(" ==\n")
         fun file(name: String) = runCatching { File(context.filesDir, name).takeIf { it.isFile }?.readText() }.getOrNull()
 
-        out.append("DnA-TV Fehlerbericht ").append(SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY).format(Date())).append('\n')
+        out.append(if (short) "DnA-TV Kurzbericht " else "DnA-TV Fehlerbericht ").append(SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.GERMANY).format(Date())).append('\n')
         out.append("Version ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
         // Wann zuerst installiert und zuletzt aktualisiert: Liegt „installiert“ beim letzten Update, wurde die App neu
         // installiert (vorher deinstalliert) und alle eigenen Daten waren deshalb weg.
@@ -67,16 +73,28 @@ object Diagnostics {
         section("Netz")
         out.append("Namensauflösung: ${if (de.ayutv.data.net.SecureDns.enabled) "verschlüsselt (DNS über HTTPS)" else "normal"}, zuletzt ${de.ayutv.data.net.SecureDns.lastPath}\n")
 
+        de.ayutv.data.net.NetInfo.sample(context).let { out.append("Verbindung jetzt: ${it.label}" + (if (it.rssi < 0) ", Signal ${it.rssi} dBm" else "") + "\n") }
+        de.ayutv.data.net.ProxyCheck.last?.let { r ->
+            out.append("Proxy-Prüfung: " + (r.proxied?.let { "über Proxy ${it.country}" } ?: "Proxy nicht erreichbar") +
+                (r.direct?.let { ", direkt ${it.country}" } ?: "") + (r.error?.let { ", Fehler: $it" } ?: "") + "\n")
+        }
+
+        section("Wiedergabe (letzte 48 h)")
+        runCatching {
+            val lines = File(context.filesDir, WATCH_FILE).takeIf { it.isFile }?.readLines().orEmpty()
+            out.append(de.ayutv.data.parse.WatchLog.summary(lines.mapNotNull(de.ayutv.data.parse.WatchLog::decode), System.currentTimeMillis()))
+        }
+
         section("Oberfläche")
         out.append("Menüs: ${de.ayutv.ui.UiPerformance.summary()}\n")
 
         // Reiter „Apps“: welche Fassung erkannt wurde, und alle Pakete mit passendem Namen (falls die Erkennung irrt).
-        section("Apps")
-        de.ayutv.data.parse.StreamingApps.ALL.forEach { app ->
+        if (!short) section("Apps")
+        if (!short) de.ayutv.data.parse.StreamingApps.ALL.forEach { app ->
             val found = runCatching { de.ayutv.ui.apps.AppLauncher.installed(context, app) }.getOrNull()
             out.append("${app.name}: ${found ?: "nicht gefunden"}\n")
         }
-        runCatching {
+        if (!short) runCatching {
             val words = listOf("youtube", "netflix", "spotify", "avod", "primevideo", "amazonvideo", "firebat")
             context.packageManager.getInstalledApplications(0).map { it.packageName }.filter { p -> words.any { it in p.lowercase() } }
                 .sorted().takeIf { it.isNotEmpty() }?.let { out.append("Pakete: ${it.joinToString()}\n") }
@@ -121,8 +139,8 @@ object Diagnostics {
             }
         }
 
-        section("Eigene Daten")
-        runCatching {
+        if (!short) section("Eigene Daten")
+        if (!short) runCatching {
             val db = container.db
             val items = db.customGroups().allItems()
             out.append("Favoriten ${db.favorites().keys().size}, eigene Gruppen ${db.customGroups().groups().size} mit ${items.size} Sendern" +
@@ -132,22 +150,24 @@ object Diagnostics {
             if (prefixes.isNotEmpty()) out.append("Einträge je Playlist-Nr.: ${prefixes.entries.joinToString { "${it.key}: ${it.value}" }}\n")
         }
 
-        section("Übersetzer")
-        runCatching {
+        if (!short) section("Übersetzer")
+        if (!short) runCatching {
             out.append("Rechenkern ${Translators.remote.engine.label}\n")
             val pairs = Translators.onDevice.installedPairs()
             out.append("Modelle ${pairs.joinToString().ifEmpty { "keine" }} (${Translators.onDevice.installedBytes() / 1_000_000} MB)\n")
             Translators.remote.lastPeakMb?.let { out.append("Speicher höchstens $it MB\n") }
             out.append("Handy: ${de.ayutv.data.translate.PhoneHelper.describe()}\n")
         }
-        file(SELFTEST_FILE)?.let { out.append("Letzter Test:\n").append(it).append('\n') }
-        NativeCrashLog.last(context.filesDir)?.let { out.append("Letzter nativer Absturz:\n").append(it).append('\n') }
+        if (!short) file(SELFTEST_FILE)?.let { out.append("Letzter Test:\n").append(it).append('\n') }
+        NativeCrashLog.last(context.filesDir)?.let { out.append("Letzter nativer Absturz:\n").append(if (short) it.take(1_500) else it).append('\n') }
 
-        file(CRASH_FILE)?.let { section("Letzter Absturz"); out.append(it).append('\n') }
-        file(PLAYER_FILE)?.let { section("Letzte Wiedergabe"); out.append(it).append('\n') }
+        file(CRASH_FILE)?.let { section("Letzter Absturz"); out.append(if (short) it.take(2_000) else it).append('\n') }
+        file(PLAYER_FILE)?.let { section("Letzte Wiedergabe"); out.append(if (short) it.lines().takeLast(40).joinToString("\n") else it).append('\n') }
 
-        section("Protokoll")
-        out.append(logcat())
+        if (!short) {
+            section("Protokoll")
+            out.append(logcat())
+        }
         Redaction.apply(out.toString(), secrets(container))
     }
 

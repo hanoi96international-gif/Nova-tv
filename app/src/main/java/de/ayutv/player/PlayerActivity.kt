@@ -509,7 +509,11 @@ class PlayerActivity : ComponentActivity() {
             }
             val active = p.playWhenReady && p.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE
             val waiting = active && p.playbackState == Player.STATE_BUFFERING
-            if (isLive && everReady && waiting && !liveWaiting) liveStalls.addLast(SystemClock.elapsedRealtime())
+            if (isLive && everReady && waiting && !liveWaiting) {
+                liveStalls.addLast(SystemClock.elapsedRealtime())
+                watchStalls++
+            }
+            if (isLive && everReady) sampleWatch(p, waiting)
             liveWaiting = waiting
             val frozen = active && p.playbackState == Player.STATE_READY && p.currentPosition == lastPosition
             lastPosition = p.currentPosition
@@ -830,6 +834,53 @@ class PlayerActivity : ComponentActivity() {
     private var watchStartedAt = 0L
     private var watchErrorsAtStart = 0
 
+    // Für den Kurzbericht (WatchLog): je Sender Ruckler, knappster Puffer, Datenrate und Netz.
+    private var watchStalls = 0
+    private var watchStallSeconds = 0
+    private var watchMinBufferMs = -1L
+    private var watchRateSum = 0L
+    private var watchRateSeconds = 0
+    private var watchRateLow = 0L
+    private var watchNet = ""
+    private var watchWorstRssi = 0
+    private var watchTicks = 0
+
+    private fun resetWatchStats() {
+        watchStalls = 0
+        watchStallSeconds = 0
+        watchMinBufferMs = -1L
+        watchRateSum = 0L
+        watchRateSeconds = 0
+        watchRateLow = 0L
+        watchTicks = 0
+        val net = de.ayutv.data.net.NetInfo.sample(this)
+        watchNet = net.label
+        watchWorstRssi = net.rssi
+    }
+
+    /** Jede Sekunde beim Live-Sender: Hänger-Dauer, Puffer, Datenrate; Netz jede Minute. */
+    private fun sampleWatch(p: ExoPlayer, waiting: Boolean) {
+        if (watchStartedAt == 0L) return
+        watchTicks++
+        if (waiting) watchStallSeconds++
+        // Erst nach dem Einschwingen (20 s): Davor ist der Puffer noch im Aufbau und die Datenrate geschätzt.
+        if (SystemClock.elapsedRealtime() - watchStartedAt < 20_000) return
+        if (p.isPlaying) {
+            val buffered = p.totalBufferedDuration
+            if (watchMinBufferMs < 0 || buffered < watchMinBufferMs) watchMinBufferMs = buffered
+            val rate = stats.bandwidth
+            if (rate > 0) {
+                watchRateSum += rate
+                watchRateSeconds++
+                if (watchRateLow == 0L || rate < watchRateLow) watchRateLow = rate
+            }
+        }
+        if (watchTicks % 60 == 0) {
+            val net = de.ayutv.data.net.NetInfo.sample(this)
+            if (net.rssi < 0 && (watchWorstRssi == 0 || net.rssi < watchWorstRssi)) watchWorstRssi = net.rssi
+        }
+    }
+
     /** Für „Best of“: wie lange der Sender lief und wie oft dabei die Verbindung abbrach. Erst ab einer Minute. */
     private fun recordWatch() {
         val channel = playing ?: return
@@ -839,8 +890,32 @@ class PlayerActivity : ComponentActivity() {
         // Datenrate des Senders merken (ab 20 s Schauen ist die Schätzung eingeschwungen): Bei doppelten Sendern gewinnt
         // bei gleicher Auflösung die Fassung, die der Anbieter mit mehr Daten (schärfer) schickt.
         if (watched >= 20_000 && stats.bandwidth > 0) de.ayutv.data.parse.ChannelQuality.recordBitrate(channel.key, (stats.bandwidth / 1000).toInt())
+        if (watched >= 30_000) logWatch(channel.name, watched)
         if (watched < 60_000) return
         de.ayutv.data.parse.ChannelQuality.recordWatch(channel.key, watched, timeshift.drops.count + (playerErrors - watchErrorsAtStart))
+    }
+
+    /** Eine Zeile ins Wiedergabe-Protokoll des Kurzberichts (klein, nur auf dem Gerät, höchstens 60 Einträge / 48 h). */
+    private fun logWatch(name: String, watchedMs: Long) {
+        val drops = timeshift.drops.recent(watchedMs).groupingBy { de.ayutv.data.parse.WatchLog.kindOf(it.reason) }.eachCount()
+        val entry = de.ayutv.data.parse.WatchLog.Entry(
+            at = System.currentTimeMillis(), channel = name, watchedS = (watchedMs / 1000).toInt(),
+            height = stats.height, fps = stats.frameRate, displayHz = stats.displayHz.takeIf { it > 0f } ?: frameRateMatcher.currentRefreshRate(),
+            codec = stats.videoCodec, avgKbps = if (watchRateSeconds > 0) (watchRateSum / watchRateSeconds / 1000).toInt() else 0,
+            lowKbps = (watchRateLow / 1000).toInt(), minBufferS = if (watchMinBufferMs < 0) -1 else (watchMinBufferMs / 1000).toInt(),
+            stalls = watchStalls, stallS = watchStallSeconds, drops = drops, droppedFrames = stats.droppedFrames,
+            startMs = stats.startupMs.toInt(), errors = playerErrors - watchErrorsAtStart,
+            route = routeLabel().removePrefix("Weg: "), net = watchNet, worstRssi = watchWorstRssi,
+        )
+        val file = java.io.File(filesDir, de.ayutv.data.Diagnostics.WATCH_FILE)
+        container.scope.launch(Dispatchers.IO) {
+            runCatching {
+                synchronized(de.ayutv.data.parse.WatchLog) {
+                    val lines = if (file.isFile) file.readLines() else emptyList()
+                    file.writeText(de.ayutv.data.parse.WatchLog.append(lines, entry, System.currentTimeMillis()).joinToString("\n") + "\n")
+                }
+            }
+        }
     }
 
     // ---------------------------------------------------------------- Schnellumschalter
@@ -923,6 +998,7 @@ class PlayerActivity : ComponentActivity() {
         recordWatch()
         watchStartedAt = SystemClock.elapsedRealtime()
         watchErrorsAtStart = playerErrors
+        resetWatchStats()
         if (!switchingVariant) failedVariants.clear()
         // Beim Ausweichen auf eine andere Fassung bleibt der Sender derselbe: kein „vorheriger Sender“.
         if (!switchingVariant) playing?.takeIf { it.key != channel.key }?.let { previousChannel = it }
