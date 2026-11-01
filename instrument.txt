@@ -1,0 +1,8 @@
+
+de.ayutv.DeviceTourTest:.
+
+Time: 1,075.642
+
+OK (1 test)
+
+
