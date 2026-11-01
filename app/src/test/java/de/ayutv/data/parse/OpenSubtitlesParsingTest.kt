@@ -171,4 +171,21 @@ class OpenSubtitlesParsingTest {
         assertEquals("1234", OpenSubtitlesParsing.seriesIdOf("3:s:1234:e:5678"))
         assertEquals(null, OpenSubtitlesParsing.seriesIdOf("3:m:99"))
     }
+
+    @Test
+    fun showFromFeatureDirectory() {
+        val body = """{"data":[
+            {"id":"111","type":"feature","attributes":{"title":"Gummi Bears Movie","feature_type":"Movie","feature_id":"111","year":"1985"}},
+            {"id":"222","type":"feature","attributes":{"title":"Disney's Adventures of the Gummi Bears","original_title":"Disney's Adventures of the Gummi Bears",
+              "title_aka":["Die Gummibärenbande","Les Gummi"],"feature_type":"Tvshow","feature_id":"222","year":"1985"}},
+            {"id":"333","type":"feature","attributes":{"title":"Recess","title_aka":["Disneys große Pause"],"feature_type":"Tvshow","feature_id":"333"}}
+        ]}"""
+        val features = OpenSubtitlesParsing.features(body)
+        assertEquals(3, features.size)
+        assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Die Gummibärenbande")?.id)
+        assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Gummibärenbande")?.id)
+        assertEquals(333L, OpenSubtitlesParsing.bestShow(features, "Disneys Große Pause")?.id)
+        assertNull(OpenSubtitlesParsing.bestShow(features.filter { it.type == "Movie" }, "Gummi"))
+        assertEquals(emptyList<OpenSubtitlesParsing.Feature>(), OpenSubtitlesParsing.features("kaputt"))
+    }
 }

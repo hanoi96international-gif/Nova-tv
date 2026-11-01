@@ -234,9 +234,13 @@ class Pretranslation(private val context: Context, private val container: AppCon
                 language(entry.key)?.let { out.putIfAbsent(entry.key, Item(entry.key, entry.url, entry.title, entry.durationMs, it)) }
             }
             if (entry.kind == HistoryKind.EPISODE) {
-                val next = runCatching { container.content.nextEpisode(entry.key) }.getOrNull() ?: continue
-                val key = Episodes.key(next.series.key, next.episode.id)
-                language(key)?.let { out.putIfAbsent(key, Item(key, next.url, Episodes.title(next.series.name, next.episode), 0L, it)) }
+                // Mit großem Kontingent (VIP) die nächsten Folgen, sonst nur die nächste.
+                val ahead = if (OpenSubtitlesQuota.generous) EPISODES_AHEAD_GENEROUS else 1
+                for (next in runCatching { container.content.nextEpisodes(entry.key, ahead) }.getOrDefault(emptyList())) {
+                    if (out.size >= maxItems) break
+                    val key = Episodes.key(next.series.key, next.episode.id)
+                    language(key)?.let { out.putIfAbsent(key, Item(key, next.url, Episodes.title(next.series.name, next.episode), 0L, it)) }
+                }
             }
         }
         if (lastTarget.isNotEmpty()) {
@@ -272,7 +276,8 @@ class Pretranslation(private val context: Context, private val container: AppCon
         /** Klein, damit ein gerade gestarteter Film nie lange auf den Übersetzer warten muss. */
         private const val BATCH = 2
         private const val MAX_ITEMS = 6
-        private const val MAX_ITEMS_GENEROUS = 20
+        private const val MAX_ITEMS_GENEROUS = 40
+        private const val EPISODES_AHEAD_GENEROUS = 5
         private val TIME = Regex("""(\d{1,2}):(\d{2}):(\d{2})[,.](\d{1,3})""")
     }
 }

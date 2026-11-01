@@ -511,6 +511,23 @@ class ContentRepository(
 
     data class NextEpisode(val series: SeriesEntity, val episode: XtreamEpisode, val url: String)
 
+    /** Die nächsten [count] Folgen nach [episodeKey] (eine Abfrage beim Anbieter für alle). */
+    suspend fun nextEpisodes(episodeKey: String, count: Int): List<NextEpisode> {
+        val seriesKey = Episodes.seriesKeyOf(episodeKey) ?: return emptyList()
+        var currentId = Episodes.episodeIdOf(episodeKey) ?: return emptyList()
+        val series = db.series().byKey(seriesKey) ?: return emptyList()
+        val list = runCatching { episodes(series) }.getOrNull() ?: return emptyList()
+        val plain = list.map { it.first }
+        val out = ArrayList<NextEpisode>()
+        repeat(count) {
+            val next = Episodes.next(plain, currentId) ?: return out
+            val url = list.firstOrNull { it.first.id == next.id }?.second ?: return out
+            out += NextEpisode(series, next, url)
+            currentId = next.id
+        }
+        return out
+    }
+
     /** Die Folge nach [episodeKey] („<Serie>:e:<Folge>“), über das Staffelende hinweg; null bei der letzten. */
     suspend fun nextEpisode(episodeKey: String): NextEpisode? {
         val seriesKey = Episodes.seriesKeyOf(episodeKey) ?: return null

@@ -191,6 +191,42 @@ object OpenSubtitlesParsing {
         val name = title.substring(0, m.range.first).trim().trimEnd('-', '–', ':', '|').trim()
         return if (name.length >= 2) Triple(cleanTitle(name).first, season, episode) else null
     }
+    /** Eine Serie oder ein Film im Verzeichnis von OpenSubtitles (/features), mit allen bekannten Namen. */
+    data class Feature(val id: Long, val type: String, val title: String, val year: Int?, val names: List<String>)
+
+    /** Antwort von /features: Serien und Filme mit Kennung, Art und Namen (auch Zweitnamen in anderen Sprachen). */
+    fun features(body: String): List<Feature> {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return emptyList()
+        val data = root["data"] as? JsonArray ?: return emptyList()
+        return data.mapNotNull { item ->
+            val o = item as? JsonObject ?: return@mapNotNull null
+            val a = o["attributes"] as? JsonObject ?: return@mapNotNull null
+            val id = a.primitive("feature_id")?.contentOrNull?.toLongOrNull() ?: o.primitive("id")?.contentOrNull?.toLongOrNull()
+                ?: return@mapNotNull null
+            val title = a.primitive("title")?.contentOrNull.orEmpty()
+            val aka = (a["title_aka"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+            val names = (listOf(title) + listOfNotNull(a.primitive("original_title")?.contentOrNull) + aka).filter { it.isNotBlank() }
+            Feature(id, a.primitive("feature_type")?.contentOrNull.orEmpty(), title, a.primitive("year")?.contentOrNull?.toIntOrNull(), names)
+        }
+    }
+
+    /**
+     * Die Serie zu [query] („Die Gummibärenbande“): eine Serie (keine Folge, kein Film), deren Name oder Zweitname
+     * zum Suchbegriff passt; sonst die erste Serie der Liste. null ohne Serie.
+     */
+    fun bestShow(features: List<Feature>, query: String): Feature? {
+        val shows = features.filter { it.type.equals("tvshow", ignoreCase = true) || it.type.equals("tv show", ignoreCase = true) }
+        if (shows.isEmpty()) return null
+        val wanted = normalize(query)
+        return shows.firstOrNull { show -> show.names.any { normalize(it) == wanted } }
+            ?: shows.firstOrNull { show -> show.names.any { normalize(it).contains(wanted) || wanted.contains(normalize(it).ifEmpty { "\u0000" }) } }
+            ?: shows.first()
+    }
+
+    private fun normalize(name: String): String =
+        java.text.Normalizer.normalize(name.lowercase(), java.text.Normalizer.Form.NFKD).replace(Regex("""\p{M}+"""), "")
+            .replace("ß", "ss").replace(Regex("""[^a-z0-9]"""), "")
+
     /**
      * Suchbegriffe für eine Serie, wie der Anbieter sie nennt: der Name selbst, dann ohne Studio-Vorsatz und Artikel
      * („Disneys Große Pause“ → „Große Pause“, „Die Gummibärenbande“ → „Gummibärenbande“). Ohne Doppelte.
