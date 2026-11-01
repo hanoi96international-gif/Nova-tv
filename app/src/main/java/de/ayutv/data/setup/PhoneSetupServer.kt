@@ -129,12 +129,15 @@ class PhoneSetupServer(private val container: AppContainer) {
             return
         }
         if (route == "/$pin/report") {
-            val text = de.ayutv.data.Diagnostics.build(container.context, container)
+            val short = de.ayutv.data.Diagnostics.build(container.context, container, short = true)
             respond(
                 client, 200,
-                "<h1>Fehlerbericht</h1><p>Ohne Passwörter und Zugangsdaten. Als Datei laden und an den Entwickler schicken " +
-                    "(oder unten alles markieren und kopieren).</p><p><a href=\"/$pin/report.txt\">Als Datei laden</a></p>" +
-                    "<textarea readonly rows=30>${esc(text)}</textarea>",
+                "<h1>Kurzbericht</h1><p>Fehlende TV-Guide-Sender, Ruckler und Neuverbindungen mit Grund, Datenrate, WLAN und Proxy der " +
+                    "letzten 48 Stunden. Ohne Passwörter und Zugangsdaten. Kopieren und in den Chat mit Claude einfügen.</p>" +
+                    "<p><button id=\"c\" type=\"button\">Kurzbericht kopieren</button></p>" +
+                    "<textarea id=\"k\" readonly rows=24>${esc(short)}</textarea>" +
+                    "<p>Vollständiger Fehlerbericht mit Systemprotokoll: <a href=\"/$pin/report.txt\">als Datei laden</a></p>" +
+                    "<script>$COPY_SCRIPT</script>",
             )
             return
         }
@@ -331,7 +334,7 @@ class PhoneSetupServer(private val container: AppContainer) {
                 write(
                     ("HTTP/1.1 $code $status\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${bytes.size}\r\n" +
                         "Cache-Control: no-store\r\nX-Frame-Options: DENY\r\nReferrer-Policy: no-referrer\r\n" +
-                        "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'\r\n" +
+                        "Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; script-src '$COPY_SCRIPT_HASH'; form-action 'self'\r\n" +
                         "Connection: close\r\n\r\n").toByteArray()
                 )
                 write(bytes)
@@ -414,6 +417,9 @@ class PhoneSetupServer(private val container: AppContainer) {
     }.getOrNull()
 
     private companion object {
+        /** Einzige erlaubte Skriptzeile (per Hash in der Sicherheitsrichtlinie freigegeben): Kurzbericht kopieren. */
+        private const val COPY_SCRIPT = "document.getElementById('c').onclick=function(){var t=document.getElementById('k');t.readOnly=false;t.focus();t.select();t.setSelectionRange(0,1e7);var ok=false;try{ok=document.execCommand('copy')}catch(e){}t.readOnly=true;t.blur();this.textContent=ok?'Kopiert ✓ – jetzt in den Chat einfügen':'Bitte ins Feld tippen, lange drücken → Alles auswählen → Kopieren'}"
+        private const val COPY_SCRIPT_HASH = "sha256-518GxTZCXPKttDtkaJTVhY38O8/NwkWTCEnD256yiTo="
         const val TAG = "PhoneSetup"
         const val PORT = 8095
         /** Groß genug für eine Sicherung mit vielen Favoriten. */

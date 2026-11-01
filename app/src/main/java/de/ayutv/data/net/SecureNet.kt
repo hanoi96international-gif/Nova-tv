@@ -22,7 +22,9 @@ import java.util.concurrent.TimeUnit
  * mitliest, sieht so nicht mehr, welche Server (IPTV-Anbieter, Untertitel, TV-Guide) DnA-TV anspricht.
  *
  * Gefragt wird direkt über die IP-Adresse des Dienstes (kein Henne-Ei-Problem). Antwortet keiner (gesperrt, kein
- * Internet), gilt wie bisher die normale Namensauflösung – es geht nie schlechter als vorher. Namen im Heimnetz
+ * Internet), gilt wie bisher die normale Namensauflösung – es geht nie schlechter als vorher (danach 5 Minuten lang
+ * gleich normal, damit nicht jeder Name erneut wartet). Abgelaufene Einträge gelten sofort weiter und werden im
+ * Hintergrund erneuert, damit Umschalten nie auf eine Abfrage wartet. Namen im Heimnetz
  * (ohne Punkt, .local, .lan, .box, .home, .internal) fragt DnA-TV wie bisher beim Router. Ergebnisse werden so lange
  * gemerkt, wie der Dienst es erlaubt (höchstens eine Stunde).
  */
@@ -47,29 +49,62 @@ object SecureDns : Dns {
         OkHttpClient.Builder()
             .dns(Dns.SYSTEM)
             .proxy(java.net.Proxy.NO_PROXY)
-            .connectTimeout(3, TimeUnit.SECONDS)
-            .readTimeout(3, TimeUnit.SECONDS)
-            .callTimeout(4, TimeUnit.SECONDS)
+            .connectTimeout(2, TimeUnit.SECONDS)
+            .readTimeout(2, TimeUnit.SECONDS)
+            .callTimeout(3, TimeUnit.SECONDS)
             .build()
+    }
+
+    /** Bis wann die verschlüsselte Abfrage übersprungen wird, weil zuletzt kein Dienst antwortete. */
+    @Volatile private var downUntil = 0L
+    private val refreshing = ConcurrentHashMap.newKeySet<String>()
+    private val refresher by lazy {
+        java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "SecureDns").apply { isDaemon = true } }
     }
 
     override fun lookup(hostname: String): List<InetAddress> {
         if (!enabled || isLocal(hostname)) return Dns.SYSTEM.lookup(hostname)
         val now = System.currentTimeMillis()
-        cache[hostname]?.takeIf { it.until > now }?.let { return it.addresses }
+        val cached = cache[hostname]
+        if (cached != null && cached.until > now) return cached.addresses
+        // Abgelaufen, aber noch frisch genug: sofort die bekannte Adresse nehmen und im Hintergrund neu fragen.
+        // So kostet das Umschalten nie eine Abfrage (Sender, Logos, TV-Guide).
+        if (cached != null && now - cached.until < STALE_MS) {
+            if (refreshing.add(hostname)) refresher.execute {
+                try { resolve(hostname) } finally { refreshing.remove(hostname) }
+            }
+            return cached.addresses
+        }
+        return resolve(hostname) ?: Dns.SYSTEM.lookup(hostname)
+    }
+
+    /** Verschlüsselt abfragen und merken; null = nicht möglich (dann normale Namensauflösung). */
+    private fun resolve(hostname: String): List<InetAddress>? {
+        val now = System.currentTimeMillis()
+        // Antwortete zuletzt keiner (gesperrt, Netz ohne Internet), nicht bei jedem Namen erneut warten.
+        if (now < downUntil) {
+            lastPath = "normal (verschlüsselt nicht erreichbar)"
+            return null
+        }
+        var reached = false
         for (resolver in resolvers) {
             val answer = runCatching { query(resolver, hostname, "A") }.getOrNull() ?: continue
+            reached = true
             val (addresses, ttl) = answer
             if (addresses.isEmpty()) continue
             val resolved = addresses.map { InetAddress.getByAddress(hostname, InetAddress.getByName(it).address) }
-            cache[hostname] = Entry(resolved, now + ttl.coerceIn(60, 3_600) * 1000L)
+            cache[hostname] = Entry(resolved, System.currentTimeMillis() + ttl.coerceIn(60, 3_600) * 1000L)
             lastPath = "verschlüsselt (${resolver.substringAfter("://").substringBefore('/')})"
             return resolved
         }
-        // Kein Dienst erreichbar oder keine IPv4-Adresse: wie bisher.
-        lastPath = "normal (verschlüsselt nicht erreichbar)"
-        return Dns.SYSTEM.lookup(hostname)
+        // Kein Dienst erreichbar: 5 Minuten lang gleich normal fragen. Nur keine IPv4-Adresse: einfach normal.
+        if (!reached) downUntil = System.currentTimeMillis() + DOWN_MS
+        lastPath = if (reached) "normal (keine IPv4-Adresse verschlüsselt)" else "normal (verschlüsselt nicht erreichbar)"
+        return null
     }
+
+    private const val STALE_MS = 6 * 60 * 60 * 1000L
+    private const val DOWN_MS = 5 * 60 * 1000L
 
     private fun query(resolver: String, hostname: String, type: String): Pair<List<String>, Int>? {
         val url = "$resolver?name=${java.net.URLEncoder.encode(hostname, "UTF-8")}&type=$type"

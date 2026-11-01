@@ -25,6 +25,9 @@ class FrameRateMatcher(private val activity: Activity) {
     /** true = Fernseher schaltet um, false = fertig (oder Zeitüberschreitung). */
     var onSwitch: (Boolean) -> Unit = {}
 
+    /** Das System hat den Wechsel nicht ausgeführt (Fire TV: „Originalbildrate anpassen“ aus). Einmal pro App-Start. */
+    var onIgnored: () -> Unit = {}
+
     var switching = false
         private set
 
@@ -40,6 +43,12 @@ class FrameRateMatcher(private val activity: Activity) {
             return false
         }
         val display = activity.windowManager.defaultDisplay ?: return false
+        // Hat das System den letzten Wechsel nicht ausgeführt, nicht bei jedem Sender erneut 5 s pausieren.
+        // Kam der Modus doch noch (Fernseher war nur langsam), gilt es wieder.
+        if (ignoredModeId != 0) {
+            if (display.mode.modeId != ignoredModeId) return false
+            ignoredModeId = 0
+        }
         val modes = display.supportedModes.map { DisplayModeInfo(it.modeId, it.physicalWidth, it.physicalHeight, it.refreshRate) }
         val current = display.mode
         val best = pickMode(modes, DisplayModeInfo(current.modeId, current.physicalWidth, current.physicalHeight, current.refreshRate), frameRate)
@@ -66,6 +75,9 @@ class FrameRateMatcher(private val activity: Activity) {
          * Players auf den Standard zurückzuschalten: Sonst wird das Bild beim nächsten Sender wieder schwarz.
          */
         @Volatile var keptModeId = 0
+
+        /** Modus, den das System zuletzt nicht eingestellt hat (0 = keiner). Gilt bis zum App-Neustart oder Umschalten der Einstellung. */
+        @Volatile var ignoredModeId = 0
 
         /** In [activity] (Menüs) den gemerkten Modus anfordern, oder mit [enabled] = false wieder den Standard. */
         fun applyKept(activity: Activity, enabled: Boolean) {
@@ -124,7 +136,14 @@ class FrameRateMatcher(private val activity: Activity) {
         listener = l
         manager?.registerDisplayListener(l, handler)
         // Manche Geräte melden den Wechsel nicht (oder lehnen ihn ab): spätestens dann weiterspielen.
-        val t = Runnable { finishSwitch() }
+        val t = Runnable {
+            if (activity.windowManager.defaultDisplay.mode.modeId != modeId) {
+                ignoredModeId = modeId
+                keptModeId = 0
+                onIgnored()
+            }
+            finishSwitch()
+        }
         timeout = t
         handler.postDelayed(t, Timing.MAX_SWITCH_MS)
     }

@@ -212,6 +212,7 @@ class RemoteServer(private val context: Context, private val container: AppConta
                 if (error != null) Reply(404, error) else Reply(200, "ok")
             }
             "/report" -> Reply(200, de.ayutv.data.Diagnostics.build(context, container))
+            "/report-short" -> Reply(200, de.ayutv.data.Diagnostics.build(context, container, short = true))
             "/sync" -> {
                 val sync = DeviceSync(container)
                 val result = runCatching { sync.import(body.toString(Charsets.UTF_8)) }

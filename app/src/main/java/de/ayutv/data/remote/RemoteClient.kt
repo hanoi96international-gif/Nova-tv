@@ -105,7 +105,8 @@ class RemoteClient(private val context: Context, private val container: AppConta
         withContext(Dispatchers.IO) { call(address, pin, "/play", request.encode()) }
 
     /** Fehlerbericht des Fernsehers (ohne Passwörter), zum Weiterschicken vom Handy. */
-    suspend fun report(): String = withContext(Dispatchers.IO) { call(required(), pin!!, "/report", null) }
+    suspend fun report(short: Boolean = false): String =
+        withContext(Dispatchers.IO) { call(required(), pin!!, if (short) "/report-short" else "/report", null) }
 
     private fun required(): String = address ?: throw IOException("Kein Fernseher gekoppelt")
 
@@ -125,7 +126,7 @@ class RemoteClient(private val context: Context, private val container: AppConta
             .post(secure.request(path, body.orEmpty()).toRequestBody("text/plain; charset=utf-8".toMediaType()))
             .build()
         val reply = http.newCall(request).execute().use { response ->
-            if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben (und DnA-TV dort auf 0.45.3 oder neuer aktualisieren)")
+            if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben (und DnA-TV dort auf 0.45.4 oder neuer aktualisieren)")
             if (!response.isSuccessful) throw IOException("Fernseher antwortet mit HTTP ${response.code}")
             runCatching { secure.reply(response.body.string()) }.getOrElse { throw IOException("Antwort des Fernsehers nicht lesbar (falsche PIN?)") }
         }
