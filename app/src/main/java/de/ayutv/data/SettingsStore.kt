@@ -163,6 +163,8 @@ data class AppSettings(
     val preferUhd: Boolean = false,
     /** Bildoptimierung für Full HD je Inhalt (Film, Serie, Sport, Fußball). */
     val pictureTuning: de.ayutv.data.parse.PictureTuning.Mode = de.ayutv.data.parse.PictureTuning.Mode.AUTO,
+    /** Sportmodus: bei Sport auf 50 Hz umschalten, auch wenn „Bildwiederholrate anpassen“ aus ist. */
+    val sportFrameRate: Boolean = true,
     /** Sender, die im Hintergrund-Check wiederholt nicht laufen, ausblenden. */
     val hideBrokenChannels: Boolean = false,
     /** In der Ruhezeit prüfen, welche Fassung doppelter Sender läuft und wie gut. */
@@ -267,6 +269,7 @@ class SettingsStore(private val context: Context) {
         val minQuality = stringPreferencesKey("min_quality")
         val preferUhd = booleanPreferencesKey("prefer_uhd")
         val pictureTuning = stringPreferencesKey("picture_tuning")
+        val sportFrameRate = booleanPreferencesKey("sport_frame_rate")
         val hideBroken = booleanPreferencesKey("hide_broken_channels")
         val channelCheck = booleanPreferencesKey("channel_check")
         val liveScores = booleanPreferencesKey("live_scores")
@@ -408,6 +411,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.minQuality] = next.minQuality.name
             prefs[Keys.preferUhd] = next.preferUhd
             prefs[Keys.pictureTuning] = next.pictureTuning.name
+            prefs[Keys.sportFrameRate] = next.sportFrameRate
             prefs[Keys.hideBroken] = next.hideBrokenChannels
             prefs[Keys.channelCheck] = next.channelCheck
             prefs[Keys.liveScores] = next.liveScores
@@ -472,6 +476,7 @@ class SettingsStore(private val context: Context) {
         minQuality = enumOrDefault(this[Keys.minQuality], MinQuality.ALL),
         preferUhd = this[Keys.preferUhd] ?: false,
         pictureTuning = de.ayutv.data.parse.PictureTuning.Mode.of(this[Keys.pictureTuning]),
+        sportFrameRate = this[Keys.sportFrameRate] ?: true,
         hideBrokenChannels = this[Keys.hideBroken] ?: false,
         channelCheck = this[Keys.channelCheck] ?: true,
         liveScores = this[Keys.liveScores] ?: true,
