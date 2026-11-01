@@ -124,5 +124,16 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
                 .build()
         }
         .crossfade(false)
+        // Schwacher Stick (4 kleine Kerne): Beim Scrollen durch Senderlisten entschlüsselte Coil sonst viele Logos und
+        // Poster gleichzeitig und ließ der Oberfläche keinen Kern frei – die Menüs ruckelten. Auf schwachen Geräten
+        // höchstens 2 Bilder zugleich entschlüsseln und 4 laden; die Bedienung hat Vorrang, Bilder kommen kurz danach.
+        .apply {
+            if (de.ayutv.ui.UiPerformance.reduced) {
+                @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+                decoderCoroutineContext(kotlinx.coroutines.Dispatchers.Default.limitedParallelism(2))
+                @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+                fetcherCoroutineContext(kotlinx.coroutines.Dispatchers.IO.limitedParallelism(4))
+            }
+        }
         .build()
 }
