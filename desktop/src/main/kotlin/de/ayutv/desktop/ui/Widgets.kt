@@ -76,7 +76,10 @@ object Palette {
     )
 
     /** Grundfarben je Design: Hintergrund, Fläche, erhöhte Fläche und Verlauf des Fensterhintergrunds (oben → unten). */
-    private class Look(val background: Color, val surface: Color, val raised: Color, val gradient: List<Color>)
+    private class Look(val background: Color, val surface: Color, val raised: Color, gradient: List<Color>) {
+        /** Einmal je Design (nicht bei jedem Neuzeichnen neu). */
+        val brush = androidx.compose.ui.graphics.Brush.verticalGradient(gradient)
+    }
 
     private val LOOKS = mapOf(
         "STANDARD" to Look(Color(0xFF0B0F14), Color(0xFF151B23), Color(0xFF1E2631), listOf(Color(0xFF0F1620), Color(0xFF0B0F14))),
@@ -114,7 +117,7 @@ object Palette {
     val surface get() = look.surface
     val raised get() = look.raised
     /** Fensterhintergrund als Verlauf (Kino: Samtrot, Tiefsee: Petrol, Abendrot: Violett). */
-    val backdrop: androidx.compose.ui.graphics.Brush get() = androidx.compose.ui.graphics.Brush.verticalGradient(look.gradient)
+    val backdrop: androidx.compose.ui.graphics.Brush get() = look.brush
     val accent get() = accentPair.first
     val accentSoft get() = accentPair.second
     val live = Color(0xFFE5484D)
