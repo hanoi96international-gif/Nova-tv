@@ -11,6 +11,7 @@ class XmltvParserTest {
         <?xml version="1.0" encoding="UTF-8"?>
         <tv>
           <channel id="daserste.de"><display-name>Das Erste HD</display-name><icon src="x"/></channel>
+          <channel id="zdf.de"><display-name>ZDF</display-name><icon src="https://logos.example/zdf.png"/></channel>
           <programme start="20240101200000 +0100" stop="20240101201500 +0100" channel="daserste.de">
             <title lang="de">Tagesschau</title>
             <desc lang="de">Nachrichten &amp; Wetter</desc>
@@ -44,6 +45,9 @@ class XmltvParserTest {
         assertEquals("ohne Titel", result[1].subtitle)
         assertNull(first.subtitle)
         assertEquals(listOf("Das Erste HD"), parser.channels["daserste.de"])
+        // Senderlogo aus dem EPG: nur echte Adressen (für Sender ohne Logo in der Playlist)
+        assertEquals("https://logos.example/zdf.png", parser.channelIcons["zdf.de"])
+        assertNull(parser.channelIcons["daserste.de"])
     }
 
     @Test

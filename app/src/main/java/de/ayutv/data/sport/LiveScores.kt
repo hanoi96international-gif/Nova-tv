@@ -43,6 +43,9 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         /** Spielort laut OpenLigaDB (Stadt, Stadion), falls angegeben. */
         val city: String? = null,
         val stadium: String? = null,
+        /** Vereinswappen (Bild-Adresse laut OpenLigaDB), falls angegeben. */
+        val icon1: String? = null,
+        val icon2: String? = null,
     ) {
         val score: String get() = "$goals1:$goals2"
         fun started(now: Long) = now >= kickoff
@@ -205,9 +208,15 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
                         goalCount = goals.size, lastGoal = scorer,
                         city = (o["location"] as? JsonObject)?.str("locationCity")?.ifEmpty { null },
                         stadium = (o["location"] as? JsonObject)?.str("locationStadium")?.ifEmpty { null },
+                        icon1 = crest(t1.str("teamIconUrl")), icon2 = crest(t2.str("teamIconUrl")),
                     ).takeIf { it.team1.isNotEmpty() && it.team2.isNotEmpty() }
                 }.getOrNull()
             }
+        }
+
+        /** Wappen-Adresse: nur Rastergrafiken über HTTP(S) (SVG zeigt der Bildlader nicht an). */
+        fun crest(url: String): String? = url.trim().takeIf {
+            it.startsWith("http") && !it.substringBefore('?').endsWith(".svg", ignoreCase = true)
         }
 
         private fun parseUtc(text: String): Long? = runCatching {

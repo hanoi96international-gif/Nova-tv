@@ -802,6 +802,11 @@ class PlaylistRepository(
         }
         db.programmes().insertAll(batch)
         for ((channelId, guideId) in assign) if (channelId in found) db.channels().setEpgId(channelId, guideId)
+        // Sender ohne Logo vom Anbieter: das Logo aus dem TV-Guide (statt eines Kästchens mit „HD“).
+        for ((channelId, guideId) in matchedGuide) {
+            if (channelId !in found) continue
+            parser.channelIcons[guideId]?.let { db.channels().setLogoIfMissing(channelId, it) }
+        }
         // Einem leeren EPG-Eintrag zugeordnet (z. B. „sky.replay.de“ ohne Sendungen neben „Sky Replay HD“ mit
         // Programm): noch einmal nur unter den Einträgen mit Sendungen suchen.
         if (onlyGuides == null) {

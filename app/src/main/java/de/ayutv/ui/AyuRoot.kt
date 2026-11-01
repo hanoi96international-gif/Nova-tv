@@ -264,7 +264,7 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
         label = "nav",
     )
     val dim by androidx.compose.animation.core.animateFloatAsState(
-        if (expanded) 0.45f else 0f,
+        if (expanded) 0.6f else 0f,
         if (UiPerformance.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(220),
         label = "dim",
     )

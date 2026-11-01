@@ -274,6 +274,14 @@ private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveSc
                     if (live) score!!.minute(now) ?: "" else "bis ${formatTime(p.stop)}",
                     color = AyuColors.TextSecondary, fontSize = 12.sp,
                 )
+                // Vereinswappen (OpenLigaDB), wenn der Spielplan das Spiel kennt.
+                if (score != null && (score.icon1 != null || score.icon2 != null)) {
+                    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Crest(score.icon1, score.team1)
+                        Text(" : ", color = AyuColors.TextSecondary, fontSize = 12.sp)
+                        Crest(score.icon2, score.team2)
+                    }
+                }
             }
             Column(Modifier.weight(1f)) {
                 Text(headline, fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
@@ -304,6 +312,19 @@ private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveSc
             }
             Spacer(Modifier.width(12.dp))
             ChannelLogo(e.channel.logo, e.channel.name, Modifier.size(width = 64.dp, height = 40.dp))
+        }
+    }
+}
+
+/** Vereinswappen, klein und ohne Rahmen; ohne Bild bleibt der Platz leer. */
+@Composable
+private fun Crest(url: String?, team: String) {
+    Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+        if (url != null) {
+            coil3.compose.AsyncImage(
+                model = url, contentDescription = team, modifier = Modifier.size(26.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            )
         }
     }
 }

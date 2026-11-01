@@ -31,6 +31,9 @@ class XmltvParser(private val parser: XmlPullParser) {
     /** Sender des EPGs (Kennung → Anzeigenamen), um Sender der Playlist zuzuordnen ([EpgMatcher]). */
     val channels = LinkedHashMap<String, MutableList<String>>()
 
+    /** Senderlogo laut EPG (`<channel><icon src>`), für Sender, deren Playlist kein Logo hat. */
+    val channelIcons = HashMap<String, String>()
+
     fun parse(
         input: InputStream,
         wanted: (channelId: String, start: Long, stop: Long) -> Boolean,
@@ -64,6 +67,8 @@ class XmltvParser(private val parser: XmlPullParser) {
             if (event == XmlPullParser.START_TAG && parser.name == "display-name") {
                 val name = readText()
                 if (name.isNotBlank()) names += name.trim()
+            } else if (event == XmlPullParser.START_TAG && parser.name == "icon" && id !in channelIcons) {
+                parser.getAttributeValue(null, "src")?.trim()?.takeIf { it.startsWith("http") }?.let { channelIcons[id] = it }
             }
         }
     }
