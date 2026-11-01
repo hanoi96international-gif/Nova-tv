@@ -809,19 +809,8 @@ class PlaylistRepository(
     /** Freie Quelle aus dem Zwischenspeicher, wenn jünger als [maxAge], sonst neu laden (alte Datei bleibt bei Fehlern). */
     private fun fetchCached(url: String, maxAge: Long): File {
         publicDir.mkdirs()
-        if (de.ayutv.data.parse.ExtraGuides.isExtra(url)) {
-            // MagentaTV und Dyn: über ihre Schnittstellen abgefragt und als XMLTV abgelegt. Dyn öfter (neue Spiele).
-            val target = File(publicDir, de.ayutv.data.parse.ExtraGuides.fileName(url))
-            val age = if (url == de.ayutv.data.parse.ExtraGuides.DYN) minOf(maxAge, 6 * HOUR) else maxAge
-            if (target.length() > 0 && System.currentTimeMillis() - target.lastModified() < age) return target
-            try {
-                de.ayutv.data.parse.ExtraGuides.write(url, importHttp, target)
-            } catch (e: Exception) {
-                if (target.length() > 0) return target
-                throw e as? IOException ?: IOException(e.message, e)
-            }
-            return target
-        }
+        // Reste der früheren Quellen MagentaTV und Dyn (bis 0.45.2) wegräumen.
+        for (old in listOf("magentatv-guide.xml", "dyn-guide.xml")) File(publicDir, old).takeIf { it.exists() }?.delete()
         val target = File(publicDir, de.ayutv.data.parse.EpgSources.cacheName(url))
         if (target.length() > 0 && System.currentTimeMillis() - target.lastModified() < maxAge) return target
         val downloaded = try {
@@ -864,6 +853,6 @@ class PlaylistRepository(
         private const val MAX_MISSING_LISTED = 20_000
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "6"
+        private const val EPG_MATCH_VERSION = "7"
     }
 }

@@ -67,12 +67,6 @@ class EpgMatcher(private val country: String = "de") {
             pick(weak[k.weak], wanted, uhd)?.let { return it }
             k.region?.let { pick(strong[it], wanted, uhd)?.let { id -> return id } }
         }
-        // Dyn mit Nummer („DE: DYN VOLLEYBALL 2“, „Dyn 5“): der Spielplan der Sportart bzw. aller Sportarten.
-        DYN_NUMBERED.find(byName.strong)?.let { m ->
-            val sport = m.groupValues[1]
-            if (sport.isNotEmpty()) pick(strong["dyn$sport"], wanted, false)?.let { return it }
-            pick(strong["dyn"], wanted, false)?.let { return it }
-        }
         return null
     }
 
@@ -174,7 +168,6 @@ class EpgMatcher(private val country: String = "de") {
         private val GLUED_UHD = Regex("""(?:uhd|4k)$""")
         private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
 
-        private val DYN_NUMBERED = Regex("""^dyn(?:sport|event|live)?([a-z]*?)\d{1,2}$""")
         /** „24/7“ und „24-7“ (Dauersender) gehören nicht zum Namen. */
         private val ROUND_THE_CLOCK = Regex("""\b24\s*[/-]\s*7\b""")
 

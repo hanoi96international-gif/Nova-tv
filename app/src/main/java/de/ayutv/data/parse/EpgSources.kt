@@ -50,19 +50,16 @@ object EpgSources {
      * Freie Programmquellen für Sender, die beim Anbieter fehlen. Spätere füllen nur noch Sender ohne Programm, und
      * eine Quelle wird nur geladen, wenn noch Sender aus ihren Ländern offen sind (Stand der Prüfung November 2026):
      *
-     * - epgshare01 Deutschland (266 Sender), MagentaTV (rund 330: alle Regionalprogramme, Sky Cinema mit den neuen
-     *   Namen, Sky Sport Kompakt, MagentaSport, myTeamTV), open-epg Deutschland 3 (Telekom-Liste, Ersatz, falls
-     *   MagentaTV nicht antwortet) und 5 (waipu.tv-Sender, Spartenkanäle wie „Stromberg“, „Pastewka“, Musik Box)
+     * - epgshare01 Deutschland (266 Sender), open-epg Deutschland 3 (Telekom-Liste: Regionalprogramme, Sky mit den
+     *   neuen Namen, MagentaSport) und 5 (waipu.tv-Sender, Spartenkanäle wie „Stromberg“, „Pastewka“, Musik Box)
      * - epgshare01 Österreich und Schweiz (u. a. Sky Bundesliga unter altem Namen, Paramount+, Amazon Prime Video),
      *   open-epg Österreich (ORF-2-Regionalfenster, Laola1, Sky Sport Austria 8, Sky Cinema Blockbuster/Feelgood)
      * - Pluto TV und Samsung TV Plus Deutschland (kostenlose 24/7-Sender, z. B. „Dyn Sport Mix“, „Pluto TV Movies“,
      *   DAZN Rise, Sony One, Moviedome, Rakuten-Kanäle)
-     * - Dyn-Spielplan (Volleyball, Handball, Basketball, Hockey, Tischtennis)
      * - epgshare01 Griechenland nur für griechische Sender (Magenta Series, Magenta Cinema, Magenta Sport, Novacinema)
      */
     val SOURCES = listOf(
         Source(EPGSHARE + "epg_ripper_DE1.xml.gz", GERMAN),
-        Source(ExtraGuides.MAGENTA, GERMAN),
         Source(EPGSHARE + "epg_ripper_AT1.xml.gz", GERMAN),
         Source(EPGSHARE + "epg_ripper_CH1.xml.gz", GERMAN),
         Source(OPEN_EPG + "germany3.xml", GERMAN),
@@ -70,7 +67,6 @@ object EpgSources {
         Source(OPEN_EPG + "austria1.xml", GERMAN),
         Source("https://i.mjh.nz/PlutoTV/de.xml.gz", GERMAN),
         Source("https://i.mjh.nz/SamsungTVPlus/de.xml.gz", GERMAN),
-        Source(ExtraGuides.DYN, GERMAN),
         Source(EPGSHARE + "epg_ripper_GR1.xml.gz", setOf("gr")),
     )
 
@@ -95,7 +91,6 @@ object EpgSources {
 
     /** Kurzer Name einer Quelle für die Anzeige ("epgshare01 DE", "tv.example.com"). */
     fun label(url: String): String {
-        ExtraGuides.label(url)?.let { return it }
         Regex("""epg_ripper_([A-Z]{2})\d*\.xml""").find(url)?.let { return "epgshare01 ${it.groupValues[1]}" }
         Regex("""open-epg\.com/files/([a-z]+\d*)\.xml""").find(url)?.let { return "open-epg ${it.groupValues[1]}" }
         if ("i.mjh.nz/PlutoTV" in url) return "Pluto TV"

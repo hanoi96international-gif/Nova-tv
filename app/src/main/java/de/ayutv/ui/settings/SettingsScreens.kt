@@ -760,7 +760,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 settings.preferInternetGuide -> "Eigener zuerst, Anbieter ergänzt"
                                 else -> "Anbieter zuerst, eigener ergänzt"
                             },
-                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, MagentaTV, open-epg, Pluto TV, Samsung TV Plus, Dyn-Spielplan), richtige Zeiten auch nach " +
+                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, open-epg, Pluto TV, Samsung TV Plus), richtige Zeiten auch nach " +
                                 "der Zeitumstellung. Der TV-Guide des Anbieters liegt oft daneben; „Nur eigener“ lädt ihn gar nicht. " +
                                 "Der Guide wird nach dem Umschalten neu geladen.",
                         ) {

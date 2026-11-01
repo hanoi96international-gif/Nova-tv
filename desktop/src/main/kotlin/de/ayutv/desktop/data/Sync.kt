@@ -196,15 +196,7 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
     }
 
     private fun readGuide(url: String, channels: List<Channel>, from: Long, until: Long, guide: MutableMap<String, MutableList<Programme>>) {
-        val stream = if (de.ayutv.data.parse.ExtraGuides.isExtra(url)) {
-            // MagentaTV und Dyn: über ihre Schnittstellen abgefragt und als XMLTV zwischengespeichert (Dyn 6 h, sonst 20 h).
-            val file = java.io.File(store.dir, de.ayutv.data.parse.ExtraGuides.fileName(url))
-            val maxAge = if (url == de.ayutv.data.parse.ExtraGuides.DYN) 6 * 3_600_000L else 20 * 3_600_000L
-            if (file.length() == 0L || System.currentTimeMillis() - file.lastModified() > maxAge) {
-                runCatching { de.ayutv.data.parse.ExtraGuides.write(url, http, file) }.onFailure { if (file.length() == 0L) throw it }
-            }
-            file.inputStream()
-        } else open(url)
+        val stream = open(url)
         stream.use { raw ->
             val input = if (url.endsWith(".gz")) GZIPInputStream(raw) else raw
             val parser = XmltvParser(org.kxml2.io.KXmlParser())

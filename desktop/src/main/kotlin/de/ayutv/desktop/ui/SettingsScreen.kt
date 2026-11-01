@@ -269,7 +269,7 @@ fun SettingsScreen(app: AppState) {
             Spacer(Modifier.height(6.dp))
             TextButton("TV-Guide neu laden", { app.scope.launch { runCatching { app.sync.syncGuide() }.onFailure { app.toast("TV-Guide: ${it.message}") } } })
             Spacer(Modifier.height(8.dp))
-            Toggle("Fehlendes Programm (oft Sky, DAZN) aus freien Quellen ergänzen (epgshare01 DE/AT/CH, MagentaTV, open-epg, Pluto TV, Samsung TV Plus, Dyn-Spielplan)", user.publicEpg) {
+            Toggle("Fehlendes Programm (oft Sky, DAZN) aus freien Quellen ergänzen (epgshare01 DE/AT/CH, open-epg, Pluto TV, Samsung TV Plus)", user.publicEpg) {
                 app.store.updateUser { u -> u.copy(publicEpg = !u.publicEpg) }
             }
             Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
