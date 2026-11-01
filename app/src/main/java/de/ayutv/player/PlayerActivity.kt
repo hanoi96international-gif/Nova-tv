@@ -450,7 +450,7 @@ class PlayerActivity : ComponentActivity() {
         if (picturePipelineWanted) {
             val profile = pictureProfile ?: PictureTuning.profile(PictureTuning.Content.OTHER, settings.pictureTuning)
             if (profile != null) runCatching {
-                built.player.setVideoEffects(PictureEffects.of(profile, upscale = !de.ayutv.ui.UiPerformance.reduced))
+                built.player.setVideoEffects(PictureEffects.of(profile))
                 pictureActive = true
                 pictureApplied = profile
             }.onFailure { Log.w(TAG, "Bildoptimierung nicht verfügbar", it); pictureFailed = true }
@@ -535,7 +535,7 @@ class PlayerActivity : ComponentActivity() {
         pictureProfile = profile
         val p = player ?: return
         if (!pictureActive || profile == null || profile == pictureApplied) return
-        runCatching { p.setVideoEffects(PictureEffects.of(profile, upscale = !de.ayutv.ui.UiPerformance.reduced)) }
+        runCatching { p.setVideoEffects(PictureEffects.of(profile)) }
             .onSuccess { pictureApplied = profile; stats = stats.copy(picture = profile.label) }
             .onFailure { Log.w(TAG, "Bildprofil nicht gesetzt", it) }
     }
@@ -553,10 +553,7 @@ class PlayerActivity : ComponentActivity() {
             handler.post { rebuildPlayer() }
             return
         }
-        stats = stats.copy(
-            picture = pictureApplied?.label.orEmpty() +
-                if (video.height in 1 until 1000 && !de.ayutv.ui.UiPerformance.reduced) " · hochgerechnet ${video.height}p → 1080p" else "",
-        )
+        stats = stats.copy(picture = pictureApplied?.label.orEmpty())
         val now = SystemClock.elapsedRealtime()
         if (pictureDropsCheckedAt == 0L) {
             pictureDropsCheckedAt = now

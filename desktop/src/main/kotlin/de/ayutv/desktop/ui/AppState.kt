@@ -233,7 +233,6 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         player.hdrMode = store.user.value.hdrMode
         player.videoLayout = store.user.value.videoLayout
         player.directMode = store.user.value.directMode
-        player.aiUpscale = store.user.value.aiUpscale
     }
 
     fun toast(text: String) {

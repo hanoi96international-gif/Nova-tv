@@ -341,11 +341,10 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Bildoptimierung (Full HD)",
                             settings.pictureTuning.label,
-                            "Bildverbesserung auf dem Grafikchip nach dem Vorbild der Spiele-Hochrechner (FSR, AMD CAS), sparsam in einem Durchgang: " +
-                                "Sender unter Full HD (z. B. 720p) werden mit Kantenschutz auf 1080p hochgerechnet, Details kontrastabhängig geschärft " +
-                                "(ohne Rauschen und Blockfehler zu verstärken), Farbstufen in Himmel und Rasen geglättet. Je nach Inhalt: Filme natürlich, " +
-                                "Sport schärfer mit mehr Kontrast, Fußball mit kräftigerem Rasengrün. 4K und HDR bleiben unverändert; ruckelt es, " +
-                                "schaltet sie sich ab. Nicht zusammen mit „Tunneling“. Im Bild auch über ☰ → Bild.",
+                            "Schärft und optimiert Full-HD-Bilder automatisch je nach Inhalt: Filme bleiben natürlich (nur leicht nachgeschärft), " +
+                                "Serien etwas schärfer, Sport deutlich schärfer mit mehr Kontrast, Fußball zusätzlich mit kräftigerem Rasengrün. " +
+                                "4K und HDR bleiben unverändert. Läuft auf dem Grafikchip; ruckelt es, schaltet sie sich von selbst ab. " +
+                                "Nicht zusammen mit „Tunneling“. Im Bild auch über ☰ → Bild umschaltbar.",
                         ) { update { it.copy(pictureTuning = it.pictureTuning.next()) } }
                     }
                     item {

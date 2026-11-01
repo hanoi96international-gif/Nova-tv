@@ -41,10 +41,8 @@ class VideoPlayer {
     var audioTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
     var subtitleTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
 
-    // Mit KI-Hochrechnung (nur Windows, VLC ab 3.0.19); kennt ein älteres VLC die Option nicht, ohne sie starten.
-    private val factory: MediaPlayerFactory? = (if (IS_WINDOWS) runCatching { MediaPlayerFactory(*(VLC_OPTIONS + UPSCALE_OPTIONS)) }.getOrNull() else null)
-        ?: runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
-            .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
+    private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
+        .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
     // Vor den Playern anlegen: [prepare] braucht sie schon beim Anlegen von [normal].
     private val format = Format()
     private val render = Render()
@@ -63,8 +61,6 @@ class VideoPlayer {
      * Untertiteln am Ton.
      */
     @Volatile var directMode = "AUTO"
-    /** KI-Hochrechnung (RTX/Intel Video Super Resolution) über die Direktausgabe. */
-    @Volatile var aiUpscale = false
     /** Vom Aufrufer vor [play]: Der Stream ist bekanntlich 4K (früher gemessen oder „4K/UHD“ im Namen). */
     @Volatile var expectUhd = false
     /** Fenster für die Direktausgabe (von der App gesetzt, kennt das Hauptfenster). */
@@ -203,7 +199,7 @@ class VideoPlayer {
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
         lastStart = Triple(url, userAgent, extra)
-        val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd) || aiUpscale
+        val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd)
         val uhdExpected = expectUhd
         expectUhd = false
         val useDirect = wantDirect && !tapAudio && directWindow != null
@@ -580,14 +576,6 @@ class VideoPlayer {
         const val UHD_HEIGHT = 1_600
         /** So viele ersetzte Bilder bleiben kurz erhalten, bevor ihr Speicher frei wird. */
         private const val RETIRED_FRAMES = 3
-        private val IS_WINDOWS = System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true)
-
-        /**
-         * Direktausgabe (Direct3D 11): Hochrechnung mit der KI der Grafikkarte, wenn vorhanden (NVIDIA RTX Video Super
-         * Resolution, Intel VSR; im Grafiktreiber eingeschaltet). Ohne passende Grafikkarte normale Skalierung.
-         */
-        private val UPSCALE_OPTIONS = arrayOf("--d3d11-upscale-mode=super")
-
         private val VLC_OPTIONS = arrayOf(
             "--quiet", "--no-video-title-show", "--http-reconnect", "--avcodec-hw=any",
             // Live-TV kommt oft als 1080i/576i: automatisch entflechten, mit voller Bildrate (50 statt 25 Bilder).

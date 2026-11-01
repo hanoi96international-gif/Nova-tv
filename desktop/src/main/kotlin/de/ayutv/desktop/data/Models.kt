@@ -194,11 +194,6 @@ data class UserData(
     val videoLayout: String = "AUTO",
     /** Direktausgabe (VLC zeigt das Bild selbst über die Grafikkarte): OFF, AUTO (bei 4K), ALWAYS. */
     val directMode: String = "AUTO",
-    /**
-     * KI-Hochrechnung der Grafikkarte (NVIDIA RTX Video Super Resolution, Intel Video Super Resolution) für Sender unter
-     * 4K. Läuft nur in der Direktausgabe; mit an wird deshalb immer direkt ausgegeben.
-     */
-    val aiUpscale: Boolean = false,
     /** Mini-Vorschau des ausgewählten Senders in der Senderliste (stumm). */
     val livePreview: Boolean = true,
     /** Reiter „Apps“: Reihenfolge und ausgeblendete Apps (Kennungen). */
