@@ -156,6 +156,8 @@ class PlayerActivity : ComponentActivity() {
     /** Sender, den der Player gerade wirklich spielt ([current] zeigt beim schnellen Zappen schon das Ziel). */
     private var playing: ChannelEntity? = null
     private var retries = 0
+    /** Langsame Wiederholungen nach einem Ausfall des Senders (siehe [SLOW_RETRY_SECONDS]). */
+    private var slowRetries = 0
     private var triedHls = false
     private var zapStartedAt = 0L
     private var everReady = false
@@ -1012,6 +1014,7 @@ class PlayerActivity : ComponentActivity() {
         streamGeneration++
         resetStreamState()
         retries = 0
+        slowRetries = 0
         triedHls = false
         message = null
         zapStartedAt = SystemClock.elapsedRealtime()
@@ -3597,6 +3600,7 @@ class PlayerActivity : ComponentActivity() {
             buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE
             if (state == Player.STATE_READY) {
                 retries = 0
+                slowRetries = 0
                 if (timeshifted && player?.isPlaying == true) timeshiftErrors = 0
                 message = null
                 everReady = true
@@ -3805,12 +3809,25 @@ class PlayerActivity : ComponentActivity() {
                         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Der Anbieter lehnt den Stream ab (z. B. zu viele Verbindungen oder Konto abgelaufen)"
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Keine Verbindung zum Server"
+                        // Allgemeiner Lesefehler: Der Sender lieferte (über Proxy oder direkt) eine Weile nichts Brauchbares.
+                        PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> "Sender liefert gerade nichts" +
+                            (if (routeLabel().startsWith("Weg: über Proxy")) " (Anbieter oder Proxy-Weg)" else " (Anbieter)")
                         else -> "Stream nicht verfügbar (${error.errorCodeName})"
                     }.let { base -> de.ayutv.data.net.AppProxy.recentFailure()?.let { "$it (Einstellungen → Proxy)" } ?: base }
-                    if (!tryNextVariant(reason)) {
-                        fatalError = true
-                        message = reason
+                    if (tryNextVariant(reason)) return
+                    // Live-Sender fallen beim Anbieter oft nur kurz aus: in größeren Abständen selbst weiter versuchen,
+                    // statt aufzugeben. Umschalten geht jederzeit.
+                    if (isLive && slowRetries < SLOW_RETRY_SECONDS.size && error.errorCode !in NO_SLOW_RETRY) {
+                        val wait = SLOW_RETRY_SECONDS[slowRetries++]
+                        retries = 0
+                        statusHistory += "Sender liefert nichts, neuer Versuch in $wait s (${slowRetries}/${SLOW_RETRY_SECONDS.size})"
+                        message = "$reason – neuer Versuch in $wait s (▲▼ anderer Sender)"
+                        val generation = streamGeneration
+                        handler.postDelayed({ if (generation == streamGeneration) restartStream() }, wait * 1000L)
+                        return
                     }
+                    fatalError = true
+                    message = reason
                 }
             }
         }
@@ -4160,6 +4177,10 @@ class PlayerActivity : ComponentActivity() {
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
         )
         private const val MAX_RETRIES = 3
+        /** Nach den schnellen Versuchen: Live-Sender noch so oft in diesen Abständen neu versuchen (zusammen gut 1,5 Minuten). */
+        private val SLOW_RETRY_SECONDS = intArrayOf(10, 20, 30, 45)
+        /** Ablehnung durch den Anbieter (Konto, Verbindungen): langes Warten hilft nicht. */
+        private val NO_SLOW_RETRY = setOf(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS)
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L
         private const val TAG = "AyuPlayer"
