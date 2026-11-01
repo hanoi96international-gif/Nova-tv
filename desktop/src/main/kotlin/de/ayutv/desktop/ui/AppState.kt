@@ -410,24 +410,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         watch(current)
     }
 
-    /** Bildoptimierung je Inhalt (Film, Serie, Sport, Fußball) für Full HD, wie auf dem Fire TV. */
-    private fun pictureFor(playback: Playback): de.ayutv.data.parse.PictureTuning.Profile? {
-        val mode = de.ayutv.data.parse.PictureTuning.Mode.of(store.user.value.pictureTuning)
-        val content = when (playback) {
-            is Playback.Live -> {
-                val programme = store.guide.value[playback.channel.key]?.let { nowOf(it) }
-                de.ayutv.data.parse.PictureTuning.classify(playback.channel.name, programme?.title, programme?.subtitle, programme?.category)
-            }
-            is Playback.Vod -> de.ayutv.data.parse.PictureTuning.classify(
-                playback.title, vodMovie = playback.series == null, vodEpisode = playback.series != null,
-            )
-        }
-        return de.ayutv.data.parse.PictureTuning.profile(content, mode)
-    }
-
     private fun start(playback: Playback, atMs: Long? = null) = when (playback) {
         is Playback.Live -> {
-            player.picture = pictureFor(playback)
             store.rememberWatched(playback.channel.key)
             // Schon als 4K bekannt (gemessen oder „4K/UHD“ im Namen): gleich über die Direktausgabe starten.
             player.expectUhd = de.ayutv.data.parse.ChannelQuality.height(playback.channel.key, playback.channel.name) >= de.ayutv.desktop.player.VideoPlayer.UHD_HEIGHT
@@ -435,10 +419,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             // Direktausgabe: Die Infoleiste liegt im verdeckten Hauptfenster, deshalb den Namen ins Bild schreiben.
             player.osd(playback.channel.name + (store.guide.value[playback.channel.key]?.let { nowOf(it) }?.let { "  ·  ${it.title}" } ?: ""))
         }
-        is Playback.Vod -> {
-            player.picture = pictureFor(playback)
-            player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
-        }
+        is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
     }
 
     /**

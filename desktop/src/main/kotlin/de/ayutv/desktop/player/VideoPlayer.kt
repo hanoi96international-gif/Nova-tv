@@ -200,7 +200,6 @@ class VideoPlayer {
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
         lastStart = Triple(url, userAgent, extra)
         val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd)
-        val uhdExpected = expectUhd
         expectUhd = false
         val useDirect = wantDirect && !tapAudio && directWindow != null
         val next = (if (useDirect) directPlayer() else if (tapAudio) tappedPlayer() else normal) ?: return
@@ -233,42 +232,8 @@ class VideoPlayer {
             if (startMs > 0) add(":start-time=${startMs / 1000.0}")
             add(":network-caching=$networkCacheMs")
             addAll(extra)
-            addAll(pictureOptions(uhdExpected))
         }
         if (!p.media().play(url, *options.toTypedArray())) error = "Der Stream lässt sich nicht öffnen"
-        applyAdjust()
-    }
-
-    /**
-     * Bildoptimierung (Full HD): Schärfe über VLCs Filter „sharpen“ (wirkt ab dem nächsten Start, deshalb als Option
-     * beim Öffnen), Kontrast und Farbe über die Bildanpassung (sofort). null = alles neutral.
-     */
-    var picture: de.ayutv.data.parse.PictureTuning.Profile? = null
-        set(value) {
-            field = value
-            applyAdjust()
-        }
-
-    /** Optionen für VLC beim Öffnen: Nachschärfen nur für Full HD und kleiner (4K/HDR bleiben unverändert). */
-    fun pictureOptions(uhd: Boolean): List<String> {
-        val profile = picture ?: return emptyList()
-        if (uhd || profile.sharpen <= 0.01f) return emptyList()
-        return listOf(":video-filter=sharpen", ":sharpen-sigma=${"%.2f".format(java.util.Locale.US, (profile.sharpen * 0.6f).coerceIn(0f, 2f))}")
-    }
-
-    private fun applyAdjust() {
-        val p = player ?: return
-        val profile = picture?.takeIf { !looksHdr }
-        runCatching {
-            if (profile == null || (profile.contrast == 0f && profile.saturation == 0f)) {
-                p.video().setAdjustVideo(false)
-            } else {
-                p.video().setAdjustVideo(true)
-                p.video().setContrast((1f + profile.contrast * 1.5f).coerceIn(0f, 2f))
-                p.video().setSaturation((1f + profile.saturation / 100f).coerceIn(0f, 3f))
-                p.video().setBrightness(1f)
-            }
-        }
     }
 
     /** Technische Angaben zum laufenden Stream (für die Stream-Info, Taste ▶ bzw. Info). */

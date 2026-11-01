@@ -99,8 +99,6 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-dash:$media3")
     implementation("androidx.media3:media3-datasource-okhttp:$media3")
     implementation("androidx.media3:media3-ui:$media3")
-    // Bildoptimierung (Nachschärfen, Kontrast, Sättigung auf dem Grafikchip)
-    implementation("androidx.media3:media3-effect:$media3")
     // Chromecast vom Handy aus (nur mit Google-Play-Diensten; auf Fire TV unbenutzt).
     implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
     implementation("androidx.mediarouter:mediarouter:1.7.0")

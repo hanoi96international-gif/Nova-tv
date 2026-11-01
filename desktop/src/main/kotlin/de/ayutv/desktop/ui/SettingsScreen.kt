@@ -154,18 +154,6 @@ fun SettingsScreen(app: AppState) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Label("Bildoptimierung (Full HD)", Type.body)
-            Row(Modifier.padding(vertical = 4.dp)) {
-                de.ayutv.data.parse.PictureTuning.Mode.entries.forEach { mode ->
-                    Selectable({ app.store.updateUser { it.copy(pictureTuning = mode.name) }; app.restartPlayback() }, selected = user.pictureTuning == mode.name) { Label(mode.label) }
-                    Spacer(Modifier.width(6.dp))
-                }
-            }
-            Label(
-                "Schärft und optimiert Full-HD-Bilder je nach Inhalt: Filme bleiben natürlich, Serien etwas schärfer, Sport deutlich schärfer mit mehr Kontrast, Fußball zusätzlich mit kräftigerem Rasengrün. 4K und HDR bleiben unverändert.",
-                Type.small, maxLines = 3,
-            )
-            Spacer(Modifier.height(8.dp))
             Label("Direktausgabe über die Grafikkarte", Type.body)
             Row(Modifier.padding(vertical = 4.dp)) {
                 DIRECT_MODES.forEach { (value, label) ->
