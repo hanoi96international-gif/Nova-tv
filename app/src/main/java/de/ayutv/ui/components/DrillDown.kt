@@ -60,12 +60,12 @@ class DrillDown(initiallyOpen: Boolean = false) {
     internal fun opened() { isOpen = true }
 
     companion object {
-        val Saver = Saver<DrillDown, Boolean>({ it.isOpen }, { DrillDown(it) })
+        val SAVER = Saver<DrillDown, Boolean>({ it.isOpen }, { DrillDown(it) })
     }
 }
 
 @Composable
-fun rememberDrillDown(): DrillDown = rememberSaveable(saver = DrillDown.Saver) { DrillDown() }
+fun rememberDrillDown(): DrillDown = rememberSaveable(saver = DrillDown.SAVER) { DrillDown() }
 
 /**
  * Für den Inhalt: Bekommt er den Fokus, gilt er als geöffnet. ◀ hinaus führt zurück zu den Gruppen statt in die
@@ -82,14 +82,14 @@ fun Modifier.drillContent(state: DrillDown, backEnabled: Boolean = true): Modifi
         // Der Inhalt lädt evtl. noch: bis zur Frist einige Male versuchen, nach rechts hineinzugehen.
         while (System.currentTimeMillis() < state.enterUntil) {
             // Per Touch gibt es keinen Fokus, der hineinwandern könnte: gleich öffnen.
-            if (inputMode.inputMode == InputMode.Touch) state.isOpened()
+            if (inputMode.inputMode == InputMode.Touch) state.opened()
             if (state.isOpen || focusManager.moveFocus(FocusDirection.Right)) break
             delay(50)
         }
         state.enterUntil = 0L
     }
     return this
-        .onFocusChanged { if (it.hasFocus) state.isOpened() }
+        .onFocusChanged { if (it.hasFocus) state.opened() }
         .focusProperties {
             onExit = {
                 if (requestedFocusDirection == FocusDirection.Left && state.isOpen) {
