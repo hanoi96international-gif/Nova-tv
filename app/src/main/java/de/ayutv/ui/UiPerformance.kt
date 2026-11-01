@@ -49,10 +49,29 @@ object UiPerformance {
 
     // ------------------------------------------------------------------ Ruckel-Messung
 
-    private val frames = AtomicLong()
-    private val slow = AtomicLong()
-    private val verySlow = AtomicLong()
-    private val worstMs = AtomicLong()
+    /** Zählt die Bilder getrennt: ruhige Bedienung und während im Hintergrund Playlist oder TV-Guide geladen werden. */
+    private class Counter {
+        val frames = AtomicLong()
+        val slow = AtomicLong()
+        val verySlow = AtomicLong()
+        val worstMs = AtomicLong()
+        fun add(ms: Long) {
+            frames.incrementAndGet()
+            if (ms > SLOW_MS) slow.incrementAndGet()
+            if (ms > VERY_SLOW_MS) verySlow.incrementAndGet()
+            worstMs.accumulateAndGet(ms) { a, b -> maxOf(a, b) }
+        }
+        fun text(): String {
+            val total = frames.get()
+            fun share(n: Long) = String.format(java.util.Locale.GERMAN, "%.1f %%", n * 100.0 / total)
+            return "$total Bilder, über ${SLOW_MS} ms: ${share(slow.get())}, über ${VERY_SLOW_MS} ms: ${share(verySlow.get())}, längstes ${worstMs.get()} ms"
+        }
+    }
+    private val calm = Counter()
+    private val loading = Counter()
+
+    /** Lädt gerade etwas im Hintergrund (Playlist, TV-Guide)? Von der App gesetzt. */
+    @Volatile var busy: () -> Boolean = { false }
     private var thread: HandlerThread? = null
     private val listeners = HashMap<Window, Window.OnFrameMetricsAvailableListener>()
 
@@ -65,10 +84,7 @@ object UiPerformance {
         val listener = Window.OnFrameMetricsAvailableListener { _, metrics, _ ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && metrics.getMetric(FrameMetrics.FIRST_DRAW_FRAME) == 1L) return@OnFrameMetricsAvailableListener
             val ms = metrics.getMetric(FrameMetrics.TOTAL_DURATION) / 1_000_000
-            frames.incrementAndGet()
-            if (ms > SLOW_MS) slow.incrementAndGet()
-            if (ms > VERY_SLOW_MS) verySlow.incrementAndGet()
-            worstMs.accumulateAndGet(ms) { a, b -> maxOf(a, b) }
+            (if (runCatching { busy() }.getOrDefault(false)) loading else calm).add(ms)
         }
         runCatching { window.addOnFrameMetricsAvailableListener(listener, handler) }.onSuccess { listeners[window] = listener }
     }
@@ -81,11 +97,12 @@ object UiPerformance {
 
     /** Für den Fehlerbericht: Anteil ruckeliger Bilder seit dem Start. */
     fun summary(): String {
-        val total = frames.get()
-        if (total == 0L) return "noch keine Messung"
-        fun share(n: Long) = String.format(java.util.Locale.GERMAN, "%.1f %%", n * 100.0 / total)
-        return "$total Bilder, über ${SLOW_MS} ms: ${share(slow.get())}, über ${VERY_SLOW_MS} ms: ${share(verySlow.get())}, " +
-            "längstes ${worstMs.get()} ms" + if (reduced) " (weniger Bewegung aktiv)" else ""
+        if (calm.frames.get() == 0L && loading.frames.get() == 0L) return "noch keine Messung"
+        val parts = listOfNotNull(
+            calm.takeIf { it.frames.get() > 0 }?.let { "ruhig: ${it.text()}" },
+            loading.takeIf { it.frames.get() > 0 }?.let { "während Playlist/TV-Guide laden: ${it.text()}" },
+        )
+        return parts.joinToString(" · ") + if (reduced) " (weniger Bewegung aktiv)" else ""
     }
 
     private const val SLOW_MS = 25L

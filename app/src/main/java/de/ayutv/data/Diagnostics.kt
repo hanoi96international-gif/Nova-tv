@@ -133,6 +133,8 @@ object Diagnostics {
                 val status = container.playlists.epgStatus(p.id) ?: continue
                 if (status.missingChannels.isEmpty()) continue
                 out.append("${p.name} (Nr. ${p.id}): ${status.total - status.withGuide} von ${status.total}\n")
+                if (status.excluded.isNotEmpty()) out.append("  Nicht mitgezählt (kein Programm möglich): " +
+                    status.excluded.joinToString { "${it.first} ${it.second}" } + "\n")
                 status.missingInGroups.groupBy({ it.first }, { it.second }).entries.take(40).forEach { (group, names) ->
                     out.append("  ${group.ifEmpty { "-" }}: ${names.distinct().take(40).joinToString(", ")}${if (names.size > 40) " … (+${names.size - 40})" else ""}\n")
                 }

@@ -61,6 +61,21 @@ object EventNames {
         return tokens.joinToString("")
     }
 
+    private val ROUND_THE_CLOCK = Regex("""\b24\s*/\s*7\b""")
+    private val EVENT_ONLY = Regex("""(?i)\bppv\b|\[\s*live[- ]?event\s*]|\(\s*(live[- ]?)?event( only)?\s*\)""")
+
+    /**
+     * Warum ein Sender ohne TV-Guide gar keinen haben kann (für den Bericht, nicht als „fehlt“ gezählt), oder null,
+     * wenn er wirklich fehlt: Dauerschleifen („24/7“), Event-Sender ohne laufendes oder angekündigtes Spiel.
+     */
+    fun noGuideReason(name: String, group: String): String? = when {
+        isSeparator(name) -> "Trennzeilen"
+        STATE.containsMatchIn(name.trim()) || isIdle(name) -> "Event-Sender ohne laufendes Spiel"
+        ROUND_THE_CLOCK.containsMatchIn(group) || ROUND_THE_CLOCK.containsMatchIn(name) -> "24/7-Sender (Dauerschleife)"
+        EVENT_ONLY.containsMatchIn(name) || EVENT_ONLY.containsMatchIn(group) -> "Event-Sender ohne Spielangabe"
+        else -> null
+    }
+
     /** Event-Sender ohne aktuelles Event („- NO EVENT STREAMING -“): leer, braucht kein Programm. */
     fun isIdle(name: String): Boolean = Regex("""(?i)no event( streaming)?|kein event|offline""").containsMatchIn(name)
 

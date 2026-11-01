@@ -75,4 +75,20 @@ class EventNamesTest {
         assertNull(EventNames.baseKey("4K: SKY SPORTS ᵁᴴᴰ ³⁸⁴⁰ᴾ (EVENT)"))
         assertNull(EventNames.baseKey("DE: SKY SPORT BUNDESLIGA ᵁᴴᴰ ³⁸⁴⁰ᴾ"))
     }
+
+    @Test
+    fun channelsThatCannotHaveAGuide() {
+        // Kurzbericht 01.11.2026: nicht als „fehlt“ zählen
+        assertEquals("Event-Sender ohne laufendes Spiel", EventNames.noGuideReason("ENDED | HSG WETZLAR - MT MELSUNGEN | Sun 01 Nov 14:45 CET (DE) | 8K EXCLUSIVE | DE: DYN PPV 19", "DE| DYN PPV EXCLUSIVE"))
+        assertEquals("Event-Sender ohne laufendes Spiel", EventNames.noGuideReason("- NO EVENT STREAMING - | 8K EXCLUSIVE | DE: DYN PPV 39", "DE| DYN PPV EXCLUSIVE"))
+        assertEquals("24/7-Sender (Dauerschleife)", EventNames.noGuideReason("DE: GAME OF THRONES S01 4K", "DE| 24/7 MAGENTA SERIE 4K"))
+        assertEquals("Event-Sender ohne Spielangabe", EventNames.noGuideReason("DE: MAGENTA SPORT PPV 3 ᴴᴰ", "DE| MAGENTA PPV ᴴᴰ ᴳᴼᴸᴰ"))
+        assertEquals("Event-Sender ohne Spielangabe", EventNames.noGuideReason("DE GO: DAZN 3 HD [LIVE-EVENT]", "DE| DAZN PPV SKY GO"))
+        assertEquals("Event-Sender ohne Spielangabe", EventNames.noGuideReason("4K: TNT SPORTS ᵁᴴᴰ ³⁸⁴⁰ᴾ (EVENT)", "4K| ᵁᴴᴰ ³⁸⁴⁰ᴾ"))
+        assertEquals("Trennzeilen", EventNames.noGuideReason("##### SKY MOVIES HD/4K #####", "DE| SKY MOVIES HD/4K"))
+        // Echte Sender fehlen wirklich
+        assertNull(EventNames.noGuideReason("DE: SKY SPORT 11 HD", "DE| SPORT HD/4K"))
+        assertNull(EventNames.noGuideReason("DE: GEO HD", "DE| GENERAL HD/4K"))
+        assertNull(EventNames.noGuideReason("4K: SKY SPORTS MAIN EVENTS ᵁᴴᴰ ³⁸⁴⁰ᴾ", "4K| ᵁᴴᴰ ³⁸⁴⁰ᴾ"))
+    }
 }
