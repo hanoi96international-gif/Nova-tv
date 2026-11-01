@@ -746,7 +746,8 @@ class PlayerActivity : ComponentActivity() {
         }
         val bits = format?.colorInfo?.lumaBitdepth?.takeIf { it > 8 }?.let { " $it Bit" }.orEmpty()
         val resolution = format?.height?.takeIf { it > 0 }?.let { if (it >= 2000) " in 4K" else " in ${it}p" }.orEmpty()
-        return "Dieses Gerät kann $codec$bits$resolution nicht abspielen"
+        // Erst nach allen Ausweichwegen (ohne Tunneling, ohne schnelles Dekodieren): Der Decoder lehnt ab.
+        return "Der Decoder lehnt diesen Stream ab ($codec$bits$resolution) – auch ohne Tunneling und schnelles Dekodieren"
     }
 
     private fun onLiveStreamEnded() {
@@ -3746,8 +3747,11 @@ class PlayerActivity : ComponentActivity() {
                 }
                 // Tunneling ist auf manchen Geräten/Streams instabil: einmalig ohne Tunneling neu starten.
                 // Steht vor dem Ton-Zweig, sonst würde ein Tunneling-Problem als Soundbar-Problem behandelt.
-                trackSelector?.parameters?.tunnelingEnabled == true && error.isDecoderOrAudioError() -> {
+                // Auch wenn der Decoder „zu hohe Anforderungen“ meldet (4K HEVC 10 Bit): Das kommt auf manchen Fire TVs
+                // vom Tunneling, nicht vom Format – erst ohne versuchen, bevor es „Gerät kann das nicht“ heißt.
+                trackSelector?.parameters?.tunnelingEnabled == true && (error.isDecoderOrAudioError() || error.isUnsupportedFormat()) -> {
                     trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
+                    statusHistory += "Ausweichen: ohne Tunneling (${error.errorCodeName})"
                     message = "Tunneling für diesen Stream deaktiviert, starte neu …"
                     restartStream()
                 }
@@ -3783,8 +3787,21 @@ class PlayerActivity : ComponentActivity() {
                     // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
                     handler.post { rebuildPlayer(asyncDecoding = false) }
                 }
-                // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
-                !everReady && error.isUnsupportedFormat() -> {
+                // „Zu hohe Anforderungen“ mit schnellem Dekodieren: für diesen Player ohne versuchen (nicht dauerhaft
+                // abschalten, 4K läuft damit sonst oft flüssiger). Tunneling bleibt dabei aus, falls es schon aus war.
+                asyncDecodingActive && error.isUnsupportedFormat() -> {
+                    message = "Verbinde neu …"
+                    asyncDecodingActive = false
+                    statusHistory += "Ausweichen: ohne schnelles Dekodieren (${error.errorCodeName})"
+                    val tunnelingOff = settings.tunneling && trackSelector?.parameters?.tunnelingEnabled == false
+                    handler.post {
+                        rebuildPlayer(asyncDecoding = false)
+                        if (tunnelingOff) trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
+                    }
+                }
+                // Format lehnt der Decoder auch ohne Sonderwege ab. Einmal wiederholen (der 4K-Decoder ist beim Zappen
+                // oft noch belegt und meldet dann „zu hohe Anforderungen“), dann klar sagen, woran es liegt.
+                !everReady && error.isUnsupportedFormat() && retries >= 1 -> {
                     val reason = unsupportedFormatMessage()
                     if (!tryNextVariant(reason)) {
                         fatalError = true
