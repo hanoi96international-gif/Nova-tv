@@ -10,6 +10,7 @@ class WatchLogTest {
             at = at, channel = channel, watchedS = 1800, height = 1080, fps = 25f, displayHz = 60f, codec = "hevc",
             avgKbps = 9_800, lowKbps = 2_100, minBufferS = 4, stalls = stalls, stallS = stalls * 3, drops = drops,
             droppedFrames = 0, startMs = 749, errors = 0, route = route, net = "WLAN 5 GHz 433 Mbit/s", worstRssi = -67,
+            audio = "eac3 6ch im Gerät",
         )
 
     @Test
@@ -49,6 +50,14 @@ class WatchLogTest {
         assertTrue(text, text.contains("25/50 fps auf 60 Hz): 2 von 2"))
         assertTrue(text, text.contains("Neu verbunden pro Stunde"))
         assertTrue(text, text.contains("Auffällige Sender"))
+        assertTrue(text, text.contains("Ton eac3 6ch im Gerät"))
+        // Viele verworfene Bilder allein machen einen Sender auffällig, getrennt nach Tonweg gezählt
+        val drops = WatchLog.summary(listOf(entry(now - 1000, channel = "DE: Sky Sport 1").copy(fps = 50f, displayHz = 50f, droppedFrames = 7190)), now)
+        assertTrue(drops, drops.contains("Verworfene Bilder je Ton: Ton im Gerät dekodiert 7190 (1 Sender)"))
+        assertTrue(drops, drops.contains("DE: Sky Sport 1"))
+        // Ältere Einträge ohne Ton-Feld lassen sich weiter lesen
+        val old = WatchLog.encode(entry(1L)).substringBeforeLast('\t')
+        assertEquals("", WatchLog.decode(old)!!.audio)
         assertEquals("Noch nichts geschaut (gezählt wird ab 30 s je Sender).\n", WatchLog.summary(emptyList(), now))
     }
 }

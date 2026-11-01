@@ -908,6 +908,10 @@ class PlayerActivity : ComponentActivity() {
             stalls = watchStalls, stallS = watchStallSeconds, drops = drops, droppedFrames = stats.droppedFrames,
             startMs = stats.startupMs.toInt(), errors = playerErrors - watchErrorsAtStart,
             route = routeLabel().removePrefix("Weg: "), net = watchNet, worstRssi = watchWorstRssi,
+            audio = if (stats.audioCodec.isBlank()) "" else listOfNotNull(
+                stats.audioCodec, stats.audioChannels.takeIf { it > 0 }?.let { "${it}ch" },
+                if (stats.audioDecoder.isNotBlank()) "im Gerät" else "durchgereicht",
+            ).joinToString(" "),
         )
         val file = java.io.File(filesDir, de.ayutv.data.Diagnostics.WATCH_FILE)
         container.scope.launch(Dispatchers.IO) {
