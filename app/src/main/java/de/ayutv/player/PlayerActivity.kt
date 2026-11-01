@@ -3900,22 +3900,17 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /**
-     * Bild-Check (einmal je App-Start): Den Bildmodus des Fernsehers kann keine App umschalten, zwei häufige
-     * Fehlerquellen lassen sich aber erkennen. 1. Der Fire TV gibt dauerhaft HDR aus („Dynamikbereich: Immer HDR“),
-     * während ein normaler Sender in SDR läuft (fast alle Full-HD-Sender, viele 4K-Sportübertragungen): Das Bild
-     * wirkt blass und flau. 2. Ein HLG-Stream (4K-Sport, ARD/ZDF UHD) auf einem Fernseher, der HLG nicht meldet:
-     * Er läuft dann nur in SDR.
+     * Bild-Check (einmal je App-Start): Ein HLG-Stream (4K-Sport, ARD/ZDF UHD) auf einem Fernseher, der HLG nicht
+     * meldet, läuft nur in SDR. Ob der Fire TV gerade HDR *ausgibt*, kann eine App nicht erfahren: `Display.isHdr`
+     * sagt nur, dass der Fernseher HDR *kann*. Der frühere Hinweis „Fire TV gibt gerade HDR aus“ erschien deshalb
+     * bei jedem SDR-Sender auf jedem HDR-Fernseher und ist entfernt.
      */
     private fun checkDynamicRange(video: androidx.media3.common.Format?) {
         if (dynamicRangeHintShown || video == null || video.height <= 0 || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay ?: return
         val transfer = video.colorInfo?.colorTransfer
-        val hdrContent = transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG || video.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION
         val hint = when {
-            !hdrContent && display.isHdr ->
-                "Tipp: Dein Fire TV gibt gerade HDR aus, dieser Sender sendet aber normales Bild (SDR) – das wirkt blass. " +
-                    "Fire TV: Einstellungen → Display und Audio → Display → Dynamikbereich → „An Inhalt anpassen“"
             transfer == C.COLOR_TRANSFER_HLG &&
                 display.hdrCapabilities?.supportedHdrTypes?.contains(android.view.Display.HdrCapabilities.HDR_TYPE_HLG) == false ->
                 "Dieser Sender sendet HLG (HDR), dein Fernseher meldet aber kein HLG – das Bild läuft deshalb nur in SDR. " +
