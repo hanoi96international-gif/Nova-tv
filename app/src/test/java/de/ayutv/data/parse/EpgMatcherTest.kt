@@ -261,6 +261,7 @@ class EpgMatcherTest {
         assertEquals("Curiosity.Channel.de", matcher.match(null, "DE: CURIOSITY CHANNEL POWERED BY SPIEGEL HD"))
         assertEquals("Home and Garden TV.de", matcher.match(null, "DE: HOME GARTEN TV HD"))
         assertEquals("hr-fernsehen.de", matcher.match(null, "JOYN: HESSISCHER RUNDFUNK ᴿᴬᵂ"))
+        assertEquals("Home and Garden TV.de", matcher.match(null, "DE: HGTV HD"))
         // „Geo“ als Zusatz bleibt Rauschen, Nat Geo Wild bleibt Nat Geo Wild
         assertEquals("NAT.GEO.WILD.de", matcher.match(null, "DE: NAT GEO WILD HD"))
     }

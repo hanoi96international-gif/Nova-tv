@@ -39,6 +39,15 @@ class LiveScoresTest {
         assertTrue(matches[1].finished)
         // Wappen: Rastergrafik ja, SVG nein (zeigt der Bildlader nicht an), fehlend = null
         assertEquals("https://upload.wikimedia.org/bvb.png", bvb.icon1)
+        // Wikimedia-SVG → fertiges PNG-Vorschaubild
+        assertEquals(
+            "https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Borussia_Dortmund_logo.svg/120px-Borussia_Dortmund_logo.svg.png",
+            LiveScores.crest("https://upload.wikimedia.org/wikipedia/commons/6/67/Borussia_Dortmund_logo.svg"),
+        )
+        // Schon ein Vorschaubild: unverändert; fremdes SVG: keines
+        val thumb = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/FC_Cologne_logo.svg/200px-FC_Cologne_logo.svg.png"
+        assertEquals(thumb, LiveScores.crest(thumb))
+        assertNull(LiveScores.crest("https://example.org/wappen.svg"))
         assertNull(bvb.icon2)
         assertNull(matches[1].icon1)
     }

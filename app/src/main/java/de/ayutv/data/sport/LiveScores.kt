@@ -214,9 +214,20 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
             }
         }
 
-        /** Wappen-Adresse: nur Rastergrafiken über HTTP(S) (SVG zeigt der Bildlader nicht an). */
-        fun crest(url: String): String? = url.trim().takeIf {
-            it.startsWith("http") && !it.substringBefore('?').endsWith(".svg", ignoreCase = true)
+        private val WIKIMEDIA_SVG = Regex("""^https?://upload\.wikimedia\.org/wikipedia/([^/]+)/(?!thumb/)([0-9a-f])/([0-9a-f]{2})/([^/?#]+\.svg)$""", RegexOption.IGNORE_CASE)
+
+        /**
+         * Wappen-Adresse als Rastergrafik. OpenLigaDB verweist meist auf SVG-Dateien bei Wikimedia, die der Bildlader nicht
+         * anzeigt: Für die gibt es dort fertige PNG-Vorschaubilder („…/thumb/…/120px-Name.svg.png“). Andere SVGs: keines.
+         */
+        fun crest(url: String): String? {
+            val u = url.trim()
+            if (!u.startsWith("http")) return null
+            WIKIMEDIA_SVG.find(u)?.let { m ->
+                val (project, a, ab, file) = m.destructured
+                return "https://upload.wikimedia.org/wikipedia/$project/thumb/$a/$ab/$file/120px-$file.png"
+            }
+            return u.takeIf { !it.substringBefore('?').endsWith(".svg", ignoreCase = true) }
         }
 
         private fun parseUtc(text: String): Long? = runCatching {

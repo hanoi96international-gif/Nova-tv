@@ -14,6 +14,11 @@ class EpgSourcesTest {
         assertEquals("plutotv-de.xml.gz", EpgSources.cacheName("https://i.mjh.nz/PlutoTV/de.xml.gz"))
         assertEquals("samsungtvplus-de.xml.gz", EpgSources.cacheName("https://i.mjh.nz/SamsungTVPlus/de.xml.gz"))
         assertEquals("epg_ripper_DE1.xml.gz", EpgSources.cacheName(EpgSources.PUBLIC.first()))
+        // open-epg Deutschland 1 und 4 (Nachrecherche): eigene Cache-Dateien, für deutschsprachige Sender
+        val de1 = EpgSources.PUBLIC.first { it.endsWith("germany1.xml") }
+        val de4 = EpgSources.PUBLIC.first { it.endsWith("germany4.xml") }
+        assertEquals(false, EpgSources.cacheName(de1) == EpgSources.cacheName(de4))
+        assertEquals(true, EpgSources.relevant(de1, listOf("DE: HGTV HD")))
     }
 
     @Test

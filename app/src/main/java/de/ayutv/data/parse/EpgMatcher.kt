@@ -155,6 +155,8 @@ class EpgMatcher(private val country: String = "de") {
             "geo" to "geotelevision", "hse24" to "hse", "hessischerrundfunk" to "hr", "sonyaxn" to "axn",
             "crimeinvestigation" to "crimeplusinvestigation", "curiositychannelpoweredbyspiegel" to "curiositychannel",
             "homegartentv" to "homeandgardentv", "homegardentv" to "homeandgardentv", "eentertainm" to "eentertainment",
+            // HGTV heißt in manchen TV-Guides „Home and Garden TV“ (gleicher Sender von Discovery).
+            "hgtv" to "homeandgardentv",
         )
 
         private val BRACKETS = Regex("""\[[^\]]*\]|\([^)]*\)|\{[^}]*\}""")
