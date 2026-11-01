@@ -177,15 +177,38 @@ class OpenSubtitlesParsingTest {
         val body = """{"data":[
             {"id":"111","type":"feature","attributes":{"title":"Gummi Bears Movie","feature_type":"Movie","feature_id":"111","year":"1985"}},
             {"id":"222","type":"feature","attributes":{"title":"Disney's Adventures of the Gummi Bears","original_title":"Disney's Adventures of the Gummi Bears",
-              "title_aka":["Die Gummibärenbande","Les Gummi"],"feature_type":"Tvshow","feature_id":"222","year":"1985"}},
-            {"id":"333","type":"feature","attributes":{"title":"Recess","title_aka":["Disneys große Pause"],"feature_type":"Tvshow","feature_id":"333"}}
+              "title_aka":["Die Gummibärenbande","Les Gummis"],"feature_type":"Tvshow","feature_id":"222","year":"1985"}},
+            {"id":"333","type":"feature","attributes":{"title":"Recess","title_aka":["Disneys große Pause"],"feature_type":"Tvshow","feature_id":"333","year":"1997"}},
+            {"id":"444","type":"feature","attributes":{"title":"DuckTales","feature_type":"Tvshow","feature_id":"444","year":"1987"}},
+            {"id":"555","type":"feature","attributes":{"title":"DuckTales","feature_type":"Tvshow","feature_id":"555","year":"2017"}},
+            {"id":"666","type":"feature","attributes":{"title":"Pause","feature_type":"Tvshow","feature_id":"666","year":"2020"}}
         ]}"""
         val features = OpenSubtitlesParsing.features(body)
-        assertEquals(3, features.size)
+        assertEquals(6, features.size)
+        // Deutscher Zweitname → die richtige englische Serie
         assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Die Gummibärenbande")?.id)
-        assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Gummibärenbande")?.id)
+        assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Gummibärenbande", 1985)?.id)
         assertEquals(333L, OpenSubtitlesParsing.bestShow(features, "Disneys Große Pause")?.id)
-        assertNull(OpenSubtitlesParsing.bestShow(features.filter { it.type == "Movie" }, "Gummi"))
+        // Nur ein Teil des Namens passt: nicht raten („Pause“ ist eine andere Serie, „Gummi“ keine)
+        assertNull(OpenSubtitlesParsing.bestShow(features, "Große"))
+        assertNull(OpenSubtitlesParsing.bestShow(features, "Gummi"))
+        // Gleichnamige Serien: das Jahr entscheidet, ohne Jahr keine Wahl
+        assertEquals(444L, OpenSubtitlesParsing.bestShow(features, "DuckTales", 1987)?.id)
+        assertEquals(555L, OpenSubtitlesParsing.bestShow(features, "Disneys DuckTales", 2018)?.id)
+        assertNull(OpenSubtitlesParsing.bestShow(features, "DuckTales"))
+        // Jahr passt nicht: lieber nichts als eine andere Serie
+        assertNull(OpenSubtitlesParsing.bestShow(features, "Recess", 2010))
+        // Filme zählen nicht als Serie
+        assertNull(OpenSubtitlesParsing.bestShow(features.filter { it.type == "Movie" }, "Gummi Bears Movie"))
         assertEquals(emptyList<OpenSubtitlesParsing.Feature>(), OpenSubtitlesParsing.features("kaputt"))
+    }
+
+    @Test
+    fun episodeMustBelongToSeries() {
+        val c = SubtitleCandidate(1, "en", "x", false, 0, false, parentTitle = "Recess")
+        assertEquals(true, OpenSubtitlesParsing.belongsToSeries(c, listOf("Recess")))
+        assertEquals(true, OpenSubtitlesParsing.belongsToSeries(c, listOf("Disney's Recess")))
+        assertEquals(false, OpenSubtitlesParsing.belongsToSeries(c.copy(parentTitle = "Recess: School's Out"), listOf("Recess")))
+        assertEquals(false, OpenSubtitlesParsing.belongsToSeries(c.copy(parentTitle = "Coffee Break"), listOf("Große Pause")))
     }
 }

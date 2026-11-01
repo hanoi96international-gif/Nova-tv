@@ -59,6 +59,10 @@ data class SubtitleCandidate(
     /** Bei Serienfolgen: Staffel und Folge laut OpenSubtitles. */
     val season: Int? = null,
     val episode: Int? = null,
+    /** Bei Serienfolgen: Name und TMDB-Kennung der Serie, zu der die Folge gehört (zum Prüfen jedes Treffers). */
+    val parentTitle: String? = null,
+    val parentTmdbId: Long? = null,
+    val parentFeatureId: Long? = null,
 )
 
 object OpenSubtitlesParsing {
@@ -93,6 +97,9 @@ object OpenSubtitlesParsing {
                 fps = attributes.primitive("fps")?.contentOrNull?.toDoubleOrNull()?.takeIf { it > 1 },
                 season = feature?.primitive("season_number")?.longOrNull?.toInt(),
                 episode = feature?.primitive("episode_number")?.longOrNull?.toInt(),
+                parentTitle = feature?.primitive("parent_title")?.contentOrNull?.takeIf { it.isNotBlank() },
+                parentTmdbId = feature?.primitive("parent_tmdb_id")?.contentOrNull?.toLongOrNull(),
+                parentFeatureId = feature?.primitive("parent_feature_id")?.contentOrNull?.toLongOrNull(),
             )
         }.sortedWith(QUALITY)
     }
@@ -211,21 +218,46 @@ object OpenSubtitlesParsing {
     }
 
     /**
-     * Die Serie zu [query] („Die Gummibärenbande“): eine Serie (keine Folge, kein Film), deren Name oder Zweitname
-     * zum Suchbegriff passt; sonst die erste Serie der Liste. null ohne Serie.
+     * Die Serie zu [query] („Die Gummibärenbande“) – nur, wenn sie sicher die richtige ist: Ein Name oder Zweitname
+     * muss genau passen (ohne Studio-Vorsatz, Artikel, Groß/klein und Sonderzeichen). Gibt es mehrere gleichnamige
+     * (DuckTales 1987 und 2017), entscheidet das [year] der Serie beim Anbieter (±1 Jahr); ohne Jahr oder bei einem
+     * anderen Jahr: null. Geraten wird nie – lieber keine Untertitel als die einer anderen Serie.
      */
-    fun bestShow(features: List<Feature>, query: String): Feature? {
-        val shows = features.filter { it.type.equals("tvshow", ignoreCase = true) || it.type.equals("tv show", ignoreCase = true) }
-        if (shows.isEmpty()) return null
-        val wanted = normalize(query)
-        return shows.firstOrNull { show -> show.names.any { normalize(it) == wanted } }
-            ?: shows.firstOrNull { show -> show.names.any { normalize(it).contains(wanted) || wanted.contains(normalize(it).ifEmpty { "\u0000" }) } }
-            ?: shows.first()
+    fun bestShow(features: List<Feature>, query: String, year: Int? = null): Feature? {
+        val wanted = nameKey(query)
+        if (wanted.length < 3) return null
+        val matching = features
+            .filter { it.type.equals("tvshow", ignoreCase = true) || it.type.equals("tv show", ignoreCase = true) }
+            .filter { show -> show.names.any { nameKey(it) == wanted } }
+            .distinctBy { it.id }
+        if (matching.isEmpty()) return null
+        if (year == null) return matching.singleOrNull()
+        val sameYear = matching.filter { it.year != null && kotlin.math.abs(it.year - year) <= 1 }
+        return when {
+            sameYear.size == 1 -> sameYear[0]
+            sameYear.size > 1 -> null
+            // Keine mit passendem Jahr: nur eine einzige Serie ohne Jahresangabe gilt, sonst nichts.
+            else -> matching.singleOrNull()?.takeIf { it.year == null }
+        }
+    }
+
+    /** Gehört die Folge [c] sicher zur Serie [names] (wenn OpenSubtitles die Serie nennt)? Ohne Angabe: ja. */
+    fun belongsToSeries(c: SubtitleCandidate, names: Collection<String>): Boolean {
+        val parent = c.parentTitle ?: return true
+        val key = nameKey(parent)
+        return names.any { nameKey(it) == key }
+    }
+
+    /** Name zum Vergleichen: ohne Studio-Vorsatz und Artikel, Groß/klein, Akzente und Sonderzeichen. */
+    fun nameKey(name: String): String {
+        var text = cleanTitle(name).first
+        text = text.replace(STUDIO, "").trim().replace(ARTICLE, "").trim()
+        return normalize(text)
     }
 
     private fun normalize(name: String): String =
         java.text.Normalizer.normalize(name.lowercase(), java.text.Normalizer.Form.NFKD).replace(Regex("""\p{M}+"""), "")
-            .replace("ß", "ss").replace(Regex("""[^a-z0-9]"""), "")
+            .replace("ß", "ss").replace("&", "and").replace(Regex("""[^a-z0-9]"""), "")
 
     /**
      * Suchbegriffe für eine Serie, wie der Anbieter sie nennt: der Name selbst, dann ohne Studio-Vorsatz und Artikel

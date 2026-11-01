@@ -162,7 +162,8 @@ class SubtitleRepository(
                         put("season_number", season.toString())
                         put("episode_number", number.toString())
                         if (language != null) put("languages", language)
-                    }).filter(::fits)
+                    // Nur Folgen genau dieser Serie (OpenSubtitles nennt die TMDB-Kennung der Serie zu jeder Datei).
+                    }).filter { fits(it) && (it.parentTmdbId == null || it.parentTmdbId.toString() == tmdb) }
                     candidates = OpenSubtitlesParsing.byQuality(found)
                     Log.i(TAG, "Folgensuche TMDB $tmdb S${season}E$number: ${found.size} Treffer, gewählt: ${candidates.firstOrNull()?.release}")
                 }
@@ -171,14 +172,15 @@ class SubtitleRepository(
                 //    dann mit der gefundenen Serie genau diese Folge; sonst die freie Suche nach dem Namen.
                 for (query in OpenSubtitlesParsing.seriesQueries(series, seriesInfo?.originalName)) {
                     if (candidates.isNotEmpty()) break
-                    val show = runCatching { findShow(apiKey, query) }.getOrNull()
+                    val year = seriesInfo?.year ?: OpenSubtitlesParsing.cleanTitle(series).second
+                    val show = runCatching { findShow(apiKey, query, year) }.getOrNull()
                     if (show != null) {
                         val found = search(apiKey, buildMap {
                             put("parent_feature_id", show.id.toString())
                             put("season_number", season.toString())
                             put("episode_number", number.toString())
                             if (language != null) put("languages", language)
-                        }).filter(::fits)
+                        }).filter { fits(it) && (it.parentFeatureId == null || it.parentFeatureId == show.id) }
                         candidates = OpenSubtitlesParsing.byQuality(found)
                         Log.i(TAG, "Folgensuche „$query“ → Serie „${show.title}“ (${show.id}) S${season}E$number: ${found.size} Treffer")
                         if (candidates.isNotEmpty()) break
@@ -189,7 +191,8 @@ class SubtitleRepository(
                         put("episode_number", number.toString())
                         put("type", "episode")
                         if (language != null) put("languages", language)
-                    }).filter(::fits)
+                        // Freie Namenssuche: nur Folgen einer Serie, die wirklich so heißt (nicht irgendeine mit „Pause“).
+                    }).filter { fits(it) && OpenSubtitlesParsing.belongsToSeries(it, listOf(query)) && it.parentTitle != null }
                     candidates = OpenSubtitlesParsing.bestFeature(found, null, wantMovie = false)
                     Log.i(TAG, "Folgensuche „$query“ S${season}E$number: ${found.size} Treffer, gewählt: ${candidates.firstOrNull()?.release}")
                 }
@@ -378,15 +381,15 @@ class SubtitleRepository(
     /** TMDB-Kennung, Originaltitel und Jahr eines Xtream-Films (player_api get_vod_info). */
     private data class MovieInfo(val tmdbId: String?, val originalTitle: String?, val year: Int?)
 
-    private data class SeriesInfo(val tmdbId: String?, val originalName: String?)
+    private data class SeriesInfo(val tmdbId: String?, val originalName: String?, val year: Int? = null)
 
     /** Serien im Verzeichnis von OpenSubtitles, je Suchbegriff einmal nachgeschlagen (nur im Speicher). */
     private val showCache = java.util.concurrent.ConcurrentHashMap<String, OpenSubtitlesParsing.Feature>()
     private val noShow = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /** Serie zu einem Namen (auch deutschen Zweitnamen) im Verzeichnis von OpenSubtitles; null, wenn keine passt. */
-    private fun findShow(apiKey: String, query: String): OpenSubtitlesParsing.Feature? {
-        val cacheKey = query.lowercase()
+    private fun findShow(apiKey: String, query: String, year: Int?): OpenSubtitlesParsing.Feature? {
+        val cacheKey = query.lowercase() + "|" + (year ?: "")
         showCache[cacheKey]?.let { return it }
         if (cacheKey in noShow || System.currentTimeMillis() < blockedUntil) return null
         val url = "$API/features".toHttpUrl().newBuilder()
@@ -400,7 +403,7 @@ class SubtitleRepository(
             }
             response.body.string()
         }
-        val show = OpenSubtitlesParsing.bestShow(OpenSubtitlesParsing.features(body), query)
+        val show = OpenSubtitlesParsing.bestShow(OpenSubtitlesParsing.features(body), query, year)
         if (show == null) noShow += cacheKey else showCache[cacheKey] = show
         return show
     }
@@ -429,7 +432,8 @@ class SubtitleRepository(
         fun text(vararg names: String) = names.firstNotNullOfOrNull { name ->
             (info[name] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() && it != "0" }
         }
-        val result = SeriesInfo(text("tmdb", "tmdb_id")?.takeIf { it.all(Char::isDigit) }, text("o_name", "original_name"))
+        val year = text("releaseDate", "releasedate", "release_date", "year")?.let { Regex("""(19|20)\d\d""").find(it)?.value?.toInt() }
+        val result = SeriesInfo(text("tmdb", "tmdb_id")?.takeIf { it.all(Char::isDigit) }, text("o_name", "original_name"), year)
         Log.i(TAG, "Serie beim Anbieter: $result")
         seriesInfoCache[cacheKey] = result
         return result
