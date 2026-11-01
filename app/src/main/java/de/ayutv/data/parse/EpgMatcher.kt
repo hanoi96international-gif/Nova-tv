@@ -118,8 +118,8 @@ class EpgMatcher(private val country: String = "de") {
         /** Angaben zu Bild, Ton und Technik, die nichts über den Sender sagen. */
         private val NOISE = setOf(
             "hd", "fhd", "uhd", "sd", "hq", "lq", "4k", "8k", "hdr", "hdr10", "dv", "hevc", "h265", "h264", "x265",
-            "1080p", "1080i", "720p", "2160p", "576i", "50fps", "60fps", "25fps", "fps", "raw", "backup", "alt",
-            "multi", "multiaudio", "dolby", "atmos", "ac3", "dd", "vip", "live", "feed", "geo", "geoblocked",
+            "1080p", "1080i", "720p", "2160p", "3840p", "576i", "50fps", "60fps", "25fps", "fps", "raw", "backup", "alt",
+            "multi", "multiaudio", "dolby", "atmos", "ac3", "dd", "vip", "live", "feed", "geoblocked",
             "hdplus", "orig", "original", "low", "high", "test", "new", "neu", "only", "event",
         )
 
@@ -151,6 +151,10 @@ class EpgMatcher(private val country: String = "de") {
             // Amazon: „Prime“ (epgshare01 DE), „Amazon Prime Video“ (CH), in Listen auch „Prime Video (24/7)“.
             "primevideo" to "prime", "amazonprime" to "prime", "amazonprimevideo" to "prime", "primevideolive" to "prime",
             "primevideosport" to "prime", "amazonprimevideolive" to "prime",
+            // Aus Kurzberichten (01.11.2026): Schreibweisen der Anbieter gegen die Namen im TV-Guide.
+            "geo" to "geotelevision", "hse24" to "hse", "hessischerrundfunk" to "hr", "sonyaxn" to "axn",
+            "crimeinvestigation" to "crimeplusinvestigation", "curiositychannelpoweredbyspiegel" to "curiositychannel",
+            "homegartentv" to "homeandgardentv", "homegardentv" to "homeandgardentv", "eentertainm" to "eentertainment",
         )
 
         private val BRACKETS = Regex("""\[[^\]]*\]|\([^)]*\)|\{[^}]*\}""")
@@ -164,7 +168,7 @@ class EpgMatcher(private val country: String = "de") {
         private val TOKENS = Regex("""[^a-z0-9]+""")
         private val GLUED_NOISE = Regex("""(?:hd|fhd|uhd|4k|8k|hevc|h265)$""")
         private val MARKS = Regex("""\p{M}+""")
-        private val UHD_TOKENS = setOf("uhd", "4k", "2160p", "8k")
+        private val UHD_TOKENS = setOf("uhd", "4k", "2160p", "3840p", "8k")
         private val GLUED_UHD = Regex("""(?:uhd|4k)$""")
         private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
 
@@ -232,7 +236,7 @@ class EpgMatcher(private val country: String = "de") {
             val allTokens = text.split(TOKENS).filter { it.isNotEmpty() }
             // UHD-Fassung („Sky Sport Bundesliga UHD“, „RTL 4K“, „Sky Sport UHD“), auch angehängt („ZDF4K“).
             val uhd = allTokens.any { it in UHD_TOKENS || (it.length > 3 && GLUED_UHD.containsMatchIn(it) && !it.startsWith("uhd")) }
-            val tokens = allTokens.filter { it !in NOISE }.toMutableList()
+            val tokens = allTokens.filterIndexed { i, t -> t !in NOISE && !(t == "geo" && i > 0) }.toMutableList()
             // "DE" am Ende ("RTL DE"), aber nicht, wenn der Name nur daraus besteht
             if (tokens.size > 1 && tokens.last() in COUNTRIES && tokens.last().length >= 2) {
                 country = country ?: COUNTRIES[tokens.last()]

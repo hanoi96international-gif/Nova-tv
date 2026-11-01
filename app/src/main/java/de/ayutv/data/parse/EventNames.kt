@@ -44,6 +44,23 @@ object EventNames {
         return n.length >= 4 && Regex("""^[#=*~_\-–—|•]{3,}""").containsMatchIn(n)
     }
 
+    private val QUALITY = setOf("4k", "8k", "uhd", "fhd", "hd", "sd", "raw", "hevc", "h265", "2160p", "3840p", "1080p", "720p", "50fps", "60fps")
+
+    /**
+     * Kern des eigentlichen Sendernamens, ohne Qualität: „… | 8K EXCLUSIVE | DE: DYN PPV 2“ und „DE: DYN PPV 2 4K“ ergeben
+     * beide „dynppv2“. So bekommt die 4K-/UHD-Fassung eines Event-Senders das Spiel aus dem Namen ihrer Schwester.
+     * Null für zu kurze oder allgemeine Namen.
+     */
+    fun baseKey(name: String): String? {
+        val last = name.substringAfterLast('|')
+        val plain = java.text.Normalizer.normalize(last, java.text.Normalizer.Form.NFKD).lowercase(Locale.ROOT)
+            .replace(Regex("""^\s*[a-z0-9]{1,6}\s*:\s*"""), "")
+        val tokens = plain.split(Regex("""[^\p{L}\p{N}]+""")).filter { it.isNotEmpty() && it !in QUALITY }
+        // Nur nummerierte Event-Sender („DYN PPV 2“, „DAZN PPV 12“): sonst bekäme „Sky Sport“ das Spiel eines Kanals.
+        if (tokens.size < 2 || tokens.last().toIntOrNull() == null) return null
+        return tokens.joinToString("")
+    }
+
     /** Event-Sender ohne aktuelles Event („- NO EVENT STREAMING -“): leer, braucht kein Programm. */
     fun isIdle(name: String): Boolean = Regex("""(?i)no event( streaming)?|kein event|offline""").containsMatchIn(name)
 
