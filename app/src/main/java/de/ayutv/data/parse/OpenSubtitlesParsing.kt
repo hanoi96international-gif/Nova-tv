@@ -191,6 +191,28 @@ object OpenSubtitlesParsing {
         val name = title.substring(0, m.range.first).trim().trimEnd('-', '–', ':', '|').trim()
         return if (name.length >= 2) Triple(cleanTitle(name).first, season, episode) else null
     }
+    /**
+     * Suchbegriffe für eine Serie, wie der Anbieter sie nennt: der Name selbst, dann ohne Studio-Vorsatz und Artikel
+     * („Disneys Große Pause“ → „Große Pause“, „Die Gummibärenbande“ → „Gummibärenbande“). Ohne Doppelte.
+     */
+    fun seriesQueries(name: String, originalName: String? = null): List<String> {
+        val base = cleanTitle(name).first
+        val variants = ArrayList<String>()
+        originalName?.let { cleanTitle(it).first }?.takeIf { it.length >= 2 }?.let(variants::add)
+        variants += base
+        var bare = base.replace(STUDIO, "").trim()
+        variants += bare
+        bare = bare.replace(ARTICLE, "").trim()
+        variants += bare
+        return variants.filter { it.length >= 3 }.distinctBy { it.lowercase() }
+    }
+    private val STUDIO = Regex("""(?i)^(disneys?|disney['’]s|walt disneys?|pixars?|dreamworks|marvels?|nickelodeons?)\s+""")
+    private val ARTICLE = Regex("""(?i)^(die|der|das|the|les|le|la)\s+""")
+
+    /** Serien-Kennung beim Anbieter aus dem Schlüssel einer Folge („3:s:1234:e:5678“ → „1234“). */
+    fun seriesIdOf(episodeKey: String): String? = SERIES_KEY.find(episodeKey)?.groupValues?.get(1)
+    private val SERIES_KEY = Regex(""":s:([^:]+):e:""")
+
     private val EPISODE = Regex("""(?i)\bS(\d{1,2})\s*E(\d{1,3})\b|\b(\d{1,2})x(\d{1,3})\b""")
 
     /** Ende der letzten Einblendung einer SRT-Datei (ms), um zu prüfen, ob sie zur Filmlänge passt. */

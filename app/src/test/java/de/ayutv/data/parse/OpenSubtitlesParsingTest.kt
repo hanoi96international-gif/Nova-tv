@@ -161,4 +161,14 @@ class OpenSubtitlesParsingTest {
         assertEquals(listOf(2L, 3L, 1L), OpenSubtitlesParsing.preferRelease(listOf(popular, same, other), hints).map { it.fileId })
         assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferRelease(listOf(popular, same), OpenSubtitlesParsing.ReleaseHints(null, null, null)).map { it.fileId })
     }
+
+    @Test
+    fun seriesQueriesForGermanTitles() {
+        assertEquals(listOf("Disneys Große Pause", "Große Pause"), OpenSubtitlesParsing.seriesQueries("DE: Disneys Große Pause"))
+        assertEquals(listOf("Die Gummibärenbande", "Gummibärenbande"), OpenSubtitlesParsing.seriesQueries("Die Gummibärenbande (1985)"))
+        assertEquals(listOf("Recess", "Disneys Große Pause", "Große Pause"), OpenSubtitlesParsing.seriesQueries("Disneys Große Pause", "Recess"))
+        assertEquals(listOf("DuckTales"), OpenSubtitlesParsing.seriesQueries("DuckTales"))
+        assertEquals("1234", OpenSubtitlesParsing.seriesIdOf("3:s:1234:e:5678"))
+        assertEquals(null, OpenSubtitlesParsing.seriesIdOf("3:m:99"))
+    }
 }
