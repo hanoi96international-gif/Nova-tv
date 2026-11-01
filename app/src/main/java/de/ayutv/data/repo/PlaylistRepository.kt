@@ -894,6 +894,6 @@ class PlaylistRepository(
         private const val MAX_MISSING_LISTED = 20_000
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
-        private const val EPG_MATCH_VERSION = "7"
+        private const val EPG_MATCH_VERSION = "8"
     }
 }

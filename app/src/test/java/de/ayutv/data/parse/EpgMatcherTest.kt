@@ -243,4 +243,25 @@ class EpgMatcherTest {
         assertEquals("Paramount+.ch", m.match(null, "DE: PARAMOUNT+ HD"))
         assertEquals(null, m.match(null, "DE: PARAMOUNT NETWORK"))
     }
+
+    @Test
+    fun spellingsFromUserReport() {
+        // Kurzbericht 01.11.2026: Sender ohne Programm, die es im TV-Guide unter anderem Namen gibt
+        val matcher = EpgMatcher()
+        listOf(
+            "RTL.de" to "RTL", "Sky.Sport.Bundesliga.UHD.de" to "Sky Sport Bundesliga UHD", "GEO.Television.de" to "GEO Television",
+            "HSE.de" to "HSE", "CRIME.+.INVESTIGATION.de" to "CRIME + INVESTIGATION", "Curiosity.Channel.de" to "Curiosity Channel",
+            "Home and Garden TV.de" to "Home and Garden TV", "hr-fernsehen.de" to "hr-fernsehen", "NAT.GEO.WILD.de" to "NAT GEO WILD",
+        ).forEach { (id, name) -> matcher.addGuideChannel(id, listOf(name)) }
+        assertEquals("RTL.de", matcher.match(null, "DE: RTL ᵁᴴᴰ 3840P"))
+        assertEquals("Sky.Sport.Bundesliga.UHD.de", matcher.match(null, "DE: SKY SPORT BUNDESLIGA ᵁᴴᴰ ³⁸⁴⁰ᴾ"))
+        assertEquals("GEO.Television.de", matcher.match(null, "DE: GEO HD"))
+        assertEquals("HSE.de", matcher.match(null, "DE: HSE 24 HD"))
+        assertEquals("CRIME.+.INVESTIGATION.de", matcher.match(null, "DE: CRIME & INVESTIGATION HD (720P)"))
+        assertEquals("Curiosity.Channel.de", matcher.match(null, "DE: CURIOSITY CHANNEL POWERED BY SPIEGEL HD"))
+        assertEquals("Home and Garden TV.de", matcher.match(null, "DE: HOME GARTEN TV HD"))
+        assertEquals("hr-fernsehen.de", matcher.match(null, "JOYN: HESSISCHER RUNDFUNK ᴿᴬᵂ"))
+        // „Geo“ als Zusatz bleibt Rauschen, Nat Geo Wild bleibt Nat Geo Wild
+        assertEquals("NAT.GEO.WILD.de", matcher.match(null, "DE: NAT GEO WILD HD"))
+    }
 }
