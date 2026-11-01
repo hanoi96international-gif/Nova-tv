@@ -924,6 +924,15 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                 }
                 SettingsPage.DATA -> {
                     item {
+                        SettingRow(
+                            "Verschlüsselte Namensauflösung",
+                            onOff(settings.secureDns),
+                            "DNS über HTTPS: Welche Server DnA-TV anspricht (Anbieter, Untertitel, TV-Guide), sieht der Internetanbieter " +
+                                "nicht mehr. Ist der Dienst nicht erreichbar, gilt automatisch die normale Namensauflösung. Abgleich, " +
+                                "Fehlerbericht und Fernbedienung zwischen Handy-App, Windows und Fire TV sind immer verschlüsselt.",
+                        ) { update { it.copy(secureDns = !it.secureDns) } }
+                    }
+                    item {
                         // Alles Wichtige auf diesem Gerät in einer Minute gemessen.
                         var running by remember { mutableStateOf(false) }
                         var result by remember { mutableStateOf<String?>(null) }

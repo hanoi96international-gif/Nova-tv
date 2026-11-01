@@ -109,15 +109,31 @@ class RemoteClient(private val context: Context, private val container: AppConta
 
     private fun required(): String = address ?: throw IOException("Kein Fernseher gekoppelt")
 
+    /** Ein Schlüssel je PIN (einmal abgeleitet), damit Tastendrücke nicht jedes Mal rechnen müssen. */
+    @Volatile private var channel: Pair<String, de.ayutv.data.setup.LocalChannel>? = null
+
+    private fun channelFor(pin: String): de.ayutv.data.setup.LocalChannel =
+        channel?.takeIf { it.first == pin }?.second ?: de.ayutv.data.setup.LocalChannel(pin).also { channel = pin to it }
+
+    /**
+     * Anfrage über den verschlüsselten Kanal (AES-256-GCM, Schlüssel aus der PIN): Wer das WLAN mitliest, sieht weder
+     * die PIN noch Favoriten, Verlauf oder den Fehlerbericht.
+     */
     private fun call(address: String, pin: String, path: String, body: String?): String {
-        val builder = Request.Builder().url("${address.trimEnd('/')}/$pin$path")
-        if (body != null) builder.post(body.toRequestBody("text/plain; charset=utf-8".toMediaType()))
-        http.newCall(builder.build()).execute().use { response ->
-            if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben")
-            if (response.code == 404 && path.startsWith("/play")) throw IOException(response.body.string().ifBlank { "Auf dem Fernseher nicht gefunden" })
+        val secure = channelFor(pin)
+        val request = Request.Builder().url("${address.trimEnd('/')}/s")
+            .post(secure.request(path, body.orEmpty()).toRequestBody("text/plain; charset=utf-8".toMediaType()))
+            .build()
+        val reply = http.newCall(request).execute().use { response ->
+            if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben (und DnA-TV dort auf 0.45.3 oder neuer aktualisieren)")
             if (!response.isSuccessful) throw IOException("Fernseher antwortet mit HTTP ${response.code}")
-            return response.body.string()
+            runCatching { secure.reply(response.body.string()) }.getOrElse { throw IOException("Antwort des Fernsehers nicht lesbar (falsche PIN?)") }
         }
+        val code = reply.substringBefore('\n').toIntOrNull() ?: 500
+        val text = reply.substringAfter('\n', "")
+        if (code == 404 && path.startsWith("/play")) throw IOException(text.ifBlank { "Auf dem Fernseher nicht gefunden" })
+        if (code !in 200..299) throw IOException("Fernseher antwortet mit $code${if (text.isNotBlank()) ": " + text.take(120) else ""}")
+        return text
     }
 
     companion object {

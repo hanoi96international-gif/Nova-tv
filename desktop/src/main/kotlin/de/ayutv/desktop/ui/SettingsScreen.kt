@@ -208,6 +208,21 @@ fun SettingsScreen(app: AppState) {
             }
         }
 
+        item { Section("Sicherheit") }
+        item {
+            Column(Modifier.width(560.dp)) {
+                Toggle("Verschlüsselte Namensauflösung (DNS über HTTPS)", user.secureDns) {
+                    app.store.updateUser { u -> u.copy(secureDns = !u.secureDns) }
+                    app.applyProxy()
+                }
+                Label(
+                    "Welche Server DnA-TV anspricht (Anbieter, Untertitel, TV-Guide), sieht der Internetanbieter nicht mehr; ist der Dienst " +
+                        "nicht erreichbar, gilt automatisch die normale Namensauflösung. Der Abgleich mit dem Fire TV ist immer verschlüsselt.",
+                    Type.small, maxLines = 3,
+                )
+            }
+        }
+
         item { Section("TV-Modus (Mini-PC am Fernseher)") }
         item {
             Toggle("TV-Modus: mit Windows starten, immer Vollbild, Mauszeiger ausblenden", user.tvMode) {

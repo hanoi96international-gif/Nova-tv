@@ -142,6 +142,22 @@ class RemoteServer(private val context: Context, private val container: AppConta
         }
         val route = path.substringBefore('?')
         val query = parseQuery(path.substringAfter('?', ""))
+        // Verschlüsselter Kanal (Handy-App, Windows): Die PIN steht nicht in der Adresse, sie ist der Schlüssel.
+        if (route == "/s") {
+            if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+            val body = if (length > 0) ByteArray(length).also { readFully(input, it) } else ByteArray(0)
+            val request = runCatching { channel.open(body.toString(Charsets.UTF_8)) }.getOrNull()
+            if (request == null) {
+                delay(1_000)
+                if (failures.incrementAndGet() > MAX_FAILURES) newPin()
+                return respond(client, 403, "text/plain", "Falsche PIN".toByteArray())
+            }
+            failures.set(0)
+            val inner = request.path.substringBefore('?')
+            val reply = dispatch("POST", inner, parseQuery(request.path.substringAfter('?', "")), request.body.toByteArray(Charsets.UTF_8), encrypted = true)
+            val sealed = channel.reply(request, "${reply.code}\n" + reply.bytes.toString(Charsets.UTF_8))
+            return respond(client, 200, "text/plain", sealed.toByteArray())
+        }
         val prefix = "/$pin"
         if (route != prefix && !route.startsWith("$prefix/")) {
             delay(1_000)
@@ -151,45 +167,58 @@ class RemoteServer(private val context: Context, private val container: AppConta
         }
         failures.set(0)
         val body = if (length > 0) ByteArray(length).also { readFully(input, it) } else ByteArray(0)
-        when (route.removePrefix(prefix)) {
-            "", "/" -> respond(client, 200, "text/html; charset=utf-8", RemotePage.html(pin).toByteArray())
-            "/info" -> respond(client, 200, "application/json", """{"name":"${jsonEscape("DnA-TV ${Build.MODEL}")}","version":"${BuildConfig.VERSION_NAME}"}""".toByteArray())
+        val reply = dispatch(method, route.removePrefix(prefix), query, body, encrypted = false)
+        respond(client, reply.code, reply.type, reply.bytes)
+    }
+
+    private class Reply(val code: Int, val type: String, val bytes: ByteArray) {
+        constructor(code: Int, text: String) : this(code, "text/plain; charset=utf-8", text.toByteArray())
+    }
+
+    /** Schlüssel je Verbindung des verschlüsselten Kanals (aus der jeweils aktuellen PIN). */
+    private val channel = de.ayutv.data.setup.LocalChannel.Server { pin }
+
+    /**
+     * Eine Anfrage beantworten. Über die Browser-Seite (PIN in der Adresse, unverschlüsselt) nur die Fernbedienung
+     * selbst; alles mit persönlichen Daten (Abgleich, Fehlerbericht, Abspielen, Übersetzer) nur [encrypted].
+     */
+    private suspend fun dispatch(method: String, route: String, query: Map<String, String>, body: ByteArray, encrypted: Boolean): Reply {
+        if (!encrypted && route !in setOf("", "/", "/info", "/key", "/search")) return Reply(404, "")
+        return when (route) {
+            "", "/" -> Reply(200, "text/html; charset=utf-8", RemotePage.html(pin).toByteArray())
+            "/info" -> Reply(200, "application/json", """{"name":"${jsonEscape("DnA-TV ${Build.MODEL}")}","version":"${BuildConfig.VERSION_NAME}"}""".toByteArray())
             "/key" -> {
-                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                if (method != "POST") return Reply(405, "")
                 val ok = query["k"]?.let { press(it) } == true
-                respond(client, if (ok) 200 else 400, "text/plain", (if (ok) "ok" else "unbekannte Taste").toByteArray())
+                Reply(if (ok) 200 else 400, if (ok) "ok" else "unbekannte Taste")
             }
             "/search" -> {
-                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
+                if (method != "POST") return Reply(405, "")
                 search(body.toString(Charsets.UTF_8).trim().take(200))
-                respond(client, 200, "text/plain", "ok".toByteArray())
+                Reply(200, "ok")
             }
             "/helper" -> {
                 // Handy meldet sich als Übersetzer (Adresse mit Schlüssel) oder ab (leer).
-                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
                 val address = body.toString(Charsets.UTF_8).trim().ifEmpty { null }
                 de.ayutv.data.translate.PhoneHelper.register(address, query["name"])
                 val s = container.settings.current()
                 val languages = listOf(s.subtitleLanguage, s.lastTranslationTarget).filter { it.isNotEmpty() }.distinct()
-                respond(client, 200, "application/json", """{"languages":[${languages.joinToString(",") { "\"${jsonEscape(it)}\"" }}]}""".toByteArray())
+                Reply(200, "application/json", """{"languages":[${languages.joinToString(",") { "\"${jsonEscape(it)}\"" }}]}""".toByteArray())
             }
             "/play" -> {
                 // Vom Handy übergeben: Sender oder Film hier abspielen.
-                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
                 val result = runCatching { play(RemotePlay.parse(body.toString(Charsets.UTF_8))) }
                 val error = result.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: result.getOrNull()
-                if (error != null) respond(client, 404, "text/plain; charset=utf-8", error.toByteArray())
-                else respond(client, 200, "text/plain", "ok".toByteArray())
+                if (error != null) Reply(404, error) else Reply(200, "ok")
             }
-            "/report" -> respond(client, 200, "text/plain; charset=utf-8", de.ayutv.data.Diagnostics.build(context, container).toByteArray())
+            "/report" -> Reply(200, de.ayutv.data.Diagnostics.build(context, container))
             "/sync" -> {
-                if (method != "POST") return respond(client, 405, "text/plain", ByteArray(0))
                 val sync = DeviceSync(container)
                 val result = runCatching { sync.import(body.toString(Charsets.UTF_8)) }
-                if (result.isFailure) return respond(client, 400, "text/plain", (result.exceptionOrNull()?.message ?: "Fehler").toByteArray())
-                respond(client, 200, "application/json", sync.export().toByteArray())
+                if (result.isFailure) Reply(400, result.exceptionOrNull()?.message ?: "Fehler")
+                else Reply(200, "application/json", sync.export().toByteArray())
             }
-            else -> respond(client, 404, "text/plain", ByteArray(0))
+            else -> Reply(404, "")
         }
     }
 
