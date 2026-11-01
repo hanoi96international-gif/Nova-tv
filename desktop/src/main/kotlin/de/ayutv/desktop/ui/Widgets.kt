@@ -327,11 +327,9 @@ fun Tile(
     wide: Boolean = true,
     onMenu: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
-    onFocus: (() -> Unit)? = null,
 ) {
     val width = if (wide) 240.dp else 150.dp
-    val focusWatch = if (onFocus != null) Modifier.onFocusChanged { if (it.hasFocus) onFocus() } else Modifier
-    Selectable(onClick, modifier.width(width).then(focusWatch), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
+    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.fillMaxWidth()) {
             val picture = rememberImage(image)
             Box(

@@ -32,7 +32,8 @@ class AudioEnhanceProcessor(private val enhance: AudioEnhance) : BaseAudioProces
         val remaining = inputBuffer.remaining()
         if (remaining == 0) return
         val out = replaceOutputBuffer(remaining)
-        if (enhance.mode == AudioMode.NORMAL) {
+        // Nur durchreichen, wenn wirklich nichts zu tun ist („Lautstärke angleichen“ wirkt auch bei „Normal“).
+        if (enhance.mode == AudioMode.NORMAL && !enhance.leveling) {
             out.put(inputBuffer)
             out.flip()
             return

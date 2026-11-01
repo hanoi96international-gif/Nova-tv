@@ -365,13 +365,6 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     if (showAdvanced) item {
                         SettingRow(
-                            "Schnelles Dekodieren (experimentell)",
-                            onOff(settings.asyncDecoding),
-                            "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
-                        ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
-                    }
-                    if (showAdvanced) item {
-                        SettingRow(
                             "Tonausgabe",
                             settings.audioOutput.label,
                             "Automatisch: Dolby/DTS gehen an Soundbar oder Receiver. Bei Stille oder Aussetzern auf „Immer im Gerät dekodieren“ stellen.",

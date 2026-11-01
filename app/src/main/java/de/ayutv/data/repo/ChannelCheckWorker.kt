@@ -128,7 +128,9 @@ class ChannelCheck(private val context: Context, private val container: AppConta
             // Läuft etwas im Player: aufhören, sonst nähme der Check die einzige Verbindung beim Anbieter weg.
             val shown = container.foreground?.get()
             if (shown is PlayerActivity || (weak && shown != null)) break
-            val result = probe(channel)
+            val result = probe(channel, stopWhenWatching = true)
+            // Mitten im Test wurde ein Sender gestartet: sofort aufgehört, nichts eintragen.
+            if (result.first < 0) break
             ChannelQuality.recordCheck(channel.key, result.first, result.second)
             checked++
             if (result.first > 0) working++
@@ -140,8 +142,12 @@ class ChannelCheck(private val context: Context, private val container: AppConta
         return summary
     }
 
-    /** Auflösung (Höhe, 0 = läuft nicht) und Zeit bis zur ersten Bildinformation. */
-    suspend fun probe(channel: ChannelEntity): Pair<Int, Long> {
+    /**
+     * Auflösung (Höhe, 0 = läuft nicht) und Zeit bis zur ersten Bildinformation. Mit [stopWhenWatching] bricht der Test
+     * sofort ab (Höhe −1), sobald der Player startet: Viele Zugänge erlauben nur eine Verbindung, und der Test darf
+     * sie dem gerade gestarteten Sender nicht wegnehmen.
+     */
+    suspend fun probe(channel: ChannelEntity, stopWhenWatching: Boolean = false): Pair<Int, Long> {
         val thread = HandlerThread("channel-check").apply { start() }
         val handler = Handler(thread.looper)
         val done = CompletableDeferred<Pair<Int, Long>>()
@@ -168,13 +174,21 @@ class ChannelCheck(private val context: Context, private val container: AppConta
                 p.prepare()
             }.onFailure { done.complete(0 to 0L) }
         }
-        val result = withTimeoutOrNull(PROBE_TIMEOUT_MS) { done.await() } ?: (0 to 0L)
+        val result = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
+            if (stopWhenWatching) {
+                while (!done.isCompleted) {
+                    if (container.foreground?.get() is PlayerActivity) return@withTimeoutOrNull -1 to 0L
+                    kotlinx.coroutines.delay(150)
+                }
+            }
+            done.await()
+        } ?: (0 to 0L)
         handler.post {
             runCatching { player?.release() }
             thread.quitSafely()
         }
         // Dem Anbieter Zeit geben, die Verbindung zu schließen (sonst 403 „zu viele Verbindungen“ beim nächsten).
-        kotlinx.coroutines.delay(600)
+        if (result.first >= 0) kotlinx.coroutines.delay(600)
         return result
     }
 

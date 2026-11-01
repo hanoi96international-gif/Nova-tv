@@ -143,9 +143,6 @@ fun HomeScreen(app: AppState) {
     // Große Kachel oben: womit man am wahrscheinlichsten weitermacht (erste Kachel der ersten Reihe). Fest, folgt
     // nicht dem Fokus (sonst würde die Seite bei jeder Bewegung neu aufgebaut).
     val spot = rows.firstOrNull()?.items?.firstOrNull()
-    val backdrop = remember(rows) { rows.asSequence().flatMap { it.items }.firstNotNullOfOrNull { heroOf(it) } }
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-    HomeBackdrop(backdrop)
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             val now = System.currentTimeMillis().also { minute } // jede Minute neu (Begrüßung)
@@ -188,7 +185,6 @@ fun HomeScreen(app: AppState) {
         }
         item { Spacer(Modifier.height(30.dp)) }
     }
-    }
     if (rows.isNotEmpty()) FocusOnShow(first)
     dialog?.invoke()
 }
@@ -198,55 +194,6 @@ private fun title(item: HomeItem) = when (item) {
     is HomeItem.Live -> item.channel.name
     is HomeItem.Film -> item.movie.name
     is HomeItem.Show -> item.series.name
-}
-
-/** Poster und Titel einer Kachel für den großen Hintergrund (nur Filme und Serien haben ein großes Bild). */
-private fun heroOf(item: HomeItem): Pair<String, String>? = when (item) {
-    is HomeItem.Film -> item.movie.poster?.takeIf { it.isNotBlank() }?.let { it to item.movie.name }
-    is HomeItem.Show -> item.series.cover?.takeIf { it.isNotBlank() }?.let { it to item.series.name }
-    else -> null
-}
-
-/**
- * Großes Bild oben rechts, das zu den Seiten in den Hintergrund ausläuft. Es wechselt erst, wenn die Auswahl kurz
- * stehen bleibt, damit beim schnellen Durchblättern nicht jedes Poster geladen wird.
- */
-@Composable
-private fun HomeBackdrop(target: Pair<String, String>?) {
-    var shown by remember { mutableStateOf(target) }
-    LaunchedEffect(target) {
-        if (shown != null) delay(400)
-        shown = target
-    }
-    val (url, title) = shown ?: return
-    val picture = rememberImage(url)
-    val background = Palette.background
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(380.dp)) {
-        androidx.compose.animation.Crossfade(
-            picture,
-            Modifier.fillMaxHeight().fillMaxWidth(0.62f).align(androidx.compose.ui.Alignment.TopEnd),
-            animationSpec = androidx.compose.animation.core.tween(450),
-            label = "hero",
-        ) { image ->
-            if (image != null) androidx.compose.foundation.Image(
-                image, null,
-                Modifier.fillMaxSize(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                alpha = 0.45f,
-            )
-        }
-        androidx.compose.foundation.layout.Box(
-            Modifier.fillMaxSize().background(
-                androidx.compose.ui.graphics.Brush.horizontalGradient(0.3f to background, 0.65f to background.copy(alpha = 0.5f), 1f to background.copy(alpha = 0.05f)),
-            ),
-        )
-        androidx.compose.foundation.layout.Box(
-            Modifier.fillMaxSize().background(
-                androidx.compose.ui.graphics.Brush.verticalGradient(0.4f to androidx.compose.ui.graphics.Color.Transparent, 1f to background),
-            ),
-        )
-        Label(title, Type.title, Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(top = 40.dp, end = 40.dp).fillMaxWidth(0.4f), maxLines = 2)
-    }
 }
 
 private fun greeting(now: Long): String = when (java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).hour) {

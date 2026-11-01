@@ -82,7 +82,7 @@ object Diagnostics {
         section("Einstellungen")
         runCatching {
             val s = container.settings.current()
-            out.append("Puffer ${s.bufferProfile}, Live ${s.liveFormat}, Tunneling ${s.tunneling}, asynchron ${s.asyncDecoding}, Bildrate ${s.matchFrameRate}, Ton ${s.audioOutput}\n")
+            out.append("Puffer ${s.bufferProfile}, Live ${s.liveFormat}, Tunneling ${s.tunneling}, Bildrate ${s.matchFrameRate}, Ton ${s.audioOutput}\n")
             out.append("Untertitel ${s.subtitleLanguage}, automatisch ${s.subtitlesAutoOn}, OpenSubtitles ${s.onlineSubtitles}" +
                 " (eigener Schlüssel ${s.openSubtitlesKey.isNotBlank()}, Konto ${s.openSubtitlesUser.isNotBlank()})\n")
             out.append("Übersetzung ${s.translationProvider}, zuletzt ${s.lastTranslationTarget.ifEmpty { "-" }}" +
