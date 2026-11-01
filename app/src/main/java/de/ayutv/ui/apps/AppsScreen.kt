@@ -93,6 +93,26 @@ object AppLauncher {
             ?: launchable(context).mapNotNull { (pkg, label) -> StreamingApps.labelMatch(app, label)?.let { it to pkg } }
                 .filter { (_, pkg) -> pkg != context.packageName }
                 .minByOrNull { it.first }?.second
+            ?: linkHandler(context, app)
+
+    /**
+     * Die App, die Links der Webseite öffnet (z. B. youtube.com). Findet sie auch, wenn sie anders heißt als erwartet
+     * oder keinen gewöhnlichen Eintrag für den Startbildschirm hat (bei Fire-OS-Fassungen häufig). Browser zählen
+     * nicht (sie öffnen jede Adresse).
+     */
+    private fun linkHandler(context: Context, app: StreamingApps.App): String? = runCatching {
+        val pm = context.packageManager
+        fun handlers(url: String) = pm.queryIntentActivities(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE), 0)
+            .map { it.activityInfo.packageName }.toSet()
+        val browsers = handlers("https://www.example.com/")
+        handlers(app.web).filter { it !in browsers && it != context.packageName }.firstOrNull { StreamingApps.packageMatch(app, it) }
+            ?: pm.getInstalledApplications(0).map { it.packageName }.filter { it in candidates(context, app) || StreamingApps.packageMatch(app, it) }
+                .firstOrNull { pm.getApplicationInfo(it, 0).enabled }
+    }.getOrNull()
+
+    /** Start über den Link der Webseite (für Apps ohne eigenen Starteintrag). */
+    private fun linkIntent(app: StreamingApps.App, pkg: String): Intent =
+        Intent(Intent.ACTION_VIEW, Uri.parse(app.web)).setPackage(pkg)
 
     fun icon(context: Context, pkg: String): ImageBitmap? = runCatching {
         val pm = context.packageManager
@@ -110,9 +130,9 @@ object AppLauncher {
     /** App starten; true = gestartet. */
     fun launch(context: Context, app: StreamingApps.App): Boolean {
         val pkg = installed(context, app) ?: return false
-        val intent = launchIntent(context, pkg) ?: return false
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return runCatching { context.startActivity(intent) }.isSuccess
+        val intent = (launchIntent(context, pkg) ?: linkIntent(app, pkg)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return runCatching { context.startActivity(intent) }.isSuccess ||
+            runCatching { context.startActivity(linkIntent(app, pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
     }
 
     /** Nicht installiert: zum Appstore (Fire TV: Amazon Appstore, Handy: Play Store), sonst zur Webseite. */

@@ -140,15 +140,19 @@ fun HomeScreen(app: AppState) {
     }
 
     val first = remember { FocusRequester() }
-    // Großes Hintergrundbild oben rechts: Poster der gewählten Kachel, sonst das erste Poster der Startseite.
-    var focusedHero by remember { mutableStateOf<Pair<String, String>?>(null) }
-    val fallbackHero = remember(rows) {
-        rows.asSequence().flatMap { it.items }.firstNotNullOfOrNull { heroOf(it) }
-    }
+    // Große Kachel oben: womit man am wahrscheinlichsten weitermacht (erste Kachel der ersten Reihe). Fest, folgt
+    // nicht dem Fokus (sonst würde die Seite bei jeder Bewegung neu aufgebaut).
+    val spot = rows.firstOrNull()?.items?.firstOrNull()
+    val backdrop = remember(rows) { rows.asSequence().flatMap { it.items }.firstNotNullOfOrNull { heroOf(it) } }
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-    HomeBackdrop(focusedHero ?: fallbackHero)
+    HomeBackdrop(backdrop)
     LazyColumn(Modifier.fillMaxSize()) {
-        item { ScreenHeader("Start", "OK abspielen · ☰ Menü · ◀ Navigation") }
+        item {
+            val now = System.currentTimeMillis().also { minute } // jede Minute neu (Begrüßung)
+            ScreenHeader(greeting(now) + " · " + java.time.format.DateTimeFormatter.ofPattern("EEEE, d. MMMM", java.util.Locale.GERMAN)
+                .format(java.time.LocalDate.now()), "OK abspielen · ☰ Menü · ◀ Navigation")
+        }
+        spot?.let { item -> item { Spotlight(item, guide[(item as? HomeItem.Live)?.channel?.key]?.let { nowOf(it) }, first, store) { open(item) } } }
         if (rows.isEmpty()) item { Label("Noch nichts geschaut. Unter „Live TV“ einen Sender wählen.", Type.body) }
         itemsIndexed(rows, key = { _, r -> r.title }) { rowIndex, row ->
             Label(row.title, Type.heading, Modifier.padding(top = if (rowIndex == 0) 0.dp else 18.dp, bottom = 8.dp))
@@ -160,24 +164,22 @@ fun HomeScreen(app: AppState) {
                             Tile(
                                 item.channel.name, now?.title ?: item.channel.group, item.channel.logo,
                                 onClick = { open(item) }, progress = now?.fraction(), onMenu = { menu(item) },
-                                focusRequester = if (rowIndex == 0 && index == 0) first else null,
+                                focusRequester = if (spot == null && rowIndex == 0 && index == 0) first else null,
                             )
                         }
                         is HomeItem.Film -> Tile(
                             item.movie.name, item.movie.category, item.movie.poster, onClick = { open(item) }, progress = item.progress,
-                            wide = false, onMenu = { menu(item) }, focusRequester = if (rowIndex == 0 && index == 0) first else null,
-                            onFocus = { focusedHero = heroOf(item) },
+                            wide = false, onMenu = { menu(item) }, focusRequester = if (spot == null && rowIndex == 0 && index == 0) first else null,
                         )
                         is HomeItem.Rec -> Tile(
                             item.recording.title,
                             (if (item.recording.state == de.ayutv.desktop.data.Recording.RUNNING) "⏺ läuft · " else "") + "${item.recording.channelName} · ${clock(item.recording.start)}",
                             store.channel(item.recording.channelKey)?.logo, onClick = { open(item) }, onMenu = { menu(item) },
-                            focusRequester = if (rowIndex == 0 && index == 0) first else null,
+                            focusRequester = if (spot == null && rowIndex == 0 && index == 0) first else null,
                         )
                         is HomeItem.Show -> Tile(
                             item.series.name, item.series.category, item.series.cover, onClick = { open(item) }, progress = item.progress,
-                            wide = false, onMenu = { menu(item) }, focusRequester = if (rowIndex == 0 && index == 0) first else null,
-                            onFocus = { focusedHero = heroOf(item) },
+                            wide = false, onMenu = { menu(item) }, focusRequester = if (spot == null && rowIndex == 0 && index == 0) first else null,
                         )
                     }
                     Spacer(Modifier.width(10.dp))
@@ -244,5 +246,64 @@ private fun HomeBackdrop(target: Pair<String, String>?) {
             ),
         )
         Label(title, Type.title, Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(top = 40.dp, end = 40.dp).fillMaxWidth(0.4f), maxLines = 2)
+    }
+}
+
+private fun greeting(now: Long): String = when (java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).hour) {
+    in 5..10 -> "Guten Morgen"
+    in 11..17 -> "Hallo"
+    in 18..22 -> "Guten Abend"
+    else -> "Gute Nacht"
+}
+
+/** Große Kachel oben: Bild links, Art, Titel, Zeit und Fortschritt rechts. */
+@Composable
+private fun Spotlight(item: HomeItem, now: de.ayutv.desktop.data.Programme?, focus: FocusRequester, store: de.ayutv.desktop.data.Store, onClick: () -> Unit) {
+    val (label, title, sub) = when (item) {
+        is HomeItem.Live -> Triple("LIVE · ${item.channel.name}", now?.title ?: item.channel.name, now?.let { "${clock(it.start)} – ${clock(it.stop)}" } ?: item.channel.group)
+        is HomeItem.Film -> Triple("WEITER SCHAUEN · FILM", item.movie.name, item.movie.category)
+        is HomeItem.Show -> Triple("WEITER SCHAUEN · SERIE", item.series.name, item.series.category)
+        is HomeItem.Rec -> Triple("AUFNAHME", item.recording.title, item.recording.channelName)
+    }
+    val image = when (item) {
+        is HomeItem.Live -> item.channel.logo
+        is HomeItem.Film -> item.movie.poster
+        is HomeItem.Show -> item.series.cover
+        is HomeItem.Rec -> store.channel(item.recording.channelKey)?.logo
+    }
+    val progress = when (item) {
+        is HomeItem.Live -> now?.fraction()
+        is HomeItem.Film -> item.progress
+        is HomeItem.Show -> item.progress
+        is HomeItem.Rec -> null
+    }
+    val poster = item is HomeItem.Film || item is HomeItem.Show
+    Selectable(onClick, Modifier.fillMaxWidth(0.7f).padding(bottom = 18.dp), focusRequester = focus, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)) {
+        androidx.compose.foundation.layout.Row(Modifier.height(170.dp)) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.width(if (poster) 114.dp else 300.dp).fillMaxHeight().background(Palette.raised, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+            ) {
+                rememberImage(image)?.let {
+                    androidx.compose.foundation.Image(
+                        it, null, if (poster) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(28.dp),
+                        contentScale = if (poster) androidx.compose.ui.layout.ContentScale.Crop else androidx.compose.ui.layout.ContentScale.Fit,
+                    )
+                }
+            }
+            Spacer(Modifier.width(22.dp))
+            androidx.compose.foundation.layout.Column(Modifier.fillMaxHeight(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
+                Label(label, Type.small, color = Palette.accent)
+                Spacer(Modifier.height(4.dp))
+                Label(title, Type.title, maxLines = 2)
+                if (!sub.isNullOrBlank()) Label(sub, Type.body)
+                if (progress != null) {
+                    Spacer(Modifier.height(10.dp))
+                    androidx.compose.foundation.layout.Box(Modifier.width(320.dp)) { Progress(progress) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Label("OK ▶ abspielen", Type.small)
+            }
+        }
     }
 }

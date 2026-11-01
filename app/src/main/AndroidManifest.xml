@@ -35,6 +35,12 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Reiter „Apps“: die App finden, die Links der Webseite öffnet (Paketnamen unterscheiden sich je Gerät). -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
         <!-- Reiter „Apps“: prüfen, welche Streaming-Apps installiert sind (Liste wie in StreamingApps). -->
         <package android:name="com.netflix.ninja" />
         <package android:name="com.netflix.mediaclient" />

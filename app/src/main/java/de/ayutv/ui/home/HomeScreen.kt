@@ -73,9 +73,6 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         return
     }
 
-    // Großes Hintergrundbild oben: das Bild der gewählten Kachel (Poster, Sendungsbild), sonst das erste vorhandene.
-    var focusedHero by remember { mutableStateOf<Hero?>(null) }
-
     var recentChannels by remember { mutableStateOf<List<ChannelEntity>>(emptyList()) }
     var recommendations by remember { mutableStateOf<List<Recommendation>>(emptyList()) }
     var nowMap by remember { mutableStateOf<Map<String, ProgrammeEntity>>(emptyMap()) }
@@ -91,16 +88,28 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
     val nothingYet = continueWatching.isEmpty() && recentChannels.isEmpty() && favorites.isEmpty() &&
         recentMovies.isEmpty() && recentSeries.isEmpty() && watchMovies.isEmpty() && watchSeries.isEmpty()
 
-    val fallbackHero = remember(continueWatching, watchMovies, recentMovies, recentSeries) {
-        continueWatching.firstOrNull { !it.image.isNullOrBlank() }?.let { Hero(it.image, it.title, it.subtitle) }
-            ?: watchMovies.firstOrNull { !it.poster.isNullOrBlank() }?.let { Hero(it.poster, it.name, "Film") }
-            ?: recentMovies.firstOrNull { !it.poster.isNullOrBlank() }?.let { Hero(it.poster, it.name, "Neu: Film") }
-            ?: recentSeries.firstOrNull { !it.cover.isNullOrBlank() }?.let { Hero(it.cover, it.name, "Neu: Serie") }
+    // „Jetzt“-Kachel oben: das, womit man am wahrscheinlichsten weitermacht (fest, folgt nicht dem Fokus – sonst
+    // würde die ganze Seite bei jeder Bewegung neu aufgebaut).
+    val spotlight = remember(continueWatching, recentChannels, favorites, nowMap) {
+        continueWatching.firstOrNull()?.let { e ->
+            Spotlight(
+                label = "WEITER SCHAUEN", title = e.title, subtitle = e.subtitle, image = e.image,
+                progress = if (e.durationMs > 0) e.positionMs.toFloat() / e.durationMs else null,
+                play = { PlayerActivity.startVod(context, VodRequest(e.key, e.kind, e.title, e.subtitle, e.image, e.url)) },
+            )
+        } ?: (recentChannels.firstOrNull() ?: favorites.firstOrNull())?.let { c ->
+            val now = c.epgId?.let { nowMap[it] }
+            Spotlight(
+                label = "LIVE · ${c.name}", title = now?.title ?: c.name,
+                subtitle = now?.let { "${formatTime(it.start)} – ${formatTime(it.stop)}" } ?: c.groupTitle,
+                image = now?.icon?.takeIf { it.isNotBlank() }, logo = c.logo,
+                progress = now?.let { p -> ((System.currentTimeMillis() - p.start).toFloat() / (p.stop - p.start).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                play = { PlayerActivity.startLive(context, c.key, c.groupTitle) },
+            )
+        }
     }
-    val hero: (Hero) -> Unit = { focusedHero = it }
 
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-    HomeBackdrop(focusedHero?.takeIf { !it.image.isNullOrBlank() } ?: fallbackHero)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 32.dp, end = 32.dp, top = 28.dp, bottom = 48.dp),
@@ -109,7 +118,11 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         item(key = "header", contentType = "header") {
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Text("Willkommen zurück", style = MaterialTheme.typography.headlineMedium)
+                    Text(greeting(minute), style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        java.text.SimpleDateFormat("EEEE, d. MMMM", java.util.Locale.GERMAN).format(java.util.Date(minute)),
+                        style = MaterialTheme.typography.bodyMedium, color = AyuColors.TextSecondary,
+                    )
                     SyncBanner(sync)
                     de.ayutv.ui.components.UpdateBanner(Modifier.padding(top = 8.dp))
                 }
@@ -117,6 +130,10 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                 Spacer(Modifier.width(16.dp))
                 Text(formatTime(minute), style = MaterialTheme.typography.headlineSmall, color = AyuColors.TextSecondary)
             }
+        }
+
+        spotlight?.let { spot ->
+            item(key = "spotlight", contentType = "spotlight") { SpotlightCard(spot) }
         }
 
         if (nothingYet) {
@@ -137,7 +154,6 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             image = entry.image,
                             subtitle = entry.subtitle,
                             progress = if (entry.durationMs > 0) entry.positionMs.toFloat() / entry.durationMs else null,
-                            onFocus = { hero(Hero(entry.image, entry.title, entry.subtitle)) },
                             onClick = {
                                 PlayerActivity.startVod(
                                     context,
@@ -150,6 +166,24 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
             }
         }
 
+        if (favorites.isNotEmpty()) {
+            item(key = "favorites", contentType = "channelRow") {
+                ChannelRow(
+                    "Favoriten",
+                    favorites,
+                    nowMap,
+                    onPlay = { PlayerActivity.startLive(context, it.key, group = null, favoritesOnly = true) },
+                    onLongClick = { channel -> scope.launch { content.toggleFavorite(channel.key) } },
+                )
+            }
+        }
+
+        if (recentChannels.isNotEmpty()) {
+            item(key = "recent", contentType = "channelRow") {
+                ChannelRow("Zuletzt gesehen", recentChannels, nowMap, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
+            }
+        }
+
         if (watchMovies.isNotEmpty() || watchSeries.isNotEmpty()) {
             item(key = "watchlist", contentType = "posterRow") {
                 // Merkliste: gemerkte Filme und Serien (☆ Merken auf der Detailseite; lange OK entfernt).
@@ -159,7 +193,6 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = movie.name,
                             image = movie.poster,
                             subtitle = "Film" + (movie.rating?.let { " · ★ $it" } ?: ""),
-                            onFocus = { hero(Hero(movie.poster, movie.name, movie.category)) },
                             onClick = {
                                 PlayerActivity.startVod(context, VodRequest(movie.key, HistoryKind.VOD, movie.name, movie.category, movie.poster, movie.url))
                             },
@@ -171,7 +204,6 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = series.name,
                             image = series.cover,
                             subtitle = "Serie",
-                            onFocus = { hero(Hero(series.cover, series.name, "Serie")) },
                             onClick = { onOpenSeries(series) },
                             onLongClick = { scope.launch { content.toggleFavorite(series.key) } },
                         )
@@ -188,7 +220,6 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = r.title,
                             image = r.image,
                             subtitle = recordingStatus(r),
-                            onFocus = { hero(Hero(r.image, r.title, r.subtitle)) },
                             progress = if (r.totalBytes > 0 && r.state == Recording.State.RUNNING) r.bytes.toFloat() / r.totalBytes else null,
                             onClick = {
                                 if (r.state == Recording.State.SCHEDULED || r.bytes == 0L && r.state != Recording.State.DONE) {
@@ -224,28 +255,9 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
             }
         }
 
-        if (recentChannels.isNotEmpty()) {
-            item(key = "recent", contentType = "channelRow") {
-                ChannelRow("Zuletzt gesehen", recentChannels, nowMap, hero, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
-            }
-        }
-
-        if (favorites.isNotEmpty()) {
-            item(key = "favorites", contentType = "channelRow") {
-                ChannelRow(
-                    "Favoriten",
-                    favorites,
-                    nowMap,
-                    hero,
-                    onPlay = { PlayerActivity.startLive(context, it.key, group = null, favoritesOnly = true) },
-                    onLongClick = { channel -> scope.launch { content.toggleFavorite(channel.key) } },
-                )
-            }
-        }
-
         recommendations.forEach { rec ->
             item(key = "rec-${rec.title}", contentType = "channelRow") {
-                ChannelRow(rec.title, rec.channels, nowMap, hero, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
+                ChannelRow(rec.title, rec.channels, nowMap, onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) })
             }
         }
 
@@ -257,7 +269,6 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
                             title = movie.name,
                             image = movie.poster,
                             subtitle = movie.rating?.let { "★ $it" },
-                            onFocus = { hero(Hero(movie.poster, movie.name, movie.category)) },
                             onClick = {
                                 PlayerActivity.startVod(
                                     context,
@@ -274,7 +285,7 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
             item(key = "series", contentType = "posterRow") {
                 PosterRow("Neue Serien") {
                     items(recentSeries, key = { it.key }) { series ->
-                        PosterCard(title = series.name, image = series.cover, onClick = { onOpenSeries(series) }, onFocus = { hero(Hero(series.cover, series.name, series.category)) })
+                        PosterCard(title = series.name, image = series.cover, onClick = { onOpenSeries(series) })
                     }
                 }
             }
@@ -303,7 +314,6 @@ private fun ChannelRow(
     title: String,
     channels: List<ChannelEntity>,
     nowMap: Map<String, ProgrammeEntity>,
-    onHero: (Hero) -> Unit,
     onPlay: (ChannelEntity) -> Unit,
     onLongClick: ((ChannelEntity) -> Unit)? = null,
 ) {
@@ -321,8 +331,6 @@ private fun ChannelRow(
                     now = now,
                     onClick = { onPlay(channel) },
                     onLongClick = onLongClick?.let { callback -> { callback(channel) } },
-                    // Sender ohne Sendungsbild lassen das bisherige Bild stehen (nur ein Logo wäre zu klein).
-                    onFocus = { now?.icon?.takeIf { it.isNotBlank() }?.let { onHero(Hero(it, now.title, channel.name)) } },
                 )
             }
         }
@@ -342,59 +350,72 @@ private fun recordingStatus(r: Recording): String {
     }
 }
 
-/** Bild und Titel für den großen Hintergrund der Startseite. */
-private data class Hero(val image: String?, val title: String, val subtitle: String?)
+/** Inhalt der großen „Jetzt“-Kachel. */
+private class Spotlight(
+    val label: String,
+    val title: String,
+    val subtitle: String?,
+    val image: String?,
+    val progress: Float?,
+    val logo: String? = null,
+    val play: () -> Unit,
+)
+
+private fun greeting(now: Long): String = when (java.util.Calendar.getInstance().apply { timeInMillis = now }.get(java.util.Calendar.HOUR_OF_DAY)) {
+    in 5..10 -> "Guten Morgen"
+    in 11..17 -> "Hallo"
+    in 18..22 -> "Guten Abend"
+    else -> "Gute Nacht"
+}
 
 /**
- * Großes Hintergrundbild oben rechts, zu den Seiten hin in den Hintergrund auslaufend, mit Titel. Es wechselt erst,
- * wenn die Auswahl kurz stehen bleibt (beim schnellen Durchscrollen wird nicht jedes Bild geladen), und auf
- * schwachen Geräten ohne Überblendung.
+ * Große Kachel oben: Bild (Poster, Sendungsbild oder Senderlogo) links, Titel, Zeit und Fortschritt rechts. Ein
+ * einziges Bild in fester Größe, keine Überblendung: kostet beim Scrollen nichts.
  */
 @Composable
-private fun HomeBackdrop(target: Hero?) {
-    var shown by remember { mutableStateOf(target) }
-    LaunchedEffect(target) {
-        if (shown != null) kotlinx.coroutines.delay(450)
-        shown = target
-    }
-    val hero = shown ?: return
+private fun SpotlightCard(spot: Spotlight) {
     val context = coil3.compose.LocalPlatformContext.current
-    val background = AyuColors.Background
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(430.dp)) {
-        androidx.compose.animation.Crossfade(
-            hero,
-            animationSpec = androidx.compose.animation.core.tween(if (de.ayutv.ui.UiPerformance.reduced) 0 else 500),
-            label = "hero",
-        ) { h ->
-            val request = remember(h.image) {
-                coil3.request.ImageRequest.Builder(context).data(h.image).size(960, 540).memoryCacheKey("hero:" + h.image).build()
-            }
-            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
-                coil3.compose.AsyncImage(
-                    model = request,
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    alpha = 0.5f,
-                    modifier = Modifier.fillMaxHeight().fillMaxWidth(0.68f).align(androidx.compose.ui.Alignment.TopEnd),
-                )
-                androidx.compose.foundation.layout.Box(
-                    Modifier.fillMaxSize().background(
-                        androidx.compose.ui.graphics.Brush.horizontalGradient(
-                            0.25f to background, 0.6f to background.copy(alpha = 0.55f), 1f to background.copy(alpha = 0.1f),
-                        ),
-                    ),
-                )
-                androidx.compose.foundation.layout.Box(
-                    Modifier.fillMaxSize().background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(0.45f to androidx.compose.ui.graphics.Color.Transparent, 1f to background),
-                    ),
-                )
-                Column(Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(end = 48.dp, bottom = 300.dp).fillMaxWidth(0.42f)) {
-                    Text(h.title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, color = AyuColors.TextPrimary)
-                    h.subtitle?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 1, color = AyuColors.TextSecondary)
+    androidx.tv.material3.Card(
+        onClick = spot.play,
+        modifier = Modifier.fillMaxWidth().height(210.dp),
+        colors = androidx.tv.material3.CardDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.SurfaceRaised),
+        border = androidx.tv.material3.CardDefaults.border(
+            focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(3.dp, AyuColors.Accent)),
+        ),
+        scale = androidx.tv.material3.CardDefaults.scale(focusedScale = 1.01f),
+    ) {
+        Row(Modifier.fillMaxSize()) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxHeight().width(374.dp).background(AyuColors.SurfaceRaised),
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+            ) {
+                val image = spot.image ?: spot.logo
+                if (image != null) {
+                    val request = remember(image) {
+                        coil3.request.ImageRequest.Builder(context).data(image).size(640, 360).memoryCacheKey("spot:$image").build()
                     }
+                    coil3.compose.AsyncImage(
+                        model = request,
+                        contentDescription = null,
+                        contentScale = if (spot.image != null) androidx.compose.ui.layout.ContentScale.Crop else androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = if (spot.image != null) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(40.dp),
+                    )
                 }
+            }
+            Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal = 28.dp, vertical = 22.dp), verticalArrangement = Arrangement.Center) {
+                Text(spot.label, color = AyuColors.Accent, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                Spacer(Modifier.height(6.dp))
+                Text(spot.title, style = MaterialTheme.typography.headlineSmall, color = AyuColors.TextPrimary, maxLines = 2)
+                spot.subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = AyuColors.TextSecondary, maxLines = 1)
+                }
+                spot.progress?.let {
+                    Spacer(Modifier.height(12.dp))
+                    de.ayutv.ui.components.ProgressLine(it, Modifier.width(320.dp))
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("OK ▶ abspielen", style = MaterialTheme.typography.bodySmall, color = AyuColors.TextSecondary)
             }
         }
     }

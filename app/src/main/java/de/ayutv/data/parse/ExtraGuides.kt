@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.decodeFromStream
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -48,22 +49,31 @@ object ExtraGuides {
         else -> url.substringAfterLast('/')
     }
 
-    /** Quelle abrufen und als XMLTV nach [target] schreiben. Wirft [IOException], wenn nichts zu holen war. */
+    /**
+     * Quelle abrufen und als XMLTV nach [target] schreiben. Wirft [IOException], wenn nichts zu holen war.
+     * Geschrieben wird direkt in die Datei, jede Antwort wird gleich verarbeitet und verworfen: Vorher lag das ganze
+     * Programm aller Sender mehrfach im Speicher (Text, JSON-Baum, fertige Datei), auf dem Fire TV Stick hielt die
+     * Speicherbereinigung dabei Oberfläche und Wiedergabe spürbar an.
+     */
     fun write(url: String, http: OkHttpClient, target: File, days: Int = 3) {
-        val xml = when (url) {
-            MAGENTA -> magenta(http, days)
-            DYN -> dyn(http)
-            else -> throw IOException("Unbekannte Quelle $url")
-        }
         val tmp = File(target.path + ".tmp")
-        tmp.writeText(xml)
+        try {
+            when (url) {
+                MAGENTA -> tmp.bufferedWriter(bufferSize = 64 * 1024).use { magenta(http, days, it) }
+                DYN -> tmp.writeText(dyn(http))
+                else -> throw IOException("Unbekannte Quelle $url")
+            }
+        } catch (e: Exception) {
+            tmp.delete()
+            throw e
+        }
         if (!tmp.renameTo(target)) {
             target.delete()
             if (!tmp.renameTo(target)) throw IOException("Datei nicht schreibbar: $target")
         }
     }
 
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true }
     private val JSON_TYPE = "application/json".toMediaType()
     private const val UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
 
@@ -71,7 +81,26 @@ object ExtraGuides {
 
     private const val MAGENTA_API = "https://api.prod.sngtv.magentatv.de/EPG/JSON"
 
-    private fun magenta(http: OkHttpClient, days: Int): String {
+    // Nur die Felder, die gebraucht werden (alles andere überspringt der Leser, ohne es aufzubauen).
+    @kotlinx.serialization.Serializable
+    data class MagentaChannel(val contentId: String? = null, val name: String? = null)
+    @kotlinx.serialization.Serializable
+    private data class MagentaChannels(val channellist: List<MagentaChannel> = emptyList())
+    @kotlinx.serialization.Serializable
+    data class MagentaPlaybill(
+        val channelid: String? = null,
+        val name: String? = null,
+        val starttime: String? = null,
+        val endtime: String? = null,
+        val subName: String? = null,
+        val introduce: String? = null,
+        val genres: String? = null,
+    )
+    @kotlinx.serialization.Serializable
+    private data class MagentaPlaybills(val playbilllist: List<MagentaPlaybill> = emptyList())
+
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    private fun magenta(http: OkHttpClient, days: Int, out: Appendable) {
         val auth = http.newCall(
             Request.Builder().url("$MAGENTA_API/Authenticate?SID=firstup&T=Windows_chrome_118").header("User-Agent", UA)
                 .post(
@@ -86,104 +115,108 @@ object ExtraGuides {
                 .filter { c -> MAGENTA_COOKIES.any { c.startsWith("$it=") } }
             token to cookies.joinToString("; ")
         }
-        fun post(path: String, body: String): String = http.newCall(
+        fun <T> post(path: String, body: String, reader: (java.io.InputStream) -> T): T = http.newCall(
             Request.Builder().url("$MAGENTA_API/$path").header("User-Agent", UA)
                 .header("X_CSRFToken", auth.first).header("Cookie", auth.second)
                 .post(body.toRequestBody(JSON_TYPE)).build()
         ).execute().use { response ->
             if (!response.isSuccessful) throw IOException("MagentaTV: $path HTTP ${response.code}")
-            response.body.string()
+            reader(response.body.byteStream())
         }
         val channels = post(
             "AllChannel",
             """{"channelNamespace":2,"filterlist":[{"key":"IsHide","value":"-1"}],"metaDataVer":"Channel/1.1","properties":[{"include":"/channellist/logicalChannel/contentId,/channellist/logicalChannel/name","name":"logicalChannel"}],"returnSatChannel":0}""",
-        )
+        ) { json.decodeFromStream(MagentaChannels.serializer(), it).channellist }
+        val guide = MagentaWriter(out, channels)
         val day = SimpleDateFormat("yyyyMMdd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
         val now = System.currentTimeMillis()
-        val playbills = (0 until days.coerceIn(1, 7)).mapNotNull { offset ->
+        val span = days.coerceIn(1, 7)
+        var dayLists = 0
+        for (offset in 0 until span) {
             val date = day.format(Date(now + offset * DAY_MS))
             runCatching {
                 post(
                     "PlayBillList",
                     """{"count":-1,"isFillProgram":1,"offset":0,"properties":[{"include":"endtime,genres,name,starttime,channelid,introduce,subName","name":"playbill"}],"type":2,"begintime":"${date}000000","endtime":"${date}235959"}""",
-                )
-            }.getOrNull()
-        }
-        if (playbills.isEmpty()) throw IOException("MagentaTV: kein Programm")
-        // Die Sammelabfrage lässt Sky und die Regionalprogramme aus: diese einzeln abfragen (je Sender alle Tage auf
-        // einmal, sechs gleichzeitig).
-        val withProgramme = HashSet<String>()
-        for (body in playbills) Regex(""""channelid":"(\d+)"""").findAll(body).forEach { withProgramme += it.groupValues[1] }
-        val missing = runCatching {
-            json.parseToJsonElement(channels).jsonObject["channellist"]?.jsonArray.orEmpty().mapNotNull { c ->
-                val o = c as? JsonObject ?: return@mapNotNull null
-                val id = o.str("contentId") ?: return@mapNotNull null
-                id.takeIf { it !in withProgramme && !MAGENTA_SKIP.containsMatchIn(o.str("name").orEmpty()) }
+                ) { guide.add(json.decodeFromStream(MagentaPlaybills.serializer(), it).playbilllist) }
+                dayLists++
             }
-        }.getOrDefault(emptyList())
-        val first = day.format(Date(now))
-        val last = day.format(Date(now + days.coerceIn(1, 7) * DAY_MS))
-        val pool = java.util.concurrent.Executors.newFixedThreadPool(6)
-        val single = try {
-            missing.map { id ->
-                pool.submit<String?> {
-                    runCatching {
-                        post(
-                            "PlayBillList",
-                            """{"count":-1,"isFillProgram":1,"offset":0,"properties":[{"include":"endtime,genres,name,starttime,channelid,introduce,subName","name":"playbill"}],"type":2,"begintime":"${first}000000","channelid":"$id","endtime":"${last}000000"}""",
-                        )
-                    }.getOrNull()
-                }
-            }.mapNotNull { runCatching { it.get(60, java.util.concurrent.TimeUnit.SECONDS) }.getOrNull() }
-        } finally {
-            pool.shutdownNow()
         }
-        return magentaXmltv(channels, playbills + single)
+        if (dayLists == 0) throw IOException("MagentaTV: kein Programm")
+        // Die Sammelabfrage lässt Sky und die Regionalprogramme aus: diese einzeln abfragen (je Sender alle Tage auf
+        // einmal), nacheinander, damit nie mehr als eine Antwort im Speicher liegt.
+        val first = day.format(Date(now))
+        val last = day.format(Date(now + span * DAY_MS))
+        for (id in guide.withoutProgramme()) {
+            runCatching {
+                post(
+                    "PlayBillList",
+                    """{"count":-1,"isFillProgram":1,"offset":0,"properties":[{"include":"endtime,genres,name,starttime,channelid,introduce,subName","name":"playbill"}],"type":2,"begintime":"${first}000000","channelid":"$id","endtime":"${last}000000"}""",
+                ) { guide.add(json.decodeFromStream(MagentaPlaybills.serializer(), it).playbilllist) }
+            }
+        }
+        guide.finish()
     }
 
     private val MAGENTA_COOKIES = listOf("JSESSIONID", "CSESSIONID", "CSRFSESSION")
     private val MAGENTA_SKIP = Regex("""(?i)^(testkanal|meine aufnahmen|magentatv\+|lokal-tv)""")
     private val NO_PROGRAMME = Regex("""(?i)momentan kein programm""")
 
+    /** Schreibt die Sender gleich und jede Liste von Sendungen, sobald sie da ist. */
+    private class MagentaWriter(private val out: Appendable, channels: List<MagentaChannel>) {
+        private val ids = HashMap<String, String>()
+        private val seen = HashSet<String>()
+        private val withProgramme = HashSet<String>()
+
+        init {
+            val used = HashSet<String>()
+            out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<tv generator-info-name=\"DnA-TV MagentaTV\">\n")
+            for (c in channels) {
+                val contentId = c.contentId ?: continue
+                val name = c.name ?: continue
+                if (MAGENTA_SKIP.containsMatchIn(name)) continue
+                var id = xmlId(name) + ".de@MagentaTV"
+                if (!used.add(id)) {
+                    id = xmlId(name) + "." + contentId + ".de@MagentaTV"
+                    used += id
+                }
+                ids[contentId] = id
+                out.append("  <channel id=\"").append(esc(id)).append("\"><display-name>").append(esc(name)).append("</display-name>")
+                // „Warner TV Serie (Sky)“: auch ohne den Zusatz.
+                name.replace(Regex("""\s*\(Sky\)\s*$"""), "").takeIf { it != name }?.let {
+                    out.append("<display-name>").append(esc(it)).append("</display-name>")
+                }
+                out.append("</channel>\n")
+            }
+        }
+
+        fun add(list: List<MagentaPlaybill>) {
+            for (p in list) {
+                val channel = p.channelid ?: continue
+                val id = ids[channel] ?: continue
+                val title = p.name?.takeIf { it.isNotBlank() } ?: continue
+                if (NO_PROGRAMME.containsMatchIn(title)) continue
+                val start = magentaTime(p.starttime) ?: continue
+                val stop = magentaTime(p.endtime) ?: continue
+                if (!seen.add("$id|$start")) continue
+                withProgramme += channel
+                programme(out, id, start, stop, title, p.subName, p.introduce, p.genres?.substringBefore(','))
+            }
+        }
+
+        fun withoutProgramme(): List<String> = ids.keys.filter { it !in withProgramme }
+
+        fun finish() {
+            out.append("</tv>\n")
+        }
+    }
+
     /** Antworten von AllChannel und PlayBillList (je Tag eine) als XMLTV. Öffentlich für Tests. */
     fun magentaXmltv(channelsJson: String, playbillJsons: List<String>): String {
-        val channels = json.parseToJsonElement(channelsJson).jsonObject["channellist"]?.jsonArray.orEmpty()
-            .mapNotNull { it as? JsonObject }
-            .mapNotNull { c -> (c.str("contentId") ?: return@mapNotNull null) to (c.str("name") ?: return@mapNotNull null) }
-            .filter { (_, name) -> !MAGENTA_SKIP.containsMatchIn(name) }
-        val ids = HashMap<String, String>()
-        val used = HashSet<String>()
-        val out = StringBuilder(1 shl 20)
-        out.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<tv generator-info-name=\"DnA-TV MagentaTV\">\n")
-        for ((contentId, name) in channels) {
-            var id = xmlId(name) + ".de@MagentaTV"
-            if (!used.add(id)) {
-                id = xmlId(name) + "." + contentId + ".de@MagentaTV"
-                used += id
-            }
-            ids[contentId] = id
-            out.append("  <channel id=\"").append(esc(id)).append("\"><display-name>").append(esc(name)).append("</display-name>")
-            // „Warner TV Serie (Sky)“: auch ohne den Zusatz.
-            name.replace(Regex("""\s*\(Sky\)\s*$"""), "").takeIf { it != name }?.let {
-                out.append("<display-name>").append(esc(it)).append("</display-name>")
-            }
-            out.append("</channel>\n")
-        }
-        val seen = HashSet<String>()
-        for (body in playbillJsons) {
-            val list = runCatching { json.parseToJsonElement(body).jsonObject["playbilllist"]?.jsonArray }.getOrNull() ?: continue
-            for (element in list) {
-                val p = element as? JsonObject ?: continue
-                val id = ids[p.str("channelid") ?: continue] ?: continue
-                val title = p.str("name")?.takeIf { it.isNotBlank() } ?: continue
-                if (NO_PROGRAMME.containsMatchIn(title)) continue
-                val start = magentaTime(p.str("starttime")) ?: continue
-                val stop = magentaTime(p.str("endtime")) ?: continue
-                if (!seen.add("$id|$start")) continue
-                programme(out, id, start, stop, title, p.str("subName"), p.str("introduce"), p.str("genres")?.substringBefore(','))
-            }
-        }
-        out.append("</tv>\n")
+        val out = StringBuilder()
+        val guide = MagentaWriter(out, json.decodeFromString(MagentaChannels.serializer(), channelsJson).channellist)
+        for (body in playbillJsons) runCatching { guide.add(json.decodeFromString(MagentaPlaybills.serializer(), body).playbilllist) }
+        guide.finish()
         return out.toString()
     }
 
@@ -317,7 +350,7 @@ object ExtraGuides {
 
     // ---------------------------------------------------------------- XMLTV
 
-    private fun programme(out: StringBuilder, channel: String, start: String, stop: String, title: String, sub: String?, desc: String?, category: String?) {
+    private fun programme(out: Appendable, channel: String, start: String, stop: String, title: String, sub: String?, desc: String?, category: String?) {
         out.append("  <programme start=\"").append(start).append("\" stop=\"").append(stop).append("\" channel=\"").append(esc(channel)).append("\">")
         out.append("<title>").append(esc(title)).append("</title>")
         sub?.takeIf { it.isNotBlank() }?.let { out.append("<sub-title>").append(esc(it)).append("</sub-title>") }
