@@ -125,7 +125,7 @@ class RemoteClient(private val context: Context, private val container: AppConta
             .post(secure.request(path, body.orEmpty()).toRequestBody("text/plain; charset=utf-8".toMediaType()))
             .build()
         val reply = http.newCall(request).execute().use { response ->
-            if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben (und DnA-TV dort auf 0.45.3 oder neuer aktualisieren)")
+            if (response.code == 403) throw IOException("Falsche PIN – bitte die PIN vom Fernseher eingeben (und DnA-TV dort auf 0.45.4 oder neuer aktualisieren)")
             if (!response.isSuccessful) throw IOException("Fernseher antwortet mit HTTP ${response.code}")
             runCatching { secure.reply(response.body.string()) }.getOrElse { throw IOException("Antwort des Fernsehers nicht lesbar (falsche PIN?)") }
         }

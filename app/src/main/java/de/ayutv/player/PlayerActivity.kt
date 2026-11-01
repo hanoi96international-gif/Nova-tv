@@ -339,6 +339,10 @@ class PlayerActivity : ComponentActivity() {
         }
         frameRateMatcher = FrameRateMatcher(this)
         frameRateMatcher.onSwitch = ::onDisplaySwitch
+        frameRateMatcher.onIgnored = {
+            subtitleStatus = "Der Fire TV hat nicht auf die Bildrate des Senders umgeschaltet. Fire-TV-Einstellungen → Display & Audio → " +
+                "Display → „Originalbildrate anpassen“ einschalten"
+        }
         vod = intent.getVodRequest()
         isLive = vod == null
 

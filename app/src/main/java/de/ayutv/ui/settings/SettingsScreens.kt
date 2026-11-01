@@ -346,6 +346,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 "Films wird gemerkt: Beim nächsten Mal schaltet der Fernseher schon während des Ladens um, die Menüs bleiben dabei. " +
                                 "Fire TV: zusätzlich unter Einstellungen → Display & Audio → Display „Originalbildrate anpassen“ einschalten.",
                         ) {
+                            de.ayutv.player.FrameRateMatcher.ignoredModeId = 0
                             if (settings.matchFrameRate) {
                                 // Ausschalten: Menüs zurück auf den Standard des Fire TV.
                                 de.ayutv.player.FrameRateMatcher.keptModeId = 0

@@ -50,7 +50,7 @@ class DeviceSync(private val store: Store, http: OkHttpClient) {
         val request = Request.Builder().url("$base/s")
             .post(secure.request("/sync", export()).toRequestBody("text/plain; charset=utf-8".toMediaType())).build()
         val reply = http.newCall(request).execute().use { response ->
-            if (response.code == 403) throw IOException("Falsche PIN – oder DnA-TV auf dem Fire TV ist älter als 0.45.3 (bitte aktualisieren)")
+            if (response.code == 403) throw IOException("Falsche PIN – oder DnA-TV auf dem Fire TV ist älter als 0.45.4 (bitte aktualisieren)")
             if (response.code == 404) throw IOException("Falsche Adresse (HTTP 404)")
             if (!response.isSuccessful) throw IOException("Fire TV antwortet mit HTTP ${response.code}")
             runCatching { secure.reply(response.body.string()) }.getOrElse { throw IOException("Antwort des Fire TV nicht lesbar (falsche PIN?)") }
