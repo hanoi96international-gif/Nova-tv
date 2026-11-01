@@ -156,6 +156,8 @@ class PlayerActivity : ComponentActivity() {
     /** Sender, den der Player gerade wirklich spielt ([current] zeigt beim schnellen Zappen schon das Ziel). */
     private var playing: ChannelEntity? = null
     private var retries = 0
+    /** Langsame Wiederholungen nach einem Ausfall des Senders (siehe [SLOW_RETRY_SECONDS]). */
+    private var slowRetries = 0
     private var triedHls = false
     private var zapStartedAt = 0L
     private var everReady = false
@@ -744,7 +746,8 @@ class PlayerActivity : ComponentActivity() {
         }
         val bits = format?.colorInfo?.lumaBitdepth?.takeIf { it > 8 }?.let { " $it Bit" }.orEmpty()
         val resolution = format?.height?.takeIf { it > 0 }?.let { if (it >= 2000) " in 4K" else " in ${it}p" }.orEmpty()
-        return "Dieses Gerät kann $codec$bits$resolution nicht abspielen"
+        // Erst nach allen Ausweichwegen (ohne Tunneling, ohne schnelles Dekodieren): Der Decoder lehnt ab.
+        return "Der Decoder lehnt diesen Stream ab ($codec$bits$resolution) – auch ohne Tunneling und schnelles Dekodieren"
     }
 
     private fun onLiveStreamEnded() {
@@ -844,6 +847,7 @@ class PlayerActivity : ComponentActivity() {
     private var watchNet = ""
     private var watchWorstRssi = 0
     private var watchTicks = 0
+    private var watchLastError = ""
 
     private fun resetWatchStats() {
         watchStalls = 0
@@ -853,6 +857,7 @@ class PlayerActivity : ComponentActivity() {
         watchRateSeconds = 0
         watchRateLow = 0L
         watchTicks = 0
+        watchLastError = ""
         val net = de.ayutv.data.net.NetInfo.sample(this)
         watchNet = net.label
         watchWorstRssi = net.rssi
@@ -906,6 +911,11 @@ class PlayerActivity : ComponentActivity() {
             stalls = watchStalls, stallS = watchStallSeconds, drops = drops, droppedFrames = stats.droppedFrames,
             startMs = stats.startupMs.toInt(), errors = playerErrors - watchErrorsAtStart,
             route = routeLabel().removePrefix("Weg: "), net = watchNet, worstRssi = watchWorstRssi,
+            audio = if (stats.audioCodec.isBlank()) "" else listOfNotNull(
+                stats.audioCodec, stats.audioChannels.takeIf { it > 0 }?.let { "${it}ch" },
+                if (stats.audioDecoder.isNotBlank()) "im Gerät" else "durchgereicht",
+            ).joinToString(" "),
+            lastError = watchLastError,
         )
         val file = java.io.File(filesDir, de.ayutv.data.Diagnostics.WATCH_FILE)
         container.scope.launch(Dispatchers.IO) {
@@ -1012,6 +1022,7 @@ class PlayerActivity : ComponentActivity() {
         streamGeneration++
         resetStreamState()
         retries = 0
+        slowRetries = 0
         triedHls = false
         message = null
         zapStartedAt = SystemClock.elapsedRealtime()
@@ -3597,6 +3608,7 @@ class PlayerActivity : ComponentActivity() {
             buffering = state == Player.STATE_BUFFERING || state == Player.STATE_IDLE
             if (state == Player.STATE_READY) {
                 retries = 0
+                slowRetries = 0
                 if (timeshifted && player?.isPlaying == true) timeshiftErrors = 0
                 message = null
                 everReady = true
@@ -3667,6 +3679,8 @@ class PlayerActivity : ComponentActivity() {
             playerErrors++
             // Für den Fehlerbericht: welcher Fehler, mit der eigentlichen Ursache.
             statusHistory += "Fehler ${error.errorCodeName}: ${(error.cause?.message ?: error.message).orEmpty().take(140)}"
+            watchLastError = error.errorCodeName.removePrefix("ERROR_CODE_") +
+                ((error.cause?.message ?: error.message)?.takeIf { it.isNotBlank() }?.let { ": ${it.take(100)}" } ?: "")
             if (timeshifted) {
                 if (++timeshiftErrors <= 2) {
                     handler.postDelayed({ if (timeshifted) player?.let { enterTimeshift(currentTimeshiftMs(it), play = true) } }, 500)
@@ -3733,8 +3747,11 @@ class PlayerActivity : ComponentActivity() {
                 }
                 // Tunneling ist auf manchen Geräten/Streams instabil: einmalig ohne Tunneling neu starten.
                 // Steht vor dem Ton-Zweig, sonst würde ein Tunneling-Problem als Soundbar-Problem behandelt.
-                trackSelector?.parameters?.tunnelingEnabled == true && error.isDecoderOrAudioError() -> {
+                // Auch wenn der Decoder „zu hohe Anforderungen“ meldet (4K HEVC 10 Bit): Das kommt auf manchen Fire TVs
+                // vom Tunneling, nicht vom Format – erst ohne versuchen, bevor es „Gerät kann das nicht“ heißt.
+                trackSelector?.parameters?.tunnelingEnabled == true && (error.isDecoderOrAudioError() || error.isUnsupportedFormat()) -> {
                     trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
+                    statusHistory += "Ausweichen: ohne Tunneling (${error.errorCodeName})"
                     message = "Tunneling für diesen Stream deaktiviert, starte neu …"
                     restartStream()
                 }
@@ -3770,8 +3787,21 @@ class PlayerActivity : ComponentActivity() {
                     // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
                     handler.post { rebuildPlayer(asyncDecoding = false) }
                 }
-                // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
-                !everReady && error.isUnsupportedFormat() -> {
+                // „Zu hohe Anforderungen“ mit schnellem Dekodieren: für diesen Player ohne versuchen (nicht dauerhaft
+                // abschalten, 4K läuft damit sonst oft flüssiger). Tunneling bleibt dabei aus, falls es schon aus war.
+                asyncDecodingActive && error.isUnsupportedFormat() -> {
+                    message = "Verbinde neu …"
+                    asyncDecodingActive = false
+                    statusHistory += "Ausweichen: ohne schnelles Dekodieren (${error.errorCodeName})"
+                    val tunnelingOff = settings.tunneling && trackSelector?.parameters?.tunnelingEnabled == false
+                    handler.post {
+                        rebuildPlayer(asyncDecoding = false)
+                        if (tunnelingOff) trackSelector?.let { it.setParameters(it.buildUponParameters().setTunnelingEnabled(false)) }
+                    }
+                }
+                // Format lehnt der Decoder auch ohne Sonderwege ab. Einmal wiederholen (der 4K-Decoder ist beim Zappen
+                // oft noch belegt und meldet dann „zu hohe Anforderungen“), dann klar sagen, woran es liegt.
+                !everReady && error.isUnsupportedFormat() && retries >= 1 -> {
                     val reason = unsupportedFormatMessage()
                     if (!tryNextVariant(reason)) {
                         fatalError = true
@@ -3805,12 +3835,25 @@ class PlayerActivity : ComponentActivity() {
                         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> "Der Anbieter lehnt den Stream ab (z. B. zu viele Verbindungen oder Konto abgelaufen)"
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> "Keine Verbindung zum Server"
+                        // Allgemeiner Lesefehler: Der Sender lieferte (über Proxy oder direkt) eine Weile nichts Brauchbares.
+                        PlaybackException.ERROR_CODE_IO_UNSPECIFIED -> "Sender liefert gerade nichts" +
+                            (if (routeLabel().startsWith("Weg: über Proxy")) " (Anbieter oder Proxy-Weg)" else " (Anbieter)")
                         else -> "Stream nicht verfügbar (${error.errorCodeName})"
                     }.let { base -> de.ayutv.data.net.AppProxy.recentFailure()?.let { "$it (Einstellungen → Proxy)" } ?: base }
-                    if (!tryNextVariant(reason)) {
-                        fatalError = true
-                        message = reason
+                    if (tryNextVariant(reason)) return
+                    // Live-Sender fallen beim Anbieter oft nur kurz aus: in größeren Abständen selbst weiter versuchen,
+                    // statt aufzugeben. Umschalten geht jederzeit.
+                    if (isLive && slowRetries < SLOW_RETRY_SECONDS.size && error.errorCode !in NO_SLOW_RETRY) {
+                        val wait = SLOW_RETRY_SECONDS[slowRetries++]
+                        retries = 0
+                        statusHistory += "Sender liefert nichts, neuer Versuch in $wait s (${slowRetries}/${SLOW_RETRY_SECONDS.size})"
+                        message = "$reason – neuer Versuch in $wait s (▲▼ anderer Sender)"
+                        val generation = streamGeneration
+                        handler.postDelayed({ if (generation == streamGeneration) restartStream() }, wait * 1000L)
+                        return
                     }
+                    fatalError = true
+                    message = reason
                 }
             }
         }
@@ -3879,22 +3922,17 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /**
-     * Bild-Check (einmal je App-Start): Den Bildmodus des Fernsehers kann keine App umschalten, zwei häufige
-     * Fehlerquellen lassen sich aber erkennen. 1. Der Fire TV gibt dauerhaft HDR aus („Dynamikbereich: Immer HDR“),
-     * während ein normaler Sender in SDR läuft (fast alle Full-HD-Sender, viele 4K-Sportübertragungen): Das Bild
-     * wirkt blass und flau. 2. Ein HLG-Stream (4K-Sport, ARD/ZDF UHD) auf einem Fernseher, der HLG nicht meldet:
-     * Er läuft dann nur in SDR.
+     * Bild-Check (einmal je App-Start): Ein HLG-Stream (4K-Sport, ARD/ZDF UHD) auf einem Fernseher, der HLG nicht
+     * meldet, läuft nur in SDR. Ob der Fire TV gerade HDR *ausgibt*, kann eine App nicht erfahren: `Display.isHdr`
+     * sagt nur, dass der Fernseher HDR *kann*. Der frühere Hinweis „Fire TV gibt gerade HDR aus“ erschien deshalb
+     * bei jedem SDR-Sender auf jedem HDR-Fernseher und ist entfernt.
      */
     private fun checkDynamicRange(video: androidx.media3.common.Format?) {
         if (dynamicRangeHintShown || video == null || video.height <= 0 || Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         @Suppress("DEPRECATION")
         val display = windowManager.defaultDisplay ?: return
         val transfer = video.colorInfo?.colorTransfer
-        val hdrContent = transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG || video.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION
         val hint = when {
-            !hdrContent && display.isHdr ->
-                "Tipp: Dein Fire TV gibt gerade HDR aus, dieser Sender sendet aber normales Bild (SDR) – das wirkt blass. " +
-                    "Fire TV: Einstellungen → Display und Audio → Display → Dynamikbereich → „An Inhalt anpassen“"
             transfer == C.COLOR_TRANSFER_HLG &&
                 display.hdrCapabilities?.supportedHdrTypes?.contains(android.view.Display.HdrCapabilities.HDR_TYPE_HLG) == false ->
                 "Dieser Sender sendet HLG (HDR), dein Fernseher meldet aber kein HLG – das Bild läuft deshalb nur in SDR. " +
@@ -4160,6 +4198,10 @@ class PlayerActivity : ComponentActivity() {
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
         )
         private const val MAX_RETRIES = 3
+        /** Nach den schnellen Versuchen: Live-Sender noch so oft in diesen Abständen neu versuchen (zusammen gut 1,5 Minuten). */
+        private val SLOW_RETRY_SECONDS = intArrayOf(10, 20, 30, 45)
+        /** Ablehnung durch den Anbieter (Konto, Verbindungen): langes Warten hilft nicht. */
+        private val NO_SLOW_RETRY = setOf(PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS)
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L
         private const val TAG = "AyuPlayer"

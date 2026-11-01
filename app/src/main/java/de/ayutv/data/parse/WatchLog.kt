@@ -36,6 +36,10 @@ object WatchLog {
         val net: String,
         /** Schwächstes WLAN-Signal (dBm, 0 = unbekannt oder LAN). */
         val worstRssi: Int,
+        /** Ton, z. B. „eac3 6ch im Gerät“ oder „eac3 6ch durchgereicht“ (leer bei älteren Einträgen). */
+        val audio: String = "",
+        /** Letzter Player-Fehler mit Ursache (leer = keiner). */
+        val lastError: String = "",
     ) {
         val dropCount: Int get() = drops.values.sum()
     }
@@ -58,7 +62,7 @@ object WatchLog {
     fun encode(e: Entry): String = listOf(
         "1", e.at, clean(e.channel), e.watchedS, e.height, e.fps, e.displayHz, clean(e.codec), e.avgKbps, e.lowKbps,
         e.minBufferS, e.stalls, e.stallS, e.drops.entries.joinToString(";") { "${clean(it.key).replace(";", ",").replace("=", "-")}=${it.value}" },
-        e.droppedFrames, e.startMs, e.errors, clean(e.route), clean(e.net), e.worstRssi,
+        e.droppedFrames, e.startMs, e.errors, clean(e.route), clean(e.net), e.worstRssi, clean(e.audio), clean(e.lastError).take(160),
     ).joinToString("\t")
 
     fun decode(line: String): Entry? = runCatching {
@@ -70,6 +74,8 @@ object WatchLog {
             stalls = f[11].toInt(), stallS = f[12].toInt(),
             drops = f[13].split(';').filter { '=' in it }.associate { it.substringBefore('=') to it.substringAfter('=').toInt() },
             droppedFrames = f[14].toInt(), startMs = f[15].toInt(), errors = f[16].toInt(), route = f[17], net = f[18], worstRssi = f[19].toInt(),
+            audio = f.getOrNull(20).orEmpty(),
+            lastError = f.getOrNull(21).orEmpty(),
         )
     }.getOrNull()
 
@@ -106,6 +112,13 @@ object WatchLog {
         }
         recent.filter { it.minBufferS >= 0 }.minByOrNull { it.minBufferS }?.let { out.append("Puffer am knappsten: ${it.minBufferS} s (${it.channel}, ${time(it.at)})\n") }
         out.append("Verworfene Bilder: ${recent.sumOf { it.droppedFrames }}, Player-Fehler: ${recent.sumOf { it.errors }}\n")
+        // Verworfene Bilder je Tonweg: zeigt, ob das Dekodieren von Dolby im Gerät das Bild bremst.
+        val byAudio = recent.filter { it.audio.isNotBlank() }.groupBy { if (it.audio.endsWith("im Gerät")) "Ton im Gerät dekodiert" else "Ton durchgereicht" }
+        if (byAudio.size > 1 || byAudio.values.any { list -> list.any { it.droppedFrames > 0 } }) {
+            out.append("Verworfene Bilder je Ton: " + byAudio.entries.joinToString { (way, list) ->
+                "$way ${list.sumOf { it.droppedFrames }} (${list.size} Sender)"
+            } + "\n")
+        }
         val starts = recent.filter { it.startMs > 0 }.map { it.startMs }.sorted()
         if (starts.isNotEmpty()) out.append("Startzeit: Mitte ${starts[starts.size / 2]} ms, langsamster ${starts.last()} ms\n")
         val mismatch = recent.count(::cadenceMismatch)
@@ -121,8 +134,10 @@ object WatchLog {
             val h = list.sumOf { it.watchedS } / 3600f
             "$route ${if (h > 0f) fmt(list.sumOf { it.dropCount } / h) else "-"}"
         } + "\n")
-        val worst = recent.filter { it.stalls > 0 || it.dropCount > 0 || it.errors > 0 || cadenceMismatch(it) }
-            .sortedByDescending { it.stalls * 10 + it.dropCount * 3 + it.errors * 5 + (if (cadenceMismatch(it)) 1 else 0) }.take(12)
+        val worst = recent.filter { it.stalls > 0 || it.dropCount > 0 || it.errors > 0 || it.droppedFrames >= 100 || cadenceMismatch(it) }
+            .sortedByDescending {
+                it.stalls * 10 + it.dropCount * 3 + it.errors * 5 + it.droppedFrames / 200 + (if (cadenceMismatch(it)) 1 else 0)
+            }.take(12)
         if (worst.isNotEmpty()) {
             out.append("Auffällige Sender:\n")
             worst.forEach { out.append("  ").append(line(it)).append('\n') }
@@ -138,8 +153,9 @@ object WatchLog {
         if (e.stalls > 0) append(" · Ruckler ${e.stalls} (${e.stallS} s)")
         if (e.dropCount > 0) append(" · neu verbunden ${e.dropCount} (" + e.drops.entries.joinToString { "${it.key} ${it.value}" } + ")")
         if (e.minBufferS >= 0) append(" · Puffer min ${e.minBufferS} s")
+        if (e.audio.isNotBlank()) append(" · Ton ${e.audio}")
         if (e.droppedFrames > 0) append(" · verworfen ${e.droppedFrames}")
-        if (e.errors > 0) append(" · Fehler ${e.errors}")
+        if (e.errors > 0) append(" · Fehler ${e.errors}" + (if (e.lastError.isNotBlank()) " (zuletzt ${e.lastError})" else ""))
         if (e.route.isNotBlank()) append(" · ${e.route}")
         if (e.worstRssi < 0) append(" · WLAN bis ${e.worstRssi} dBm")
     }
