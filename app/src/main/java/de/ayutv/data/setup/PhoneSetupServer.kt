@@ -418,8 +418,8 @@ class PhoneSetupServer(private val container: AppContainer) {
 
     private companion object {
         /** Einzige erlaubte Skriptzeile (per Hash in der Sicherheitsrichtlinie freigegeben): Kurzbericht kopieren. */
-        private const val COPY_SCRIPT = "document.getElementById('c').onclick=function(){var t=document.getElementById('k');t.focus();t.select();t.setSelectionRange(0,1e7);document.execCommand('copy');this.textContent='Kopiert ✓ – jetzt in den Chat einfügen'}"
-        private const val COPY_SCRIPT_HASH = "sha256-09hxA0BOK3DW2m5Lzod4qiWW3GlphdG6MvuB69KfiXs="
+        private const val COPY_SCRIPT = "document.getElementById('c').onclick=function(){var t=document.getElementById('k');t.readOnly=false;t.focus();t.select();t.setSelectionRange(0,1e7);var ok=false;try{ok=document.execCommand('copy')}catch(e){}t.readOnly=true;t.blur();this.textContent=ok?'Kopiert ✓ – jetzt in den Chat einfügen':'Bitte ins Feld tippen, lange drücken → Alles auswählen → Kopieren'}"
+        private const val COPY_SCRIPT_HASH = "sha256-518GxTZCXPKttDtkaJTVhY38O8/NwkWTCEnD256yiTo="
         const val TAG = "PhoneSetup"
         const val PORT = 8095
         /** Groß genug für eine Sicherung mit vielen Favoriten. */
