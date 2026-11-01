@@ -64,4 +64,15 @@ class EventNamesTest {
         assertEquals("MÜNCHNER SC (D) - DER CLUB AN DER ALSTER (D)", a.title)
         assertTrue(ProgrammeText.pairing(a.title, null) != null)
     }
+
+    @Test
+    fun uhdVersionsShareTheEventOfTheirSibling() {
+        assertEquals("dynppv2", EventNames.baseKey("LIVE | MÜNCHNER SC (D) - DER CLUB AN DER ALSTER (D) | Sun 01 Nov 11:25 CET (DE) | 8K EXCLUSIVE | DE: DYN PPV 2"))
+        assertEquals("dynppv2", EventNames.baseKey("DE: DYN PPV 2 4K"))
+        assertEquals("dynppv2", EventNames.baseKey("DE: DYN PPV 2 ᵁᴴᴰ"))
+        assertEquals("daznppv12", EventNames.baseKey("Next | Juventus - Neapel | Serie A | 2026-11-01 | 19:45 (GMT) | 8K EXCLUSIVE | DE: DAZN PPV 12"))
+        // Ohne Nummer kein Event-Sender: nie das Spiel eines anderen übernehmen
+        assertNull(EventNames.baseKey("4K: SKY SPORTS ᵁᴴᴰ ³⁸⁴⁰ᴾ (EVENT)"))
+        assertNull(EventNames.baseKey("DE: SKY SPORT BUNDESLIGA ᵁᴴᴰ ³⁸⁴⁰ᴾ"))
+    }
 }

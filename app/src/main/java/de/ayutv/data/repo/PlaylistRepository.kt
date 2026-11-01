@@ -598,8 +598,16 @@ class PlaylistRepository(
         val assign = ArrayList<Pair<Long, String>>()
         // Teilen sich mehrere Event-Sender eine Kennung des Anbieters, bekäme jeder alle Spiele: dann eine eigene.
         val shared = open.mapNotNull { it.epgId?.takeIf { id -> id.isNotBlank() } }.groupingBy { it }.eachCount()
+        // Fassungen ohne Spiel im Namen („DE: DYN PPV 2 4K“) übernehmen das Spiel ihrer Schwester („LIVE | … | DE: DYN PPV 2“).
+        val named = HashMap<String, de.ayutv.data.parse.EventNames.Event>()
         for (channel in open) {
             val event = de.ayutv.data.parse.EventNames.parse(channel.name, now) ?: continue
+            de.ayutv.data.parse.EventNames.baseKey(channel.name)?.let { named.putIfAbsent(it, event) }
+        }
+        for (channel in open) {
+            val event = de.ayutv.data.parse.EventNames.parse(channel.name, now)
+                ?: de.ayutv.data.parse.EventNames.baseKey(channel.name)?.takeIf { !de.ayutv.data.parse.EventNames.isIdle(channel.name) }?.let(named::get)
+                ?: continue
             if (event.stop < now) continue
             val own = channel.epgId?.takeIf { it.isNotBlank() && shared[it] == 1 && it !in taken }
             val storage = own ?: "event:${channel.id}"
