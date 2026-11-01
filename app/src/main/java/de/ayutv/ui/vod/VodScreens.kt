@@ -70,6 +70,7 @@ import de.ayutv.player.PlayerActivity
 import de.ayutv.player.VodRequest
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.components.CategoryColumn
+import de.ayutv.ui.components.drillContent
 import de.ayutv.ui.components.CategoryEntry
 import de.ayutv.ui.components.EmptyHint
 import de.ayutv.ui.components.PosterCard
@@ -80,6 +81,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun MoviesScreen() {
     val content = LocalContainer.current.content
+    // Kategorie geöffnet: nur noch ihr Raster, die Kategorienspalte ist weg. Zurück holt sie wieder. Vor allen
+    // vorzeitigen Rückgaben, damit es nach der Detailseite eines Films beim geöffneten Raster bleibt.
+    val drill = de.ayutv.ui.components.rememberDrillDown()
     val context = LocalContext.current
     val categories by content.vodCategories.collectAsStateWithLifecycle(emptyList())
     var selected by rememberSaveable { mutableStateOf<String?>(null) }
@@ -101,19 +105,23 @@ fun MoviesScreen() {
     }
 
     Row(Modifier.fillMaxSize()) {
-        CategoryColumn(
+        if (!drill.isOpen) CategoryColumn(
             entries = remember(categories) { categories.map { CategoryEntry(it.name, it.name, it.count) } },
             selected = active,
             onSelect = { selected = it },
+            onOpen = { drill.enter() },
+            focusSelectedTick = drill.backTick,
             onLongClick = { name ->
                 scope.launch { content.hideGroupEverywhere(GroupKind.VOD, name) }
                 if (selected == name) selected = null
             },
         )
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+        if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty())
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
             state = gridState,
-            modifier = Modifier.weight(1f).fillMaxHeight().focusRestorer(),
+            modifier = Modifier.weight(1f).fillMaxWidth().drillContent(drill).focusRestorer(),
             contentPadding = PaddingValues(24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -127,12 +135,15 @@ fun MoviesScreen() {
                 )
             }
         }
+        }
     }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Unit) {
+    // Wie bei Filmen: geöffnete Kategorie ohne Kategorienspalte, auch nach der Detailseite einer Serie.
+    val drill = de.ayutv.ui.components.rememberDrillDown()
     if (openSeries != null) {
         BackHandler { onOpenSeries(null) }
         SeriesDetail(openSeries)
@@ -152,18 +163,22 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
     val scope = rememberCoroutineScope()
 
     Row(Modifier.fillMaxSize()) {
-        CategoryColumn(
+        if (!drill.isOpen) CategoryColumn(
             entries = remember(categories) { categories.map { CategoryEntry(it.name, it.name, it.count) } },
             selected = active,
             onSelect = { selected = it },
+            onOpen = { drill.enter() },
+            focusSelectedTick = drill.backTick,
             onLongClick = { name ->
                 scope.launch { content.hideGroupEverywhere(GroupKind.SERIES, name) }
                 if (selected == name) selected = null
             },
         )
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+        if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty())
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
-            modifier = Modifier.weight(1f).fillMaxHeight().focusRestorer(),
+            modifier = Modifier.weight(1f).fillMaxWidth().drillContent(drill).focusRestorer(),
             contentPadding = PaddingValues(24.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -176,6 +191,7 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
                     onClick = { onOpenSeries(item) },
                 )
             }
+        }
         }
     }
 }

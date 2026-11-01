@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -64,7 +63,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-private enum class SportFilter(val label: String) { ALL("Alles"), FOOTBALL("Fußball"), TEAMS("Meine Vereine") }
+/** Filter: alles, eine Sportart, oder die Spiele der gefolgten Vereine. */
+private sealed interface SportFilter {
+    val label: String
+    data object All : SportFilter { override val label = "Alles" }
+    data object Teams : SportFilter { override val label = "Meine Vereine" }
+    data class Of(val kind: de.ayutv.data.parse.SportKinds.Kind) : SportFilter { override val label = kind.label }
+}
+
+/**
+ * Zuletzt berechnete Liste, damit der Bereich beim Öffnen sofort etwas zeigt (statt leer zu bleiben, bis zehntausende
+ * Sendungen durchsucht sind). Nur im Speicher, wird im Hintergrund erneuert.
+ */
+private object SportCache {
+    @Volatile var events: List<SportEvent>? = null
+    @Volatile var loadedAt = 0L
+}
+
+/** Spiel laut Spielplan und Sportart je Sendung, abseits der Oberfläche berechnet. */
+private class SportInfo(
+    val matches: Map<SportEvent, de.ayutv.data.sport.LiveScores.Match?> = emptyMap(),
+    val kinds: Map<SportEvent, de.ayutv.data.parse.SportKinds.Kind> = emptyMap(),
+)
 
 /**
  * Sport auf einen Blick: was jetzt live läuft und was heute und morgen kommt, über alle Sender.
@@ -78,8 +98,8 @@ fun SportScreen() {
     val scope = rememberCoroutineScope()
     val settings by container.settings.settings.collectAsStateWithLifecycle(initialValue = null)
     val minute by rememberMinuteTicker()
-    var events by remember { mutableStateOf<List<SportEvent>?>(null) }
-    var filter by rememberSaveable { mutableStateOf(SportFilter.ALL) }
+    var events by remember { mutableStateOf(SportCache.events) }
+    var filter by remember { mutableStateOf<SportFilter>(SportFilter.All) }
     var choosing by remember { mutableStateOf<SportEvent?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
     val teams = settings?.followedTeams.orEmpty()
@@ -91,7 +111,21 @@ fun SportScreen() {
         }
     }
 
-    LaunchedEffect(minute) { events = container.content.sportEvents(hours = 48) }
+    // Sofort laden (aus dem Speicher, falls schon da), dann alle 5 Minuten neu – nicht jede Minute: Das Durchsuchen
+    // aller Sendungen kostet auf dem Stick mehrere Sekunden Rechenzeit.
+    LaunchedEffect(Unit) {
+        while (true) {
+            if (events == null || System.currentTimeMillis() - SportCache.loadedAt > SPORT_REFRESH_MS) {
+                val fresh = runCatching { container.content.sportEvents(hours = 48) }.getOrNull()
+                if (fresh != null) {
+                    SportCache.events = fresh
+                    SportCache.loadedAt = System.currentTimeMillis()
+                    events = fresh
+                } else if (events == null) events = emptyList()
+            }
+            delay(SPORT_REFRESH_MS)
+        }
+    }
     // Spielpläne und Stände (OpenLigaDB), jede Minute: für die Paarung, wenn das EPG nur „Live: 2. BL“ nennt, und
     // (wenn eingeschaltet) für Stand und Spielminute.
     var scores by remember { mutableStateOf<List<de.ayutv.data.sport.LiveScores.Match>>(emptyList()) }
@@ -100,25 +134,36 @@ fun SportScreen() {
     }
     /**
      * Das Spiel zu jeder Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung, sonst
-     * per Ausschluss (das einzige übrige Spiel der Liga zu dieser Zeit). Einmal je Minute für alle, nicht je Zeile.
+     * per Ausschluss (das einzige übrige Spiel der Liga zu dieser Zeit). Dazu die Sportart. Abseits der Oberfläche
+     * (vorher in der Darstellung selbst: Das hielt die Bedienung bei vielen Sendungen spürbar an).
      */
-    val matches = remember(events, scores) {
-        val events = events.orEmpty()
-        val direct = events.map { e ->
-            val p = e.programme
-            container.liveScores.find(scores, p.pairing(), p.start, p.title)
-                ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
+    var info by remember { mutableStateOf(SportInfo()) }
+    LaunchedEffect(events, scores) {
+        val list = events.orEmpty()
+        info = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val direct = list.map { e ->
+                val p = e.programme
+                container.liveScores.find(scores, p.pairing(), p.start, p.title)
+                    ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
+            }
+            val openIndex = list.indices.filter { direct[it] == null && list[it].programme.pairing() == null }
+            val found = container.liveScores.byElimination(
+                scores,
+                openIndex.map { i -> list[i].programme.let { de.ayutv.data.sport.LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
+                direct.filterNotNull().toSet(),
+            )
+            val result = direct.toMutableList()
+            for ((k, match) in found) result[openIndex[k]] = match
+            SportInfo(
+                matches = list.indices.associate { list[it] to result[it] },
+                kinds = list.indices.associate { i ->
+                    val p = list[i].programme
+                    list[i] to de.ayutv.data.parse.SportKinds.kind(p.title, p.subtitle, p.category, p.description, list[i].channel.name, result[i] != null)
+                },
+            )
         }
-        val openIndex = events.indices.filter { direct[it] == null && events[it].programme.pairing() == null }
-        val found = container.liveScores.byElimination(
-            scores,
-            openIndex.map { i -> events[i].programme.let { de.ayutv.data.sport.LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
-            direct.filterNotNull().toSet(),
-        )
-        val result = direct.toMutableList()
-        for ((k, match) in found) result[openIndex[k]] = match
-        events.indices.associate { events[it] to result[it] }
     }
+    val matches = info.matches
     fun matchOf(e: SportEvent): de.ayutv.data.sport.LiveScores.Match? = matches[e]
     /** Stand nur, wenn Live-Ergebnisse eingeschaltet sind. */
     fun scoreOf(e: SportEvent) = matchOf(e)?.takeIf { settings?.liveScores == true }
@@ -146,12 +191,19 @@ fun SportScreen() {
     }
 
     val now = minute
+    // Sportarten, die gerade vorkommen (Fußball zuerst, dann nach Anzahl): je ein Filter.
+    val kindsPresent = remember(info) {
+        info.kinds.values.groupingBy { it }.eachCount().entries
+            .sortedWith(compareBy({ it.key != de.ayutv.data.parse.SportKinds.Kind.FOOTBALL }, { it.key == de.ayutv.data.parse.SportKinds.Kind.OTHER }, { -it.value }))
+            .map { it.key }
+    }
+    val filters: List<SportFilter> = listOf<SportFilter>(SportFilter.All) + kindsPresent.map { SportFilter.Of(it) } + SportFilter.Teams
     val shown = events.orEmpty().filter { e ->
         val p = e.programme
-        when (filter) {
-            SportFilter.ALL -> true
-            SportFilter.FOOTBALL -> Regex("(?i)fu(ß|ss)ball|bundesliga|liga|league|pokal|\\bBL\\b").containsMatchIn(p.title + " " + p.category.orEmpty())
-            SportFilter.TEAMS -> pairingOf(e)?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
+        when (val f = filter) {
+            SportFilter.All -> true
+            is SportFilter.Of -> info.kinds[e] == f.kind
+            SportFilter.Teams -> pairingOf(e)?.let { pairing -> teams.any { Teams.plays(it, pairing, p.title) } } == true
         }
     }
     val live = shown.filter { it.programme.start <= now && it.programme.stop > now }
@@ -172,15 +224,15 @@ fun SportScreen() {
             )
             Spacer(Modifier.height(12.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.focusRestorer()) {
-                items(SportFilter.entries) { f -> Pill(f.label, selected = f == filter) { filter = f } }
+                items(filters, key = { it.label }) { f -> Pill(f.label, selected = f == filter) { filter = f } }
                 items(teams.sorted()) { team -> Pill("★ $team  ✕", selected = false) { unfollow(team) } }
             }
             Spacer(Modifier.height(12.dp))
             when {
-                events == null -> Unit
+                events == null -> Text("Spiele werden gesucht …", color = AyuColors.TextSecondary, fontSize = 16.sp, modifier = Modifier.padding(top = 12.dp))
                 shown.isEmpty() -> EmptyHint(
-                    if (filter == SportFilter.TEAMS && teams.isEmpty()) "Noch keinem Verein gefolgt" else "Gerade keine Spiele im TV-Guide",
-                    if (filter == SportFilter.TEAMS && teams.isEmpty()) "Auf einem Spiel OK gedrückt halten und einen der beiden Vereine wählen."
+                    if (filter == SportFilter.Teams && teams.isEmpty()) "Noch keinem Verein gefolgt" else "Gerade keine Spiele im TV-Guide",
+                    if (filter == SportFilter.Teams && teams.isEmpty()) "Auf einem Spiel OK gedrückt halten und einen der beiden Vereine wählen."
                     else "Sport erscheint hier, sobald der TV-Guide ihn kennt (Einstellungen → Anzeige → TV-Guide aus dem Internet).",
                 )
                 else -> LazyColumn(
@@ -232,6 +284,7 @@ fun SportScreen() {
 }
 
 private const val DAY = 24 * 3_600_000L
+private const val SPORT_REFRESH_MS = 5 * 60_000L
 
 /** Überschrift einer Sport-Sendung; fehlt die Paarung im EPG, kommt sie aus dem Spielplan nach vorn („A – B (Live: 2. BL)“). */
 private fun headlineOf(p: de.ayutv.data.db.ProgrammeEntity, pairing: String?): String =
