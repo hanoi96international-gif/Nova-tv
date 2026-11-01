@@ -1,0 +1,24 @@
+airtango.de	airtango.de
+BR Fernsehen.de	BR Fernsehen.de
+DAS ERSTE.de	DAS ERSTE.de
+DW TV.de	DW TV.de
+EuroLeagueTV.de	EuroLeagueTV.de
+Hamburg 1.de	Hamburg 1.de
+HR.de	HR.de
+Kabel 1.de	Kabel 1.de
+n tv.de	n tv.de
+ORF 1.de	ORF 1.de
+ORF 2.de	ORF 2.de
+ORF SPORT +.de	ORF SPORT +.de
+ProSieben.de	ProSieben.de
+Puls 4.de	Puls 4.de
+RTL.de	RTL.de
+Sat.1.de	Sat.1.de
+Sky Sport F1.de	Sky Sport F1.de
+SPORT1.de	SPORT1.de
+SRF 1.de	SRF 1.de
+SRF 2.de	SRF 2.de
+SWR BW HD.de	SWR BW HD.de
+SWR Rheinland Pfalz.de	SWR Rheinland Pfalz.de
+WDR.de	WDR.de
+ZDF.de	ZDF.de

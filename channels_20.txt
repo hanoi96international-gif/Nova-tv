@@ -1,0 +1,84 @@
+3+ Adrenalin.de	3+ Adrenalin.de
+3+ Focus.de	3+ Focus.de
+3+ Movies.de	3+ Movies.de
+3+ Series.de	3+ Series.de
+3+.de	3+.de
+3sat.de	3sat.de
+Anixe HD Serie.de	Anixe HD Serie.de
+Anixe+.de	Anixe+.de
+ARD alpha.de	ARD alpha.de
+Arte.de	Arte.de
+ATV.de	ATV.de
+ATV2.de	ATV2.de
+BBC News.de	BBC News.de
+Bibel TV.de	Bibel TV.de
+BR.de	BR.de
+CNBC Europe.de	CNBC Europe.de
+CNN.de	CNN.de
+Comedy Central.de	Comedy Central.de
+Das Erste.de	Das Erste.de
+Deluxe Music.de	Deluxe Music.de
+Disney Channel.de	Disney Channel.de
+DMF.de	DMF.de
+DR 1.de	DR 1.de
+DW English.de	DW English.de
+eSportsONE.de	eSportsONE.de
+Euronews.de	Euronews.de
+Eurosport 1.de	Eurosport 1.de
+France 2.de	France 2.de
+France 24.de	France 24.de
+France 3.de	France 3.de
+Franken Fernsehen.de	Franken Fernsehen.de
+Hamburg 1.de	Hamburg 1.de
+HR.de	HR.de
+HSE.de	HSE.de
+Kabel 1 Doku.de	Kabel 1 Doku.de
+Kabel Eins.de	Kabel Eins.de
+KiKA.de	KiKA.de
+MDR.de	MDR.de
+München TV.de	München TV.de
+n tv.de	n tv.de
+NDR.de	NDR.de
+Nickelodeon.de	Nickelodeon.de
+NITRO.de	NITRO.de
+One.de	One.de
+ORF 1.de	ORF 1.de
+ORF 2.de	ORF 2.de
+ORF 3.de	ORF 3.de
+ORF Sport +.de	ORF Sport +.de
+Phoenix.de	Phoenix.de
+ProSieben.de	ProSieben.de
+Puls 4.de	Puls 4.de
+QVC.de	QVC.de
+Radio Bremen TV.de	Radio Bremen TV.de
+RBB.de	RBB.de
+RiC.de	RiC.de
+RTL Zwei.de	RTL Zwei.de
+RTL.de	RTL.de
+Sat.1.de	Sat.1.de
+Schlager Deluxe.de	Schlager Deluxe.de
+Servus TV.de	Servus TV.de
+sixx.de	sixx.de
+sonnenklar.tv.de	sonnenklar.tv.de
+SPORT1.de	SPORT1.de
+Spreekanal.de	Spreekanal.de
+SR Fernsehen.de	SR Fernsehen.de
+SRF 1.de	SRF 1.de
+SRF info.de	SRF info.de
+SRF zwei.de	SRF zwei.de
+Star TV.de	Star TV.de
+Super RTL.de	Super RTL.de
+SWR.de	SWR.de
+tagesschau24.de	tagesschau24.de
+Tele 5.de	Tele 5.de
+Tide TV.de	Tide TV.de
+TRT Türk.de	TRT Türk.de
+TV 2.de	TV 2.de
+TV.Berlin.de	TV.Berlin.de
+TV5MONDE.de	TV5MONDE.de
+VOX.de	VOX.de
+WDR.de	WDR.de
+WELT.de	WELT.de
+ZDF.de	ZDF.de
+ZDFinfo.de	ZDFinfo.de
+ZDFneo.de	ZDFneo.de

@@ -1,0 +1,1249 @@
+== 1 https://epgshare01.online/epgshare01/epg_ripper_DE1.xml.gz HTTP 200 4301485 Bytes: 266 Sender, 26693 Sendungen, Tage 20261031..20261104
+   DAZN.de	DAZN
+   Disney.Channel.de	Disney Channel
+   travelxp.4K.de	travelxp 4K
+   UHD1.de	UHD1
+   Prime.HD.de	Prime HD
+   Sky.Cinema.Premiere.HD.de	Sky Cinema Premiere HD
+   Sky.Cinema.Family.HD.de	Sky Cinema Family HD
+   Sky.Cinema.Highlights.HD.de	Sky Cinema Highlights HD
+   Sky.Cinema.Action.HD.de	Sky Cinema Action HD
+   Sky.Cinema.Classics.HD.de	Sky Cinema Classics HD
+   Sky.Crime.de	Sky Crime
+   Sky.Documentaries.de	Sky Documentaries
+   Sky.Nature.de	Sky Nature
+   Warner.TV.Film.de	Warner TV Film
+   KinoweltTV.de	KinoweltTV
+   Sky.Sport.Bundesliga.de	Sky Sport Bundesliga
+   Sky.Sport.News.de	Sky Sport News
+   Sky.Sport.F1.de	Sky Sport F1
+   Sky.Sport.Premier.League.de	Sky Sport Premier League
+   Sky.Sport.Golf.de	Sky Sport Golf
+   Sky.Sport.Mix.de	Sky Sport Mix
+   Sky.Sport.Tennis.de	Sky Sport Tennis
+   Sky.Sport.Top.Event.de	Sky Sport Top Event
+   Sky.Sport.Austria.de	Sky Sport Austria
+   Sky.One.de	Sky One
+   Sky.Atlantic.HD.de	Sky Atlantic HD
+   Sky.Krimi.de	Sky Krimi
+   sky.replay.de	sky replay
+   sky.showcase.de	sky showcase
+   Universal.Channel.HD.de	Universal Channel HD
+   Spiegel.Geschichte.de	Spiegel Geschichte
+   13th.Street.Universal.de	13th Street Universal
+   Warner.TV.Serie.de	Warner TV Serie
+   Warner.TV.Comedy.de	Warner TV Comedy
+   AXN.Black.de	AXN Black
+   AXN.White.de	AXN White
+   DAZN.1.de	DAZN 1
+   DAZN.2.de	DAZN 2
+   Sky.Replay.HD.de	Sky Replay HD
+   Sky.Showcase.HD.de	Sky Showcase HD
+   Sky.Sport.UHD.de	Sky Sport UHD
+   Sky.Sport.Austria.1.HD.de	Sky Sport Austria 1 HD
+   Sky.Sport.Austria.2.HD.de	Sky Sport Austria 2 HD
+   Sky.Sport.Austria.3.HD.de	Sky Sport Austria 3 HD
+   Sky.Sport.Austria.4.HD.de	Sky Sport Austria 4 HD
+   Sky.Sport.Austria.5.HD.de	Sky Sport Austria 5 HD
+   Sky.Sport.Austria.6.HD.de	Sky Sport Austria 6 HD
+   Sky.Sport.Austria.7.HD.de	Sky Sport Austria 7 HD
+   Sky.Sport.Bundesliga.UHD.de	Sky Sport Bundesliga UHD
+   Sky.Sport.Bundesliga.1.de	Sky Sport Bundesliga 1
+   Sky.Sport.Bundesliga.2.de	Sky Sport Bundesliga 2
+   Sky.Sport.Bundesliga.3.de	Sky Sport Bundesliga 3
+   Sky.Sport.Bundesliga.4.de	Sky Sport Bundesliga 4
+   Sky.Sport.Bundesliga.5.de	Sky Sport Bundesliga 5
+   Sky.Sport.Bundesliga.6.de	Sky Sport Bundesliga 6
+   Sky.Sport.Bundesliga.7.de	Sky Sport Bundesliga 7
+   Sky.Sport.Bundesliga.8.de	Sky Sport Bundesliga 8
+   Sky.Sport.Bundesliga.9.de	Sky Sport Bundesliga 9
+   Sky.Sport.Bundesliga.10.de	Sky Sport Bundesliga 10
+   Sky.Sport.1.de	Sky Sport 1
+   Sky.Sport.2.de	Sky Sport 2
+   Sky.Sport.3.de	Sky Sport 3
+   Sky.Sport.4.de	Sky Sport 4
+   Sky.Sport.5.de	Sky Sport 5
+   Sky.Sport.6.de	Sky Sport 6
+   Sky.Sport.7.de	Sky Sport 7
+   Sky.Sport.8.de	Sky Sport 8
+   Sky.Sport.9.de	Sky Sport 9
+   Sky.Sport.10.de	Sky Sport 10
+   Top.Serien.de	Top Serien
+   Prime.de	Prime
+== 2 https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz HTTP 200 3776079 Bytes: 144 Sender, 18034 Sendungen, Tage 20261031..20261104
+   ANIXE.SERIE.at	ANIXE SERIE
+   AXN.at	AXN
+   DISNEY.at	DISNEY
+   KINOWELT.at	KINOWELT
+   SKY.ATLANTIK.at	SKY ATLANTIK
+   SKY.CINEMA.ACTION.at	SKY CINEMA ACTION
+   SKY.CINEMA.BEST.OF.at	SKY CINEMA BEST OF
+   SKY.CINEMA.FAMILY.at	SKY CINEMA FAMILY
+   SKY.CINEMA.PREMIEREN.+24.at	SKY CINEMA PREMIEREN +24
+   SKY.CINEMA.SPECIAL.at	SKY CINEMA SPECIAL
+   SKY.CINEMA.THRILLER.at	SKY CINEMA THRILLER
+   SKY.CINEMA.at	SKY CINEMA
+   SKY.COMEDY.at	SKY COMEDY
+   SKY.DOCUMENTARIES.at	SKY DOCUMENTARIES
+   SKY.KRIMI.at	SKY KRIMI
+   SKY.NATURE.at	SKY NATURE
+   SKY.NOSTALGIE.at	SKY NOSTALGIE
+   SKY.ONE.at	SKY ONE
+   SKY.SPORT.F1.at	SKY SPORT F1
+   SKY.SPORT.GOLF.at	SKY SPORT GOLF
+   SKY.SPORT.MIX.at	SKY SPORT MIX
+   SKY.SPORT.NEWS.at	SKY SPORT NEWS
+   SKY.SPORT.PREMIER.LEAGUE.at	SKY SPORT PREMIER LEAGUE
+   SKY.SPORT.TENNIS.at	SKY SPORT TENNIS
+   SPIEGEL.GESCHICHTE.at	SPIEGEL GESCHICHTE
+   Sky.Cinema.Highlights.HD.at	Sky Cinema Highlights HD
+   UNIVERSAL.TV.at	UNIVERSAL TV
+   WARNER.TV.FILM.at	WARNER TV FILM
+   WARNER.TV.SERIE.at	WARNER TV SERIE
+== 3 https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz HTTP 200 6238945 Bytes: 751 Sender, 86646 Sendungen, Tage -..-
+   Love.Nature.4K.ch	Love Nature 4K
+   Spiegel.Geschichte.ch	Spiegel Geschichte
+   Warner.TV.ch	Warner TV
+   TF1.Séries.Films.ch	TF1 Séries Films
+   Sky.Bundesliga.9.ch	Sky Bundesliga 9
+   Sky.One.D.ch	Sky One D
+   Sky.Showcase.ch	Sky Showcase
+   Disney+.ch	Disney+
+   Stingray.Festival.4K.ch	Stingray Festival 4K
+   Kinowelt.ch	Kinowelt
+   Sky.Bundesliga.10.ch	Sky Bundesliga 10
+   The.Filmclub.ch	The Filmclub
+   Film.Four.ch	Film Four
+   Enter-Film.ch	Enter-Film
+   Sky.Krimi.ch	Sky Krimi
+   Sky.Bundesliga.1.ch	Sky Bundesliga 1
+   myZenTV.4K.ch	myZenTV 4K
+   Warner.TV.Film.ch	Warner TV Film
+   Sky.News.International.ch	Sky News International
+   Kinomir.ch	Kinomir
+   Sky.Sport.1.D.ch	Sky Sport 1 D
+   Museum.TV.4K.ch	Museum TV 4K
+   Atreseries.ch	Atreseries
+   Netflix.ch	Netflix
+   Warner.TV.Serie.ch	Warner TV Serie
+   Disney.Channel.F.ch	Disney Channel F
+   CANAL+.Cinema(s).ch	CANAL+ Cinema(s)
+   Sky.Show.ch	Sky Show
+   Sky.Bundesliga.8.ch	Sky Bundesliga 8
+   WarnerTV.Next.ch	WarnerTV Next
+   CANAL+.Series.ch	CANAL+ Series
+   Sky.Cinema.(Logo.VOD).ch	Sky Cinema (Logo VOD)
+   Sky.Mix.ch	Sky Mix
+   DAZN.ch	DAZN
+   Disney.Channel.D.ch	Disney Channel D
+   Disney.Junior.F.ch	Disney Junior F
+   Pink.Film.ch	Pink Film
+   Sky.Sport.Bundesliga.ch	Sky Sport Bundesliga
+   Universal.TV.ch	Universal TV
+   Warner.TV.Italy.ch	Warner TV Italy
+   AXN.Black.ch	AXN Black
+   Sky.Documentaries.ch	Sky Documentaries
+   Sky.Bundesliga.6.ch	Sky Bundesliga 6
+   Sky.Bundesliga.4.ch	Sky Bundesliga 4
+   Sky.Crime.IT.ch	Sky Crime IT
+   Sky.Nature.ch	Sky Nature
+   Sky.Sport.ch	Sky Sport
+   AXN.White.ch	AXN White
+   Warner.TV.Comedy.ch	Warner TV Comedy
+   Sky.Atlantic.D.ch	Sky Atlantic D
+   Anixe.Serie.ch	Anixe Serie
+   Sky.Sport.2.D.ch	Sky Sport 2 D
+   Paramount+.ch	Paramount+
+   Sky.Sport.Golf.ch	Sky Sport Golf
+   Sky.Bundesliga.5.ch	Sky Bundesliga 5
+   Sky.Crime.ch	Sky Crime
+   Paramount.F.ch	Paramount F
+   Sky.Bundesliga.ch	Sky Bundesliga
+   Sky.Bundesliga.3.ch	Sky Bundesliga 3
+   Sky.(Logo.VOD).ch	Sky (Logo VOD)
+   UHD1.by.ASTRA.ch	UHD1 by ASTRA
+   Sky.Cinema.D.ch	Sky Cinema D
+   Sky.Bundesliga.7.ch	Sky Bundesliga 7
+   sky.TG.24.ch	sky TG 24
+   Amazon.Prime.Video.ch	Amazon Prime Video
+   Sky.Bundesliga.2.ch	Sky Bundesliga 2
+== 4 https://epgshare01.online/epgshare01/epg_ripper_PLUTO1.xml.gz HTTP 404 52 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 5 https://epgshare01.online/epgshare01/epg_ripper_SAMSUNG1.xml.gz HTTP 404 52 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 6 https://epgshare01.online/epgshare01/epg_ripper_RAKUTEN1.xml.gz HTTP 200 8699042 Bytes: 1640 Sender, 169636 Sendungen, Tage -..-
+   NO:.Sony.Faves.be	NO: Sony Faves
+   FR:.Man.City.24/7.be	FR: Man City 24/7
+   FR:.Films.Romantiques.-.Rakuten.TV.be	FR: Films Romantiques - Rakuten TV
+   DE:.Crime.Serien.-.Rakuten.TV.be	DE: Crime Serien - Rakuten TV
+   FI:.DAZN.Ringside.be	FI: DAZN Ringside
+   DE:.Man.City.24/7.be	DE: Man City 24/7
+   SE:.World.Surf.League.24/7.be	SE: World Surf League 24/7
+   DK:.Sony.Faves.be	DK: Sony Faves
+   NL:.World.Surf.League.24/7.be	NL: World Surf League 24/7
+   IT:.INTER.24/7.be	IT: INTER 24/7
+   IT:.Film.Top.-.Rakuten.TV.be	IT: Film Top - Rakuten TV
+   FR:.FilmRise.Binge.Watch.be	FR: FilmRise Binge Watch
+   DE:.Top.Serien.be	DE: Top Serien
+   DE:.Deutsches.Kino.-.Rakuten.TV.be	DE: Deutsches Kino - Rakuten TV
+   UK:.INTER.24/7.be	UK: INTER 24/7
+   UK:.World.Surf.League.24/7.be	UK: World Surf League 24/7
+   NO:.Actionfilmer.-.Rakuten.TV.be	NO: Actionfilmer - Rakuten TV
+   SE:.Sony.Faves.be	SE: Sony Faves
+   IT:.FilmRise.Sci-Fi.be	IT: FilmRise Sci-Fi
+   DE:.Netzkino.be	DE: Netzkino
+   DK:.INTER.24/7.be	DK: INTER 24/7
+   SE:.Actionfilmer.-.Rakuten.TV.be	SE: Actionfilmer - Rakuten TV
+   ES:.World.Surf.League.24/7.be	ES: World Surf League 24/7
+   DK:.FilmRise.Sci-Fi.be	DK: FilmRise Sci-Fi
+   NO:.FilmRise.Sci-Fi.be	NO: FilmRise Sci-Fi
+   IT:.Cinema.Italiano.be	IT: Cinema Italiano
+   IT:.Serie.Crime.-.Rakuten.TV.be	IT: Serie Crime - Rakuten TV
+   NO:.INTER.24/7.be	NO: INTER 24/7
+   UK:.Filmrise.Medical.Detectives.be	UK: Filmrise Medical Detectives
+   NO:.Komediefilmer.-.Rakuten.TV.be	NO: Komediefilmer - Rakuten TV
+   DE:.FilmGold.be	DE: FilmGold
+   NO:.Toppfilmer.-.Rakuten.TV.be	NO: Toppfilmer - Rakuten TV
+   UK:.Dragons`.Den.Sony.be	UK: Dragons` Den Sony
+   FI:.Man.City.24/7.be	FI: Man City 24/7
+   ES:.Man.City.24/7.be	ES: Man City 24/7
+   NL:.Duck.Dynasty.be	NL: Duck Dynasty
+   DK:.Topfilm.-.Rakuten.TV.be	DK: Topfilm - Rakuten TV
+   SE:.INTER.24/7.be	SE: INTER 24/7
+   PL:.INTER.24/7.be	PL: INTER 24/7
+   SE:.FilmRise.Sci-Fi.be	SE: FilmRise Sci-Fi
+   UK:.Sony.Faves.be	UK: Sony Faves
+   UK:.DAZN.Ringside.be	UK: DAZN Ringside
+   DK:.Grjngo.-.Western.Films.be	DK: Grjngo - Western Films
+   DE:.Sony.Faves.be	DE: Sony Faves
+   DK:.Man.City.24/7.be	DK: Man City 24/7
+   DE:.Filmrise.Unsolved.Mysteries.be	DE: Filmrise Unsolved Mysteries
+   NO:.Man.City.24/7.be	NO: Man City 24/7
+   NO:.Grjngo.-.Western.Films.be	NO: Grjngo - Western Films
+   ES:.FilmRise.Sci-Fi.be	ES: FilmRise Sci-Fi
+   FI:.FilmRise.Sci-Fi.be	FI: FilmRise Sci-Fi
+   SE:.Grjngo.-.Western.Films.be	SE: Grjngo - Western Films
+   FI:.INTER.24/7.be	FI: INTER 24/7
+   ES:.INTER.24/7.be	ES: INTER 24/7
+   SE:.Nordiska.Filmer.-.Rakuten.TV.be	SE: Nordiska Filmer - Rakuten TV
+   PL:.Man.City.24/7.be	PL: Man City 24/7
+   PL:.World.Surf.League.24/7.be	PL: World Surf League 24/7
+   SE:.Man.City.24/7.be	SE: Man City 24/7
+   FR:.Sony.Favoris.be	FR: Sony Favoris
+   FR:.INTER.24/7.be	FR: INTER 24/7
+   PL:.DAZN.Ringside.be	PL: DAZN Ringside
+   DE:.FilmRise.True.Crime.be	DE: FilmRise True Crime
+   SE:.Toppfilmer.-.Rakuten.TV.be	SE: Toppfilmer - Rakuten TV
+   ES:.Blacklist.TV.Sony.be	ES: Blacklist TV Sony
+   NO:.Nordiske.Filmer.-.Rakuten.TV.be	NO: Nordiske Filmer - Rakuten TV
+   SE:.DAZN.Ringside.be	SE: DAZN Ringside
+   DE:.INTER.24/7.be	DE: INTER 24/7
+   PL:.Royalworld.-.Arystokracja.&amp;.Dynastie.be	PL: Royalworld - Arystokracja &amp; Dynastie
+   NL:.Grjngo.-.Western.Films.be	NL: Grjngo - Western Films
+   DK:.DAZN.Ringside.be	DK: DAZN Ringside
+   UK:.Man.City.24/7.be	UK: Man City 24/7
+   IT:.Man.City.24/7.be	IT: Man City 24/7
+   FI:.Sony.Faves.be	FI: Sony Faves
+   UK:.Grjngo.-.Western.Films.be	UK: Grjngo - Western Films
+   IT:.World.Surf.League.24/7.be	IT: World Surf League 24/7
+   NO:.DAZN.Ringside.be	NO: DAZN Ringside
+   FI:.FloHockey.24/7.be	FI: FloHockey 24/7
+   DE:.Royalworld.-.Adel.&amp;.Dynastien.be	DE: Royalworld - Adel &amp; Dynastien
+   NL:.Top.Films.-.Rakuten.TV.be	NL: Top Films - Rakuten TV
+   FI:.World.Surf.League.24/7.be	FI: World Surf League 24/7
+   FR:.Films.d`Action.-.Rakuten.TV.be	FR: Films d`Action - Rakuten TV
+   DE:.Top.Filme.-.Rakuten.TV.be	DE: Top Filme - Rakuten TV
+   FR:.Grjngo.-.Films.de.Western.be	FR: Grjngo - Films de Western
+   DE:.Comedy.TV.Sony.be	DE: Comedy TV Sony
+   NL:.FilmRise.Free.Series.be	NL: FilmRise Free Series
+   DE:.Moviedome.be	DE: Moviedome
+   DE:.SPIEGEL.TV.action.+.crime.be	DE: SPIEGEL TV action + crime
+   PL:.Bigtime.-.Darmowe.Filmy.be	PL: Bigtime - Darmowe Filmy
+   NL:.Actiefilms.-.Rakuten.TV.be	NL: Actiefilms - Rakuten TV
+   ES:.BBC.Series.be	ES: BBC Series
+   IT:.CG.Grandi.Film.be	IT: CG Grandi Film
+   SE:.Dramafilmer.-.Rakuten.TV.be	SE: Dramafilmer - Rakuten TV
+   NO:.Dramafilmer.-.Rakuten.TV.be	NO: Dramafilmer - Rakuten TV
+   UK:.Duck.Dynasty.be	UK: Duck Dynasty
+   UK:.Thriller.TV.Sony.be	UK: Thriller TV Sony
+   DK:.Actionfilm.-.Rakuten.TV.be	DK: Actionfilm - Rakuten TV
+   NO:.Duck.Dynasty.be	NO: Duck Dynasty
+   DE:.Moviedome.Family.be	DE: Moviedome Family
+   DE:.SPIEGEL.TV.be	DE: SPIEGEL TV
+   DE:.SpiegelTV.Konflikte.be	DE: SpiegelTV Konflikte
+   DE:.Romantische.Filme.-.Rakuten.TV.be	DE: Romantische Filme - Rakuten TV
+   DK:.Duck.Dynasty.be	DK: Duck Dynasty
+   FR:.World.Surf.League.24/7.be	FR: World Surf League 24/7
+   DK:.World.Surf.League.24/7.be	DK: World Surf League 24/7
+   IT:.Grjngo.-.Film.Western.be	IT: Grjngo - Film Western
+   NO:.World.Surf.League.24/7.be	NO: World Surf League 24/7
+   FR:.The.Blacklist.Sony.be	FR: The Blacklist Sony
+   SE:.Duck.Dynasty.be	SE: Duck Dynasty
+   FI:.Comedy.TV.Sony.be	FI: Comedy TV Sony
+   DK:.Dramafilm.-.Rakuten.TV.be	DK: Dramafilm - Rakuten TV
+   NL:.INTER.24/7.be	NL: INTER 24/7
+   NL:.Dramafilms.-.Rakuten.TV.be	NL: Dramafilms - Rakuten TV
+   DE:.Merhaba.Arabische.Serien.be	DE: Merhaba Arabische Serien
+   DE:.Merhaba.Türkische.Filme.be	DE: Merhaba Türkische Filme
+   DK:.Comedy.TV.Sony.be	DK: Comedy TV Sony
+   FR:.FilmRise.Séries.be	FR: FilmRise Séries
+   FR:.Top.Films.-.Rakuten.TV.be	FR: Top Films - Rakuten TV
+   NO:.Comedy.TV.Sony.be	NO: Comedy TV Sony
+   DK:.Komediefilm.-.Rakuten.TV.be	DK: Komediefilm - Rakuten TV
+   IT:.BBC.Series.be	IT: BBC Series
+   FI:.Duck.Dynasty.be	FI: Duck Dynasty
+   SE:.Comedy.TV.Sony.be	SE: Comedy TV Sony
+   FI:.Grjngo.-.Western.Films.be	FI: Grjngo - Western Films
+   DE:.Thriller.TV.Sony.be	DE: Thriller TV Sony
+   NL:.Man.City.24/7.be	NL: Man City 24/7
+   DE:.World.Surf.League.24/7.be	DE: World Surf League 24/7
+   IT:.Film.Asiatici.-.Rakuten.TV.be	IT: Film Asiatici - Rakuten TV
+   DK:.Nordiske.Film.-.Rakuten.TV.be	DK: Nordiske Film - Rakuten TV
+   NL:.DAZN.Ringside.be	NL: DAZN Ringside
+   SE:.FloHockey.24/7.be	SE: FloHockey 24/7
+   DE:.Merhaba.Türkische.Serien.be	DE: Merhaba Türkische Serien
+   UK:.Comedy.TV.Sony.be	UK: Comedy TV Sony
+   DK:.FloHockey.24/7.be	DK: FloHockey 24/7
+   DE:.Drama.Filme.-.Rakuten.TV.be	DE: Drama Filme - Rakuten TV
+   NO:.FloHockey.24/7.be	NO: FloHockey 24/7
+   SE:.Komedifilmer.-.Rakuten.TV.be	SE: Komedifilmer - Rakuten TV
+   DE:.Actionfilme.-.Rakuten.TV.be	DE: Actionfilme - Rakuten TV
+== 7 https://epgshare01.online/epgshare01/epg_ripper_PLEX1.xml.gz HTTP 200 4639635 Bytes: 693 Sender, 75468 Sendungen, Tage 20261031..20261103
+   plex.tv.FilmRise.British.TV.plex	FilmRise British TV
+   plex.tv.FilmRise.Drama.plex	FilmRise Drama
+   plex.tv.Primetime.Soaps.plex	Primetime Soaps
+   plex.tv.Prime.Suspect.plex	Prime Suspect
+   plex.tv.Mythical.24/7.plex	Mythical 24/7
+   plex.tv.Duck.Dynasty.by.A&amp;E.plex	Duck Dynasty by A&amp;E
+   plex.tv.IFC.Films.Picks.plex	IFC Films Picks
+   plex.tv.Maverick.Black.Cinema.plex	Maverick Black Cinema
+   plex.tv.Classic.Cinema.plex	Classic Cinema
+   plex.tv.DAZN.Ringside.plex	DAZN Ringside
+   plex.tv.FilmRise.Free.Movies.plex	FilmRise Free Movies
+   plex.tv.FilmRise.True.Crime.plex	FilmRise True Crime
+   plex.tv.Comedy.Dynamics.plex	Comedy Dynamics
+   plex.tv.Surf.Cinema.plex	Surf Cinema
+   plex.tv.FilmRise.Comedy.plex	FilmRise Comedy
+   plex.tv.FilmRise.Mysteries.plex	FilmRise Mysteries
+   plex.tv.CBS.News.24/7.plex	CBS News 24/7
+   plex.tv.World.Surf.League.24/7.plex	World Surf League 24/7
+   plex.tv.FilmRise.Classic.TV.plex	FilmRise Classic TV
+   plex.tv.FilmRise.Creators.plex	FilmRise Creators
+   plex.tv.FilmRise.Western.plex	FilmRise Western
+   plex.tv.INTER.24/7.plex	INTER 24/7
+   plex.tv.Anime.24/7.plex	Anime 24/7
+   plex.tv.FilmRise.Anime.plex	FilmRise Anime
+   plex.tv.FilmRise.Black.TV.plex	FilmRise Black TV
+   plex.tv.FilmRise.Action.plex	FilmRise Action
+   plex.tv.FilmRise.Concursos.de.Cocina.plex	FilmRise Concursos de Cocina
+   plex.tv.FilmRise.Series.Gratis.plex	FilmRise Series Gratis
+   plex.tv.FilmRise.Sci-Fi.plex	FilmRise Sci-Fi
+   plex.tv.FilmRise.Crímenes.Verdaderos.plex	FilmRise Crímenes Verdaderos
+   plex.tv.FilmRise.Películas.Gratis.plex	FilmRise Películas Gratis
+   plex.tv.FilmRise.Kids.plex	FilmRise Kids
+   plex.tv.FilmRise.Horror.plex	FilmRise Horror
+   plex.tv.FilmRise.Music.plex	FilmRise Music
+== 8 https://epgshare01.online/epgshare01/epg_ripper_DISTROTV1.xml.gz HTTP 200 19499 Bytes: 90 Sender, 212 Sendungen, Tage -..-
+   4K.TRAVEL.TV.distro	4K TRAVEL TV
+== 9 https://epgshare01.online/epgshare01/epg_ripper_ALL_SOURCES1.xml.gz HTTP 200 207124726 Bytes: 28529 Sender, 2911407 Sendungen, Tage 20261026..20270410
+   Rotana.Cinema.KSA.ae	Rotana Cinema KSA
+   Rotana.Cinema.Egypt.ae	Rotana Cinema Egypt
+   Sky.News.Arabia.HD.ae	Sky News Arabia HD
+   Nile.Cinema.ae	Nile Cinema
+   Panorama.Film.ae	Panorama Film
+   Beirut.Cinema.ae	Beirut Cinema
+   El.Omda.Hekayat.Film.ae	El Omda Hekayat Film
+   Al.Shasha.Cinema.ae	Al Shasha Cinema
+   Al.Shasha.Film.ae	Al Shasha Film
+   Sukariya.Cinema.ae	Sukariya Cinema
+   Elzaeem.Cinema.ae	Elzaeem Cinema
+   Dolly.Cinema.ae	Dolly Cinema
+   Alfa.Cinema.ae	Alfa Cinema
+   Cairo.Plus.Cinema.ae	Cairo Plus Cinema
+   Dream.Cinema.ae	Dream Cinema
+   Play.Cinema.ae	Play Cinema
+   iFilm.Arabic.ae	iFilm Arabic
+   Algerian.4kids.ae	Algerian 4kids
+   en:.Sky.News.Arabia.-.Live.ae	en: Sky News Arabia - Live
+   en:.Asianet.Cinema.ae	en: Asianet Cinema
+   en:.Sky.News.ae	en: Sky News
+   en:.DAZN.Ringside.ae	en: DAZN Ringside
+   en:.STARZPLAY.Series.ae	en: STARZPLAY Series
+   en:.Zee.Cinema.ae	en: Zee Cinema
+   en:.Sony.TV.ae	en: Sony TV
+   en:.Rotana.Cinema.KSA.ae	en: Rotana Cinema KSA
+   en:.Rotana.Cinema.Egypt.ae	en: Rotana Cinema Egypt
+   EuroFilm.al	EuroFilm
+   Film.Aksion.al	Film Aksion
+   Film.Autor.al	Film Autor
+   Film.Drame.al	Film Drame
+   Film.Hits.HD.al	Film Hits HD
+   Film.Komedi.al	Film Komedi
+   Film.Thriller.al	Film Thriller
+   Kino.1.al	Kino 1
+   Kino.2.al	Kino 2
+   Kino.3.al	Kino 3
+   Prime.TV.al	Prime TV
+   Sky.360.al	Sky 360
+   Tring.Series.al	Tring Series
+   Canal.AXN.(Argentina).ar	Canal AXN (Argentina)
+   Canal.Disney.Channel.(Argentina).ar	Canal Disney Channel (Argentina)
+   Canal.Disney.Junior.(Argentina).ar	Canal Disney Junior (Argentina)
+   Canal.Film.&amp;.Arts.ar	Canal Film &amp; Arts
+   Canal.Sony.(Argentina).ar	Canal Sony (Argentina)
+   Canal.Warner.TV.(Argentina).ar	Canal Warner TV (Argentina)
+   ATN.Sony.ca	ATN Sony
+   ATN.Sony.Aath.ca	ATN Sony Aath
+   ATN.Sony.PAL.ca	ATN Sony PAL
+   ATN.Sony.YAY.ca	ATN Sony YAY
+   ANIXE.SERIE.at	ANIXE SERIE
+   AXN.at	AXN
+   DISNEY.at	DISNEY
+   KINOWELT.at	KINOWELT
+   SKY.ATLANTIK.at	SKY ATLANTIK
+   SKY.CINEMA.ACTION.at	SKY CINEMA ACTION
+   SKY.CINEMA.BEST.OF.at	SKY CINEMA BEST OF
+   SKY.CINEMA.FAMILY.at	SKY CINEMA FAMILY
+   SKY.CINEMA.PREMIEREN.+24.at	SKY CINEMA PREMIEREN +24
+   SKY.CINEMA.SPECIAL.at	SKY CINEMA SPECIAL
+   SKY.CINEMA.THRILLER.at	SKY CINEMA THRILLER
+   SKY.CINEMA.at	SKY CINEMA
+   SKY.COMEDY.at	SKY COMEDY
+   SKY.DOCUMENTARIES.at	SKY DOCUMENTARIES
+   SKY.KRIMI.at	SKY KRIMI
+   SKY.NATURE.at	SKY NATURE
+   SKY.NOSTALGIE.at	SKY NOSTALGIE
+   SKY.ONE.at	SKY ONE
+   SKY.SPORT.F1.at	SKY SPORT F1
+   SKY.SPORT.GOLF.at	SKY SPORT GOLF
+   SKY.SPORT.MIX.at	SKY SPORT MIX
+   SKY.SPORT.NEWS.at	SKY SPORT NEWS
+   SKY.SPORT.PREMIER.LEAGUE.at	SKY SPORT PREMIER LEAGUE
+   SKY.SPORT.TENNIS.at	SKY SPORT TENNIS
+   SPIEGEL.GESCHICHTE.at	SPIEGEL GESCHICHTE
+   Sky.Cinema.Highlights.HD.at	Sky Cinema Highlights HD
+   UNIVERSAL.TV.at	UNIVERSAL TV
+   WARNER.TV.FILM.at	WARNER TV FILM
+   WARNER.TV.SERIE.at	WARNER TV SERIE
+   Universal.au	Universal
+   FoxtelMoviesUltraHD.au	Foxtel Movies 4K Ultra
+   BritishCinema.au	British Cinema
+   SkyNewsUK.au	Sky News UK
+   SkyRacing1.au	Sky Racing 1
+   SkyRacing2.au	Sky Racing 2
+   SkyThoroughbredCentral.au	Sky Thoroughbred Central
+   24Kitchen.HD.(BIH).ba	24Kitchen HD (BIH)
+   Cinema.TV.ba	Cinema TV
+   Cinemania.HD.(BIH).ba	Cinemania HD (BIH)
+   Cinemax.2.HD.(BIH).ba	Cinemax 2 HD (BIH)
+   Cinemax.HD.(BIH).ba	Cinemax HD (BIH)
+   Disney.Channel.(BIH).ba	Disney Channel (BIH)
+   Disney.Junior.(BIH).ba	Disney Junior (BIH)
+   Eurosport.4K.(BIH).ba	Eurosport 4K (BIH)
+   FilmBox.Extra.HD.(BIH).ba	FilmBox Extra HD (BIH)
+   FilmBox.Premium.HD.(BIH).ba	FilmBox Premium HD (BIH)
+   Kino.TV.HD.(BIH).ba	Kino TV HD (BIH)
+   Nova.Series.(BIH).ba	Nova Series (BIH)
+   Pink.Film.(BiH).ba	Pink Film (BiH)
+   Pink.World.Cinema.(BIH).ba	Pink World Cinema (BIH)
+   Sky.News.(BIH).ba	Sky News (BIH)
+   Viasat.Kino.HD.(BIH).ba	Viasat Kino HD (BIH)
+   RUSH.Prime.bb	RUSH Prime
+   DAZN.Pro.League.1.be	DAZN Pro League 1
+   DISNEY.JUNIOR.be	DISNEY JUNIOR
+   BE.SERIES.be	BE SERIES
+   UHD1.by.ASTRA.UHD.be	UHD1 by ASTRA UHD
+   Sky.Arts.be	Sky Arts
+   Disney.Junior.HD.be	Disney Junior HD
+   FTV.UHD.be	FTV UHD
+   WARNER.TV.be	WARNER TV
+   DISNEY.CINEMA.be	DISNEY CINEMA
+   Sky.Mix.HD.be	Sky Mix HD
+   VTM.Series.be	VTM Series
+   QVC.UHD.(Germany).be	QVC UHD (Germany)
+   Film4.+1.be	Film4 +1
+   Sky.News.HD.be	Sky News HD
+   QVC.Zwei.UHD.be	QVC Zwei UHD
+   Serien+.be	Serien+
+   MyZen.4K.be	MyZen 4K
+   Film4.be	Film4
+   Disney.Channel.+1.HD.be	Disney Channel +1 HD
+   Sky.News.Arabia.be	Sky News Arabia
+   Sky.Arts.(ROI).be	Sky Arts (ROI)
+   New.Tang.Dynasty.TV.be	New Tang Dynasty TV
+   Disney.XD.HD.be	Disney XD HD
+   TCM.CINEMA.be	TCM CINEMA
+   DISNEY.CHANNEL.be	DISNEY CHANNEL
+   DAZN.Pro.League.2.be	DAZN Pro League 2
+   DAZN.1.be	DAZN 1
+   Sky.News.be	Sky News
+   Disney.Channel.be	Disney Channel
+   Disney.Channel.HD.be	Disney Channel HD
+   DISNEY.XD.be	DISNEY XD
+   4K-HDR-200x200-1_AR.bein	4K-HDR-200x200-1_AR
+   4K-HDR-200x200-1_EN.bein	4K-HDR-200x200-1_EN
+   4k_DIGITAL_Mono_AR.bein	4k_DIGITAL_Mono_AR
+   4k_DIGITAL_Mono_EN.bein	4k_DIGITAL_Mono_EN
+   24kitchen.bg	24kitchen
+   AXN.Black.bg	AXN Black
+   AXN.White.bg	AXN White
+   AXN.bg	AXN
+   Cinemania.bg	Cinemania
+   Cinemax.2.bg	Cinemax 2
+   Cinemax.bg	Cinemax
+   Disney.Channel.bg	Disney Channel
+   Disney.Junior.bg	Disney Junior
+   FilmBox.Extra.HD.bg	FilmBox Extra HD
+   FilmBox.Stars.bg	FilmBox Stars
+   FilmBox.bg	FilmBox
+   KinoNova.bg	KinoNova
+   bTV.Cinema.bg	bTV Cinema
+   São.Paulo/SP..Prime.Box.Brazil.br	São Paulo/SP  Prime Box Brazil
+   São.Paulo/SP..Studio.Universal.HD.br	São Paulo/SP  Studio Universal HD
+   São.Paulo/SP...Universal.TV.HD.br	São Paulo/SP   Universal TV HD
+   São.Paulo/SP..Warner.Channel.br	São Paulo/SP  Warner Channel
+   São.Paulo/SP..Cinemax.HD.³.br	São Paulo/SP  Cinemax HD ³
+   São.Paulo/SP..Warner.Channel.HD.br	São Paulo/SP  Warner Channel HD
+   São.Paulo/SP..AXN.br	São Paulo/SP  AXN
+   São.Paulo/SP..Sony.br	São Paulo/SP  Sony
+   Sony.Movies.Brazil.br	Sony Movies Brazil
+   São.Paulo/SP..Film&amp;Arts.HD.br	São Paulo/SP  Film&amp;Arts HD
+   Campinas/SP..Film&amp;Arts.br	Campinas/SP  Film&amp;Arts
+   São.Paulo/SP..Paramount.Network.HD..br	São Paulo/SP  Paramount Network HD 
+   São.Paulo/SP..Paramount.Network.br	São Paulo/SP  Paramount Network
+   São.Paulo/SP..Prime.Box.Brazil.HD.³.br	São Paulo/SP  Prime Box Brazil HD ³
+   São.Paulo/SP..Studio.Universal.br	São Paulo/SP  Studio Universal
+   São.Paulo/SP..Sony.HD.³.br	São Paulo/SP  Sony HD ³
+   São.Paulo/SP..Disney.Channel.HD.³.br	São Paulo/SP  Disney Channel HD ³
+   São.Paulo/SP..Universal.TV.br	São Paulo/SP  Universal TV
+   São.Paulo/SP..Cinemax.br	São Paulo/SP  Cinemax
+   São.Paulo/SP..AXN.HD.³.br	São Paulo/SP  AXN HD ³
+   São.Paulo/SP..Disney.Channel.br	São Paulo/SP  Disney Channel
+   Cinemax.br	Cinemax
+   Paramount.Channel.br	Paramount Channel
+   AXN.br	AXN
+   Film.&amp;.Arts.br	Film &amp; Arts
+   Sony.br	Sony
+   Studio.Universal.br	Studio Universal
+   Universal.Channel.br	Universal Channel
+   Warner.Channel.br	Warner Channel
+   Bell.Netflix.ca2	Bell Netflix
+   Prime.Monday.Night.Hockey.ca2	Prime Monday Night Hockey
+   Disney.Channel.Canada.HD.ca2	Disney Channel Canada HD
+   Sportsnet.4K.ca2	Sportsnet 4K
+   Prime.Asia.TV.SD.ca2	Prime Asia TV SD
+   Disney.Channel.Canada.ca2	Disney Channel Canada
+   TSN.4K.ca2	TSN 4K
+   Love.Nature.4K.ch	Love Nature 4K
+   Spiegel.Geschichte.ch	Spiegel Geschichte
+   Warner.TV.ch	Warner TV
+   TF1.Séries.Films.ch	TF1 Séries Films
+   Sky.Bundesliga.9.ch	Sky Bundesliga 9
+   Sky.One.D.ch	Sky One D
+   Sky.Showcase.ch	Sky Showcase
+   Disney+.ch	Disney+
+   Stingray.Festival.4K.ch	Stingray Festival 4K
+   Kinowelt.ch	Kinowelt
+   Sky.Bundesliga.10.ch	Sky Bundesliga 10
+   The.Filmclub.ch	The Filmclub
+   Film.Four.ch	Film Four
+   Enter-Film.ch	Enter-Film
+   Sky.Krimi.ch	Sky Krimi
+   Sky.Bundesliga.1.ch	Sky Bundesliga 1
+   myZenTV.4K.ch	myZenTV 4K
+   Warner.TV.Film.ch	Warner TV Film
+   Sky.News.International.ch	Sky News International
+   Kinomir.ch	Kinomir
+   Sky.Sport.1.D.ch	Sky Sport 1 D
+   Museum.TV.4K.ch	Museum TV 4K
+   Atreseries.ch	Atreseries
+   Netflix.ch	Netflix
+   Warner.TV.Serie.ch	Warner TV Serie
+   Disney.Channel.F.ch	Disney Channel F
+   CANAL+.Cinema(s).ch	CANAL+ Cinema(s)
+   Sky.Show.ch	Sky Show
+   Sky.Bundesliga.8.ch	Sky Bundesliga 8
+   WarnerTV.Next.ch	WarnerTV Next
+   CANAL+.Series.ch	CANAL+ Series
+   Sky.Cinema.(Logo.VOD).ch	Sky Cinema (Logo VOD)
+   Sky.Mix.ch	Sky Mix
+   DAZN.ch	DAZN
+   Disney.Channel.D.ch	Disney Channel D
+   Disney.Junior.F.ch	Disney Junior F
+   Pink.Film.ch	Pink Film
+   Sky.Sport.Bundesliga.ch	Sky Sport Bundesliga
+   Universal.TV.ch	Universal TV
+   Warner.TV.Italy.ch	Warner TV Italy
+   AXN.Black.ch	AXN Black
+   Sky.Documentaries.ch	Sky Documentaries
+   Sky.Bundesliga.6.ch	Sky Bundesliga 6
+   Sky.Bundesliga.4.ch	Sky Bundesliga 4
+   Sky.Crime.IT.ch	Sky Crime IT
+   Sky.Nature.ch	Sky Nature
+   Sky.Sport.ch	Sky Sport
+   AXN.White.ch	AXN White
+   Warner.TV.Comedy.ch	Warner TV Comedy
+   Sky.Atlantic.D.ch	Sky Atlantic D
+   Anixe.Serie.ch	Anixe Serie
+   Sky.Sport.2.D.ch	Sky Sport 2 D
+   Paramount+.ch	Paramount+
+   Sky.Sport.Golf.ch	Sky Sport Golf
+   Sky.Bundesliga.5.ch	Sky Bundesliga 5
+   Sky.Crime.ch	Sky Crime
+   Paramount.F.ch	Paramount F
+   Sky.Bundesliga.ch	Sky Bundesliga
+   Sky.Bundesliga.3.ch	Sky Bundesliga 3
+   Sky.(Logo.VOD).ch	Sky (Logo VOD)
+   UHD1.by.ASTRA.ch	UHD1 by ASTRA
+   Sky.Cinema.D.ch	Sky Cinema D
+   Sky.Bundesliga.7.ch	Sky Bundesliga 7
+   sky.TG.24.ch	sky TG 24
+   Amazon.Prime.Video.ch	Amazon Prime Video
+   Sky.Bundesliga.2.ch	Sky Bundesliga 2
+   Canal.Disney.Channel.(Chile).cl	Canal Disney Channel (Chile)
+   Canal.Cinemax.(Chile).cl	Canal Cinemax (Chile)
+   Canal.Paramount.Channel.(Chile).cl	Canal Paramount Channel (Chile)
+   Canal.Warner.TV.(Chile).cl	Canal Warner TV (Chile)
+   Canal.AXN.(Chile).cl	Canal AXN (Chile)
+   Canal.Sony.(Chile).cl	Canal Sony (Chile)
+   Canal.Disney.Junior.(Chile).cl	Canal Disney Junior (Chile)
+   Canal.Atreseries.(Internacional).cl	Canal Atreseries (Internacional)
+   ATRES.SERIES.HD.co	ATRES SERIES HD
+   AXN.co	AXN
+   Cinemax.co	Cinemax
+   DISNEY.+.co	DISNEY +
+   Disney.Channel.co	Disney Channel
+   DISNEY.JUNIOR.co	DISNEY JUNIOR
+   FILM.&amp;.ARTS.co	FILM &amp; ARTS
+   NETFLIX.co	NETFLIX
+   Paramount.Channel.co	Paramount Channel
+   PRIME.VIDEO.co	PRIME VIDEO
+   Sony.co	Sony
+   Studio.Universal.co	Studio Universal
+   TNT.Series.co	TNT Series
+   Universal.TV.co	Universal TV
+   Warner.Channel.co	Warner Channel
+   Canal.Warner.TV.(Costa.Rica).cr	Canal Warner TV (Costa Rica)
+   Canal.Sony.(Costa.Rica).cr	Canal Sony (Costa Rica)
+   Canal.Disney.Junior.(Costa.Rica).cr	Canal Disney Junior (Costa Rica)
+   Canal.Disney.Channel.(Costa.Rica).cr	Canal Disney Channel (Costa Rica)
+   Canal.Cinemax.(Costa.Rica).cr	Canal Cinemax (Costa Rica)
+   Canal.Universal.TV.(Costa.Rica).cr	Canal Universal TV (Costa Rica)
+   Canal.Studio.Universal.(Costa.Rica).cr	Canal Studio Universal (Costa Rica)
+   Canal.Paramount.Channel.(Costa.Rica).cr	Canal Paramount Channel (Costa Rica)
+   Canal.AXN.(Costa.Rica).cr	Canal AXN (Costa Rica)
+   Canal.TNT.Series.(Costa.Rica).cr	Canal TNT Series (Costa Rica)
+   Sony.(Costa.Rica).cr	Sony (Costa Rica)
+   Greek.Cinema.cy	Greek Cinema
+   Cablenet.Cinema.cy	Cablenet Cinema
+   Novacinema1HD.cy	Novacinema1HD
+   Novacinema2HD.cy	Novacinema2HD
+   Novacinema3HD.cy	Novacinema3HD
+   Novacinema4HD.cy	Novacinema4HD
+   Disney.Channel.cy	Disney Channel
+   Disney.Junior.cy	Disney Junior
+   Primetel.1.HD.cy	Primetel 1 HD
+   Novasports.Prime.cy	Novasports Prime
+   Sky.News.HD.cy	Sky News HD
+   Film+.(hu).cz	Film+ (hu)
+   Polsat.Film.cz	Polsat Film
+   Sky.Movies.Drama.&amp;.Romance.HD.cz	Sky Movies Drama &amp; Romance HD
+   Barrandov.Kino.cz	Barrandov Kino
+   AXN.Sat.cz	AXN Sat
+   Sky.Movies.Comedy.HD.cz	Sky Movies Comedy HD
+   Filmbox+.comedy.(pl).cz	Filmbox+ comedy (pl)
+   Disney.Channel.(de).cz	Disney Channel (de)
+   AXN.cz	AXN
+   AXN.White.cz	AXN White
+   AXN.HD.cz	AXN HD
+   Sky.Sports.News.cz	Sky Sports News
+   Filmbox+.comedy.cz	Filmbox+ comedy
+   Filmbox+.action.(pl).cz	Filmbox+ action (pl)
+   JOJ.Cinema.cz	JOJ Cinema
+   Disney.Junior.cz	Disney Junior
+   Film.Café.cz	Film Café
+   Filmbox+.love&amp;crime.cz	Filmbox+ love&amp;crime
+   AXN.Digi.TV.cz	AXN Digi TV
+   Film.Ua.Drama.cz	Film.Ua Drama
+   Filmbox+.emotion.(pl).cz	Filmbox+ emotion (pl)
+   Cinemax.(hr).cz	Cinemax (hr)
+   Filmbox+.one.cz	Filmbox+ one
+   Cinemax.2.cz	Cinemax 2
+   Filmbox+.festival.cz	Filmbox+ festival
+   Sky.Sports.4.cz	Sky Sports 4
+   Sky.Movies.Action.&amp;.Adventure.HD.cz	Sky Movies Action &amp; Adventure HD
+   Paramount.Network.(pl).cz	Paramount Network (pl)
+   NASA.TV.UHD.cz	NASA TV UHD
+   Disney.Junior.HD.UK.cz	Disney Junior HD UK
+   CS.Film.cz	CS Film
+   Film.4.cz	Film 4
+   Film.Europe.cz	Film Europe
+   Viasat.Kino.cz	Viasat Kino
+   Filmbox+.hits.cz	Filmbox+ hits
+   Sky.news.cz	Sky news
+   Star.Cinema.cz	Star Cinema
+   Filmbox+.emotion.(hr).cz	Filmbox+ emotion (hr)
+   Filmbox+.hits.(hr).cz	Filmbox+ hits (hr)
+   Dom.Kino.cz	Dom Kino
+   KINOTV.(hr).cz	KINOTV (hr)
+   Film.Mánia.cz	Film Mánia
+   Sky.Sports.3.cz	Sky Sports 3
+   Travelxp.4K.cz	Travelxp 4K
+   Sky.Sports.1.cz	Sky Sports 1
+   Filmbox+.love&amp;crime.(hr).cz	Filmbox+ love&amp;crime (hr)
+   Filmbox+.one.(hu).cz	Filmbox+ one (hu)
+   Sky.Movies.Disney.HD.cz	Sky Movies Disney HD
+   Cinemax.2.(hr).cz	Cinemax 2 (hr)
+   Sky.Movies.Greats.HD.cz	Sky Movies Greats HD
+   Sky.Movies.Family.HD.cz	Sky Movies Family HD
+   Filmbox+.hits.(pl).cz	Filmbox+ hits (pl)
+   Sony.Movie.cz	Sony Movie
+   Kino.Polska.cz	Kino Polska
+   AXN.Black.cz	AXN Black
+   Nova.Cinema.cz	Nova Cinema
+   Dom.Kino.Premium.cz	Dom Kino Premium
+   JOJ.Cinema.+1.cz	JOJ Cinema +1
+   Sky.SciFi.&amp;.Horror.SD.cz	Sky SciFi &amp; Horror SD
+   Extasy.4K.Platinum.cz	Extasy 4K Platinum
+   PRIME.cz	PRIME
+   Film.Europe.+.cz	Film Europe +
+   myZen.4K.cz	myZen 4K
+   Sky.Sports.2.cz	Sky Sports 2
+   Sony.Max.cz	Sony Max
+   Sky.Atlantic.HD.UK.cz	Sky Atlantic HD UK
+   Sky.Arts.HD.cz	Sky Arts HD
+   Sky.Movies.Crime.&amp;.Thriller.HD.cz	Sky Movies Crime &amp; Thriller HD
+   Filmax.cz	Filmax
+   Disney.XD.cz	Disney XD
+   Prime.Fight.cz	Prime Fight
+   Enter.Film.cz	Enter Film
+   Cinemax.cz	Cinemax
+   Sky.Sports.5.cz	Sky Sports 5
+   Filmbox+.one.(pl).cz	Filmbox+ one (pl)
+   Paramount.Channel.cz	Paramount Channel
+   Sky.Movies.Select.HD.cz	Sky Movies Select HD
+   Sky.Living.HD.cz	Sky Living HD
+   Sky.Movies.Premiere.HD.cz	Sky Movies Premiere HD
+   Filmbox+.emotion.cz	Filmbox+ emotion
+   Warner.TV.cz	Warner TV
+   Film+.cz	Film+
+   Disney.Channel.cz	Disney Channel
+   Sky.Movies.Showcase.HD.cz	Sky Movies Showcase HD
+   RTL+.cz	RTL+
+   Filmbox+.festival.(hr).cz	Filmbox+ festival (hr)
+   DAZN.de	DAZN
+   Disney.Channel.de	Disney Channel
+   travelxp.4K.de	travelxp 4K
+   UHD1.de	UHD1
+   Prime.HD.de	Prime HD
+   Sky.Cinema.Premiere.HD.de	Sky Cinema Premiere HD
+   Sky.Cinema.Family.HD.de	Sky Cinema Family HD
+   Sky.Cinema.Highlights.HD.de	Sky Cinema Highlights HD
+   Sky.Cinema.Action.HD.de	Sky Cinema Action HD
+   Sky.Cinema.Classics.HD.de	Sky Cinema Classics HD
+   Sky.Crime.de	Sky Crime
+   Sky.Documentaries.de	Sky Documentaries
+   Sky.Nature.de	Sky Nature
+   Warner.TV.Film.de	Warner TV Film
+   KinoweltTV.de	KinoweltTV
+== 10 https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz HTTP 200 2955382 Bytes: 486 Sender, 42451 Sendungen, Tage -..-
+   Sky.Sci-Fi.HD.uk	Sky Sci-Fi HD
+   Sky.Sports.NFL.uk	Sky Sports NFL
+   Sky.Cinema.Comedy.uk	Sky Cinema Comedy
+   Sky.Premiere.uk	Sky Premiere
+   Sky.Arts.HD.uk	Sky Arts HD
+   Sky.ScFi/HorHD.uk	Sky ScFi/HorHD
+   Sky.Cinema.Hits.HD.uk	Sky Cinema Hits HD
+   Sky.Greats.uk	Sky Greats
+   Sky.Comedy.HD.uk	Sky Comedy HD
+   Sky.HistoryHD.uk	Sky HistoryHD
+   Sky.Atlantic+1.uk	Sky Atlantic+1
+   SONY.MAX.2.uk	SONY MAX 2
+   Sky.Thriller.HD.uk	Sky Thriller HD
+   SONY.TV.HD.uk	SONY TV HD
+   Zee.Cinema.uk	Zee Cinema
+   Film4+1.uk	Film4+1
+   Film4.HD.uk	Film4 HD
+   Sky.Action.HD.uk	Sky Action HD
+   Sky.Atlantic.HD.uk	Sky Atlantic HD
+   Sky.Crime+1.uk	Sky Crime+1
+   Sky.History2.uk	Sky History2
+   Sky.News.HD.uk	Sky News HD
+   Sky.Cinema.Select.uk	Sky Cinema Select
+   Sky.History+1.uk	Sky History+1
+   Sky.Kids.HD.uk	Sky Kids HD
+   Sky.Nature.HD.uk	Sky Nature HD
+   Sky.Family.HD.uk	Sky Family HD
+   Sky.Valentine.uk	Sky Valentine
+   Sky.Sports.Ultra.HD.1.uk	Sky Sports Ultra HD 1
+   Sky.Mix.HD.uk	Sky Mix HD
+   Sky.Drama.HD.uk	Sky Drama HD
+   Disney+CineHD.uk	Disney+CineHD
+   Sky.Witness.HD.uk	Sky Witness HD
+   Sky.One.HD.uk	Sky One HD
+   Sky.Documentaries.HD.uk	Sky Documentaries HD
+   Sky.Greats.HD.uk	Sky Greats HD
+   Sky.Crime.HD.uk	Sky Crime HD
+   Disney.Jr.HD.uk	Disney Jr HD
+   Sky.Adventure.uk	Sky Adventure
+   Sky.Replay.uk	Sky Replay
+   Sky.Witness+1.uk	Sky Witness+1
+   SONY.SAB.uk	SONY SAB
+   Sky.Sports.Football.HD.uk	Sky Sports Football HD
+   SONY.MAX.HD.uk	SONY MAX HD
+   Sky.Sports.Ultra.HD.2.uk	Sky Sports Ultra HD 2
+   Sky.Action.uk	Sky Action
+== 11 https://i.mjh.nz/PlutoTV/de.xml.gz HTTP 200 543867 Bytes: 200 Sender, 5020 Sendungen, Tage -..-
+   64b67f0424ade50008a3be17	DAZN Darts x Pluto TV
+   68ac5543a1ac0c90f2c8943e	Pluto TV Snooker 900
+   66337e6ba0a74e000889563b	MODUS Super Series Darts
+   61409f8d6feb30000766b675	Pluto TV Space
+   6866525c8a412a0e95c438b4	Dyn Sport Mix
+   64afe50c5dc16600087f3227	DAZN Heldinnen x Pluto TV
+   660e767baec9680008fac009	Pluto TV Halloween
+   67ebbe32f7c5d70b903676ea	Pluto TV Gore &amp; Slasher
+   67ff7d487fc25e0e72450adf	Pluto TV Creature Features
+   5f98487036af340008da1e37	Pluto TV Paranormal
+   62f4f4b88157cf00075c22db	Pluto TV Horror
+   67ff7d9c7fc25e0e72451bc9	Pluto TV Horror-Serien
+   5d4947590ba40f75dc29c26b	Comedy Central Pluto TV
+   5d767ab2b456c8cf265ce921	Pluto TV Sitcoms
+   6672f49f61a39900089db68e	Pluto TV Deutsche Comedy
+   615333098185f00008715a56	Pluto TV True Crime
+   64be64445dc166000899ce75	Pluto TV Polizeiserien
+   5e7b6c60fd20c50007910bf5	Pluto TV Crime
+   67d984408d8dc3d7754dccf2	Pluto TV Nordic Crime
+   5caf325764025859afdd6c4d	MTV Pluto TV
+   67f68bd2135aeda9ddf0ef54	Pluto TV Adult Animation
+   608181d420fc8500075f612a	Pluto TV Anime
+   6864e8f264d94c1425fb4563	Merhaba Türkische Serien
+   5dc190f7bfed110009d934c3	Pluto TV Serie
+   677e5a3d7bffa6000808dbf2	Pluto TV Britische Serien
+   68ada3395190a45dc9c445cf	Pluto TV Historische Serien
+   6a3160eae022927e1c9eb429	Pluto TV Star Trek: Picards Scharfsinn
+   69776b58036e883f39e5ab8a	Star Trek: The Original Series
+   69492467ae33e24d916e56cf	Pluto TV Star Trek: Animation
+   6152ee71bf99590007893a11	Pluto TV Star Trek
+   60ed498c4248a400077c0b9d	Pluto TV Sci-Fi
+   652e7582cc7abc0008439bfe	Pluto TV Kumite
+   64be7398e4391c0008cdedfe	Pluto TV Bud &amp; Terence
+   5c5c3b948002db3c3e0b262e	Pluto TV Movies
+   5dde47b63585b500099f74ec	Pluto TV Kultfilme
+   66337de656fc840008ff7a65	Pluto TV Kult Comedies
+   65004605110545000842035d	Pluto TV Action
+   5dc287ce3086a20009f5024c	Pluto TV Romance
+   615c1e5ce3039400070a0547	MOVIEDOME
+   6305ca798bd95300072d2f93	Filmgold
+   67ebc04855de98dc71428538	Pluto TV Emmanuelle Filme
+   64526a145a0cd50008632bfa	Pluto TV heiße Nächte
+   664f10c4f9992200084a2f47	Pluto TV Heiße Nächte Retro
+   67d983d6a1609bdb523f5f9b	Pluto TV Sanfte Berührungen
+   663a176ecb3ea10008edacf9	Pluto TV Stimulierende Dokus
+   617aad99b68ef100072608cd	Pluto TV Mystery
+   5d767b1c126c65d0a307355f	Pluto TV History
+   5d767ae7b456c8cf265ce922	Pluto TV Animals
+   5be1c3f9851dd5632e2c91b2	Pluto TV Nature
+   5ad9b8551b95267e225e59c1	Pluto TV Explore
+   5dc280c9aa218c0009724b4b	Pluto TV Food
+   6576c20fb3801200084786c9	SPIEGEL TV
+   5d767b4889bca2ce7b73ef2e	Pluto TV Science
+   68ada3edf84960586ad31c7d	Pluto TV Reportagen
+   65b9268fc798e800085add89	SPIEGEL TV Konflikte
+   682453215c646751955e1204	Pluto TV Western Serien
+   630dd3b2605f140007e002f5	Pluto TV Western
+   69b015c5d29cc97de7da4af8	Pluto TV Haialarm
+   62441d6ded1827000763dcda	CBS News 24/7
+== 12 https://i.mjh.nz/SamsungTVPlus/de.xml.gz HTTP 200 278501 Bytes: 217 Sender, 1934 Sendungen, Tage -..-
+   DEBA3300040CR	Moviedome Family
+   DE3800005AU	Weihnachtskino
+   DEBD5000001VL	Top Filme
+   DE30000067I	Deutsches Kino - Rakuten TV
+   DE26000096S	Top Filme - Rakuten TV
+   DE2600005XA	Actionfilme - Rakuten TV
+   DEAJ0500419A	Netzkino
+   DE3900004ZH	Merhaba Türkische Filme
+   DE2600007ET	Drama Filme - Rakuten TV
+   DEBC35000020P	Filmgold
+   DE300002CL	Sony One Comedy HITS
+   DE1900001NT	Himmlisches Kino
+   DEAK3504517A	Pluto TV Movies
+   DE30000489	Sony One Action HITS
+   DEBA3300039TT	Moviedome
+   DE310000218	INTER 24/7
+   DEBC470000128	DAZN FAST+
+   DEBD700001C5	DAZN Rise
+   DEBA3300001L9	Pluto TV Food
+   DE2200004KN	N24 Doku
+   DEAJ2900001NG	SPIEGEL TV Konflikte
+   DEBD2700003W5	Royalworld - Adel &amp; Dynastien
+   DEAJ700008WL	Pluto TV Paranormal
+   DEAK3504506A	Pluto TV Science
+   DEAK3504503A	Pluto TV Animals
+   DEAK0500441A	SPIEGEL TV
+   DE3400001N1	Sky News International
+   DE1400003DP	Spiegel TV action+crime
+   DE2600004U3	Crime Serien - Rakuten TV
+   DE21000031Z	BBC Series
+   DE20004336	Merhaba Türkische Serien
+   DEAJ700007OT	Pluto TV Serie
+   DEBA33000038I	Pluto TV - Star Trek
+   DE300003AV	Sony One Thriller TV
+   DE300005NB	Sony One Best Of
+   DE3000016Q	Sony One Comedy TV
+   DEAK3504508A	Pluto TV Sitcoms
+   DE49000017W	Merhaba Arabische Serien
+   DEBA3300038NO	Top Serien
+   DEAJ7000033P	MTV Pluto TV
+   DEAK3504500A	Comedy Central Pluto TV
+== 13 https://i.mjh.nz/Plex/de.xml.gz HTTP 404 231415 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 14 https://i.mjh.nz/Roku/all.xml.gz HTTP 200 3389886 Bytes: 719 Sender, 65636 Sendungen, Tage -..-
+   70881c73b6275623ace6c5c3603a339c	CBS News 24/7
+   989feef9c39a5d41a7e88bd5d54f38b9	Sky News
+   58e6bfd1c4819af32ead547dbc82e1f8	FloRacing 24/7
+   0f26179eb1225698ab79961ba4e04c41	Universal Movies
+   e2855d7a70c960c11ab278e386f11921	Paramount Movie Channel
+   f8e30bbf7d345413bff10b8c6ff499c8	IFC Films Picks
+   af7b719197365e69aff9c86f42fa3306	Universal Action
+   d6f71998860459eca1bed73db5988330	FilmRise Free Movies
+   dead0e7a46da533c94c61c8710ef3418	FilmRise British TV
+   9d21287eff4c09a5d1078558e8245cfb	Pluto TV Fantastic
+   bfced9f99e1a685204996285b2788dbc	Pluto TV Anime
+   8346cc0f3d415e39875fca80b67fd951	Universal Westerns
+   c5a72a598a355db4b1781ca075280773	FilmRise Western
+   e2e10d08139b56aba73a448f5555b6fd	FilmRise Classic TV
+   cfd904d2f64e108809ada1e095a044dc	Primetime Soaps
+   3d3f3113ff49ca22c3ad51ee00fe7e9d	Comedy Central Pluto TV
+   bc68164868385873a0f2b1c649fa2495	Comedy Dynamics
+   714890342efe5cd6b236e85415b661ca	Universal Monsters
+   834e2a09799752b3be7ecaab726b7242	Maverick Black Cinema
+   885d5897052b53709a83c4947174cd09	FilmRise Black TV
+   515d785b0a5ea55f15f7e4c773990009	BET Pluto TV
+   16722bc43ef05012afa2297def830266	FilmRise Mysteries
+   18c5f5feae8855baba4d1ccfd75be3db	Dateline 24/7
+   0322f5b9c0d954169122de194a8005ac	Universal Crime
+   ebb810a8868251f18ac64056834c749a	FilmRise True Crime
+   62945e18ab825bfd8b4995d9bd14917b	FilmRise Forensic Files
+   22d9d1cb36e855a2b40ba752313a50d9	FilmRise Food
+   8152fae2aebf5c228eee6470242174ec	Dinos 24/7
+   067e6b6fa36352ad8984a8d97c9a39d4	FilmRise Creators
+   51cc9cb7f052534cb6e6f55ac4980b06	Mythical 24/7
+   7a406f20f6ad468f10f6b4752b30df56	MTV Pluto TV
+   34d90b2ece59551f9bd3257d7d132c25	Duck Dynasty
+   b7d49470ce09913c2cb9227708a815a2	Pluto TV Cars
+   1e2a4ec82eb65f729ad7484337c0bcd4	FILMEX
+   4010582bb66b58a69151a4f552de0823	FilmRise Series Gratis
+   b602b0edb0cd58a5a5be2b7554166c07	FilmRise Autopista al Cielo
+   5a28fbf15c135b51b3638e8bd02d6577	N+ Univision 24/7
+   3a7f2ae8da19530ba33c0c3502becd32	Sony One Escape Perfecto
+   021974fb5a54b06798912517ae84b6c5	Sony One Shark Tank Latino
+   fa7c1fc64ab453e28165ee3125742c67	Sony One Dramón
+   8b2c97d22c7fed4d9d302a1796d5e009	FILMEX Comedia
+   5b4b59af18ff5686916ef5eb3574de46	FilmRise Películas Gratis
+   f53e794f65b781ff1a0d37843c704827	FILMEX Acción
+   50cd4d6c632d5172834eb5b77fa395c6	FILMEX Clásico
+== 15 https://i.mjh.nz/Rakuten/de.xml.gz HTTP 404 231451 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 16 https://i.mjh.nz/LG/de.xml.gz HTTP 404 231392 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 17 https://www.open-epg.com/files/germany1.xml HTTP 200 117837 Bytes: 181 Sender, 604 Sendungen, Tage 20261031..20261102
+   Anixe HD Serie.de	Anixe HD Serie.de
+   AXN black.de	AXN black.de
+   AXN white.de	AXN white.de
+   DAZN.de	DAZN.de
+   Disney Channel.de	Disney Channel.de
+   Kinowelt TV.de	Kinowelt TV.de
+   Sky Atlantic HD.de	Sky Atlantic HD.de
+   Sky Bundesliga.de	Sky Bundesliga.de
+   Sky Cinema Action.de	Sky Cinema Action.de
+   Sky Cinema Family.de	Sky Cinema Family.de
+   Sky Cinema Premieren.de	Sky Cinema Premieren.de
+   Sky Crime.de	Sky Crime.de
+   Sky Documentaries HD.de	Sky Documentaries HD.de
+   Sky Krimi.de	Sky Krimi.de
+   Sky Nature HD.de	Sky Nature HD.de
+   Sky News.de	Sky News.de
+   Sky Nostalgie.de	Sky Nostalgie.de
+   Sky One.de	Sky One.de
+   Sky Sport News HD.de	Sky Sport News HD.de
+   SPIEGEL GESCHICHTE.de	SPIEGEL GESCHICHTE.de
+   Universal TV.de	Universal TV.de
+   Warner TV Comedy.de	Warner TV Comedy.de
+   Warner TV Film.de	Warner TV Film.de
+   Warner TV Serie.de	Warner TV Serie.de
+== 18 https://www.open-epg.com/files/germany2.xml HTTP 200 0 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 19 https://www.open-epg.com/files/germany3.xml HTTP 200 9346495 Bytes: 334 Sender, 24102 Sendungen, Tage 20261030..20261102
+   13TH STREET (Sky).de	13TH STREET (Sky).de
+   ANIXE HD Serie.de	ANIXE HD Serie.de
+   AXN Black.de	AXN Black.de
+   AXN White.de	AXN White.de
+   Beate-Uhse.TV (Sky).de	Beate-Uhse.TV (Sky).de
+   Cartoon Network (Sky).de	Cartoon Network (Sky).de
+   Cartoonito (Sky).de	Cartoonito (Sky).de
+   Crime+Investigation (Sky).de	Crime+Investigation (Sky).de
+   Disney Channel.de	Disney Channel.de
+   Heimatkanal (Sky).de	Heimatkanal (Sky).de
+   Jukebox (Sky).de	Jukebox (Sky).de
+   Kinomir.de	Kinomir.de
+   KinoweltTV.de	KinoweltTV.de
+   Magenta Musik 1.de	Magenta Musik 1.de
+   Magenta Musik 2.de	Magenta Musik 2.de
+   MagentaSport.de	MagentaSport.de
+   MagentaTV+.de	MagentaTV+.de
+   National Geographic (Sky).de	National Geographic (Sky).de
+   National Geographic Wild (Sky).de	National Geographic Wild (Sky).de
+   Nick Jr. (Sky).de	Nick Jr. (Sky).de
+   Nicktoons (Sky).de	Nicktoons (Sky).de
+   Romance TV (Sky).de	Romance TV (Sky).de
+   Sky Atlantic.de	Sky Atlantic.de
+   Sky Cinema Action.de	Sky Cinema Action.de
+   Sky Cinema Classics.de	Sky Cinema Classics.de
+   Sky Cinema Family.de	Sky Cinema Family.de
+   Sky Cinema Highlights.de	Sky Cinema Highlights.de
+   Sky Cinema Premiere.de	Sky Cinema Premiere.de
+   Sky Crime.de	Sky Crime.de
+   Sky Documentaries.de	Sky Documentaries.de
+   Sky Krimi.de	Sky Krimi.de
+   Sky Nature.de	Sky Nature.de
+   Sky One.de	Sky One.de
+   Sky Sci-Fi (Sky).de	Sky Sci-Fi (Sky).de
+   Sky Sci-Fi.de	Sky Sci-Fi.de
+   Sky Showcase.de	Sky Showcase.de
+   Sky Sport 1.de	Sky Sport 1.de
+   Sky Sport 10.de	Sky Sport 10.de
+   Sky Sport 2.de	Sky Sport 2.de
+   Sky Sport 3.de	Sky Sport 3.de
+   Sky Sport 4.de	Sky Sport 4.de
+   Sky Sport 5.de	Sky Sport 5.de
+   Sky Sport 6.de	Sky Sport 6.de
+   Sky Sport 7.de	Sky Sport 7.de
+   Sky Sport 8.de	Sky Sport 8.de
+   Sky Sport 9.de	Sky Sport 9.de
+   Sky Sport Bundesliga 1.de	Sky Sport Bundesliga 1.de
+   Sky Sport Bundesliga 10.de	Sky Sport Bundesliga 10.de
+   Sky Sport Bundesliga 2.de	Sky Sport Bundesliga 2.de
+   Sky Sport Bundesliga 3.de	Sky Sport Bundesliga 3.de
+   Sky Sport Bundesliga 4.de	Sky Sport Bundesliga 4.de
+   Sky Sport Bundesliga 5.de	Sky Sport Bundesliga 5.de
+   Sky Sport Bundesliga 6.de	Sky Sport Bundesliga 6.de
+   Sky Sport Bundesliga 7.de	Sky Sport Bundesliga 7.de
+   Sky Sport Bundesliga 8.de	Sky Sport Bundesliga 8.de
+   Sky Sport Bundesliga 9.de	Sky Sport Bundesliga 9.de
+   Sky Sport Bundesliga.de	Sky Sport Bundesliga.de
+   Sky Sport F1.de	Sky Sport F1.de
+   Sky Sport Golf.de	Sky Sport Golf.de
+   Sky Sport Kompakt 1.de	Sky Sport Kompakt 1.de
+   Sky Sport Mix.de	Sky Sport Mix.de
+   Sky Sport News.de	Sky Sport News.de
+   Sky Sport Premier League.de	Sky Sport Premier League.de
+   Sky Sport Tennis.de	Sky Sport Tennis.de
+   Sky Sport Top Event.de	Sky Sport Top Event.de
+   Spiegel Geschichte.de	Spiegel Geschichte.de
+   The HISTORY Channel (Sky).de	The HISTORY Channel (Sky).de
+   TOP SERIEN.de	TOP SERIEN.de
+   Universal TV (Sky).de	Universal TV (Sky).de
+   Universal TV.de	Universal TV.de
+   Warner TV Comedy (Sky).de	Warner TV Comedy (Sky).de
+   Warner TV Comedy.de	Warner TV Comedy.de
+   Warner TV Film (Sky).de	Warner TV Film (Sky).de
+   Warner TV Film.de	Warner TV Film.de
+   Warner TV Serie (Sky).de	Warner TV Serie (Sky).de
+   Warner TV Serie.de	Warner TV Serie.de
+== 20 https://www.open-epg.com/files/germany4.xml HTTP 200 150078 Bytes: 84 Sender, 831 Sendungen, Tage 20261031..20261102
+   3+ Series.de	3+ Series.de
+   Anixe HD Serie.de	Anixe HD Serie.de
+   Disney Channel.de	Disney Channel.de
+== 21 https://www.open-epg.com/files/germany5.xml HTTP 200 2947778 Bytes: 207 Sender, 17950 Sendungen, Tage 20261030..20261102
+   AXN Black Catch-Up.de	AXN Black Catch-Up.de
+   AXN Black.de	AXN Black.de
+   AXN White Catch-Up.de	AXN White Catch-Up.de
+   AXN White.de	AXN White.de
+   Disney Channel.de	Disney Channel.de
+   Royalworld - Adel &amp; Dynastien.de	Royalworld - Adel &amp; Dynastien.de
+   Sky Sci-Fi.de	Sky Sci-Fi.de
+   Universal TV.de	Universal TV.de
+   waipu.tv Highlights.de	waipu.tv Highlights.de
+   waipu.tv Info.de	waipu.tv Info.de
+   WARNER TV COMEDY.de	WARNER TV COMEDY.de
+   WARNER TV FILM.de	WARNER TV FILM.de
+   WARNER TV SERIE.de	WARNER TV SERIE.de
+== 22 https://www.open-epg.com/files/austria1.xml HTTP 200 3957676 Bytes: 315 Sender, 20742 Sendungen, Tage 20261030..20261102
+   Disney Channel.at	Disney Channel.at
+   Kinowelt TV HD.at	Kinowelt TV HD.at
+   Magenta HD.at	Magenta HD.at
+   Pink Film.at	Pink Film.at
+   Serien+.at	Serien+.at
+   Sky Atlantic.at	Sky Atlantic.at
+   Sky Bundesliga 1.at	Sky Bundesliga 1.at
+   Sky Bundesliga 10.at	Sky Bundesliga 10.at
+   Sky Bundesliga 2.at	Sky Bundesliga 2.at
+   Sky Bundesliga 3.at	Sky Bundesliga 3.at
+   Sky Bundesliga 4.at	Sky Bundesliga 4.at
+   Sky Bundesliga 5.at	Sky Bundesliga 5.at
+   Sky Bundesliga 6.at	Sky Bundesliga 6.at
+   Sky Bundesliga 7.at	Sky Bundesliga 7.at
+   Sky Bundesliga 8.at	Sky Bundesliga 8.at
+   Sky Bundesliga 9.at	Sky Bundesliga 9.at
+   Sky Bundesliga.at	Sky Bundesliga.at
+   Sky Cinema Action.at	Sky Cinema Action.at
+   Sky Cinema Blockbuster.at	Sky Cinema Blockbuster.at
+   Sky Cinema Classics.at	Sky Cinema Classics.at
+   Sky Cinema Feelgood.at	Sky Cinema Feelgood.at
+   Sky Cinema Premiere.at	Sky Cinema Premiere.at
+   Sky Crime.at	Sky Crime.at
+   Sky Documentaries.at	Sky Documentaries.at
+   Sky Krimi HD.at	Sky Krimi HD.at
+   Sky Nature.at	Sky Nature.at
+   Sky One.at	Sky One.at
+   Sky Sci Fi.at	Sky Sci Fi.at
+   Sky Showcase.at	Sky Showcase.at
+   Sky Sport 1.at	Sky Sport 1.at
+   Sky Sport 10.at	Sky Sport 10.at
+   Sky Sport 2.at	Sky Sport 2.at
+   Sky Sport 3.at	Sky Sport 3.at
+   Sky Sport 4.at	Sky Sport 4.at
+   Sky Sport 5.at	Sky Sport 5.at
+   Sky Sport 6.at	Sky Sport 6.at
+   Sky Sport 7.at	Sky Sport 7.at
+   Sky Sport 8.at	Sky Sport 8.at
+   Sky Sport 9.at	Sky Sport 9.at
+   Sky Sport Austria 1.at	Sky Sport Austria 1.at
+   Sky Sport Austria 2.at	Sky Sport Austria 2.at
+   Sky Sport Austria 3.at	Sky Sport Austria 3.at
+   Sky Sport Austria 4.at	Sky Sport Austria 4.at
+   Sky Sport Austria 5.at	Sky Sport Austria 5.at
+   Sky Sport Austria 6.at	Sky Sport Austria 6.at
+   Sky Sport Austria 7.at	Sky Sport Austria 7.at
+   Sky Sport Austria 8.at	Sky Sport Austria 8.at
+   Sky Sport F1.at	Sky Sport F1.at
+   Sky Sport Golf.at	Sky Sport Golf.at
+   Sky Sport Mix.at	Sky Sport Mix.at
+   Sky Sport News.at	Sky Sport News.at
+   Sky Sport Premier League.at	Sky Sport Premier League.at
+   Sky Sport Tennis.at	Sky Sport Tennis.at
+   Spiegel Geschichte HD.at	Spiegel Geschichte HD.at
+   Stingray Festival 4K.at	Stingray Festival 4K.at
+   Stingray Naturescape 4K.at	Stingray Naturescape 4K.at
+   Universal TV HD.at	Universal TV HD.at
+   Warner TV Comedy HD.at	Warner TV Comedy HD.at
+   Warner TV Film HD.at	Warner TV Film HD.at
+   Warner TV Serie HD.at	Warner TV Serie HD.at
+== 23 https://www.open-epg.com/files/switzerland1.xml HTTP 200 0 Bytes: 0 Sender, 0 Sendungen, Tage -..-
+== 24 https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany1.xml HTTP 200 7840762 Bytes: 334 Sender, 20540 Sendungen, Tage 20251230..20260102
+   13TH STREET (Sky).de	13TH STREET (Sky).de
+   ANIXE HD Serie.de	ANIXE HD Serie.de
+   AXN Black.de	AXN Black.de
+   AXN White.de	AXN White.de
+   Beate-Uhse.TV (Sky).de	Beate-Uhse.TV (Sky).de
+   Cartoon Network (Sky).de	Cartoon Network (Sky).de
+   Cartoonito (Sky).de	Cartoonito (Sky).de
+   Crime+Investigation (Sky).de	Crime+Investigation (Sky).de
+   Discovery Channel (Sky).de	Discovery Channel (Sky).de
+   Disney Channel.de	Disney Channel.de
+   Heimatkanal (Sky).de	Heimatkanal (Sky).de
+   Jukebox (Sky).de	Jukebox (Sky).de
+   Kinomir.de	Kinomir.de
+   KinoweltTV.de	KinoweltTV.de
+   Magenta Musik 1.de	Magenta Musik 1.de
+   Magenta Musik 2.de	Magenta Musik 2.de
+   MagentaSport.de	MagentaSport.de
+   MagentaTV+.de	MagentaTV+.de
+   Nick Jr. (Sky).de	Nick Jr. (Sky).de
+   Nicktoons (Sky).de	Nicktoons (Sky).de
+   Romance TV (Sky).de	Romance TV (Sky).de
+   Sky Atlantic.de	Sky Atlantic.de
+   Sky Cinema Action.de	Sky Cinema Action.de
+   Sky Cinema Classics.de	Sky Cinema Classics.de
+   Sky Cinema Family.de	Sky Cinema Family.de
+   Sky Cinema Highlights.de	Sky Cinema Highlights.de
+   Sky Cinema Premiere.de	Sky Cinema Premiere.de
+   Sky Crime.de	Sky Crime.de
+   Sky Documentaries.de	Sky Documentaries.de
+   Sky Krimi.de	Sky Krimi.de
+   Sky Nature.de	Sky Nature.de
+   Sky One.de	Sky One.de
+   Sky Replay.de	Sky Replay.de
+   Sky Showcase.de	Sky Showcase.de
+   Sky Sport 1.de	Sky Sport 1.de
+   Sky Sport 10.de	Sky Sport 10.de
+   Sky Sport 2.de	Sky Sport 2.de
+   Sky Sport 3.de	Sky Sport 3.de
+   Sky Sport 4.de	Sky Sport 4.de
+   Sky Sport 5.de	Sky Sport 5.de
+   Sky Sport 6.de	Sky Sport 6.de
+   Sky Sport 7.de	Sky Sport 7.de
+   Sky Sport 8.de	Sky Sport 8.de
+   Sky Sport 9.de	Sky Sport 9.de
+   Sky Sport Bundesliga 1.de	Sky Sport Bundesliga 1.de
+   Sky Sport Bundesliga 10.de	Sky Sport Bundesliga 10.de
+   Sky Sport Bundesliga 2.de	Sky Sport Bundesliga 2.de
+   Sky Sport Bundesliga 3.de	Sky Sport Bundesliga 3.de
+   Sky Sport Bundesliga 4.de	Sky Sport Bundesliga 4.de
+   Sky Sport Bundesliga 5.de	Sky Sport Bundesliga 5.de
+   Sky Sport Bundesliga 6.de	Sky Sport Bundesliga 6.de
+   Sky Sport Bundesliga 7.de	Sky Sport Bundesliga 7.de
+   Sky Sport Bundesliga 8.de	Sky Sport Bundesliga 8.de
+   Sky Sport Bundesliga 9.de	Sky Sport Bundesliga 9.de
+   Sky Sport Bundesliga.de	Sky Sport Bundesliga.de
+   Sky Sport F1.de	Sky Sport F1.de
+   Sky Sport Golf.de	Sky Sport Golf.de
+   Sky Sport Kompakt 1.de	Sky Sport Kompakt 1.de
+   Sky Sport Mix.de	Sky Sport Mix.de
+   Sky Sport News.de	Sky Sport News.de
+   Sky Sport Premier League.de	Sky Sport Premier League.de
+   Sky Sport Tennis.de	Sky Sport Tennis.de
+   Sky Sport Top Event.de	Sky Sport Top Event.de
+   Spiegel Geschichte.de	Spiegel Geschichte.de
+   SYFY (Sky).de	SYFY (Sky).de
+   The HISTORY Channel (Sky).de	The HISTORY Channel (Sky).de
+   Universal TV (Sky).de	Universal TV (Sky).de
+   Universal TV.de	Universal TV.de
+   Warner TV Comedy (Sky).de	Warner TV Comedy (Sky).de
+   Warner TV Comedy.de	Warner TV Comedy.de
+   Warner TV Film (Sky).de	Warner TV Film (Sky).de
+   Warner TV Film.de	Warner TV Film.de
+   Warner TV Serie (Sky).de	Warner TV Serie (Sky).de
+   Warner TV Serie.de	Warner TV Serie.de
+== 25 https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany2.xml HTTP 200 30248 Bytes: 24 Sender, 166 Sendungen, Tage 20251231..20260102
+   Sky Sport F1.de	Sky Sport F1.de
+== 26 https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany3.xml HTTP 200 4389500 Bytes: 371 Sender, 26145 Sendungen, Tage 20251228..20251231
+   alleskino.de	alleskino.de
+   ARTFLIX - Filmklassiker.de	ARTFLIX - Filmklassiker.de
+   AXN Black.de	AXN Black.de
+   AXN White.de	AXN White.de
+   Cinema of Hearts.de	Cinema of Hearts.de
+   DAZN 1.de	DAZN 1.de
+   DAZN 2.de	DAZN 2.de
+   DAZN FAST.de	DAZN FAST.de
+   DAZN RISE.de	DAZN RISE.de
+   Der Filmkanal.de	Der Filmkanal.de
+   DER SPIEGEL.de	DER SPIEGEL.de
+   Disney Channel.de	Disney Channel.de
+   Film Total.de	Film Total.de
+   Filmbox Arthouse.de	Filmbox Arthouse.de
+   Filmlegenden.de	Filmlegenden.de
+   Filmpalast.de	Filmpalast.de
+   FilmRise Serien.de	FilmRise Serien.de
+   FILMTASTIC.de	FILMTASTIC.de
+   KinoweltTV Catch-Up.de	KinoweltTV Catch-Up.de
+   KinoweltTV.de	KinoweltTV.de
+   Moviedome.de	Moviedome.de
+   Netzkino.de	Netzkino.de
+   Royalworld - Adel and Dynastien.de	Royalworld - Adel and Dynastien.de
+   Sky Sport Bundesliga 1.de	Sky Sport Bundesliga 1.de
+   Sky Sport Bundesliga 10.de	Sky Sport Bundesliga 10.de
+   Sky Sport Bundesliga 2.de	Sky Sport Bundesliga 2.de
+   Sky Sport Bundesliga 3.de	Sky Sport Bundesliga 3.de
+   Sky Sport Bundesliga 4.de	Sky Sport Bundesliga 4.de
+   Sky Sport Bundesliga 5.de	Sky Sport Bundesliga 5.de
+   Sky Sport Bundesliga 6.de	Sky Sport Bundesliga 6.de
+   Sky Sport Bundesliga 7.de	Sky Sport Bundesliga 7.de
+   Sky Sport Bundesliga 8.de	Sky Sport Bundesliga 8.de
+   Sky Sport Bundesliga 9.de	Sky Sport Bundesliga 9.de
+   Sky Sport Bundesliga.de	Sky Sport Bundesliga.de
+   SPIEGEL Geschichte.de	SPIEGEL Geschichte.de
+   SPIEGEL TV Konflikte.de	SPIEGEL TV Konflikte.de
+   Top Filme.de	Top Filme.de
+   Universal TV.de	Universal TV.de
+   waipu.tv Highlights.de	waipu.tv Highlights.de
+   waipu.tv Infochannel.de	waipu.tv Infochannel.de
+   WARNER TV COMEDY.de	WARNER TV COMEDY.de
+   WARNER TV FILM.de	WARNER TV FILM.de
+   WARNER TV SERIE.de	WARNER TV SERIE.de
+   Weihnachtskino.de	Weihnachtskino.de
+== 27 https://xmltv.info/de/epg.xml.gz HTTP 000 0 Bytes: 0 Sender, 0 Sendungen, Tage -..-
