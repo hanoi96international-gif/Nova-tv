@@ -70,6 +70,8 @@ fun SportScreen(app: AppState) {
     }
 
     val list = events
+    // Spiel zu jeder Sendung (Paarung, Stadion, sonst Ausschluss), einmal für die ganze Liste.
+    val assigned = androidx.compose.runtime.remember(list, matches) { assign(scores, matches, list.orEmpty()) }
     when {
         guide.isEmpty() -> Empty("Noch kein TV-Guide. Unter „Einstellungen“ den TV-Guide laden.")
         list == null -> Empty("Sport wird gesucht …")
@@ -83,9 +85,9 @@ fun SportScreen(app: AppState) {
             Column(Modifier.fillMaxSize()) {
                 Label("Sport", Type.title, Modifier.padding(bottom = 8.dp))
                 LazyColumn(Modifier.fillMaxSize()) {
-                    section("Jetzt live", running, app, scores, matches, now, ::eventMenu)
-                    section("Heute", todayList, app, scores, matches, now, ::eventMenu)
-                    section("Morgen", tomorrow, app, scores, matches, now, ::eventMenu)
+                    section("Jetzt live", running, app, assigned, now, ::eventMenu)
+                    section("Heute", todayList, app, assigned, now, ::eventMenu)
+                    section("Morgen", tomorrow, app, assigned, now, ::eventMenu)
                 }
             }
         }
@@ -93,12 +95,12 @@ fun SportScreen(app: AppState) {
     dialog?.invoke()
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String, events: List<SportEvent>, app: AppState, scores: LiveScores, matches: List<LiveScores.Match>, now: Long, onMenu: (SportEvent) -> Unit) {
+private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String, events: List<SportEvent>, app: AppState, assigned: Map<SportEvent, LiveScores.Match?>, now: Long, onMenu: (SportEvent) -> Unit) {
     if (events.isEmpty()) return
     item(key = "h$title") { Label(title, Type.heading, Modifier.padding(top = 14.dp, bottom = 4.dp)) }
     items(events, key = { "$title|${it.channel.key}|${it.programme.start}" }) { e ->
         val p = e.programme
-        val match = scoreOf(scores, matches, e)
+        val match = assigned[e]
         val score = match?.let { m ->
             when {
                 m.live(now) -> "  ${m.score} (${m.minute(now)})"
@@ -108,7 +110,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String
         }.orEmpty()
         val also = if (e.alsoOn.isEmpty()) "" else " · auch auf ${e.alsoOn.take(3).joinToString { it.name }}${if (e.alsoOn.size > 3) " …" else ""}"
         ListRow(
-            title = (if (p.start <= now) "🔴 " else "") + e.headline + score,
+            // „Live: 2. BL“ ohne Paarung im TV-Guide: das Spiel aus dem Spielplan dazuschreiben.
+            title = (if (p.start <= now) "🔴 " else "") + (if (e.pairing == null && match != null) "${match.pairing} (${e.headline})" else e.headline) + score,
             subtitle = "${clock(p.start)} – ${clock(p.stop)} · ${e.channel.name}$also",
             onClick = {
                 val best = de.ayutv.desktop.data.SportEvents.bestFor(e.channel, app.store.channels())
@@ -120,9 +123,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String
     }
 }
 
-/** Spielstand zur Sendung: über die Paarung, sonst über Stadion/Stadt in der Beschreibung (Sky „Live: 2. BL“). */
-private fun scoreOf(scores: LiveScores, matches: List<LiveScores.Match>, e: SportEvent): LiveScores.Match? {
-    if (matches.isEmpty()) return null
-    val p = e.programme
-    return scores.find(matches, e.pairing, p.start, p.title) ?: scores.byVenue(matches, p.title, p.subtitle, p.description, p.start, p.stop)
+/**
+ * Spiel zu jeder Sendung: über die Paarung, sonst über Stadion/Stadt in der Beschreibung (Sky „Live: 2. BL“), sonst per
+ * Ausschluss (das einzige übrige Spiel der Liga zu dieser Zeit, wenn die anderen schon anderen Sendern gehören).
+ */
+private fun assign(scores: LiveScores, matches: List<LiveScores.Match>, events: List<SportEvent>): Map<SportEvent, LiveScores.Match?> {
+    if (matches.isEmpty()) return emptyMap()
+    val direct = events.map { e ->
+        val p = e.programme
+        scores.find(matches, e.pairing, p.start, p.title)
+            ?: if (e.pairing == null) scores.byVenue(matches, p.title, p.subtitle, p.description, p.start, p.stop) else null
+    }
+    val open = events.indices.filter { direct[it] == null && events[it].pairing == null }
+    val found = scores.byElimination(
+        matches,
+        open.map { i -> events[i].programme.let { LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
+        direct.filterNotNull().toSet(),
+    )
+    val result = direct.toMutableList()
+    for ((k, m) in found) result[open[k]] = m
+    return events.indices.associate { events[it] to result[it] }
 }

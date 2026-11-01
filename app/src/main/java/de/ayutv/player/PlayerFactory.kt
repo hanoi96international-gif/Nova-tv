@@ -66,6 +66,7 @@ object PlayerFactory {
         http: OkHttpClient,
         settings: AppSettings,
         live: Boolean,
+        asyncDecoding: Boolean = settings.asyncDecoding,
         forcePcm: Boolean = settings.audioOutput == AudioOutput.PCM,
         speech: SpeechActivity? = null,
         timeshift: TimeshiftHolder? = null,
@@ -111,9 +112,9 @@ object PlayerFactory {
                 else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF
             )
             .apply {
-                // Synchrones Queueing wie bis 0.44 auf allen Geräten: Das asynchrone (früher als Versuch wählbar)
-                // brachte keinen messbaren Vorteil und musste bei Decoder-Fehlern den Player neu aufbauen.
-                forceDisableMediaCodecAsynchronousQueueing()
+                // Fire OS 6–8 entspricht Android 9–11: dort ist asynchrones Queueing nicht Standard,
+                // bringt aber bei 4K mehr Decoder-Durchsatz. Bei Problemen schaltet der Player es selbst ab.
+                if (asyncDecoding) forceEnableMediaCodecAsynchronousQueueing() else forceDisableMediaCodecAsynchronousQueueing()
             }
 
         val trackSelector = DefaultTrackSelector(context).apply {

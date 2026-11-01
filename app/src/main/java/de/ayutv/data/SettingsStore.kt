@@ -97,6 +97,11 @@ data class AppSettings(
     val liveFormat: LiveFormat = LiveFormat.TS,
     val userAgent: String = DEFAULT_USER_AGENT,
     val zapWithUpDown: Boolean = true,
+    /**
+     * Hardware-Decoder asynchron ansteuern. Auf Fire OS (Android 9–11) nicht Standard und mit manchen
+     * Decodern instabil, daher aus; ab Android 12 nutzt Media3 es ohnehin automatisch.
+     */
+    val asyncDecoding: Boolean = false,
     val audioOutput: AudioOutput = AudioOutput.AUTO,
     /** Raster-TV-Guide im Menü. Die EPG-Daten werden unabhängig davon für "Jetzt läuft" genutzt. */
     val showGuide: Boolean = true,
@@ -228,6 +233,7 @@ class SettingsStore(private val context: Context) {
         val followedTeams = stringSetPreferencesKey("followed_teams")
         val mergeVariants = booleanPreferencesKey("merge_variants")
         val countryChoiceDone = booleanPreferencesKey("country_choice_done")
+        val asyncDecoding = booleanPreferencesKey("async_decoding_v2")
         val audioOutput = stringPreferencesKey("audio_output")
         val showGuide = booleanPreferencesKey("show_guide")
         val livePreview = booleanPreferencesKey("live_preview")
@@ -367,6 +373,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.followedTeams] = next.followedTeams
             prefs[Keys.mergeVariants] = next.mergeVariants
             prefs[Keys.countryChoiceDone] = next.countryChoiceDone
+            prefs[Keys.asyncDecoding] = next.asyncDecoding
             prefs[Keys.audioOutput] = next.audioOutput.name
             prefs[Keys.showGuide] = next.showGuide
             prefs[Keys.livePreview] = next.livePreview
@@ -429,6 +436,7 @@ class SettingsStore(private val context: Context) {
         followedTeams = this[Keys.followedTeams] ?: emptySet(),
         mergeVariants = this[Keys.mergeVariants] ?: true,
         countryChoiceDone = this[Keys.countryChoiceDone] ?: false,
+        asyncDecoding = this[Keys.asyncDecoding] ?: false,
         audioOutput = enumOrDefault(this[Keys.audioOutput], AudioOutput.AUTO),
         showGuide = this[Keys.showGuide] ?: true,
         livePreview = this[Keys.livePreview] ?: false,

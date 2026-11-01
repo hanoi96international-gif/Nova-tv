@@ -365,6 +365,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     if (showAdvanced) item {
                         SettingRow(
+                            "Schnelles Dekodieren (experimentell)",
+                            onOff(settings.asyncDecoding),
+                            "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
+                        ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
+                    }
+                    if (showAdvanced) item {
+                        SettingRow(
                             "Tonausgabe",
                             settings.audioOutput.label,
                             "Automatisch: Dolby/DTS gehen an Soundbar oder Receiver. Bei Stille oder Aussetzern auf „Immer im Gerät dekodieren“ stellen.",
@@ -753,7 +760,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 settings.preferInternetGuide -> "Eigener zuerst, Anbieter ergänzt"
                                 else -> "Anbieter zuerst, eigener ergänzt"
                             },
-                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, MagentaTV, open-epg, Pluto TV, Samsung TV Plus, Dyn-Spielplan), richtige Zeiten auch nach " +
+                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, open-epg, Pluto TV, Samsung TV Plus), richtige Zeiten auch nach " +
                                 "der Zeitumstellung. Der TV-Guide des Anbieters liegt oft daneben; „Nur eigener“ lädt ihn gar nicht. " +
                                 "Der Guide wird nach dem Umschalten neu geladen.",
                         ) {

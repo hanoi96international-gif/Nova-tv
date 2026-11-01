@@ -114,6 +114,32 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         return best.first.takeIf { scored.count { it.second == best.second } == 1 }
     }
 
+    /** Eine Sport-Sendung ohne bekannte Paarung (für [byElimination]). */
+    data class Open(val title: String, val subtitle: String?, val start: Long, val stop: Long)
+
+    /**
+     * Sendungen ohne Paarung, die weder Paarung noch Stadion zuordnen konnten („Live: 2. BL – Aus dem Millerntor-Stadion“,
+     * der Spielplan kennt das Stadion nicht): Laufen zur selben Zeit drei Zweitliga-Spiele und sind zwei schon anderen
+     * Sendern zugeordnet ([taken]), gehört das übrige zu dieser Sendung. Nur wenn es genau ein übriges Spiel gibt und
+     * keine andere offene Sendung es auch beanspruchen könnte; Konferenzen nie. Ergebnis: Index in [open] → Spiel.
+     */
+    fun byElimination(matches: List<Match>, open: List<Open>, taken: Set<Match>): Map<Int, Match> {
+        val candidates = open.map { o ->
+            val head = o.title + " " + o.subtitle.orEmpty()
+            val league = leagueOf(head)
+            if (MULTI.containsMatchIn(head) || league == null) emptyList()
+            else matches.filter { it.kickoff in (o.start - 15 * MINUTE) until o.stop && it.league == league && it !in taken }
+        }
+        val out = HashMap<Int, Match>()
+        for ((index, list) in candidates.withIndex()) {
+            val only = list.singleOrNull() ?: continue
+            // Eine andere offene Sendung, die dasselbe Spiel (auch unter mehreren) beanspruchen könnte: nicht raten.
+            if (candidates.withIndex().any { (i, other) -> i != index && only in other }) continue
+            out[index] = only
+        }
+        return out
+    }
+
     /** Das Spiel zur TV-Paarung, falls es eins gibt (Anstoß höchstens 3 Stunden neben der Sendung). */
     fun find(matches: List<Match>, pairing: String?, start: Long, context: String = ""): Match? {
         if (pairing == null) return null

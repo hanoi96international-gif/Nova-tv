@@ -118,4 +118,20 @@ class ProgrammeTextTest {
         assertEquals(true, ProgrammeText.isSportChannel("Sky Bundesliga 1 HD"))
         assertEquals(true, ProgrammeText.isSportEvent("Konferenz", null, null, 0, sportChannel = ProgrammeText.isSportChannel("Sky Bundesliga 1 HD")))
     }
+
+    @Test
+    fun sportGroupsKeepDifferentGamesApart() {
+        val desc = "Live-Übertragung der 2. Bundesliga."
+        // Gleicher Allgemeintext auf zwei verschiedenen Sendern: zwei Einträge
+        val a = ProgrammeText.sportGroupKey("Live: 2. BL", null, desc, "sky.bl2.de", "skysportbundesliga2")
+        val b = ProgrammeText.sportGroupKey("Live: 2. BL", null, desc, "sky.bl3.de", "skysportbundesliga3")
+        assertNotEquals(a, b)
+        // Dieselbe Sendung in HD und 4K desselben Senders: ein Eintrag
+        assertEquals(a, ProgrammeText.sportGroupKey("Live: 2. BL", null, desc, "sky.bl2.uhd.de", "skysportbundesliga2"))
+        // Mit Paarung: über alle Sender ein Eintrag
+        assertEquals(
+            ProgrammeText.sportGroupKey("Hannover 96 – Dynamo Dresden", null, null, "x", "skysportbundesliga2"),
+            ProgrammeText.sportGroupKey("Hannover 96 – Dynamo Dresden", null, null, "y", "skysporttopevent"),
+        )
+    }
 }

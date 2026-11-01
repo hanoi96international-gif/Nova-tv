@@ -89,4 +89,32 @@ class LiveScoresTest {
         assertEquals("bl3", LiveScores.leagueOf("3. Liga: Spieltag"))
         assertEquals("bl1", LiveScores.leagueOf("Bundesliga live"))
     }
+
+    /** Foto vom 1.11.: drei Zweitliga-Spiele um 13:30, eines nur mit „Aus dem Millerntor-Stadion“ ohne Ort im Spielplan. */
+    @Test
+    fun remainingMatchByElimination() {
+        val kickoff = 1_761_999_000_000L
+        fun m(id: Long, t1: String, t2: String, league: String = "bl2") = LiveScores.Match(id, league, t1, t1, t2, t2, kickoff, 0, 0, false, 0, null)
+        val hannover = m(1, "Hannover 96", "Dynamo Dresden")
+        val fuerth = m(2, "SpVgg Greuther Fürth", "Holstein Kiel")
+        val third = m(3, "FC St. Pauli", "Hertha BSC")
+        val bl1 = m(4, "FC Bayern München", "Borussia Dortmund", league = "bl1")
+        val matches = listOf(hannover, fuerth, third, bl1)
+        val scores = LiveScores(okhttp3.OkHttpClient())
+        val start = kickoff - 30 * 60_000L
+        val stop = kickoff + 2 * 3_600_000L
+        val open = listOf(
+            LiveScores.Open("Live: 2. BL", null, start, stop),
+            LiveScores.Open("Live: 2. BL: Sonntags-Konferenz – 10. Spieltag", null, start, stop),
+        )
+        // Hannover und Fürth sind über ihre Paarung zugeordnet: das übrige Zweitliga-Spiel gehört zur offenen Sendung.
+        assertEquals(mapOf(0 to third), scores.byElimination(matches, open, setOf(hannover, fuerth)))
+        // Zwei offene Einzelspiel-Sendungen, zwei übrige Spiele: nicht raten
+        val two = listOf(LiveScores.Open("Live: 2. BL", null, start, stop), LiveScores.Open("Live: 2. BL", "Topspiel", start, stop))
+        assertEquals(emptyMap<Int, LiveScores.Match>(), scores.byElimination(matches, two, setOf(hannover)))
+        // Zwei offene Sendungen, ein übriges Spiel: auch nicht (beide könnten es sein)
+        assertEquals(emptyMap<Int, LiveScores.Match>(), scores.byElimination(matches, two, setOf(hannover, fuerth)))
+        // Ohne Liga im Titel: nichts
+        assertEquals(emptyMap<Int, LiveScores.Match>(), scores.byElimination(matches, listOf(LiveScores.Open("Fußball live", null, start, stop)), setOf(hannover, fuerth)))
+    }
 }
