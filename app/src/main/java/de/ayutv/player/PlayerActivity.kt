@@ -368,7 +368,8 @@ class PlayerActivity : ComponentActivity() {
             loudnessLevel = settings.loudnessLevel
             textDisabled = vod != null && !settings.subtitlesAutoOn
             // Bildoptimierung (Full HD): Filme und Folgen gleich mit Profil; bei Sendern entscheidet der erste Start.
-            picturePipelineWanted = pictureAllowed()
+            // Filme: nur, wenn der Titel nicht nach 4K aussieht (4K-Filme laufen unverändert).
+            picturePipelineWanted = pictureAllowed() && vod?.let { de.ayutv.data.parse.ChannelQuality.heightFromName(it.title) <= 1100 } == true
             installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             if (vod != null) updatePictureProfile()
             startWatchdog()
@@ -483,7 +484,9 @@ class PlayerActivity : ComponentActivity() {
      * laufen unverändert). Baut den Player nur um, wenn sich etwas ändert; der Sender startet danach wie gewohnt.
      */
     private fun preparePicture(expectedHeight: Int) {
-        val want = pictureAllowed() && PictureTuning.eligible(expectedHeight, hdr = false)
+        // Nur wenn sicher ist, dass der Sender höchstens Full HD liefert (schon einmal gemessen oder „HD/FHD“ im Namen).
+        // Unbekannt: ohne Bildverarbeitung starten. Sonst liefe ein 4K-Sender erst durch sie und müsste neu starten.
+        val want = pictureAllowed() && expectedHeight in 1..1100
         picturePipelineWanted = want
         if (player != null && want != pictureActive) reinstallPlayer()
     }
@@ -508,7 +511,7 @@ class PlayerActivity : ComponentActivity() {
      * aus ist – sonst ruckelt der Ball bei 60 Hz sichtbar. Gilt nur, solange Sport läuft (Bildoptimierung nicht „Aus“).
      */
     private fun sportFrameRate(fps: Float): Boolean =
-        isLive && settings.pictureTuning != PictureTuning.Mode.OFF &&
+        isLive && settings.sportFrameRate && settings.pictureTuning != PictureTuning.Mode.OFF &&
             (pictureContent == PictureTuning.Content.SPORT || pictureContent == PictureTuning.Content.FOOTBALL) &&
             (fps in 24.5f..25.5f || fps in 49.5f..50.5f)
 
@@ -3289,12 +3292,14 @@ class PlayerActivity : ComponentActivity() {
             rebuildPlayer()
         }
         updatePictureProfile()
-        message = when {
+        val text = when {
             mode == PictureTuning.Mode.OFF -> "Bildoptimierung aus"
             !want && settings.tunneling -> "Bildoptimierung braucht „Tunneling“ aus (Einstellungen → Wiedergabe)"
-            !want -> "Bildoptimierung gilt für Full HD; dieser Sender läuft in 4K/HDR unverändert"
+            !want && height > 1100 -> "Bildoptimierung: ${mode.label} – wirkt bei Full HD, 4K/HDR bleibt unverändert"
             else -> "Bildoptimierung: ${mode.label}"
         }
+        message = text
+        handler.postDelayed({ if (message == text) message = null }, 4_000)
     }
 
     fun chooseAspect(mode: AspectMode) {

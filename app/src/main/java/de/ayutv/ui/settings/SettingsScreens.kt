@@ -350,6 +350,15 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     }
                     item {
                         SettingRow(
+                            "Sportmodus (50 Hz bei Sport)",
+                            onOff(settings.sportFrameRate),
+                            "Bei Sport und Fußball schaltet der Fernseher auf 50 Hz, damit Ball und Schwenks flüssig laufen – auch wenn " +
+                                "„Bildwiederholrate anpassen“ aus ist. Beim Umschalten ist das Bild 1–2 s schwarz. Ausschalten, falls dein " +
+                                "Fernseher damit Probleme hat.",
+                        ) { update { it.copy(sportFrameRate = !it.sportFrameRate) } }
+                    }
+                    item {
+                        SettingRow(
                             "Bildwiederholrate anpassen",
                             onOff(settings.matchFrameRate),
                             "Empfohlen: An. Deutsches TV läuft mit 50 Hz, Filme mit 23,976 Hz – der Fire TV gibt sonst 60 Hz aus, das ruckelt bei " +
