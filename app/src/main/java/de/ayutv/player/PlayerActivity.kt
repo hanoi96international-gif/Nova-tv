@@ -846,6 +846,7 @@ class PlayerActivity : ComponentActivity() {
     private var watchNet = ""
     private var watchWorstRssi = 0
     private var watchTicks = 0
+    private var watchLastError = ""
 
     private fun resetWatchStats() {
         watchStalls = 0
@@ -855,6 +856,7 @@ class PlayerActivity : ComponentActivity() {
         watchRateSeconds = 0
         watchRateLow = 0L
         watchTicks = 0
+        watchLastError = ""
         val net = de.ayutv.data.net.NetInfo.sample(this)
         watchNet = net.label
         watchWorstRssi = net.rssi
@@ -912,6 +914,7 @@ class PlayerActivity : ComponentActivity() {
                 stats.audioCodec, stats.audioChannels.takeIf { it > 0 }?.let { "${it}ch" },
                 if (stats.audioDecoder.isNotBlank()) "im Gerät" else "durchgereicht",
             ).joinToString(" "),
+            lastError = watchLastError,
         )
         val file = java.io.File(filesDir, de.ayutv.data.Diagnostics.WATCH_FILE)
         container.scope.launch(Dispatchers.IO) {
@@ -3675,6 +3678,8 @@ class PlayerActivity : ComponentActivity() {
             playerErrors++
             // Für den Fehlerbericht: welcher Fehler, mit der eigentlichen Ursache.
             statusHistory += "Fehler ${error.errorCodeName}: ${(error.cause?.message ?: error.message).orEmpty().take(140)}"
+            watchLastError = error.errorCodeName.removePrefix("ERROR_CODE_") +
+                ((error.cause?.message ?: error.message)?.takeIf { it.isNotBlank() }?.let { ": ${it.take(100)}" } ?: "")
             if (timeshifted) {
                 if (++timeshiftErrors <= 2) {
                     handler.postDelayed({ if (timeshifted) player?.let { enterTimeshift(currentTimeshiftMs(it), play = true) } }, 500)

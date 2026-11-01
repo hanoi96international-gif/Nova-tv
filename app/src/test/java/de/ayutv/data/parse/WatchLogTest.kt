@@ -56,8 +56,11 @@ class WatchLogTest {
         assertTrue(drops, drops.contains("Verworfene Bilder je Ton: Ton im Gerät dekodiert 7190 (1 Sender)"))
         assertTrue(drops, drops.contains("DE: Sky Sport 1"))
         // Ältere Einträge ohne Ton-Feld lassen sich weiter lesen
-        val old = WatchLog.encode(entry(1L)).substringBeforeLast('\t')
+        val old = WatchLog.encode(entry(1L)).split('\t').dropLast(2).joinToString("\t")
         assertEquals("", WatchLog.decode(old)!!.audio)
+        val failed = entry(now - 500).copy(errors = 4, lastError = "IO_UNSPECIFIED: Zwischenspeicher bekommt keine Daten")
+        assertEquals(failed, WatchLog.decode(WatchLog.encode(failed)))
+        assertTrue(WatchLog.line(failed).contains("Fehler 4 (zuletzt IO_UNSPECIFIED: Zwischenspeicher bekommt keine Daten)"))
         assertEquals("Noch nichts geschaut (gezählt wird ab 30 s je Sender).\n", WatchLog.summary(emptyList(), now))
     }
 }

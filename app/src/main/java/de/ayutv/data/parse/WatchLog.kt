@@ -38,6 +38,8 @@ object WatchLog {
         val worstRssi: Int,
         /** Ton, z. B. „eac3 6ch im Gerät“ oder „eac3 6ch durchgereicht“ (leer bei älteren Einträgen). */
         val audio: String = "",
+        /** Letzter Player-Fehler mit Ursache (leer = keiner). */
+        val lastError: String = "",
     ) {
         val dropCount: Int get() = drops.values.sum()
     }
@@ -60,7 +62,7 @@ object WatchLog {
     fun encode(e: Entry): String = listOf(
         "1", e.at, clean(e.channel), e.watchedS, e.height, e.fps, e.displayHz, clean(e.codec), e.avgKbps, e.lowKbps,
         e.minBufferS, e.stalls, e.stallS, e.drops.entries.joinToString(";") { "${clean(it.key).replace(";", ",").replace("=", "-")}=${it.value}" },
-        e.droppedFrames, e.startMs, e.errors, clean(e.route), clean(e.net), e.worstRssi, clean(e.audio),
+        e.droppedFrames, e.startMs, e.errors, clean(e.route), clean(e.net), e.worstRssi, clean(e.audio), clean(e.lastError).take(160),
     ).joinToString("\t")
 
     fun decode(line: String): Entry? = runCatching {
@@ -73,6 +75,7 @@ object WatchLog {
             drops = f[13].split(';').filter { '=' in it }.associate { it.substringBefore('=') to it.substringAfter('=').toInt() },
             droppedFrames = f[14].toInt(), startMs = f[15].toInt(), errors = f[16].toInt(), route = f[17], net = f[18], worstRssi = f[19].toInt(),
             audio = f.getOrNull(20).orEmpty(),
+            lastError = f.getOrNull(21).orEmpty(),
         )
     }.getOrNull()
 
@@ -152,7 +155,7 @@ object WatchLog {
         if (e.minBufferS >= 0) append(" · Puffer min ${e.minBufferS} s")
         if (e.audio.isNotBlank()) append(" · Ton ${e.audio}")
         if (e.droppedFrames > 0) append(" · verworfen ${e.droppedFrames}")
-        if (e.errors > 0) append(" · Fehler ${e.errors}")
+        if (e.errors > 0) append(" · Fehler ${e.errors}" + (if (e.lastError.isNotBlank()) " (zuletzt ${e.lastError})" else ""))
         if (e.route.isNotBlank()) append(" · ${e.route}")
         if (e.worstRssi < 0) append(" · WLAN bis ${e.worstRssi} dBm")
     }

@@ -576,8 +576,46 @@ class PlaylistRepository(
             if (firstError == null) return
             throw firstError ?: IOException("Kein TV-Guide geladen")
         }
+        // Event-Sender (PPV): das Spiel aus dem Sendernamen als Programm, damit es im TV-Guide und im Sport erscheint.
+        val events = runCatching { eventProgrammes(playlist, channels.filter { it.id !in covered }, taken) }
+            .onFailure { Log.w(TAG, "Events aus Sendernamen", it) }.getOrDefault(emptySet())
+        if (events.isNotEmpty()) {
+            covered += events
+            counts += "Events aus dem Sendernamen" to events.count { it in visible }
+        }
         writeStatus(playlist.id, channels, visible, covered, counts)
         runCatching { File(statusDir, "epg-guide-${playlist.id}.tsv").writeText(guideIndex.joinToString("\n")) }
+    }
+
+    /**
+     * Event-Sender ohne TV-Guide, deren Name das Spiel nennt („NEXT | HSV II VS HANNOVER 96 II | Sun 01 Nov 14:00 CET“):
+     * ein Programmeintrag (Sport, live) unter einer eigenen Kennung je Sender. Liefert die versorgten Sender.
+     */
+    private fun eventProgrammes(playlist: PlaylistEntity, open: List<EpgChannel>, taken: Set<String>): Set<Long> {
+        val now = System.currentTimeMillis()
+        val found = HashSet<Long>()
+        val rows = ArrayList<ProgrammeEntity>()
+        val assign = ArrayList<Pair<Long, String>>()
+        // Teilen sich mehrere Event-Sender eine Kennung des Anbieters, bekäme jeder alle Spiele: dann eine eigene.
+        val shared = open.mapNotNull { it.epgId?.takeIf { id -> id.isNotBlank() } }.groupingBy { it }.eachCount()
+        for (channel in open) {
+            val event = de.ayutv.data.parse.EventNames.parse(channel.name, now) ?: continue
+            if (event.stop < now) continue
+            val own = channel.epgId?.takeIf { it.isNotBlank() && shared[it] == 1 && it !in taken }
+            val storage = own ?: "event:${channel.id}"
+            rows += ProgrammeEntity(
+                playlistId = playlist.id, channelEpgId = storage, start = event.start, stop = event.stop,
+                title = event.title, description = null, category = "Sport", flags = de.ayutv.data.db.ProgrammeFlags.LIVE,
+            )
+            if (own == null) assign += channel.id to storage
+            found += channel.id
+        }
+        if (rows.isNotEmpty()) db.runInTransaction(Runnable {
+            db.programmes().insertAll(rows)
+            for ((id, storage) in assign) db.channels().setEpgId(id, storage)
+        })
+        if (found.isNotEmpty()) Log.i(TAG, "Events aus Sendernamen: ${found.size} Sender")
+        return found
     }
 
     /** Ein Sender aus einem der geladenen EPGs (für die Auswahl „Programm zuordnen“). */
@@ -592,7 +630,10 @@ class PlaylistRepository(
     }.getOrDefault(emptyList())
 
     private fun writeStatus(playlistId: Long, channels: List<EpgChannel>, visible: Set<Long>, covered: Set<Long>, counts: List<Pair<String, Int>>) {
-        val shown = channels.filter { it.id in visible }
+        // Trennzeilen („##### SKY MOVIES #####“) und Event-Sender ohne Event sind keine Sender mit Programm.
+        val shown = channels.filter {
+            it.id in visible && !de.ayutv.data.parse.EventNames.isSeparator(it.name) && !de.ayutv.data.parse.EventNames.isIdle(it.name)
+        }
         val missing = shown.filter { it.id !in covered }.distinctBy { it.groupTitle.trim() to it.name.trim() }
         runCatching {
             statusDir.mkdirs()
