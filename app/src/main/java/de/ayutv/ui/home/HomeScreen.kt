@@ -85,6 +85,17 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
         nowMap = content.nowPlaying(recentChannels + favorites + recommendations.flatMap { it.channels })
     }
 
+    // „Jetzt live im Sport“: laufende Spiele aller Sender (auch Event-Sender mit Spiel im Namen). Abseits der
+    // Oberfläche berechnet und nur alle 5 Minuten, damit die Startseite beim Bedienen nichts kostet.
+    var liveSport by remember { mutableStateOf<List<de.ayutv.data.repo.ContentRepository.SportEvent>>(emptyList()) }
+    LaunchedEffect(minute / SPORT_REFRESH_MS) {
+        val now = System.currentTimeMillis()
+        liveSport = runCatching { content.sportEvents(hours = 1, now = now) }.getOrDefault(emptyList())
+            .filter { it.programme.start <= now && it.programme.stop > now }
+            .distinctBy { it.channel.key } // Schlüssel der Reihe müssen eindeutig sein
+            .take(20)
+    }
+
     val nothingYet = continueWatching.isEmpty() && recentChannels.isEmpty() && favorites.isEmpty() &&
         recentMovies.isEmpty() && recentSeries.isEmpty() && watchMovies.isEmpty() && watchSeries.isEmpty()
 
@@ -134,6 +145,17 @@ fun HomeScreen(onOpenSeries: (SeriesEntity) -> Unit) {
 
         spotlight?.let { spot ->
             item(key = "spotlight", contentType = "spotlight") { SpotlightCard(spot) }
+        }
+
+        if (liveSport.isNotEmpty()) {
+            item(key = "liveSport", contentType = "channelRow") {
+                ChannelRow(
+                    "● Jetzt live im Sport",
+                    liveSport.map { it.channel },
+                    liveSport.mapNotNull { e -> e.channel.epgId?.let { it to e.programme } }.toMap(),
+                    onPlay = { PlayerActivity.startLive(context, it.key, it.groupTitle) },
+                )
+            }
         }
 
         if (nothingYet) {
@@ -360,6 +382,9 @@ private class Spotlight(
     val logo: String? = null,
     val play: () -> Unit,
 )
+
+/** Wie oft die Reihe „Jetzt live im Sport“ neu berechnet wird. */
+private const val SPORT_REFRESH_MS = 5 * 60_000L
 
 private fun greeting(now: Long): String = when (java.util.Calendar.getInstance().apply { timeInMillis = now }.get(java.util.Calendar.HOUR_OF_DAY)) {
     in 5..10 -> "Guten Morgen"

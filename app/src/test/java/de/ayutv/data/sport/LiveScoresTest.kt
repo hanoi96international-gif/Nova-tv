@@ -11,8 +11,8 @@ class LiveScoresTest {
     // Gekürzt aus https://api.openligadb.de/getmatchdata/bl1
     private val body = """
         [{"matchID":72001,"matchDateTimeUTC":"2026-10-31T14:30:00Z","leagueShortcut":"bl1",
-          "team1":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund"},
-          "team2":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt"},
+          "team1":{"teamId":7,"teamName":"Borussia Dortmund","shortName":"Dortmund","teamIconUrl":"https://upload.wikimedia.org/bvb.png"},
+          "team2":{"teamId":91,"teamName":"Eintracht Frankfurt","shortName":"Frankfurt","teamIconUrl":"https://upload.wikimedia.org/sge.svg"},
           "matchIsFinished":false,"matchResults":[],
           "goals":[{"goalID":1,"scoreTeam1":1,"scoreTeam2":0,"matchMinute":12,"goalGetterName":"Guirassy"},
                    {"goalID":3,"scoreTeam1":2,"scoreTeam2":1,"matchMinute":67,"goalGetterName":"Adeyemi"},
@@ -37,6 +37,10 @@ class LiveScoresTest {
         assertFalse(bvb.finished)
         assertEquals("3:0", matches[1].score)
         assertTrue(matches[1].finished)
+        // Wappen: Rastergrafik ja, SVG nein (zeigt der Bildlader nicht an), fehlend = null
+        assertEquals("https://upload.wikimedia.org/bvb.png", bvb.icon1)
+        assertNull(bvb.icon2)
+        assertNull(matches[1].icon1)
     }
 
     @Test

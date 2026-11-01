@@ -168,6 +168,10 @@ interface ChannelDao {
     @Query("UPDATE channels SET epgId = :epgId WHERE id = :id")
     fun setEpgId(id: Long, epgId: String)
 
+    /** Logo aus dem TV-Guide, nur wenn der Anbieter keines liefert. */
+    @Query("UPDATE channels SET logo = :logo WHERE id = :id AND (logo IS NULL OR logo = '')")
+    fun setLogoIfMissing(id: Long, logo: String)
+
     @Query("SELECT id, `key` FROM channels WHERE playlistId = :playlistId")
     suspend fun keysFor(playlistId: Long): List<ChannelKeyId>
 
