@@ -146,6 +146,9 @@ data class UserData(
     /** Länge von Filmen und Folgen (ms), für „gesehen“ und Fortschrittsbalken. */
     val durations: Map<String, Long> = emptyMap(),
     val openSubtitlesKey: String = "",
+    /** OpenSubtitles-Konto (z. B. VIP): höheres Tageskontingent. Kommt auch mit der Sicherung vom Fire TV. */
+    val openSubtitlesUser: String = "",
+    val openSubtitlesPassword: String = "",
     val deeplKey: String = "",
     val subtitleLanguage: String = "de",
     /** Handy als Fernbedienung eingeschaltet, und die PIN in der Adresse. */

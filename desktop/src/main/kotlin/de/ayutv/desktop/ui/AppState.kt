@@ -738,7 +738,11 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     fun loadSubtitles(vod: Playback.Vod) = scope.launch {
         val user = store.user.value
         runCatching {
-            subtitles.find(vod.key, vod.title, user.subtitleLanguage.ifBlank { "de" }, user.openSubtitlesKey, user.deeplKey) { toast(it) }
+            subtitles.find(
+                vod.key, vod.title, vod.url, user.subtitleLanguage.ifBlank { "de" },
+                de.ayutv.desktop.player.Subtitles.Account(user.openSubtitlesKey, user.openSubtitlesUser, user.openSubtitlesPassword),
+                user.deeplKey,
+            ) { toast(it) }
         }.onSuccess { found ->
             if ((playing as? Playback.Vod)?.key != vod.key) return@onSuccess
             val text = withContext(Dispatchers.IO) { found.file.readText() }
