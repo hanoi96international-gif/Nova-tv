@@ -4001,7 +4001,8 @@ class PlayerActivity : ComponentActivity() {
                     overlay == Overlay.CHANNELS && miniVideo -> finish()
                     overlay != Overlay.NONE -> closeOverlay()
                     // Live-TV: erst Senderliste mit kleinem Bild, statt sofort zu den Menüs.
-                    isLive && channels.isNotEmpty() && pipPlayer == null -> openMiniChannelList()
+                    // (Nur mit genug Breite für Liste und Bild daneben, nicht auf dem Handy im Hochformat.)
+                    isLive && channels.isNotEmpty() && pipPlayer == null && resources.configuration.screenWidthDp >= 900 -> openMiniChannelList()
                     else -> finish()
                 }
             }

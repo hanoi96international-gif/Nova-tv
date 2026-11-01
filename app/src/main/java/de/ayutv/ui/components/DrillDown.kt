@@ -89,7 +89,9 @@ fun Modifier.drillContent(state: DrillDown, backEnabled: Boolean = true): Modifi
         state.enterUntil = 0L
     }
     return this
-        .onFocusChanged { if (it.hasFocus) state.opened() }
+        // Nur mit Fernbedienung oder Tastatur: Per Touch bekommt eine angetippte Zeile auch den Fokus, dann
+        // verschwänden die Gruppen schon beim Antippen. Dort öffnet nur das Antippen einer Gruppe.
+        .onFocusChanged { if (it.hasFocus && inputMode.inputMode != InputMode.Touch) state.opened() }
         .focusProperties {
             onExit = {
                 if (requestedFocusDirection == FocusDirection.Left && state.isOpen) {
