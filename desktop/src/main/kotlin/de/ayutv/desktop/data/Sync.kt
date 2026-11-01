@@ -182,6 +182,7 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                 for (url in sources) {
                     val missing = channels.filter { it.key !in guide }
                     if (missing.isEmpty()) break
+                    if (!EpgSources.relevant(url, missing.map { it.name })) continue
                     _status.value = "TV-Guide: ${EpgSources.label(url)} …"
                     runCatching { readGuide(url, missing, from, until, guide) }
                 }

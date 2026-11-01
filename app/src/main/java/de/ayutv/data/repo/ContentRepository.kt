@@ -133,7 +133,11 @@ class ContentRepository(
      * Sport von jetzt bis [hours] Stunden: nur Spiele und Live-Übertragungen (keine Magazine, Wiederholungen).
      * Läuft dasselbe Spiel auf mehreren Sendern, erscheint es einmal (bevorzugt auf einem Favoriten).
      */
-    suspend fun sportEvents(hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> {
+    // Komplett abseits der Oberfläche: Der Sportbereich fragt jede Minute bis zu 65.000 Sendungen ab.
+    suspend fun sportEvents(hours: Int = 36, now: Long = System.currentTimeMillis()): List<SportEvent> =
+        withContext(Dispatchers.Default) { sportEventsNow(hours, now) }
+
+    private suspend fun sportEventsNow(hours: Int, now: Long): List<SportEvent> {
         // Was jetzt läuft, vollständig (höchstens eine Sendung je Sender); danach die kommenden bis zur Grenze.
         // Vorher war eine gemeinsame Grenze von 4000 bei großen Senderlisten schnell erreicht.
         val airing = db.programmes().sportBetween(now, now + 1, 50_000)
@@ -308,7 +312,11 @@ class ContentRepository(
     }
 
     /** Aktuelle Sendung je EPG-ID. */
-    suspend fun nowPlaying(channels: List<ChannelEntity>, at: Long = System.currentTimeMillis()): Map<String, ProgrammeEntity> {
+    // Abseits der Oberfläche: Live TV fragt das jede Minute für tausende Sender ab.
+    suspend fun nowPlaying(channels: List<ChannelEntity>, at: Long = System.currentTimeMillis()): Map<String, ProgrammeEntity> =
+        withContext(Dispatchers.Default) { nowPlayingNow(channels, at) }
+
+    private suspend fun nowPlayingNow(channels: List<ChannelEntity>, at: Long): Map<String, ProgrammeEntity> {
         val ids = channels.mapNotNull { it.epgId?.takeIf(String::isNotEmpty) }.distinct()
         if (ids.isEmpty()) return emptyMap()
         val result = HashMap<String, ProgrammeEntity>()
@@ -327,9 +335,11 @@ class ContentRepository(
     suspend fun programmesInRange(channels: List<ChannelEntity>, from: Long, to: Long): Map<String, List<ProgrammeEntity>> {
         val ids = channels.mapNotNull { it.epgId?.takeIf(String::isNotEmpty) }.distinct()
         if (ids.isEmpty()) return emptyMap()
-        // Mehrere Playlists mit denselben Sendern: jede Sendung nur einmal.
-        return ids.chunked(SQL_CHUNK).flatMap { db.programmes().inRange(it, from, to) }.groupBy { it.channelEpgId }
-            .mapValues { (_, list) -> list.distinctBy { it.start } }
+        val rows = ids.chunked(SQL_CHUNK).flatMap { db.programmes().inRange(it, from, to) }
+        // Mehrere Playlists mit denselben Sendern: jede Sendung nur einmal. Abseits der Oberfläche (tausende Sendungen).
+        return withContext(Dispatchers.Default) {
+            rows.groupBy { it.channelEpgId }.mapValues { (_, list) -> list.distinctBy { it.start }.sortedBy { it.start } }
+        }
     }
 
     /** Archiv-Adresse einer vergangenen Sendung oder null (Sender ohne Archiv, zu alt). */
@@ -500,6 +510,23 @@ class ContentRepository(
     }
 
     data class NextEpisode(val series: SeriesEntity, val episode: XtreamEpisode, val url: String)
+
+    /** Die nächsten [count] Folgen nach [episodeKey] (eine Abfrage beim Anbieter für alle). */
+    suspend fun nextEpisodes(episodeKey: String, count: Int): List<NextEpisode> {
+        val seriesKey = Episodes.seriesKeyOf(episodeKey) ?: return emptyList()
+        var currentId = Episodes.episodeIdOf(episodeKey) ?: return emptyList()
+        val series = db.series().byKey(seriesKey) ?: return emptyList()
+        val list = runCatching { episodes(series) }.getOrNull() ?: return emptyList()
+        val plain = list.map { it.first }
+        val out = ArrayList<NextEpisode>()
+        repeat(count) {
+            val next = Episodes.next(plain, currentId) ?: return out
+            val url = list.firstOrNull { it.first.id == next.id }?.second ?: return out
+            out += NextEpisode(series, next, url)
+            currentId = next.id
+        }
+        return out
+    }
 
     /** Die Folge nach [episodeKey] („<Serie>:e:<Folge>“), über das Staffelende hinweg; null bei der letzten. */
     suspend fun nextEpisode(episodeKey: String): NextEpisode? {

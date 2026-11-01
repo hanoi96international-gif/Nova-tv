@@ -67,10 +67,22 @@ object Diagnostics {
         section("Oberfläche")
         out.append("Menüs: ${de.ayutv.ui.UiPerformance.summary()}\n")
 
+        // Reiter „Apps“: welche Fassung erkannt wurde, und alle Pakete mit passendem Namen (falls die Erkennung irrt).
+        section("Apps")
+        de.ayutv.data.parse.StreamingApps.ALL.forEach { app ->
+            val found = runCatching { de.ayutv.ui.apps.AppLauncher.installed(context, app) }.getOrNull()
+            out.append("${app.name}: ${found ?: "nicht gefunden"}\n")
+        }
+        runCatching {
+            val words = listOf("youtube", "netflix", "spotify", "avod", "primevideo", "amazonvideo", "firebat")
+            context.packageManager.getInstalledApplications(0).map { it.packageName }.filter { p -> words.any { it in p.lowercase() } }
+                .sorted().takeIf { it.isNotEmpty() }?.let { out.append("Pakete: ${it.joinToString()}\n") }
+        }
+
         section("Einstellungen")
         runCatching {
             val s = container.settings.current()
-            out.append("Puffer ${s.bufferProfile}, Live ${s.liveFormat}, Tunneling ${s.tunneling}, asynchron ${s.asyncDecoding}, Bildrate ${s.matchFrameRate}, Ton ${s.audioOutput}\n")
+            out.append("Puffer ${s.bufferProfile}, Live ${s.liveFormat}, Tunneling ${s.tunneling}, Bildrate ${s.matchFrameRate}, Ton ${s.audioOutput}\n")
             out.append("Untertitel ${s.subtitleLanguage}, automatisch ${s.subtitlesAutoOn}, OpenSubtitles ${s.onlineSubtitles}" +
                 " (eigener Schlüssel ${s.openSubtitlesKey.isNotBlank()}, Konto ${s.openSubtitlesUser.isNotBlank()})\n")
             out.append("Übersetzung ${s.translationProvider}, zuletzt ${s.lastTranslationTarget.ifEmpty { "-" }}" +

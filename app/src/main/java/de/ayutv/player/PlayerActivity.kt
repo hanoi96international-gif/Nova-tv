@@ -57,7 +57,6 @@ import de.ayutv.data.Languages
 import de.ayutv.data.record.Recording
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
-import de.ayutv.data.parse.PictureTuning
 import de.ayutv.data.IntroStore
 import de.ayutv.hideSystemBars
 import de.ayutv.ui.components.FitToScreen
@@ -96,7 +95,6 @@ class PlayerActivity : ComponentActivity() {
     private var trackSelector: DefaultTrackSelector? = null
     /** Beim Laden mitgelesene eingebettete Untertitel (für Übersetzung mit Vorlauf). */
     private var embedded: EmbeddedSubtitles? = null
-    private var asyncDecodingActive = false
     private var forcePcmActive = false
     private val rebufferTimes = ArrayDeque<Long>()
     private var bufferAdviceShown = false
@@ -367,10 +365,7 @@ class PlayerActivity : ComponentActivity() {
             enhance.leveling = settings.loudnessLevel
             loudnessLevel = settings.loudnessLevel
             textDisabled = vod != null && !settings.subtitlesAutoOn
-            // Bildoptimierung (Full HD): Filme und Folgen gleich mit Profil; bei Sendern entscheidet der erste Start.
-            picturePipelineWanted = pictureAllowed()
-            installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
-            if (vod != null) updatePictureProfile()
+            installPlayer(settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
             startGoalWatch()
 
@@ -423,9 +418,9 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Stabilität
 
-    private fun installPlayer(asyncDecoding: Boolean, forcePcm: Boolean) {
+    private fun installPlayer(forcePcm: Boolean) {
         val built = PlayerFactory.create(
-            this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm,
+            this, container.http, settings, live = vod == null, forcePcm = forcePcm,
             speech = heardSpeech.takeIf { vod != null },
             timeshift = timeshift.takeIf { vod == null },
             enhance = enhance,
@@ -438,147 +433,16 @@ class PlayerActivity : ComponentActivity() {
         }
         embedded = built.subtitles
         built.subtitles.audio = audioAhead
-        asyncDecodingActive = asyncDecoding
         forcePcmActive = forcePcm
         built.player.addListener(playerListener)
         built.player.addAnalyticsListener(analyticsListener)
         cushionActive = false
         streamGeneration++
-        // Bildoptimierung: Die Bildverarbeitung muss vor dem ersten Start stehen; die Werte je Inhalt
-        // wechseln danach ohne Neustart.
-        pictureActive = false
-        if (picturePipelineWanted) {
-            val profile = pictureProfile ?: PictureTuning.profile(PictureTuning.Content.OTHER, settings.pictureTuning)
-            if (profile != null) runCatching {
-                built.player.setVideoEffects(PictureEffects.of(profile, upscale = !de.ayutv.ui.UiPerformance.reduced))
-                pictureActive = true
-                pictureApplied = profile
-            }.onFailure { Log.w(TAG, "Bildoptimierung nicht verfügbar", it); pictureFailed = true }
-        }
         player = built.player
     }
 
-    // ---------------------------------------------------------------- Bildoptimierung
-
-    /** Soll der nächste Player die Bildverarbeitung bekommen? */
-    private var picturePipelineWanted = true
-    /** Hat der aktuelle Player die Bildverarbeitung? */
-    private var pictureActive = false
-    /** Gewünschtes und angewandtes Profil (Film, Sport, Fußball …). */
-    private var pictureProfile: PictureTuning.Profile? = null
-    private var pictureApplied: PictureTuning.Profile? = null
-    private var pictureDropsAt = 0
-    private var pictureDropsCheckedAt = 0L
-
-    /** Bildoptimierung grundsätzlich möglich (Einstellung, kein Tunneling, kein Emulator, kein Fehler bisher)? */
-    private fun pictureAllowed(): Boolean =
-        settings.pictureTuning != PictureTuning.Mode.OFF && !settings.tunneling && !pictureFailed && !isEmulator()
-
-    private fun isEmulator(): Boolean =
-        Build.FINGERPRINT.startsWith("generic") || Build.HARDWARE.contains("ranchu") || Build.HARDWARE.contains("goldfish") ||
-            Build.PRODUCT.contains("sdk")
-
-    /**
-     * Vor dem Start eines Senders: Bildverarbeitung passend zur erwarteten Auflösung ein- oder ausbauen (4K und HDR
-     * laufen unverändert). Baut den Player nur um, wenn sich etwas ändert; der Sender startet danach wie gewohnt.
-     */
-    private fun preparePicture(expectedHeight: Int) {
-        val want = pictureAllowed() && PictureTuning.eligible(expectedHeight, hdr = false)
-        picturePipelineWanted = want
-        if (player != null && want != pictureActive) reinstallPlayer()
-    }
-
-    /** Player neu aufbauen, ohne etwas zu starten (der Aufrufer startet gleich den nächsten Sender). */
-    private fun reinstallPlayer() {
-        val old = player ?: return
-        val parameters = old.trackSelectionParameters
-        val userAgent = headers?.userAgent
-        old.removeListener(playerListener)
-        old.release()
-        installPlayer(asyncDecodingActive, forcePcmActive)
-        player?.trackSelectionParameters = parameters
-        userAgent?.let { headers?.userAgent = it }
-    }
-
-    /** Was gerade läuft (Film, Sport, Fußball …), auch wenn die Bildoptimierung aus ist. */
-    private var pictureContent: PictureTuning.Content? = null
-
-    /**
-     * Sportmodus: Bei Sport und Fußball mit 25/50 Bildern auf 50 Hz umschalten, auch wenn „Bildwiederholrate anpassen“
-     * aus ist – sonst ruckelt der Ball bei 60 Hz sichtbar. Gilt nur, solange Sport läuft (Bildoptimierung nicht „Aus“).
-     */
-    private fun sportFrameRate(fps: Float): Boolean =
-        isLive && settings.pictureTuning != PictureTuning.Mode.OFF &&
-            (pictureContent == PictureTuning.Content.SPORT || pictureContent == PictureTuning.Content.FOOTBALL) &&
-            (fps in 24.5f..25.5f || fps in 49.5f..50.5f)
-
-    /** Profil je Inhalt wählen und (wenn die Bildverarbeitung läuft) sofort anwenden. */
-    private fun updatePictureProfile() {
-        val channel = playing
-        val request = vod
-        val content = when {
-            request != null -> PictureTuning.classify(
-                request.title, vodMovie = request.kind == HistoryKind.VOD, vodEpisode = request.kind == HistoryKind.EPISODE,
-            )
-            channel != null -> {
-                val now = System.currentTimeMillis()
-                val programme = nowNext.firstOrNull { it.start <= now && it.stop > now }
-                PictureTuning.classify(channel.name, programme?.title, programme?.subtitle, programme?.category)
-            }
-            else -> PictureTuning.Content.OTHER
-        }
-        val sportBefore = pictureContent == PictureTuning.Content.SPORT || pictureContent == PictureTuning.Content.FOOTBALL
-        pictureContent = content
-        // Sport hat gerade begonnen: gleich auf 50 Hz, nicht erst beim nächsten Formatwechsel.
-        if (!sportBefore && !settings.matchFrameRate) stats.frameRate.takeIf(::sportFrameRate)?.let(frameRateMatcher::match)
-        val profile = PictureTuning.profile(content, settings.pictureTuning)
-        pictureProfile = profile
-        val p = player ?: return
-        if (!pictureActive || profile == null || profile == pictureApplied) return
-        runCatching { p.setVideoEffects(PictureEffects.of(profile, upscale = !de.ayutv.ui.UiPerformance.reduced)) }
-            .onSuccess { pictureApplied = profile; stats = stats.copy(picture = profile.label) }
-            .onFailure { Log.w(TAG, "Bildprofil nicht gesetzt", it) }
-    }
-
-    /**
-     * Nach dem Start: Ist das Bild doch 4K oder HDR, die Bildverarbeitung ausbauen (einmal kurz neu starten). Ruckelt
-     * es mit ihr (Gerät zu langsam), für diese Sitzung abschalten.
-     */
-    private fun checkPicture(video: androidx.media3.common.Format?) {
-        if (!pictureActive || video == null || video.height <= 0) return
-        val transfer = video.colorInfo?.colorTransfer
-        val hdr = transfer == C.COLOR_TRANSFER_ST2084 || transfer == C.COLOR_TRANSFER_HLG || video.sampleMimeType == MimeTypes.VIDEO_DOLBY_VISION
-        if (!PictureTuning.eligible(video.height, hdr)) {
-            picturePipelineWanted = false
-            handler.post { rebuildPlayer() }
-            return
-        }
-        stats = stats.copy(
-            picture = pictureApplied?.label.orEmpty() +
-                if (video.height in 1 until 1000 && !de.ayutv.ui.UiPerformance.reduced) " · hochgerechnet ${video.height}p → 1080p" else "",
-        )
-        val now = SystemClock.elapsedRealtime()
-        if (pictureDropsCheckedAt == 0L) {
-            pictureDropsCheckedAt = now
-            pictureDropsAt = stats.droppedFrames
-            return
-        }
-        val elapsed = now - pictureDropsCheckedAt
-        if (elapsed < 25_000) return
-        val dropped = stats.droppedFrames - pictureDropsAt
-        pictureDropsCheckedAt = now
-        pictureDropsAt = stats.droppedFrames
-        if (everReady && dropped > 60 && elapsed < 70_000) {
-            // Über 60 verworfene Bilder in einer halben Minute: Das Gerät schafft die Bildverarbeitung nicht.
-            pictureFailed = true
-            picturePipelineWanted = false
-            subtitleStatus = "Bildoptimierung pausiert: Das Gerät kommt nicht mit (Bild ruckelte). Wieder an: App neu starten"
-            handler.post { rebuildPlayer() }
-        }
-    }
-
     /** Player mit anderer Decoder-Konfiguration neu aufbauen und an derselben Stelle weiterspielen. */
-    private fun rebuildPlayer(asyncDecoding: Boolean = asyncDecodingActive, forcePcm: Boolean = forcePcmActive) {
+    private fun rebuildPlayer(forcePcm: Boolean = forcePcmActive) {
         val old = player ?: return
         val item = old.currentMediaItem
         val position = old.currentPosition
@@ -586,7 +450,7 @@ class PlayerActivity : ComponentActivity() {
         val userAgent = headers?.userAgent
         old.removeListener(playerListener)
         old.release()
-        installPlayer(asyncDecoding, forcePcm)
+        installPlayer(forcePcm)
         val p = player ?: return
         userAgent?.let { headers?.userAgent = it }
         p.trackSelectionParameters = parameters
@@ -618,21 +482,9 @@ class PlayerActivity : ComponentActivity() {
         var framesAdvancing = false
         var frozenVideoSeconds = 0
         var seenGeneration = -1
-        var pictureTick = 0
         while (true) {
             delay(1_000)
             val p = player ?: continue
-            // Bildoptimierung: jede halbe Minute prüfen, ob eine neue Sendung läuft (Nachrichten → Fußball),
-            // und ob das Gerät mitkommt.
-            if (++pictureTick >= 30) {
-                pictureTick = 0
-                if (pictureActive) {
-                    val now = System.currentTimeMillis()
-                    val shown = nowNext.firstOrNull { it.start <= now && it.stop > now }
-                    if (isLive && shown == null) playing?.let { loadChannelInfo(it) } else updatePictureProfile()
-                    checkPicture(p.videoFormat)
-                }
-            }
             if (isLive) {
                 updateTimeshiftState(p)
                 checkDrops()
@@ -705,18 +557,9 @@ class PlayerActivity : ComponentActivity() {
         // Unsichtbar überbrückt (der Puffer lief weiter): kein Hinweis, nur in der Stream-Info und im Fehlerbericht.
         while (liveStalls.isNotEmpty() && now - liveStalls.first() > DROP_WINDOW_MS) liveStalls.removeFirst()
         if (recent.size < DROP_WARN_COUNT || liveStalls.isEmpty()) return
-        // TS-Verbindungen reißen immer wieder ab, der Anbieter beendet sie: für diese Sitzung HLS versuchen (kurze
-        // Abrufe statt einer Dauerverbindung, die viele Anbieter regelmäßig kappen).
+        // Kein automatischer Wechsel auf HLS mehr (0.45): Der Neustart war selbst ein sichtbarer Hänger, und HLS lief
+        // bei vielen Anbietern schlechter. Wer HLS will, stellt es unter Einstellungen → Wiedergabe ein.
         val channel = playing
-        if (closed >= DROP_WARN_COUNT && !sessionHls && settings.liveFormat == LiveFormat.TS && channel != null &&
-            "/live/" in channel.url && channel.url.endsWith(".ts")
-        ) {
-            sessionHls = true
-            statusHistory += "Wechsel auf HLS für diese Sitzung (TS-Verbindung wurde $closed× beendet)"
-            val text = "Der Anbieter beendet die Verbindung immer wieder. DnA-TV wechselt für diese Sitzung auf HLS – das ist robuster."
-            handler.post { playChannel(channel); message = text; handler.postDelayed({ if (message == text) message = null }, 8_000) }
-            return
-        }
         if (message == null && (dropWarnedAt == 0L || now - dropWarnedAt > DROP_WINDOW_MS)) {
             dropWarnedAt = now
             val oneConnection = channel?.let { container.accountLimits.maxConnections(it.playlistId) } == 1
@@ -739,8 +582,6 @@ class PlayerActivity : ComponentActivity() {
     /** Sichtbare Hänger im Live-Bild (Puffer leer), für die Einordnung der Trennungen. */
     private val liveStalls = ArrayDeque<Long>()
     private var liveWaiting = false
-    /** Diese Sitzung über HLS statt TS (der Anbieter beendet TS-Verbindungen zu oft). */
-    private var sessionHls = false
 
     /**
      * Der Fernseher wechselt die Bildwiederholrate: HDMI synchronisiert neu, Bild und Ton fallen
@@ -831,7 +672,7 @@ class PlayerActivity : ComponentActivity() {
         stats = stats.copy(frameRate = snapped, frameRateMeasured = true, displayHz = frameRateMatcher.currentRefreshRate())
         memoryKey()?.let { container.playerMemory.rememberFrameRate(it, snapped, isLive) }
         suggestFrameRateMatching()
-        if (settings.matchFrameRate || sportFrameRate(snapped)) frameRateMatcher.match(snapped)
+        if (settings.matchFrameRate) frameRateMatcher.match(snapped)
     }
 
     /** Mehrfaches Nachladen in kurzer Zeit: größeren Puffer empfehlen (einmal pro Sitzung). */
@@ -1069,8 +910,6 @@ class PlayerActivity : ComponentActivity() {
     }
 
     fun playChannel(channel: ChannelEntity) {
-        // Bildoptimierung nur für Full HD und kleiner: vorher passend auf- oder abbauen.
-        preparePicture(de.ayutv.data.parse.ChannelQuality.height(channel.key, channel.name))
         val p = player ?: return
         recordWatch()
         watchStartedAt = SystemClock.elapsedRealtime()
@@ -1269,7 +1108,6 @@ class PlayerActivity : ComponentActivity() {
         infoJob = lifecycleScope.launch {
             nowNext = container.content.upcoming(channel, 3)
             isFavorite = container.db.favorites().isFavorite(channel.key)
-            updatePictureProfile()
         }
     }
 
@@ -1310,7 +1148,16 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun adaptLiveUrl(url: String): String =
-        if ((settings.liveFormat == LiveFormat.HLS || sessionHls) && "/live/" in url && url.endsWith(".ts")) url.removeSuffix(".ts") + ".m3u8" else url
+        if (settings.liveFormat == LiveFormat.HLS && "/live/" in url && url.endsWith(".ts") &&
+            de.ayutv.data.net.AppProxy.hostOf(url).let { it == null || it !in noHlsHosts }
+        ) url.removeSuffix(".ts") + ".m3u8" else url
+
+    /** Läuft gerade die HLS-Fassung eines eigentlich als MPEG-TS gelieferten Senders (Einstellung „Live-Format: HLS“)? */
+    private fun playingAdaptedHls(p: ExoPlayer): Boolean {
+        val channelUrl = playing?.url ?: return false
+        val now = p.currentMediaItem?.localConfiguration?.uri?.toString() ?: return false
+        return channelUrl.endsWith(".ts") && now.endsWith(".m3u8")
+    }
 
     fun toggleFavorite() {
         val channel = current ?: return
@@ -3271,32 +3118,6 @@ class PlayerActivity : ComponentActivity() {
         showGestureInfo(if (fill) "Bild füllt den Bildschirm" else "Ganzes Bild")
     }
 
-    /** Aktive Bildoptimierung für das Menü („Fußball“, „Film“ …; leer = keine). */
-    val pictureLabel: String get() = if (pictureActive) pictureApplied?.label.orEmpty() else ""
-    val pictureMode: PictureTuning.Mode get() = settings.pictureTuning
-
-    /** Bildoptimierung im ☰-Menü umschalten: gilt sofort (wenn nötig kurzer Neustart des Streams) und bleibt gespeichert. */
-    fun choosePictureMode(mode: PictureTuning.Mode) {
-        if (mode == settings.pictureTuning) return
-        settings = settings.copy(pictureTuning = mode)
-        container.scope.launch { container.settings.update { it.copy(pictureTuning = mode) } }
-        if (mode != PictureTuning.Mode.OFF) pictureFailed = false
-        val height = stats.height.takeIf { it > 0 } ?: playing?.let { de.ayutv.data.parse.ChannelQuality.height(it.key, it.name) } ?: 0
-        val want = pictureAllowed() && PictureTuning.eligible(height, hdr = stats.hdr.isNotEmpty())
-        picturePipelineWanted = want
-        pictureApplied = null
-        if (want != pictureActive) {
-            rebuildPlayer()
-        }
-        updatePictureProfile()
-        message = when {
-            mode == PictureTuning.Mode.OFF -> "Bildoptimierung aus"
-            !want && settings.tunneling -> "Bildoptimierung braucht „Tunneling“ aus (Einstellungen → Wiedergabe)"
-            !want -> "Bildoptimierung gilt für Full HD; dieser Sender läuft in 4K/HDR unverändert"
-            else -> "Bildoptimierung: ${mode.label}"
-        }
-    }
-
     fun chooseAspect(mode: AspectMode) {
         aspect = mode
         memoryKey()?.let { key -> container.playerMemory.update(key) { it.copy(aspect = mode) } }
@@ -3759,23 +3580,6 @@ class PlayerActivity : ComponentActivity() {
             val p = player ?: return
             Log.w(TAG, "Wiedergabefehler ${error.errorCodeName}", error)
             playerErrors++
-            // Automatisch auf HLS gewechselt, aber das liefert der Anbieter nicht: zurück zu TS.
-            if (sessionHls && !everReady && settings.liveFormat == LiveFormat.TS) {
-                sessionHls = false
-                statusHistory += "HLS geht bei diesem Anbieter nicht (${error.errorCodeName}), zurück zu TS"
-                playing?.let { channel -> handler.post { playChannel(channel) } }
-                return
-            }
-            // Bildoptimierung scheitert auf diesem Gerät: ohne sie neu starten und für diese Sitzung aus lassen.
-            if (pictureActive && (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED ||
-                    error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)
-            ) {
-                pictureFailed = true
-                picturePipelineWanted = false
-                statusHistory += "Bildoptimierung abgeschaltet: ${error.errorCodeName}"
-                handler.post { rebuildPlayer() }
-                return
-            }
             // Für den Fehlerbericht: welcher Fehler, mit der eigentlichen Ursache.
             statusHistory += "Fehler ${error.errorCodeName}: ${(error.cause?.message ?: error.message).orEmpty().take(140)}"
             if (timeshifted) {
@@ -3802,6 +3606,20 @@ class PlayerActivity : ComponentActivity() {
                 error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW -> {
                     p.seekToDefaultPosition()
                     p.prepare()
+                }
+                // Live-Format HLS eingestellt, der Anbieter liefert diesen Sender aber nicht als HLS (404, kaputte
+                // Liste …): sofort über MPEG-TS, und für diesen Anbieter bis zum App-Neustart gleich so (kein
+                // dreimaliges Wiederholen einer Adresse, die es nicht gibt, und kein „Sender läuft nicht“).
+                isLive && !everReady && playingAdaptedHls(p) && error.errorCode in HLS_MISSING -> {
+                    val channel = playing ?: return
+                    de.ayutv.data.net.AppProxy.hostOf(channel.url)?.let { noHlsHosts += it }
+                    statusHistory += "HLS beim Anbieter nicht verfügbar (${error.errorCodeName}), weiter über MPEG-TS"
+                    val text = "Dein Anbieter liefert diesen Sender nicht als HLS – er läuft über MPEG-TS."
+                    handler.post {
+                        playChannel(channel)
+                        message = text
+                        handler.postDelayed({ if (message == text) message = null }, 6_000)
+                    }
                 }
                 // Viele Playlists liefern HLS ohne .m3u8-Endung. Dann einmal explizit als HLS versuchen,
                 // aber nur vor dem ersten Bild: Später ist ein Lesefehler kaputte Daten, kein falsches Format.
@@ -3857,15 +3675,6 @@ class PlayerActivity : ComponentActivity() {
                         fatalError = true
                         message = "Tonausgabe gestört: Soundbar/Receiver prüfen oder Tonausgabe auf „Immer im Gerät dekodieren“ stellen"
                     }
-                }
-                // Asynchrones Dekodieren mag nicht jeder Decoder: ohne neu aufbauen und für die
-                // Zukunft merken, damit der Neustart nicht bei jedem Sender wieder passiert.
-                asyncDecodingActive && error.isVideoDecoderError() -> {
-                    message = "Verbinde neu …"
-                    asyncDecodingActive = false
-                    container.scope.launch { container.settings.update { it.copy(asyncDecoding = false) } }
-                    // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
-                    handler.post { rebuildPlayer(asyncDecoding = false) }
                 }
                 // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
                 !everReady && error.isUnsupportedFormat() -> {
@@ -3971,10 +3780,8 @@ class PlayerActivity : ComponentActivity() {
         )
         video?.frameRate?.takeIf { it > 1f }?.let { fps -> memoryKey()?.let { container.playerMemory.rememberFrameRate(it, fps, isLive) } }
         if (settings.matchFrameRate) video?.frameRate?.let(frameRateMatcher::match)
-        else video?.frameRate?.takeIf(::sportFrameRate)?.let(frameRateMatcher::match)
         suggestFrameRateMatching()
         checkDynamicRange(video)
-        checkPicture(video)
     }
 
     /**
@@ -4246,8 +4053,18 @@ class PlayerActivity : ComponentActivity() {
         /** Hinweis auf 50 Hz nur einmal pro App-Start, nicht bei jedem Sender. */
         private var afrHintShown = false
         private var dynamicRangeHintShown = false
-        /** Bildoptimierung hat auf diesem Gerät versagt (Fehler oder Ruckeln): bis zum nächsten App-Start aus. */
-        private var pictureFailed = false
+        /** Anbieter (Host), die kein HLS liefern: bis zum App-Neustart MPEG-TS (nur im Speicher). */
+        private val noHlsHosts = java.util.Collections.synchronizedSet(HashSet<String>())
+        /** Fehler, an denen man erkennt, dass es die HLS-Fassung nicht gibt (nicht: Netz weg, Zeitüberschreitung). */
+        private val HLS_MISSING = setOf(
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+        )
         private const val MAX_RETRIES = 3
         private const val ZAP_BURST_MS = 600L
         private const val ZAP_COMMIT_MS = 400L

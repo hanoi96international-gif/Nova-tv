@@ -86,8 +86,9 @@ object StorageCleaner {
             }
         }
         freed += updates
-        // Reste vom Zeitversatz (Puffer eines beendeten Players).
-        File(context.cacheDir, "timeshift").listFiles().orEmpty().filter { now - it.lastModified() > 3_600_000L }.forEach {
+        // Reste vom Zeitversatz (Puffer eines beendeten Players). Erst nach 12 Stunden: Ein laufender Puffer hält bis zu
+        // mehreren Stunden, seine ältesten Teile darf das Aufräumen (auch nachts während der Wiedergabe) nicht löschen.
+        File(context.cacheDir, "timeshift").listFiles().orEmpty().filter { now - it.lastModified() > 12 * 3_600_000L }.forEach {
             freed += size(it)
             it.deleteRecursively()
         }

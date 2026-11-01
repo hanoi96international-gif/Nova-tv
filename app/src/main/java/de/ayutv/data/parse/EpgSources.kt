@@ -39,24 +39,67 @@ object EpgSources {
         return "${uri.scheme}://${uri.host}$port$base/xmltv.php?username=${enc(user)}&password=${enc(password)}"
     }
 
+    /** Eine freie Quelle und die Länder, für deren Sender sie gedacht ist (null = Sender ohne Länderangabe). */
+    class Source(val url: String, val countries: Set<String?>)
+
+    private val GERMAN = setOf(null, "de", "at", "ch")
+    private const val EPGSHARE = "https://epgshare01.online/epgshare01/"
+    private const val OPEN_EPG = "https://www.open-epg.com/files/"
+
     /**
-     * Freie Programmquellen für Sender, die beim Anbieter fehlen (oft Sky und DAZN). Reihenfolge: epgshare01
-     * Deutschland, dann MagentaTV (rund 330 deutsche Sender: alle Regionalprogramme, Sky Cinema mit den neuen
-     * Namen, Sky Sport Kompakt, MagentaSport, myTeamTV), epgshare01 Österreich und Schweiz (dort u. a. Sky
-     * Bundesliga unter altem Namen) und zuletzt der Spielplan von Dyn (Volleyball, Handball, Basketball, Hockey).
+     * Freie Programmquellen für Sender, die beim Anbieter fehlen. Spätere füllen nur noch Sender ohne Programm, und
+     * eine Quelle wird nur geladen, wenn noch Sender aus ihren Ländern offen sind (Stand der Prüfung November 2026):
+     *
+     * - epgshare01 Deutschland (266 Sender), MagentaTV (rund 330: alle Regionalprogramme, Sky Cinema mit den neuen
+     *   Namen, Sky Sport Kompakt, MagentaSport, myTeamTV), open-epg Deutschland 3 (Telekom-Liste, Ersatz, falls
+     *   MagentaTV nicht antwortet) und 5 (waipu.tv-Sender, Spartenkanäle wie „Stromberg“, „Pastewka“, Musik Box)
+     * - epgshare01 Österreich und Schweiz (u. a. Sky Bundesliga unter altem Namen, Paramount+, Amazon Prime Video),
+     *   open-epg Österreich (ORF-2-Regionalfenster, Laola1, Sky Sport Austria 8, Sky Cinema Blockbuster/Feelgood)
+     * - Pluto TV und Samsung TV Plus Deutschland (kostenlose 24/7-Sender, z. B. „Dyn Sport Mix“, „Pluto TV Movies“,
+     *   DAZN Rise, Sony One, Moviedome, Rakuten-Kanäle)
+     * - Dyn-Spielplan (Volleyball, Handball, Basketball, Hockey, Tischtennis)
+     * - epgshare01 Griechenland nur für griechische Sender (Magenta Series, Magenta Cinema, Magenta Sport, Novacinema)
      */
-    val PUBLIC = listOf(
-        "https://epgshare01.online/epgshare01/epg_ripper_DE1.xml.gz",
-        ExtraGuides.MAGENTA,
-        "https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz",
-        "https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz",
-        ExtraGuides.DYN,
+    val SOURCES = listOf(
+        Source(EPGSHARE + "epg_ripper_DE1.xml.gz", GERMAN),
+        Source(ExtraGuides.MAGENTA, GERMAN),
+        Source(EPGSHARE + "epg_ripper_AT1.xml.gz", GERMAN),
+        Source(EPGSHARE + "epg_ripper_CH1.xml.gz", GERMAN),
+        Source(OPEN_EPG + "germany3.xml", GERMAN),
+        Source(OPEN_EPG + "germany5.xml", GERMAN),
+        Source(OPEN_EPG + "austria1.xml", GERMAN),
+        Source("https://i.mjh.nz/PlutoTV/de.xml.gz", GERMAN),
+        Source("https://i.mjh.nz/SamsungTVPlus/de.xml.gz", GERMAN),
+        Source(ExtraGuides.DYN, GERMAN),
+        Source(EPGSHARE + "epg_ripper_GR1.xml.gz", setOf("gr")),
     )
+
+    val PUBLIC: List<String> = SOURCES.map { it.url }
+
+    /**
+     * Lohnt die freie Quelle [url] für diese Sender (Namen der noch offenen)? Eigene Quellen (nicht in [SOURCES])
+     * immer. So lädt der Fire TV z. B. das griechische Programm nur, wenn griechische Sender in der Liste sind.
+     */
+    fun relevant(url: String, names: Iterable<String>): Boolean {
+        val countries = SOURCES.firstOrNull { it.url == url }?.countries ?: return true
+        return names.any { EpgMatcher.analyse(it, isId = false).country in countries }
+    }
+
+    /** Dateiname im Zwischenspeicher: eindeutig je Adresse (Pluto TV und Samsung TV Plus heißen beide „de.xml.gz“). */
+    fun cacheName(url: String): String {
+        val file = url.substringAfterLast('/').substringBefore('?').ifEmpty { "guide.xml" }
+        if ("i.mjh.nz/" !in url) return file
+        val service = url.substringAfter("i.mjh.nz/").substringBefore('/').lowercase().filter { it.isLetterOrDigit() }
+        return "$service-$file"
+    }
 
     /** Kurzer Name einer Quelle für die Anzeige ("epgshare01 DE", "tv.example.com"). */
     fun label(url: String): String {
         ExtraGuides.label(url)?.let { return it }
         Regex("""epg_ripper_([A-Z]{2})\d*\.xml""").find(url)?.let { return "epgshare01 ${it.groupValues[1]}" }
+        Regex("""open-epg\.com/files/([a-z]+\d*)\.xml""").find(url)?.let { return "open-epg ${it.groupValues[1]}" }
+        if ("i.mjh.nz/PlutoTV" in url) return "Pluto TV"
+        if ("i.mjh.nz/SamsungTVPlus" in url) return "Samsung TV Plus"
         return runCatching { URI(url.trim()).host }.getOrNull()?.takeIf { it.isNotEmpty() } ?: url.substringAfterLast('/').take(40)
     }
 

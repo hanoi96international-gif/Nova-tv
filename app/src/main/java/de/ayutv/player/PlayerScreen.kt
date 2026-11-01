@@ -399,10 +399,14 @@ private fun LiveInfoBar(activity: PlayerActivity) {
     val channel = activity.current ?: return
     val now = activity.nowNext.firstOrNull()
     val next = activity.nowNext.getOrNull(1)
-    val stats = activity.stats
-    val badges = remember(stats.height, stats.frameRate, stats.hdr, stats.audioCodec, stats.audioChannels) {
-        de.ayutv.data.parse.StreamBadges.video(stats.height, stats.frameRate, stats.hdr) +
-            listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(stats.audioCodec, stats.audioChannels))
+    // Die Stream-Werte ändern sich mehrmals pro Sekunde (Datenrate, verworfene Bilder): Die Leiste zeichnet nur neu,
+    // wenn sich die Kennzeichen selbst ändern.
+    val badges by remember {
+        androidx.compose.runtime.derivedStateOf {
+            val stats = activity.stats
+            de.ayutv.data.parse.StreamBadges.video(stats.height, stats.frameRate, stats.hdr) +
+                listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(stats.audioCodec, stats.audioChannels))
+        }
     }
     val headline = remember(now) { now?.headlineWithBadge() }
     val description = remember(now) { now?.let { de.ayutv.data.parse.ProgrammeText.description(it.description) } }
@@ -667,8 +671,9 @@ private fun VodControls(activity: PlayerActivity) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(activity.vodTitle, style = MaterialTheme.typography.headlineSmall, color = Color.White, modifier = Modifier.weight(1f))
-            activity.stats.resolutionLabel.takeIf { it.isNotEmpty() }?.let { Badge(it) }
-            activity.stats.hdr.takeIf { it.isNotEmpty() }?.let { Badge(it) }
+            val labels by remember { androidx.compose.runtime.derivedStateOf { activity.stats.resolutionLabel to activity.stats.hdr } }
+            labels.first.takeIf { it.isNotEmpty() }?.let { Badge(it) }
+            labels.second.takeIf { it.isNotEmpty() }?.let { Badge(it) }
         }
         Spacer(Modifier.height(16.dp))
         // Touch: auf den Balken tippen springt dorthin (großzügige Trefferfläche um die dünne Linie).
@@ -717,7 +722,6 @@ private fun TechLine(stats: StreamStats, bufferedMs: Long, cushion: Boolean, dro
         if (stats.audioCodec.isNotEmpty()) add("${stats.audioCodec} ${stats.audioChannels}ch")
         if (stats.audioDecoder.isNotEmpty()) add("Ton: " + if ("ffmpeg" in stats.audioDecoder.lowercase()) "FFmpeg" else stats.audioDecoder)
         if (stats.decoder.isNotEmpty()) add(stats.decoder)
-        if (stats.picture.isNotEmpty()) add("Bildoptimierung: ${stats.picture}")
         if (stats.bandwidth > 0) add("Datenrate des Senders %.1f Mbit/s".format(stats.bandwidth / 1_000_000f))
         add("Verworfene Frames: ${stats.droppedFrames}")
         if (stats.startupMs > 0) add("Start in ${stats.startupMs} ms")
@@ -929,16 +933,6 @@ private fun TracksOverlay(activity: PlayerActivity) {
         item { MenuHeader("Bild") }
         AspectMode.entries.forEach { mode ->
             item { OptionRow(mode.label, activity.aspect == mode) { activity.chooseAspect(mode) } }
-        }
-        item { MenuHeader("Bildoptimierung (Full HD)") }
-        de.ayutv.data.parse.PictureTuning.Mode.entries.forEach { mode ->
-            item { OptionRow(mode.label, activity.pictureMode == mode) { activity.choosePictureMode(mode) } }
-        }
-        item {
-            MenuHint(
-                activity.pictureLabel.takeIf { it.isNotEmpty() }?.let { "Gerade: $it-Profil (schärfer, je nach Inhalt mehr Kontrast und Farbe). 4K und HDR bleiben unverändert." }
-                    ?: "Schärft und optimiert Full-HD-Bilder je nach Inhalt: Film, Serie, Sport, Fußball. 4K und HDR bleiben unverändert."
-            )
         }
         item { MenuHeader("Schlaf-Timer") }
         if (activity.sleepAt > 0) {

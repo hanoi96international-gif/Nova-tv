@@ -154,18 +154,6 @@ fun SettingsScreen(app: AppState) {
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Label("Bildoptimierung (Full HD)", Type.body)
-            Row(Modifier.padding(vertical = 4.dp)) {
-                de.ayutv.data.parse.PictureTuning.Mode.entries.forEach { mode ->
-                    Selectable({ app.store.updateUser { it.copy(pictureTuning = mode.name) }; app.restartPlayback() }, selected = user.pictureTuning == mode.name) { Label(mode.label) }
-                    Spacer(Modifier.width(6.dp))
-                }
-            }
-            Label(
-                "Schärft und optimiert Full-HD-Bilder je nach Inhalt: Filme bleiben natürlich, Serien etwas schärfer, Sport deutlich schärfer mit mehr Kontrast, Fußball zusätzlich mit kräftigerem Rasengrün. 4K und HDR bleiben unverändert.",
-                Type.small, maxLines = 3,
-            )
-            Spacer(Modifier.height(8.dp))
             Label("Direktausgabe über die Grafikkarte", Type.body)
             Row(Modifier.padding(vertical = 4.dp)) {
                 DIRECT_MODES.forEach { (value, label) ->
@@ -173,12 +161,6 @@ fun SettingsScreen(app: AppState) {
                     Spacer(Modifier.width(6.dp))
                 }
             }
-            Toggle(
-                "KI-Hochrechnung der Grafikkarte (NVIDIA RTX Video Super Resolution / Intel VSR): Full-HD- und HD-Sender werden " +
-                    "mit KI auf die Bildschirmauflösung gerechnet – schärfer und mit weniger Kompressionsfehlern. Nutzt immer die " +
-                    "Direktausgabe. Bei NVIDIA zusätzlich in der NVIDIA-App unter „RTX Video Enhancement“ → „Super Resolution“ einschalten.",
-                user.aiUpscale,
-            ) { app.store.updateUser { it.copy(aiUpscale = !it.aiUpscale) }; app.applyBuffer() }
             Label(
                 "VLC dekodiert und zeigt das Bild komplett auf der Grafikkarte – der schnellste Weg, flüssig auch bei 4K mit 50 Bildern, und mit HDR-Bildschirm kommt HDR10 unverändert an. Menüs und Senderliste erscheinen wie gewohnt; solange sie offen sind, ist das Bild ausgeblendet. „Bei 4K“ wechselt automatisch, sobald ein Sender 4K liefert.",
                 Type.small, maxLines = 4,
@@ -287,7 +269,7 @@ fun SettingsScreen(app: AppState) {
             Spacer(Modifier.height(6.dp))
             TextButton("TV-Guide neu laden", { app.scope.launch { runCatching { app.sync.syncGuide() }.onFailure { app.toast("TV-Guide: ${it.message}") } } })
             Spacer(Modifier.height(8.dp))
-            Toggle("Fehlendes Programm (oft Sky, DAZN) aus freien Quellen ergänzen (epgshare01 DE/AT/CH, MagentaTV, Dyn-Spielplan)", user.publicEpg) {
+            Toggle("Fehlendes Programm (oft Sky, DAZN) aus freien Quellen ergänzen (epgshare01 DE/AT/CH, MagentaTV, open-epg, Pluto TV, Samsung TV Plus, Dyn-Spielplan)", user.publicEpg) {
                 app.store.updateUser { u -> u.copy(publicEpg = !u.publicEpg) }
             }
             Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {

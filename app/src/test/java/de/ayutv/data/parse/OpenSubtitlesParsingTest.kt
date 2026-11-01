@@ -161,4 +161,54 @@ class OpenSubtitlesParsingTest {
         assertEquals(listOf(2L, 3L, 1L), OpenSubtitlesParsing.preferRelease(listOf(popular, same, other), hints).map { it.fileId })
         assertEquals(listOf(1L, 2L), OpenSubtitlesParsing.preferRelease(listOf(popular, same), OpenSubtitlesParsing.ReleaseHints(null, null, null)).map { it.fileId })
     }
+
+    @Test
+    fun seriesQueriesForGermanTitles() {
+        assertEquals(listOf("Disneys Große Pause", "Große Pause"), OpenSubtitlesParsing.seriesQueries("DE: Disneys Große Pause"))
+        assertEquals(listOf("Die Gummibärenbande", "Gummibärenbande"), OpenSubtitlesParsing.seriesQueries("Die Gummibärenbande (1985)"))
+        assertEquals(listOf("Recess", "Disneys Große Pause", "Große Pause"), OpenSubtitlesParsing.seriesQueries("Disneys Große Pause", "Recess"))
+        assertEquals(listOf("DuckTales"), OpenSubtitlesParsing.seriesQueries("DuckTales"))
+        assertEquals("1234", OpenSubtitlesParsing.seriesIdOf("3:s:1234:e:5678"))
+        assertEquals(null, OpenSubtitlesParsing.seriesIdOf("3:m:99"))
+    }
+
+    @Test
+    fun showFromFeatureDirectory() {
+        val body = """{"data":[
+            {"id":"111","type":"feature","attributes":{"title":"Gummi Bears Movie","feature_type":"Movie","feature_id":"111","year":"1985"}},
+            {"id":"222","type":"feature","attributes":{"title":"Disney's Adventures of the Gummi Bears","original_title":"Disney's Adventures of the Gummi Bears",
+              "title_aka":["Die Gummibärenbande","Les Gummis"],"feature_type":"Tvshow","feature_id":"222","year":"1985"}},
+            {"id":"333","type":"feature","attributes":{"title":"Recess","title_aka":["Disneys große Pause"],"feature_type":"Tvshow","feature_id":"333","year":"1997"}},
+            {"id":"444","type":"feature","attributes":{"title":"DuckTales","feature_type":"Tvshow","feature_id":"444","year":"1987"}},
+            {"id":"555","type":"feature","attributes":{"title":"DuckTales","feature_type":"Tvshow","feature_id":"555","year":"2017"}},
+            {"id":"666","type":"feature","attributes":{"title":"Pause","feature_type":"Tvshow","feature_id":"666","year":"2020"}}
+        ]}"""
+        val features = OpenSubtitlesParsing.features(body)
+        assertEquals(6, features.size)
+        // Deutscher Zweitname → die richtige englische Serie
+        assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Die Gummibärenbande")?.id)
+        assertEquals(222L, OpenSubtitlesParsing.bestShow(features, "Gummibärenbande", 1985)?.id)
+        assertEquals(333L, OpenSubtitlesParsing.bestShow(features, "Disneys Große Pause")?.id)
+        // Nur ein Teil des Namens passt: nicht raten („Pause“ ist eine andere Serie, „Gummi“ keine)
+        assertNull(OpenSubtitlesParsing.bestShow(features, "Große"))
+        assertNull(OpenSubtitlesParsing.bestShow(features, "Gummi"))
+        // Gleichnamige Serien: das Jahr entscheidet, ohne Jahr keine Wahl
+        assertEquals(444L, OpenSubtitlesParsing.bestShow(features, "DuckTales", 1987)?.id)
+        assertEquals(555L, OpenSubtitlesParsing.bestShow(features, "Disneys DuckTales", 2018)?.id)
+        assertNull(OpenSubtitlesParsing.bestShow(features, "DuckTales"))
+        // Jahr passt nicht: lieber nichts als eine andere Serie
+        assertNull(OpenSubtitlesParsing.bestShow(features, "Recess", 2010))
+        // Filme zählen nicht als Serie
+        assertNull(OpenSubtitlesParsing.bestShow(features.filter { it.type == "Movie" }, "Gummi Bears Movie"))
+        assertEquals(emptyList<OpenSubtitlesParsing.Feature>(), OpenSubtitlesParsing.features("kaputt"))
+    }
+
+    @Test
+    fun episodeMustBelongToSeries() {
+        val c = SubtitleCandidate(1, "en", "x", false, 0, false, parentTitle = "Recess")
+        assertEquals(true, OpenSubtitlesParsing.belongsToSeries(c, listOf("Recess")))
+        assertEquals(true, OpenSubtitlesParsing.belongsToSeries(c, listOf("Disney's Recess")))
+        assertEquals(false, OpenSubtitlesParsing.belongsToSeries(c.copy(parentTitle = "Recess: School's Out"), listOf("Recess")))
+        assertEquals(false, OpenSubtitlesParsing.belongsToSeries(c.copy(parentTitle = "Coffee Break"), listOf("Große Pause")))
+    }
 }

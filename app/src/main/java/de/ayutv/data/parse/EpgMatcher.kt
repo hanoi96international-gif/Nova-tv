@@ -67,6 +67,12 @@ class EpgMatcher(private val country: String = "de") {
             pick(weak[k.weak], wanted, uhd)?.let { return it }
             k.region?.let { pick(strong[it], wanted, uhd)?.let { id -> return id } }
         }
+        // Dyn mit Nummer („DE: DYN VOLLEYBALL 2“, „Dyn 5“): der Spielplan der Sportart bzw. aller Sportarten.
+        DYN_NUMBERED.find(byName.strong)?.let { m ->
+            val sport = m.groupValues[1]
+            if (sport.isNotEmpty()) pick(strong["dyn$sport"], wanted, false)?.let { return it }
+            pick(strong["dyn"], wanted, false)?.let { return it }
+        }
         return null
     }
 
@@ -148,6 +154,9 @@ class EpgMatcher(private val country: String = "de") {
             "13thstreetuniversal" to "13thstreet", "uhd1by" to "uhd1", "uhd1byhd" to "uhd1", "skyatlantik" to "skyatlantic",
             "magentasport" to "magentasport", "magentatvsport" to "magentasport", "telekomsport" to "magentasport",
             "dazn1bar" to "dazn1", "dazn2bar" to "dazn2", "sportdigital1" to "sportdigital1plus",
+            // Amazon: „Prime“ (epgshare01 DE), „Amazon Prime Video“ (CH), in Listen auch „Prime Video (24/7)“.
+            "primevideo" to "prime", "amazonprime" to "prime", "amazonprimevideo" to "prime", "primevideolive" to "prime",
+            "primevideosport" to "prime", "amazonprimevideolive" to "prime",
         )
 
         private val BRACKETS = Regex("""\[[^\]]*\]|\([^)]*\)|\{[^}]*\}""")
@@ -164,6 +173,10 @@ class EpgMatcher(private val country: String = "de") {
         private val UHD_TOKENS = setOf("uhd", "4k", "2160p", "8k")
         private val GLUED_UHD = Regex("""(?:uhd|4k)$""")
         private val ANY_PREFIX = Regex("""^(?:\s*[^:|]{1,24}?\s*[:|]+\s*)+""")
+
+        private val DYN_NUMBERED = Regex("""^dyn(?:sport|event|live)?([a-z]*?)\d{1,2}$""")
+        /** „24/7“ und „24-7“ (Dauersender) gehören nicht zum Namen. */
+        private val ROUND_THE_CLOCK = Regex("""\b24\s*[/-]\s*7\b""")
 
         private val TIME_SHIFT = Regex("""\s*\+\s*(\d{1,2})(?:\s*(?:h|std|stunden?)\b)?(?![\d.])""", RegexOption.IGNORE_CASE)
 
@@ -202,6 +215,7 @@ class EpgMatcher(private val country: String = "de") {
                 ID_COUNTRY.find(text)?.let { m -> COUNTRIES[m.groupValues[1]]?.let { country = it; text = text.substring(0, m.range.first) } }
                 text = text.replace(ID_FEED, "").replace('.', ' ').replace('_', ' ')
             }
+            text = text.replace(ROUND_THE_CLOCK, " ")
             text = text.replace(HD_PLUS, " hdplus ").replace(PLUS_SHIFT, " plus$1 ").replace(PLUS_NAME, " plus ")
             // Länder-Vorsatz, auch mehrfach ("DE | 4K | RTL")
             repeat(3) {

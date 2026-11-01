@@ -22,6 +22,7 @@ enum class ProgrammeGenre(val label: String, val argb: Long) {
         private val NEWS_WORDS = Regex("""(?i)nachrichten|news|tagesschau|heute journal|\bheute\b|wetter|politik|aktuell|journal""")
         private val KIDS_WORDS = Regex("""(?i)kinder|kids|zeichentrick|animation|cartoon|jugend|kika|nick|disney|toggo|junior""")
         private val DOCU_WORDS = Regex("""(?i)doku|dokumentation|documentary|reportage|natur|wissen|geschichte|history""")
+        private val NEWS_CHANNELS = Regex("""(?i)\bnews\b|n-tv|\bntv\b|welt\b""")
         private val SHOW_WORDS = Regex("""(?i)\bshow|unterhaltung|entertainment|quiz|talk|musik|music|comedy|reality""")
 
         /** Art aus [category] (EPG), sonst aus [title] und [channel] (z. B. Sportsender, Kindersender). */
@@ -42,7 +43,7 @@ enum class ProgrammeGenre(val label: String, val argb: Long) {
             return when {
                 SPORT_WORDS.containsMatchIn(channel) -> SPORT
                 KIDS_WORDS.containsMatchIn(channel) -> KIDS
-                NEWS_WORDS.containsMatchIn(title) || Regex("""(?i)\bnews\b|n-tv|\bntv\b|welt\b""").containsMatchIn(channel) -> NEWS
+                NEWS_WORDS.containsMatchIn(title) || NEWS_CHANNELS.containsMatchIn(channel) -> NEWS
                 else -> OTHER
             }
         }

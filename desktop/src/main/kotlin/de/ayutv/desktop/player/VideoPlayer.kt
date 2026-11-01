@@ -41,10 +41,8 @@ class VideoPlayer {
     var audioTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
     var subtitleTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
 
-    // Mit KI-Hochrechnung (nur Windows, VLC ab 3.0.19); kennt ein älteres VLC die Option nicht, ohne sie starten.
-    private val factory: MediaPlayerFactory? = (if (IS_WINDOWS) runCatching { MediaPlayerFactory(*(VLC_OPTIONS + UPSCALE_OPTIONS)) }.getOrNull() else null)
-        ?: runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
-            .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
+    private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
+        .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
     // Vor den Playern anlegen: [prepare] braucht sie schon beim Anlegen von [normal].
     private val format = Format()
     private val render = Render()
@@ -63,8 +61,6 @@ class VideoPlayer {
      * Untertiteln am Ton.
      */
     @Volatile var directMode = "AUTO"
-    /** KI-Hochrechnung (RTX/Intel Video Super Resolution) über die Direktausgabe. */
-    @Volatile var aiUpscale = false
     /** Vom Aufrufer vor [play]: Der Stream ist bekanntlich 4K (früher gemessen oder „4K/UHD“ im Namen). */
     @Volatile var expectUhd = false
     /** Fenster für die Direktausgabe (von der App gesetzt, kennt das Hauptfenster). */
@@ -203,8 +199,7 @@ class VideoPlayer {
 
     fun play(url: String, userAgent: String? = null, startMs: Long = 0, vararg extra: String) {
         lastStart = Triple(url, userAgent, extra)
-        val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd) || aiUpscale
-        val uhdExpected = expectUhd
+        val wantDirect = directMode == "ALWAYS" || (directMode == "AUTO" && expectUhd)
         expectUhd = false
         val useDirect = wantDirect && !tapAudio && directWindow != null
         val next = (if (useDirect) directPlayer() else if (tapAudio) tappedPlayer() else normal) ?: return
@@ -237,42 +232,8 @@ class VideoPlayer {
             if (startMs > 0) add(":start-time=${startMs / 1000.0}")
             add(":network-caching=$networkCacheMs")
             addAll(extra)
-            addAll(pictureOptions(uhdExpected))
         }
         if (!p.media().play(url, *options.toTypedArray())) error = "Der Stream lässt sich nicht öffnen"
-        applyAdjust()
-    }
-
-    /**
-     * Bildoptimierung (Full HD): Schärfe über VLCs Filter „sharpen“ (wirkt ab dem nächsten Start, deshalb als Option
-     * beim Öffnen), Kontrast und Farbe über die Bildanpassung (sofort). null = alles neutral.
-     */
-    var picture: de.ayutv.data.parse.PictureTuning.Profile? = null
-        set(value) {
-            field = value
-            applyAdjust()
-        }
-
-    /** Optionen für VLC beim Öffnen: Nachschärfen nur für Full HD und kleiner (4K/HDR bleiben unverändert). */
-    fun pictureOptions(uhd: Boolean): List<String> {
-        val profile = picture ?: return emptyList()
-        if (uhd || profile.sharpen <= 0.01f) return emptyList()
-        return listOf(":video-filter=sharpen", ":sharpen-sigma=${"%.2f".format(java.util.Locale.US, (profile.sharpen * 0.6f).coerceIn(0f, 2f))}")
-    }
-
-    private fun applyAdjust() {
-        val p = player ?: return
-        val profile = picture?.takeIf { !looksHdr }
-        runCatching {
-            if (profile == null || (profile.contrast == 0f && profile.saturation == 0f)) {
-                p.video().setAdjustVideo(false)
-            } else {
-                p.video().setAdjustVideo(true)
-                p.video().setContrast((1f + profile.contrast * 1.5f).coerceIn(0f, 2f))
-                p.video().setSaturation((1f + profile.saturation / 100f).coerceIn(0f, 3f))
-                p.video().setBrightness(1f)
-            }
-        }
     }
 
     /** Technische Angaben zum laufenden Stream (für die Stream-Info, Taste ▶ bzw. Info). */
@@ -580,14 +541,6 @@ class VideoPlayer {
         const val UHD_HEIGHT = 1_600
         /** So viele ersetzte Bilder bleiben kurz erhalten, bevor ihr Speicher frei wird. */
         private const val RETIRED_FRAMES = 3
-        private val IS_WINDOWS = System.getProperty("os.name").orEmpty().startsWith("Windows", ignoreCase = true)
-
-        /**
-         * Direktausgabe (Direct3D 11): Hochrechnung mit der KI der Grafikkarte, wenn vorhanden (NVIDIA RTX Video Super
-         * Resolution, Intel VSR; im Grafiktreiber eingeschaltet). Ohne passende Grafikkarte normale Skalierung.
-         */
-        private val UPSCALE_OPTIONS = arrayOf("--d3d11-upscale-mode=super")
-
         private val VLC_OPTIONS = arrayOf(
             "--quiet", "--no-video-title-show", "--http-reconnect", "--avcodec-hw=any",
             // Live-TV kommt oft als 1080i/576i: automatisch entflechten, mit voller Bildrate (50 statt 25 Bilder).

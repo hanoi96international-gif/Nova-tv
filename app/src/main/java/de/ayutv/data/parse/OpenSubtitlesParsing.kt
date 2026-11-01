@@ -59,6 +59,10 @@ data class SubtitleCandidate(
     /** Bei Serienfolgen: Staffel und Folge laut OpenSubtitles. */
     val season: Int? = null,
     val episode: Int? = null,
+    /** Bei Serienfolgen: Name und TMDB-Kennung der Serie, zu der die Folge gehört (zum Prüfen jedes Treffers). */
+    val parentTitle: String? = null,
+    val parentTmdbId: Long? = null,
+    val parentFeatureId: Long? = null,
 )
 
 object OpenSubtitlesParsing {
@@ -93,6 +97,9 @@ object OpenSubtitlesParsing {
                 fps = attributes.primitive("fps")?.contentOrNull?.toDoubleOrNull()?.takeIf { it > 1 },
                 season = feature?.primitive("season_number")?.longOrNull?.toInt(),
                 episode = feature?.primitive("episode_number")?.longOrNull?.toInt(),
+                parentTitle = feature?.primitive("parent_title")?.contentOrNull?.takeIf { it.isNotBlank() },
+                parentTmdbId = feature?.primitive("parent_tmdb_id")?.contentOrNull?.toLongOrNull(),
+                parentFeatureId = feature?.primitive("parent_feature_id")?.contentOrNull?.toLongOrNull(),
             )
         }.sortedWith(QUALITY)
     }
@@ -191,6 +198,89 @@ object OpenSubtitlesParsing {
         val name = title.substring(0, m.range.first).trim().trimEnd('-', '–', ':', '|').trim()
         return if (name.length >= 2) Triple(cleanTitle(name).first, season, episode) else null
     }
+    /** Eine Serie oder ein Film im Verzeichnis von OpenSubtitles (/features), mit allen bekannten Namen. */
+    data class Feature(val id: Long, val type: String, val title: String, val year: Int?, val names: List<String>)
+
+    /** Antwort von /features: Serien und Filme mit Kennung, Art und Namen (auch Zweitnamen in anderen Sprachen). */
+    fun features(body: String): List<Feature> {
+        val root = runCatching { json.parseToJsonElement(body) }.getOrNull() as? JsonObject ?: return emptyList()
+        val data = root["data"] as? JsonArray ?: return emptyList()
+        return data.mapNotNull { item ->
+            val o = item as? JsonObject ?: return@mapNotNull null
+            val a = o["attributes"] as? JsonObject ?: return@mapNotNull null
+            val id = a.primitive("feature_id")?.contentOrNull?.toLongOrNull() ?: o.primitive("id")?.contentOrNull?.toLongOrNull()
+                ?: return@mapNotNull null
+            val title = a.primitive("title")?.contentOrNull.orEmpty()
+            val aka = (a["title_aka"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+            val names = (listOf(title) + listOfNotNull(a.primitive("original_title")?.contentOrNull) + aka).filter { it.isNotBlank() }
+            Feature(id, a.primitive("feature_type")?.contentOrNull.orEmpty(), title, a.primitive("year")?.contentOrNull?.toIntOrNull(), names)
+        }
+    }
+
+    /**
+     * Die Serie zu [query] („Die Gummibärenbande“) – nur, wenn sie sicher die richtige ist: Ein Name oder Zweitname
+     * muss genau passen (ohne Studio-Vorsatz, Artikel, Groß/klein und Sonderzeichen). Gibt es mehrere gleichnamige
+     * (DuckTales 1987 und 2017), entscheidet das [year] der Serie beim Anbieter (±1 Jahr); ohne Jahr oder bei einem
+     * anderen Jahr: null. Geraten wird nie – lieber keine Untertitel als die einer anderen Serie.
+     */
+    fun bestShow(features: List<Feature>, query: String, year: Int? = null): Feature? {
+        val wanted = nameKey(query)
+        if (wanted.length < 3) return null
+        val matching = features
+            .filter { it.type.equals("tvshow", ignoreCase = true) || it.type.equals("tv show", ignoreCase = true) }
+            .filter { show -> show.names.any { nameKey(it) == wanted } }
+            .distinctBy { it.id }
+        if (matching.isEmpty()) return null
+        if (year == null) return matching.singleOrNull()
+        val sameYear = matching.filter { it.year != null && kotlin.math.abs(it.year - year) <= 1 }
+        return when {
+            sameYear.size == 1 -> sameYear[0]
+            sameYear.size > 1 -> null
+            // Keine mit passendem Jahr: nur eine einzige Serie ohne Jahresangabe gilt, sonst nichts.
+            else -> matching.singleOrNull()?.takeIf { it.year == null }
+        }
+    }
+
+    /** Gehört die Folge [c] sicher zur Serie [names] (wenn OpenSubtitles die Serie nennt)? Ohne Angabe: ja. */
+    fun belongsToSeries(c: SubtitleCandidate, names: Collection<String>): Boolean {
+        val parent = c.parentTitle ?: return true
+        val key = nameKey(parent)
+        return names.any { nameKey(it) == key }
+    }
+
+    /** Name zum Vergleichen: ohne Studio-Vorsatz und Artikel, Groß/klein, Akzente und Sonderzeichen. */
+    fun nameKey(name: String): String {
+        var text = cleanTitle(name).first
+        text = text.replace(STUDIO, "").trim().replace(ARTICLE, "").trim()
+        return normalize(text)
+    }
+
+    private fun normalize(name: String): String =
+        java.text.Normalizer.normalize(name.lowercase(), java.text.Normalizer.Form.NFKD).replace(Regex("""\p{M}+"""), "")
+            .replace("ß", "ss").replace("&", "and").replace(Regex("""[^a-z0-9]"""), "")
+
+    /**
+     * Suchbegriffe für eine Serie, wie der Anbieter sie nennt: der Name selbst, dann ohne Studio-Vorsatz und Artikel
+     * („Disneys Große Pause“ → „Große Pause“, „Die Gummibärenbande“ → „Gummibärenbande“). Ohne Doppelte.
+     */
+    fun seriesQueries(name: String, originalName: String? = null): List<String> {
+        val base = cleanTitle(name).first
+        val variants = ArrayList<String>()
+        originalName?.let { cleanTitle(it).first }?.takeIf { it.length >= 2 }?.let(variants::add)
+        variants += base
+        var bare = base.replace(STUDIO, "").trim()
+        variants += bare
+        bare = bare.replace(ARTICLE, "").trim()
+        variants += bare
+        return variants.filter { it.length >= 3 }.distinctBy { it.lowercase() }
+    }
+    private val STUDIO = Regex("""(?i)^(disneys?|disney['’]s|walt disneys?|pixars?|dreamworks|marvels?|nickelodeons?)\s+""")
+    private val ARTICLE = Regex("""(?i)^(die|der|das|the|les|le|la)\s+""")
+
+    /** Serien-Kennung beim Anbieter aus dem Schlüssel einer Folge („3:s:1234:e:5678“ → „1234“). */
+    fun seriesIdOf(episodeKey: String): String? = SERIES_KEY.find(episodeKey)?.groupValues?.get(1)
+    private val SERIES_KEY = Regex(""":s:([^:]+):e:""")
+
     private val EPISODE = Regex("""(?i)\bS(\d{1,2})\s*E(\d{1,3})\b|\b(\d{1,2})x(\d{1,3})\b""")
 
     /** Ende der letzten Einblendung einer SRT-Datei (ms), um zu prüfen, ob sie zur Filmlänge passt. */

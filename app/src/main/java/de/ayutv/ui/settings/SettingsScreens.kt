@@ -318,7 +318,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                         if (hlsBetter) {
-                            SettingRow("Live-Format auf HLS stellen", "Übernehmen", "Dein Anbieter schickt über HLS eine höhere Datenrate (schärferes Bild) als über MPEG-TS.") {
+                            SettingRow("Live-Format auf HLS stellen", "Übernehmen", "Dein Anbieter schickt über HLS eine höhere Datenrate (schärferes Bild) als über MPEG-TS. Dafür gehen Pause und Zurückspulen im Live-Bild nicht.") {
                                 update { it.copy(liveFormat = LiveFormat.HLS) }
                                 hlsBetter = false
                             }
@@ -336,17 +336,6 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             "Bild und Ton laufen direkt in der Hardware synchron: am Fire TV Stick 4K / 4K Max flüssigeres 4K und exakte Lippensynchronität. " +
                                 "Empfohlen für 4K. Ausschalten, falls Ton aussetzt (manche Soundbars) – das Puffer-Polster gegen Hänger ist dabei inaktiv.",
                         ) { update { it.copy(tunneling = !it.tunneling) } }
-                    }
-                    item {
-                        SettingRow(
-                            "Bildoptimierung (Full HD)",
-                            settings.pictureTuning.label,
-                            "Bildverbesserung auf dem Grafikchip nach dem Vorbild der Spiele-Hochrechner (FSR, AMD CAS), sparsam in einem Durchgang: " +
-                                "Sender unter Full HD (z. B. 720p) werden mit Kantenschutz auf 1080p hochgerechnet, Details kontrastabhängig geschärft " +
-                                "(ohne Rauschen und Blockfehler zu verstärken), Farbstufen in Himmel und Rasen geglättet. Je nach Inhalt: Filme natürlich, " +
-                                "Sport schärfer mit mehr Kontrast, Fußball mit kräftigerem Rasengrün. 4K und HDR bleiben unverändert; ruckelt es, " +
-                                "schaltet sie sich ab. Nicht zusammen mit „Tunneling“. Im Bild auch über ☰ → Bild.",
-                        ) { update { it.copy(pictureTuning = it.pictureTuning.next()) } }
                     }
                     item {
                         SettingRow(
@@ -369,15 +358,10 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Live-Format (Xtream)",
                             settings.liveFormat.label,
-                            "MPEG-TS startet schneller. HLS ist robuster, falls der Anbieter TS drosselt.",
+                            "MPEG-TS (empfohlen): startet schneller, Pause und Zurückspulen im Live-Bild gehen nur damit. HLS nur, wenn der " +
+                                "Leitungs-Check es vorschlägt (manche Anbieter schicken darüber eine höhere Datenrate). Sender, die der Anbieter " +
+                                "nicht als HLS liefert, laufen automatisch über MPEG-TS weiter.",
                         ) { update { it.copy(liveFormat = if (it.liveFormat == LiveFormat.TS) LiveFormat.HLS else LiveFormat.TS) } }
-                    }
-                    if (showAdvanced) item {
-                        SettingRow(
-                            "Schnelles Dekodieren (experimentell)",
-                            onOff(settings.asyncDecoding),
-                            "Steuert den Hardware-Decoder asynchron an. Nur einschalten, wenn 4K ruckelt; schaltet sich bei Problemen selbst ab.",
-                        ) { update { it.copy(asyncDecoding = !it.asyncDecoding) } }
                     }
                     if (showAdvanced) item {
                         SettingRow(
@@ -769,7 +753,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                                 settings.preferInternetGuide -> "Eigener zuerst, Anbieter ergänzt"
                                 else -> "Anbieter zuerst, eigener ergänzt"
                             },
-                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, MagentaTV, Dyn-Spielplan), richtige Zeiten auch nach " +
+                            "Eigener TV-Guide: freies EPG für Deutschland, Österreich und die Schweiz (epgshare01, MagentaTV, open-epg, Pluto TV, Samsung TV Plus, Dyn-Spielplan), richtige Zeiten auch nach " +
                                 "der Zeitumstellung. Der TV-Guide des Anbieters liegt oft daneben; „Nur eigener“ lädt ihn gar nicht. " +
                                 "Der Guide wird nach dem Umschalten neu geladen.",
                         ) {

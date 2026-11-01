@@ -227,4 +227,28 @@ class EpgMatcherTest {
         val m = EpgMatcher().apply { addGuideChannel("Sky.Cinema.Premiere.HD.de", listOf("Sky Cinema Premiere HD")) }
         assertEquals("Sky.Cinema.Premiere.HD.de", m.match(null, EpgMatcher.timeShift("DE: SKY CINEMA PREMIEREN +24 HD")!!.second))
     }
+
+    @Test
+    fun primeDynAndRoundTheClock() {
+        val m = EpgMatcher().apply {
+            addGuideChannel("Prime.HD.de", listOf("Prime HD"))
+            addGuideChannel("Dyn.Volleyball.de@Dyn", listOf("Dyn Volleyball"))
+            addGuideChannel("Dyn.Handball.de@Dyn", listOf("Dyn Handball"))
+            addGuideChannel("Dyn.de@Dyn", listOf("Dyn", "Dyn Sport"))
+            addGuideChannel("6866525c8a412a0e95c438b4", listOf("Dyn Sport Mix"))
+            addGuideChannel("INTER247", listOf("INTER 24/7"))
+            addGuideChannel("Paramount+.ch", listOf("Paramount+"))
+        }
+        assertEquals("Prime.HD.de", m.match(null, "DE: PRIME VIDEO 24/7 HD"))
+        assertEquals("Prime.HD.de", m.match(null, "DE: AMAZON PRIME VIDEO"))
+        assertEquals("Dyn.Volleyball.de@Dyn", m.match(null, "DE: DYN VOLLEYBALL 2"))
+        assertEquals("Dyn.Volleyball.de@Dyn", m.match(null, "DYN Volleyball HD"))
+        assertEquals("Dyn.Handball.de@Dyn", m.match(null, "|DE| Dyn Handball 1"))
+        assertEquals("Dyn.de@Dyn", m.match(null, "DE: DYN 5"))
+        assertEquals("Dyn.de@Dyn", m.match(null, "DE: DYN SPORT 3"))
+        assertEquals("6866525c8a412a0e95c438b4", m.match(null, "DE: Dyn Sport Mix"))
+        assertEquals("INTER247", m.match(null, "INTER 24-7"))
+        assertEquals("Paramount+.ch", m.match(null, "DE: PARAMOUNT+ HD"))
+        assertEquals(null, m.match(null, "DE: PARAMOUNT NETWORK"))
+    }
 }

@@ -50,9 +50,24 @@ object StreamingApps {
         val l = label.trim().lowercase()
         if (app.labels.any { it == l }) return 0
         val others = listOf("kids", "music", "musik", "studio", "create", "direct", "photos")
-        // „YouTube TV“ ist ein eigener (US-)Dienst, nicht die YouTube-App.
-        val otherService = app.id == "youtube" && Regex("""\btv\b""").containsMatchIn(l)
+        // „YouTube TV“ ist ein eigener (US-)Dienst, nicht die YouTube-App. „YouTube für Fire TV“ o. Ä. ist aber YouTube.
+        val otherService = app.id == "youtube" && (l == "youtube tv" || l.startsWith("youtube tv ") || l.startsWith("youtube tv:"))
         return if (app.labels.any { l.startsWith("$it ") || l.startsWith("$it:") } && others.none { l.contains(it) } && !otherService) 1 else null
+    }
+
+    /**
+     * Gehört das Paket [pkg] (gefunden, weil es Links der App-Webseite öffnet) zu [app]? Schließt Kinder-, Musik- und
+     * die YouTube-TV-Fassung (US-Dienst) aus.
+     */
+    fun packageMatch(app: App, pkg: String): Boolean {
+        val p = pkg.lowercase()
+        val word = when (app.id) {
+            "prime" -> listOf("avod", "primevideo", "amazonvideo", "firebat")
+            else -> listOf(app.id)
+        }
+        if (word.none { it in p }) return false
+        val excluded = listOf("kids", "music", "unplugged", "creator", "studio", "youtube.tv.", "firetv.youtube.tv")
+        return excluded.none { it in p } && p != "com.amazon.firetv.youtube.tv"
     }
 
     /** Alle Paketnamen (für die Sichtbarkeit unter Android 11+ im Manifest und für Tests). */
