@@ -93,7 +93,8 @@ enum class AudioMode(val label: String) {
 data class AppSettings(
     val bufferProfile: BufferProfile = BufferProfile.BALANCED,
     val tunneling: Boolean = false,
-    val matchFrameRate: Boolean = false,
+    /** Standard an (seit 0.45.4): Deutsches TV hat 25/50 Bilder, der Fire TV gibt sonst 60 Hz aus und das Bild läuft ungleichmäßig. */
+    val matchFrameRate: Boolean = true,
     val liveFormat: LiveFormat = LiveFormat.TS,
     val userAgent: String = DEFAULT_USER_AGENT,
     val zapWithUpDown: Boolean = true,
@@ -224,7 +225,7 @@ class SettingsStore(private val context: Context) {
     private object Keys {
         val buffer = stringPreferencesKey("buffer_profile")
         val tunneling = booleanPreferencesKey("tunneling")
-        val afr = booleanPreferencesKey("match_frame_rate")
+        val afr = booleanPreferencesKey("match_frame_rate_v2")
         val liveFormat = stringPreferencesKey("live_format")
         val userAgent = stringPreferencesKey("user_agent")
         val zap = booleanPreferencesKey("zap_up_down")
@@ -429,7 +430,7 @@ class SettingsStore(private val context: Context) {
     private fun Preferences.toSettings() = AppSettings(
         bufferProfile = enumOrDefault(this[Keys.buffer], BufferProfile.BALANCED),
         tunneling = this[Keys.tunneling] ?: false,
-        matchFrameRate = this[Keys.afr] ?: false,
+        matchFrameRate = this[Keys.afr] ?: true,
         liveFormat = enumOrDefault(this[Keys.liveFormat], LiveFormat.TS),
         userAgent = this[Keys.userAgent]?.takeIf { it.isNotBlank() } ?: AppSettings.DEFAULT_USER_AGENT,
         zapWithUpDown = this[Keys.zap] ?: true,
