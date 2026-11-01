@@ -36,6 +36,7 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             runCatching { if (de.ayutv.data.StorageCleaner.isLow(this)) android.util.Log.i("AyuStorage", de.ayutv.data.StorageCleaner.clean(this)) }
         }.apply { priority = Thread.MIN_PRIORITY }.start()
         container = AppContainer(this)
+        de.ayutv.ui.UiPerformance.busy = { container.playlists.state.value is de.ayutv.data.repo.SyncState.Running }
         // Einstellung „Flüssige Bedienung“ (weniger Bewegung) laufend übernehmen.
         container.scope.launch { container.settings.settings.collect { de.ayutv.ui.UiPerformance.setSmooth(it.smoothUi) } }
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.

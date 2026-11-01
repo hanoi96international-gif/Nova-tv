@@ -489,6 +489,8 @@ class PlaylistRepository(
         val withGuide: Int,
         val total: Int,
         val sources: List<Pair<String, Int>>,
+        /** Sender ohne Programm, die keines haben können (24/7, Event ohne Spiel, Trennzeilen), je Grund. */
+        val excluded: List<Pair<String, Int>> = emptyList(),
         /** Sender ohne Programm (Zeile in der Datenbank beim letzten Laden, Gruppe, Name). */
         val missingChannels: List<MissingChannel>,
     ) {
@@ -504,7 +506,8 @@ class PlaylistRepository(
         EpgStatus(
             withGuide, total,
             lines.filter { it.startsWith("S\t") }.map { it.split('\t').let { p -> p[1] to p[2].toInt() } },
-            lines.filter { it.startsWith("M\t") }.map {
+            excluded = lines.filter { it.startsWith("X\t") }.mapNotNull { it.split('\t').takeIf { p -> p.size >= 3 }?.let { p -> p[1] to (p[2].toIntOrNull() ?: 0) } },
+            missingChannels = lines.filter { it.startsWith("M\t") }.map {
                 it.split('\t').let { p -> if (p.size >= 3) MissingChannel(p.getOrNull(3)?.toLongOrNull(), p[1], p[2]) else MissingChannel(null, "", p.last()) }
             },
         )
@@ -638,16 +641,20 @@ class PlaylistRepository(
     }.getOrDefault(emptyList())
 
     private fun writeStatus(playlistId: Long, channels: List<EpgChannel>, visible: Set<Long>, covered: Set<Long>, counts: List<Pair<String, Int>>) {
-        // Trennzeilen („##### SKY MOVIES #####“) und Event-Sender ohne Event sind keine Sender mit Programm.
-        val shown = channels.filter {
-            it.id in visible && !de.ayutv.data.parse.EventNames.isSeparator(it.name) && !de.ayutv.data.parse.EventNames.isIdle(it.name)
-        }
+        // Ohne Programm, aber ohne eines haben zu können (Trennzeilen, 24/7-Schleifen, Event-Sender ohne Spiel):
+        // nicht als „fehlt“ zählen, sondern getrennt nennen. So steht im Bericht nur, was sich verbessern lässt.
+        val visibleChannels = channels.filter { it.id in visible }
+        val reasons = visibleChannels.filter { it.id !in covered }
+            .associate { it.id to de.ayutv.data.parse.EventNames.noGuideReason(it.name, it.groupTitle) }
+        val shown = visibleChannels.filter { reasons[it.id] == null }
+        val excluded = reasons.values.filterNotNull().groupingBy { it }.eachCount()
         val missing = shown.filter { it.id !in covered }.distinctBy { it.groupTitle.trim() to it.name.trim() }
         runCatching {
             statusDir.mkdirs()
             File(statusDir, "epg-$playlistId.txt").writeText(buildString {
                 append("${shown.count { it.id in covered }}\t${shown.size}\n")
                 for ((label, count) in counts) append("S\t${label.replace('\t', ' ')}\t$count\n")
+                for ((label, count) in excluded) append("X\t$label\t$count\n")
                 for (c in missing.take(MAX_MISSING_LISTED)) append("M\t${c.groupTitle.trim().clean()}\t${c.name.trim().clean()}\t${c.id}\n")
             })
         }
