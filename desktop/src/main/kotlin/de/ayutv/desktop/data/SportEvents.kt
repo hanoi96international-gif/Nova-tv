@@ -31,7 +31,10 @@ object SportEvents {
                     }
                     .map { it to c }
             }
-            .groupBy { (p, c) -> (p.start / (5 * 60_000L)) to ProgrammeText.sportKey(p.title, p.subtitle, p.description, c.epgId ?: c.key) }
+            .groupBy { (p, c) ->
+                (p.start / (5 * 60_000L)) to
+                    ProgrammeText.sportGroupKey(p.title, p.subtitle, p.description, c.epgId ?: c.key, ChannelVariants.key(c.name) ?: c.key)
+            }
             .values.map { same ->
                 val (p, c) = same.minWith(best)
                 val others = same.filter { variant(it.second) != variant(c) }

@@ -124,6 +124,17 @@ object ProgrammeText {
         val desc = description(description)?.takeUnless { PLACEHOLDER.containsMatchIn(it) }?.let { simple(it).take(120) }
         return "h:" + simple(headline(title, subtitle)) + "|" + (desc?.ifEmpty { null } ?: "@$channelEpgId")
     }
+    /**
+     * Schlüssel, unter dem Sport-Sendungen zu einem Eintrag zusammengefasst werden. Mit Paarung („Hannover – Dresden“)
+     * über alle Sender: dasselbe Spiel. Ohne Paarung („Live: 2. BL“) nur Fassungen desselben Senders ([channelGroup],
+     * z. B. „Sky Sport Bundesliga 2“ in HD und 4K): Sonst wurden verschiedene Spiele mit gleichem Allgemeintext auf
+     * verschiedenen Sendern zu einem Eintrag, und Spiele fehlten in der Liste.
+     */
+    fun sportGroupKey(title: String, subtitle: String?, description: String?, channelEpgId: String, channelGroup: String): String {
+        val key = sportKey(title, subtitle, description, channelEpgId)
+        return if (key.startsWith("p:")) key else "$key|$channelGroup"
+    }
+
     private val PLACEHOLDER = Regex("""(?i)folg(en|t) in k(ü|u)rze|keine (weiteren )?informationen""")
     private val NON_WORD = Regex("""[^\p{L}\p{N}]+""")
     private fun simple(text: String) = text.lowercase().replace(NON_WORD, "")

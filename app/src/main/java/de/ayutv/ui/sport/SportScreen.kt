@@ -98,12 +98,28 @@ fun SportScreen() {
     LaunchedEffect(minute) {
         scores = runCatching { container.liveScores.current() }.getOrDefault(emptyList())
     }
-    /** Das Spiel zur Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung. */
-    fun matchOf(e: SportEvent): de.ayutv.data.sport.LiveScores.Match? {
-        val p = e.programme
-        return container.liveScores.find(scores, p.pairing(), p.start, p.title)
-            ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
+    /**
+     * Das Spiel zu jeder Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung, sonst
+     * per Ausschluss (das einzige übrige Spiel der Liga zu dieser Zeit). Einmal je Minute für alle, nicht je Zeile.
+     */
+    val matches = remember(events, scores) {
+        val events = events.orEmpty()
+        val direct = events.map { e ->
+            val p = e.programme
+            container.liveScores.find(scores, p.pairing(), p.start, p.title)
+                ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
+        }
+        val openIndex = events.indices.filter { direct[it] == null && events[it].programme.pairing() == null }
+        val found = container.liveScores.byElimination(
+            scores,
+            openIndex.map { i -> events[i].programme.let { de.ayutv.data.sport.LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
+            direct.filterNotNull().toSet(),
+        )
+        val result = direct.toMutableList()
+        for ((k, match) in found) result[openIndex[k]] = match
+        events.indices.associate { events[it] to result[it] }
     }
+    fun matchOf(e: SportEvent): de.ayutv.data.sport.LiveScores.Match? = matches[e]
     /** Stand nur, wenn Live-Ergebnisse eingeschaltet sind. */
     fun scoreOf(e: SportEvent) = matchOf(e)?.takeIf { settings?.liveScores == true }
     /** Paarung aus dem EPG, sonst aus dem Spielplan. */

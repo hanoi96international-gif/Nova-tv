@@ -151,7 +151,10 @@ class ContentRepository(
         return withContext(Dispatchers.Default) {
             programmes.flatMap { p -> channels[p.channelEpgId].orEmpty().map { p to it } }
                 .filter { (p, c) -> p.isSportEvent(ProgrammeText.isSportChannel(c.name)) }
-                .groupBy { (p, _) -> (p.start / (5 * 60_000L)) to ProgrammeText.sportKey(p.title, p.subtitle, p.description, p.channelEpgId) }
+                .groupBy { (p, c) ->
+                    (p.start / (5 * 60_000L)) to
+                        ProgrammeText.sportGroupKey(p.title, p.subtitle, p.description, p.channelEpgId, ChannelVariants.key(c.name) ?: c.key)
+                }
                 .values.map { same ->
                     // Weitere Sender, nicht weitere Fassungen desselben Senders: je Sender die beste Fassung.
                     fun variant(channel: ChannelEntity) = ChannelVariants.key(channel.name) ?: channel.key

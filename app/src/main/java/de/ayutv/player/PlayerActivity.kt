@@ -95,6 +95,7 @@ class PlayerActivity : ComponentActivity() {
     private var trackSelector: DefaultTrackSelector? = null
     /** Beim Laden mitgelesene eingebettete Untertitel (für Übersetzung mit Vorlauf). */
     private var embedded: EmbeddedSubtitles? = null
+    private var asyncDecodingActive = false
     private var forcePcmActive = false
     private val rebufferTimes = ArrayDeque<Long>()
     private var bufferAdviceShown = false
@@ -365,7 +366,7 @@ class PlayerActivity : ComponentActivity() {
             enhance.leveling = settings.loudnessLevel
             loudnessLevel = settings.loudnessLevel
             textDisabled = vod != null && !settings.subtitlesAutoOn
-            installPlayer(settings.audioOutput == AudioOutput.PCM)
+            installPlayer(settings.asyncDecoding, settings.audioOutput == AudioOutput.PCM)
             startWatchdog()
             startGoalWatch()
 
@@ -418,9 +419,9 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Stabilität
 
-    private fun installPlayer(forcePcm: Boolean) {
+    private fun installPlayer(asyncDecoding: Boolean, forcePcm: Boolean) {
         val built = PlayerFactory.create(
-            this, container.http, settings, live = vod == null, forcePcm = forcePcm,
+            this, container.http, settings, live = vod == null, asyncDecoding = asyncDecoding, forcePcm = forcePcm,
             speech = heardSpeech.takeIf { vod != null },
             timeshift = timeshift.takeIf { vod == null },
             enhance = enhance,
@@ -433,6 +434,7 @@ class PlayerActivity : ComponentActivity() {
         }
         embedded = built.subtitles
         built.subtitles.audio = audioAhead
+        asyncDecodingActive = asyncDecoding
         forcePcmActive = forcePcm
         built.player.addListener(playerListener)
         built.player.addAnalyticsListener(analyticsListener)
@@ -442,7 +444,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Player mit anderer Decoder-Konfiguration neu aufbauen und an derselben Stelle weiterspielen. */
-    private fun rebuildPlayer(forcePcm: Boolean = forcePcmActive) {
+    private fun rebuildPlayer(asyncDecoding: Boolean = asyncDecodingActive, forcePcm: Boolean = forcePcmActive) {
         val old = player ?: return
         val item = old.currentMediaItem
         val position = old.currentPosition
@@ -450,7 +452,7 @@ class PlayerActivity : ComponentActivity() {
         val userAgent = headers?.userAgent
         old.removeListener(playerListener)
         old.release()
-        installPlayer(forcePcm)
+        installPlayer(asyncDecoding, forcePcm)
         val p = player ?: return
         userAgent?.let { headers?.userAgent = it }
         p.trackSelectionParameters = parameters
@@ -3675,6 +3677,15 @@ class PlayerActivity : ComponentActivity() {
                         fatalError = true
                         message = "Tonausgabe gestört: Soundbar/Receiver prüfen oder Tonausgabe auf „Immer im Gerät dekodieren“ stellen"
                     }
+                }
+                // Asynchrones Dekodieren mag nicht jeder Decoder: ohne neu aufbauen und für die
+                // Zukunft merken, damit der Neustart nicht bei jedem Sender wieder passiert.
+                asyncDecodingActive && error.isVideoDecoderError() -> {
+                    message = "Verbinde neu …"
+                    asyncDecodingActive = false
+                    container.scope.launch { container.settings.update { it.copy(asyncDecoding = false) } }
+                    // Nicht im eigenen Callback freigeben: erst im nächsten Durchlauf neu aufbauen.
+                    handler.post { rebuildPlayer(asyncDecoding = false) }
                 }
                 // Format kann das Gerät nicht: Wiederholen ist sinnlos, sofort klar sagen, woran es liegt.
                 !everReady && error.isUnsupportedFormat() -> {
