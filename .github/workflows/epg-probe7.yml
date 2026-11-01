@@ -1,0 +1,86 @@
+name: EPG-Probe-7
+on:
+  push:
+    branches: [epg-probe7]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Quellen sammeln
+        run: |
+          set +e
+          mkdir out && cd out
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+          curl -sSL -m 60 -A "$UA" -o epgshare_index.html https://epgshare01.online/epgshare01/
+          curl -sSL -m 60 -A "$UA" -o openepg_index.html https://www.open-epg.com/app/index.php
+          curl -sSL -m 60 -A "$UA" -o mjh_index.html https://i.mjh.nz/
+          curl -sSL -m 60 -A "$UA" -o globetv_index.json "https://api.github.com/repos/globetvapp/epg/contents/Germany"
+          cat > urls.txt <<'U'
+          https://epgshare01.online/epgshare01/epg_ripper_DE1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_AT1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_CH1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_PLUTO1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_SAMSUNG1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_RAKUTEN1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_PLEX1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_DISTROTV1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_ALL_SOURCES1.xml.gz
+          https://epgshare01.online/epgshare01/epg_ripper_UK1.xml.gz
+          https://i.mjh.nz/PlutoTV/de.xml.gz
+          https://i.mjh.nz/SamsungTVPlus/de.xml.gz
+          https://i.mjh.nz/Plex/de.xml.gz
+          https://i.mjh.nz/Roku/all.xml.gz
+          https://i.mjh.nz/Rakuten/de.xml.gz
+          https://i.mjh.nz/LG/de.xml.gz
+          https://www.open-epg.com/files/germany1.xml
+          https://www.open-epg.com/files/germany2.xml
+          https://www.open-epg.com/files/germany3.xml
+          https://www.open-epg.com/files/germany4.xml
+          https://www.open-epg.com/files/germany5.xml
+          https://www.open-epg.com/files/austria1.xml
+          https://www.open-epg.com/files/switzerland1.xml
+          https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany1.xml
+          https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany2.xml
+          https://raw.githubusercontent.com/globetvapp/epg/main/Germany/germany3.xml
+          https://xmltv.info/de/epg.xml.gz
+          https://iptv-epg.org/files/epg-de.xml.gz
+          U
+          i=0
+          while read -r u; do
+            u=$(echo "$u" | xargs); [ -z "$u" ] && continue
+            i=$((i+1)); f="src_$i"
+            curl -sSL -m 180 -A "$UA" -o "$f.raw" -w "%{http_code} %{size_download}" "$u" > "$f.status"
+            if gzip -t "$f.raw" 2>/dev/null; then gunzip -c "$f.raw" > "$f.xml"; else mv "$f.raw" "$f.xml"; fi
+            rm -f "$f.raw"
+            echo "$i $u $(cat $f.status)" >> sources.txt
+          done < urls.txt
+          python3 - <<'PY'
+          import re, glob, os, time
+          words = re.compile(r'(?i)magenta|vodafone|prime|amazon|freevee|paramount|dyn|volley|uhd|4k|\bsky\b|dazn|rtl\+|joyn|waipu|zattoo|pluto|serie|film|cinema|kino|24/7|warner|universal|sony|axn|disney|netflix|blue movie|spiegel|filmtastic|moviedome')
+          summary = open('summary.txt','w')
+          for line in open('sources.txt'):
+              n, url, code, size = line.split()[:4]
+              path = 'src_%s.xml' % n
+              try: data = open(path, encoding='utf-8', errors='replace').read()
+              except Exception: data = ''
+              chans = re.findall(r'<channel id="([^"]*)"[^>]*>(.*?)</channel>', data, re.S)
+              progs = data.count('<programme ')
+              stops = re.findall(r'<programme start="(\d{8})', data)
+              days = sorted(set(stops))
+              summary.write("== %s %s HTTP %s %s Bytes: %d Sender, %d Sendungen, Tage %s..%s\n" % (n, url, code, size, len(chans), progs, days[0] if days else '-', days[-1] if days else '-'))
+              names = []
+              for cid, body in chans:
+                  dn = re.findall(r'<display-name[^>]*>(.*?)</display-name>', body, re.S)
+                  names.append((cid, dn[0] if dn else ''))
+              open('channels_%s.txt' % n, 'w').write("\n".join("%s\t%s" % x for x in names))
+              hits = [x for x in names if words.search(x[0] + ' ' + x[1])]
+              for cid, dn in hits[:400]:
+                  summary.write("   %s\t%s\n" % (cid, dn))
+              os.remove(path)
+          PY
+          rm -f src_*.status
+          git init -q -b epg-probe7-results && git config user.name ci && git config user.email ci@users.noreply.github.com
+          git add -A && git commit -qm results && git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" epg-probe7-results
