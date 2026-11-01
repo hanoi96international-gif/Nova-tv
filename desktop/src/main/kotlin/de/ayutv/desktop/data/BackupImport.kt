@@ -142,6 +142,8 @@ class BackupImport(private val store: Store) {
                 hiddenMovieGroups = u.hiddenMovieGroups + hiddenByKind["VOD"].orEmpty(),
                 hiddenSeriesGroups = u.hiddenSeriesGroups + hiddenByKind["SERIES"].orEmpty(),
                 openSubtitlesKey = setting("opensubtitles_key") ?: u.openSubtitlesKey,
+                openSubtitlesUser = setting("opensubtitles_user") ?: u.openSubtitlesUser,
+                openSubtitlesPassword = setting("opensubtitles_password") ?: u.openSubtitlesPassword,
                 deeplKey = setting("deepl_key") ?: u.deeplKey,
                 subtitleLanguage = setting("subtitle_language_code") ?: u.subtitleLanguage,
             )
