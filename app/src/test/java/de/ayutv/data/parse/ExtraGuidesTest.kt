@@ -36,8 +36,23 @@ class ExtraGuidesTest {
                 ),
             ),
         )
-        assertEquals(2, Regex("<programme ").findAll(xml).count())
+        assertEquals(2, Regex("channel=\"Dyn\\.Volleyball\\.de@Dyn\"").findAll(xml).count())
         assertTrue(xml, xml.contains("Volleyball: BR Volleys – Düren · Lüneburg – Giesen"))
         assertTrue(xml, xml.contains("<display-name>Dyn Volleyball</display-name>"))
+        // Alle Sportarten zusammen für „Dyn 3“ usw.
+        assertTrue(xml, xml.contains("<channel id=\"Dyn.de@Dyn\">"))
+        assertEquals(2, Regex("channel=\"Dyn\\.de@Dyn\"").findAll(xml).count())
+    }
+
+    @Test
+    fun sourcesByCountry() {
+        val gr = EpgSources.SOURCES.first { "GR1" in it.url }.url
+        assertEquals(false, EpgSources.relevant(gr, listOf("DE: RTL HD", "Sky Sport 1")))
+        assertEquals(true, EpgSources.relevant(gr, listOf("DE: RTL HD", "GR: MAGENTA SERIES HD")))
+        assertEquals(true, EpgSources.relevant(EpgSources.PUBLIC.first(), listOf("Sky Sport 1")))
+        assertEquals(true, EpgSources.relevant("http://anbieter.example/xmltv.php", emptyList()))
+        assertEquals("plutotv-de.xml.gz", EpgSources.cacheName("https://i.mjh.nz/PlutoTV/de.xml.gz"))
+        assertEquals("samsungtvplus-de.xml.gz", EpgSources.cacheName("https://i.mjh.nz/SamsungTVPlus/de.xml.gz"))
+        assertEquals("epg_ripper_DE1.xml.gz", EpgSources.cacheName(EpgSources.PUBLIC.first()))
     }
 }

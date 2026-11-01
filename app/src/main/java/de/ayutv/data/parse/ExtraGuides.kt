@@ -312,8 +312,11 @@ object ExtraGuides {
             out.append("  <channel id=\"Dyn.").append(sport).append(".de@Dyn\"><display-name>Dyn ").append(sport)
                 .append("</display-name></channel>\n")
         }
+        // Alle Sportarten zusammen: für Sender ohne Sportart im Namen („Dyn“, „Dyn 3“, „Dyn Sport 1“).
+        out.append("  <channel id=\"Dyn.de@Dyn\"><display-name>Dyn</display-name><display-name>Dyn Sport</display-name></channel>\n")
         val time = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
-        for ((sport, events) in bySport) {
+        val all = bySport.flatMap { (sport, events) -> events.map { it.copy(title = "$sport: ${it.title}") } }
+        for ((sport, events) in bySport + ("" to all)) {
             val sorted = events.sortedWith(compareBy({ it.start }, { it.stop }))
             var block = ArrayList<DynEvent>()
             var blockStop = 0L
@@ -326,7 +329,8 @@ object ExtraGuides {
                 val clock = SimpleDateFormat("HH:mm", Locale.GERMANY).apply { timeZone = TimeZone.getTimeZone("Europe/Berlin") }
                 val description = block.joinToString("\n") { e -> "${clock.format(Date(e.start))} ${e.title}" + (e.competition?.let { " ($it)" } ?: "") }
                 val sub = block.mapNotNull { it.competition }.distinct().joinToString(", ").ifEmpty { null }
-                programme(out, "Dyn.$sport.de@Dyn", time.format(Date(start)), time.format(Date(stop)), "$sport: $title", sub, description, "Sport")
+                val channel = if (sport.isEmpty()) "Dyn.de@Dyn" else "Dyn.$sport.de@Dyn"
+                programme(out, channel, time.format(Date(start)), time.format(Date(stop)), if (sport.isEmpty()) title else "$sport: $title", sub, description, "Sport")
                 block = ArrayList()
             }
             for (e in sorted) {

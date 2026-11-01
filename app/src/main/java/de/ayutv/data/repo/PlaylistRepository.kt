@@ -543,7 +543,7 @@ class PlaylistRepository(
                 // Ohne die fragliche Kennung: Ein Treffer im freien EPG bekommt dessen Kennung (setEpgId).
                 if (isPublic) channels.filter { it.id in suspects }.map { it.copy(epgId = null) } else emptyList()
             if (open.isEmpty()) break
-            if (isPublic && open.none { it.id in visible && EpgMatcher.analyse(it.name, isId = false).country in GERMAN_SPEAKING }) continue
+            if (isPublic && !EpgSources.relevant(url, open.asSequence().filter { it.id in visible }.map { it.name }.asIterable())) continue
             val source = try {
                 if (isPublic) fetchCached(url, PUBLIC_MAX_AGE) else fetch(url, "epg-${playlist.id}-$index.xml")
             } catch (e: IOException) {
@@ -822,7 +822,7 @@ class PlaylistRepository(
             }
             return target
         }
-        val target = File(publicDir, url.substringAfterLast('/'))
+        val target = File(publicDir, de.ayutv.data.parse.EpgSources.cacheName(url))
         if (target.length() > 0 && System.currentTimeMillis() - target.lastModified() < maxAge) return target
         val downloaded = try {
             fetch(url, "public-" + target.name)
@@ -865,7 +865,5 @@ class PlaylistRepository(
         private fun String.clean() = replace('\t', ' ').replace('\n', ' ')
         /** Erhöhen, wenn sich die Senderzuordnung verbessert: Dann wird nach dem Update neu zugeordnet. */
         private const val EPG_MATCH_VERSION = "6"
-        /** Für die freien Quellen: Sender ohne Länder-Vorsatz zählen als deutschsprachig. */
-        private val GERMAN_SPEAKING = setOf(null, "de", "at", "ch")
     }
 }
