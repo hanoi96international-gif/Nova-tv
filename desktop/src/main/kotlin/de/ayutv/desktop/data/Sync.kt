@@ -1,6 +1,7 @@
 package de.ayutv.desktop.data
 
 import de.ayutv.data.parse.EpgMatcher
+import de.ayutv.data.parse.EventNames
 import de.ayutv.data.parse.EpgSources
 import de.ayutv.data.parse.M3uParser
 import de.ayutv.data.parse.XmltvParser
@@ -186,12 +187,32 @@ class Sync(private val store: Store, val http: OkHttpClient = Network.http) {
                     _status.value = "TV-Guide: ${EpgSources.label(url)} …"
                     runCatching { readGuide(url, missing, from, until, guide) }
                 }
+                eventProgrammes(channels.filter { it.key !in guide }, now, guide)
                 guide.mapValues { (_, list) -> list.sortedBy { it.start }.distinctBy { it.start } }
             }
             store.setGuide(result)
             store.updateUser { it.copy(guideSyncedAt = System.currentTimeMillis()) }
         } finally {
             _status.value = null
+        }
+    }
+
+    /**
+     * Event-Sender (PPV) ohne TV-Guide: das Spiel aus dem Sendernamen („NEXT | HSV II VS HANNOVER 96 II | Sun 01 Nov 14:00 CET“),
+     * 4K-/UHD-Fassungen („DE: DYN PPV 2 4K“) übernehmen es von ihrer Schwester. Wie auf dem Fire TV.
+     */
+    private fun eventProgrammes(open: List<Channel>, now: Long, guide: MutableMap<String, MutableList<Programme>>) {
+        val named = HashMap<String, EventNames.Event>()
+        for (c in open) {
+            val event = EventNames.parse(c.name, now) ?: continue
+            EventNames.baseKey(c.name)?.let { named.putIfAbsent(it, event) }
+        }
+        for (c in open) {
+            val event = EventNames.parse(c.name, now)
+                ?: EventNames.baseKey(c.name)?.takeIf { !EventNames.isIdle(c.name) }?.let(named::get)
+                ?: continue
+            if (event.stop < now) continue
+            guide.getOrPut(c.key) { ArrayList() } += Programme(event.start, event.stop, event.title, category = "Sport", flags = 2)
         }
     }
 
