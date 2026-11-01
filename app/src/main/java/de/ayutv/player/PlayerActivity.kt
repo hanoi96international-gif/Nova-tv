@@ -1260,6 +1260,18 @@ class PlayerActivity : ComponentActivity() {
         lifecycleScope.launch { isFavorite = container.content.toggleFavorite(channel.key) }
     }
 
+    /**
+     * Live-TV: Zurück öffnet links die Senderliste, das Bild läuft rechts klein weiter. Ein Sender (auch derselbe)
+     * holt es wieder ins Vollbild; noch einmal Zurück verlässt den Player.
+     */
+    var miniVideo by mutableStateOf(false)
+        private set
+
+    private fun openMiniChannelList() {
+        miniVideo = true
+        openChannelList()
+    }
+
     fun openChannelList() {
         showOverlay(Overlay.CHANNELS)
         lifecycleScope.launch { nowPlayingMap = container.content.nowPlaying(channels) }
@@ -1267,6 +1279,7 @@ class PlayerActivity : ComponentActivity() {
 
     fun closeOverlay() {
         overlay = Overlay.NONE
+        miniVideo = false
         syncPanel = false
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
@@ -3984,7 +3997,12 @@ class PlayerActivity : ComponentActivity() {
                     languagePicker -> closeLanguagePicker()
                     epgPicker -> closeEpgPicker()
                     pipChoices != null -> closePipPicker()
+                    // Senderliste mit kleinem Bild: noch einmal Zurück verlässt den Player.
+                    overlay == Overlay.CHANNELS && miniVideo -> finish()
                     overlay != Overlay.NONE -> closeOverlay()
+                    // Live-TV: erst Senderliste mit kleinem Bild, statt sofort zu den Menüs.
+                    // (Nur mit genug Breite für Liste und Bild daneben, nicht auf dem Handy im Hochformat.)
+                    isLive && channels.isNotEmpty() && pipPlayer == null && resources.configuration.screenWidthDp >= 900 -> openMiniChannelList()
                     else -> finish()
                 }
             }

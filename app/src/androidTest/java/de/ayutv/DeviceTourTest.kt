@@ -421,7 +421,20 @@ class DeviceTourTest {
                     key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)
                     key(KeyEvent.KEYCODE_MENU); Thread.sleep(1_000)
                     shot("1${index}_live_menu")
-                    key(KeyEvent.KEYCODE_BACK)
+                    key(KeyEvent.KEYCODE_BACK); Thread.sleep(600)
+                    // Zurück ohne offenes Menü: links die Senderliste, das Bild läuft klein weiter; ein Sender (hier der
+                    // gerade laufende) geht wieder ins Vollbild.
+                    section("live_mini") {
+                        key(KeyEvent.KEYCODE_BACK)
+                        val mini = waitFor(3_000) { scenario.read { it.miniVideo && it.overlay == de.ayutv.player.Overlay.CHANNELS } }
+                        val playing = scenario.read { it.player?.isPlaying == true || it.player?.playbackState == Player.STATE_BUFFERING }
+                        Thread.sleep(800)
+                        shot("1${index}_live_mini")
+                        key(KeyEvent.KEYCODE_DPAD_CENTER)
+                        val full = waitFor(5_000) { scenario.read { !it.miniVideo && it.overlay == de.ayutv.player.Overlay.NONE } }
+                        log("live_mini: mini=$mini playing=$playing full=$full finishing=${scenario.read { it.isFinishing }}")
+                        assertTrue("Mini-Bild: mini=$mini playing=$playing full=$full", mini && full && !scenario.read { it.isFinishing })
+                    }
                 }
             }
         } }

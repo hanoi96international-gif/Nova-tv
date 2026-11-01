@@ -4,6 +4,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import de.ayutv.data.setup.Backup
+import de.ayutv.ui.components.drillContent
 import de.ayutv.ui.components.isTouchDevice
 import de.ayutv.ui.components.isPortrait
 import androidx.activity.compose.BackHandler
@@ -174,9 +175,18 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         return
     }
 
+    // Bereich geöffnet: nur noch seine Einstellungen, die Bereichsspalte ist weg. Zurück holt sie wieder.
+    val drill = de.ayutv.ui.components.rememberDrillDown()
+    LaunchedEffect(drill.backTick) {
+        if (drill.backTick == 0) return@LaunchedEffect
+        repeat(10) {
+            if (runCatching { pageFocus.getValue(page).requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
     Row(Modifier.fillMaxSize()) {
         // Links die Bereiche: Fokus genügt zum Umschalten, rechts stehen die Einstellungen dazu.
-        Column(
+        if (!drill.isOpen) Column(
             // focusRestorer: Von rechts zurück landet der Fokus auf dem gewählten Bereich, nicht auf dem
             // gerade daneben liegenden (der sonst sofort umschalten würde).
             // fallback: Beim ersten Betreten (noch nichts gemerkt) auf den gewählten Bereich, nicht auf den nächstgelegenen.
@@ -196,7 +206,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                     selected = page == entry,
                     focusRequester = pageFocus.getValue(entry),
                     onFocus = { pendingPage = entry },
-                    onClick = { pendingPage = null; page = entry },
+                    onClick = { pendingPage = null; page = entry; drill.enter() },
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -205,13 +215,13 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
         key(page) { LazyColumn(
             // Am Listenende nicht in die linke Spalte (würde den Bereich wechseln) oder die Seitenleiste springen.
-            modifier = Modifier.weight(1f).fillMaxHeight().keepVerticalFocus(),
+            modifier = Modifier.weight(1f).fillMaxHeight().drillContent(drill).keepVerticalFocus(),
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item(key = "title-${page.name}") {
                 Column(Modifier.padding(bottom = 8.dp)) {
-                    Text(page.title, style = MaterialTheme.typography.headlineMedium)
+                    Text(if (drill.isOpen) "‹  ${page.title}" else page.title, style = MaterialTheme.typography.headlineMedium)
                     Text(page.description, color = AyuColors.TextSecondary, fontSize = 14.sp)
                     SyncBanner(sync, Modifier.padding(top = 4.dp))
                 }

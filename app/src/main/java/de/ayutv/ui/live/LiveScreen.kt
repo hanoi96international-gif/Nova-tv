@@ -56,6 +56,7 @@ import de.ayutv.data.db.ProgrammeEntity
 import de.ayutv.player.PlayerActivity
 import de.ayutv.ui.LocalContainer
 import de.ayutv.ui.components.CategoryColumn
+import de.ayutv.ui.components.drillContent
 import de.ayutv.ui.components.CategoryEntry
 import de.ayutv.ui.components.ChannelListItem
 import de.ayutv.ui.components.ChannelLogo
@@ -185,11 +186,19 @@ fun LiveScreen() {
         }
     }
 
+    // Gruppe geöffnet: nur noch ihre Sender, die Gruppenspalte ist weg. Zurück holt sie wieder.
+    val drill = de.ayutv.ui.components.rememberDrillDown()
+    // Geöffnete Gruppe ohne Sender (z. B. nach dem Ausblenden): zurück zu den Gruppen, sonst gäbe es keinen Weg dorthin.
+    LaunchedEffect(drill.isOpen, loaded) {
+        if (drill.isOpen && loaded?.isEmpty() == true && moving == null) drill.close()
+    }
     Row(Modifier.fillMaxSize()) {
-        CategoryColumn(
+        if (!drill.isOpen) CategoryColumn(
             entries,
             selectedGroup,
             onSelect = { selectedGroup = it },
+            onOpen = { drill.enter() },
+            focusSelectedTick = drill.backTick,
             onLongClick = { name ->
                 // Eigene Gruppe: umbenennen, verschieben, löschen. Gruppe des Anbieters: ausblenden (Favoriten und eigene
                 // Gruppen behalten ihre Sender trotzdem).
@@ -239,9 +248,13 @@ fun LiveScreen() {
                 selecting = false
                 picked = emptyList()
             }
+            Column(Modifier.weight(1f).fillMaxHeight()) {
+            if (drill.isOpen) de.ayutv.ui.components.DrillTitle(entries.firstOrNull { it.id == selectedGroup }?.label ?: "Sender")
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxHeight().keepVerticalFocus().focusRestorer().onPreviewKeyEvent { event ->
+                modifier = Modifier.weight(1f).fillMaxWidth()
+                    .drillContent(drill, backEnabled = movingKeys == null && !selecting)
+                    .keepVerticalFocus().focusRestorer().onPreviewKeyEvent { event ->
                     val keys = movingKeys ?: return@onPreviewKeyEvent false
                     val list = moving ?: return@onPreviewKeyEvent false
                     val code = event.nativeKeyEvent.keyCode
@@ -299,6 +312,7 @@ fun LiveScreen() {
                         },
                     )
                 }
+            }
             }
         }
 

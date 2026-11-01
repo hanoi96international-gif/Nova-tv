@@ -133,8 +133,13 @@ fun PlayerScreen(activity: PlayerActivity) {
                     it.subtitleView?.setBottomPaddingFraction(if (barVisible) 0.3f else activity.subtitleLook.position.bottomFraction)
                 },
                 // Nebeneinander (Multiview): Hauptbild links, zweiter Sender rechts, gleich groß.
-                modifier = if (activity.pipPlayer != null && activity.pipSplit) Modifier.fillMaxHeight().fillMaxWidth(0.5f).align(Alignment.CenterStart)
-                else Modifier.fillMaxSize(),
+                modifier = when {
+                    activity.pipPlayer != null && activity.pipSplit -> Modifier.fillMaxHeight().fillMaxWidth(0.5f).align(Alignment.CenterStart)
+                    // Senderliste nach Zurück: Bild rechts daneben klein weiter (links die 460 dp breite Liste).
+                    activity.miniVideo -> Modifier.align(Alignment.CenterEnd).padding(start = 484.dp, end = 32.dp)
+                        .fillMaxWidth().aspectRatio(16f / 9f)
+                    else -> Modifier.fillMaxSize()
+                },
             )
         }
 
@@ -385,7 +390,8 @@ fun PlayerScreen(activity: PlayerActivity) {
             Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             // Beim Zuordnen des TV-Guides (Suchen, Blättern in langen Listen) nicht von selbst schließen.
             Overlay.TRACKS -> if (activity.epgPicker || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
-            Overlay.CHANNELS -> 15_000L
+            // Mit kleinem Bild (nach Zurück) bleibt die Liste, bis man wählt oder noch einmal Zurück drückt.
+            Overlay.CHANNELS -> if (activity.miniVideo) Long.MAX_VALUE else 15_000L
         }
         delay(timeout)
         activity.closeOverlay()

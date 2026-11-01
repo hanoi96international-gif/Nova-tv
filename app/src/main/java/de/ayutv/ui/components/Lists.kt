@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -119,8 +120,26 @@ fun CategoryColumn(
     /** Langes Drücken auf eine echte Gruppe (nicht "Alle"/"Favoriten"), z. B. zum Ausblenden. */
     onLongClick: ((String) -> Unit)? = null,
     onAction: ((String) -> Unit)? = null,
+    /** OK auf einer Gruppe: sie öffnen (Inhalt statt Gruppenspalte), siehe [DrillDown]. */
+    onOpen: ((String?) -> Unit)? = null,
+    /** Ändert sich der Wert, kommt der Fokus auf die gewählte Gruppe (nach Zurück aus dem Inhalt). */
+    focusSelectedTick: Int = 0,
 ) {
     var focusedId by remember { mutableStateOf<Any?>(Unset) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = if (focusSelectedTick > 0) (entries.indexOfFirst { it.id == selected } - 3).coerceAtLeast(0) else 0,
+    )
+    val selectedFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(focusSelectedTick) {
+        if (focusSelectedTick == 0) return@LaunchedEffect
+        val index = entries.indexOfFirst { it.id == selected }
+        if (index < 0) return@LaunchedEffect
+        if (listState.layoutInfo.visibleItemsInfo.none { it.index == index }) listState.scrollToItem((index - 3).coerceAtLeast(0))
+        repeat(10) {
+            if (runCatching { selectedFocus.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
     LaunchedEffect(focusedId) {
         val id = focusedId
         if (id === Unset) return@LaunchedEffect
@@ -128,6 +147,7 @@ fun CategoryColumn(
         onSelect(id as String?)
     }
     LazyColumn(
+        state = listState,
         modifier = modifier.width(width).fillMaxHeight().keepVerticalFocus().focusRestorer(),
         contentPadding = PaddingValues(vertical = 24.dp, horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -135,9 +155,17 @@ fun CategoryColumn(
         items(entries, key = { it.id ?: "\u0000all" }) { entry ->
             val id = entry.id
             Surface(
-                onClick = { if (entry.action && id != null) onAction?.invoke(id) else onSelect(entry.id) },
+                onClick = {
+                    if (entry.action && id != null) onAction?.invoke(id)
+                    else {
+                        onSelect(entry.id)
+                        onOpen?.invoke(entry.id)
+                    }
+                },
                 onLongClick = if (onLongClick != null && id != null && entry.removable) ({ onLongClick(id) }) else null,
-                modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused && !entry.action) focusedId = entry.id },
+                modifier = Modifier.fillMaxWidth()
+                    .then(if (entry.id == selected && !entry.action) Modifier.focusRequester(selectedFocus) else Modifier)
+                    .onFocusChanged { if (it.isFocused && !entry.action) focusedId = entry.id },
                 shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
                 colors = ClickableSurfaceDefaults.colors(
                     containerColor = if (entry.id == selected) AyuColors.SurfaceRaised else Color.Transparent,
