@@ -163,6 +163,13 @@ object HttpsUpgrade : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         val secure = upgrade(request.url)
-        return chain.proceed(if (secure == request.url) request else request.newBuilder().url(secure).build())
+        val builder = if (secure == request.url) null else request.newBuilder().url(secure)
+        // Wikimedia (Vereinswappen) lehnt Abrufe ohne aussagekräftige Kennung ab; ohne eigene gilt die von OkHttp.
+        if (secure.host.endsWith("wikimedia.org") && request.header("User-Agent") == null) {
+            return chain.proceed((builder ?: request.newBuilder()).header("User-Agent", WIKIMEDIA_AGENT).build())
+        }
+        return chain.proceed(builder?.build() ?: request)
     }
+
+    private const val WIKIMEDIA_AGENT = "DnA-TV/1.0 (IPTV-Player; https://github.com/hanoi96international-gif/Nova-tv)"
 }
