@@ -37,18 +37,22 @@ object ProxyCheck {
         val direct = runCatching { lookup(quick.proxy(Proxy.NO_PROXY).build()) }.getOrNull()
         // Auch bei ausgeschaltetem Proxy testbar (vor dem Einschalten), solange Adresse und Port da sind.
         if (!config.complete) return@withContext Result(direct, null, "Adresse und Port eintragen").also { last = it }
-        val viaProxy = quick.proxy(config.toProxy()).proxyAuthenticator { _, response ->
+        val viaProxy = proxiedClient(quick, config)
+        runCatching { lookup(viaProxy) }.fold(
+            onSuccess = { Result(direct, it, null) },
+            onFailure = { Result(direct, null, explain(it)) },
+        ).also { last = it }
+    }
+
+    /** Client über den eingetragenen Proxy, mit dessen Anmeldung (auch für den Speedtest). */
+    fun proxiedClient(base: OkHttpClient.Builder, config: ProxyConfig): OkHttpClient =
+        base.proxy(config.toProxy()).proxyAuthenticator { _, response ->
             // Eigene Anmeldung für den Test: die gerade eingetragenen Zugangsdaten, nicht die gespeicherten.
             if (response.code != 407 || config.user.isEmpty() || response.request.header("Proxy-Authorization") != null &&
                 response.challenges().none { it.scheme == "OkHttp-Preemptive" }
             ) null
             else response.request.newBuilder().header("Proxy-Authorization", okhttp3.Credentials.basic(config.user, config.password)).build()
         }.build()
-        runCatching { lookup(viaProxy) }.fold(
-            onSuccess = { Result(direct, it, null) },
-            onFailure = { Result(direct, null, explain(it)) },
-        ).also { last = it }
-    }
 
     private fun lookup(client: OkHttpClient): Seen {
         var last: Throwable? = null

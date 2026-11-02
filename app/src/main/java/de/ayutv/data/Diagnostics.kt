@@ -78,6 +78,7 @@ object Diagnostics {
             out.append("Proxy-Prüfung: " + (r.proxied?.let { "über Proxy ${it.country}" } ?: "Proxy nicht erreichbar") +
                 (r.direct?.let { ", direkt ${it.country}" } ?: "") + (r.error?.let { ", Fehler: $it" } ?: "") + "\n")
         }
+        de.ayutv.data.net.ProxySpeedTest.last?.let { out.append(it.report()).append('\n') }
 
         section("Wiedergabe (letzte 48 h)")
         runCatching {

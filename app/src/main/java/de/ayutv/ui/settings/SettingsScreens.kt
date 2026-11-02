@@ -891,6 +891,26 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                             }
                         }
                     }
+                    if (settings.proxyConfig.complete) item {
+                        // Speedtest: Ping und Geschwindigkeit über den Proxy und direkt (neutraler Messserver, eine Verbindung).
+                        var phase by remember { mutableStateOf<String?>(null) }
+                        var result by remember { mutableStateOf(de.ayutv.data.net.ProxySpeedTest.last) }
+                        SettingRow(
+                            "Proxy-Speedtest",
+                            phase?.let { "misst $it" } ?: "Jetzt messen",
+                            result?.summary()
+                                ?: "Misst Ping und Geschwindigkeit über den Proxy und zum Vergleich direkt, je etwa 10 Sekunden über eine " +
+                                    "Verbindung wie bei einem Videostream. Die schwächste Sekunde zeigt, ob 4K oder Full HD ohne Hänger " +
+                                    "durchkommt. Verbraucht bis zu 300 MB, vorher die Wiedergabe beenden.",
+                        ) {
+                            if (phase != null) return@SettingRow
+                            phase = "…"
+                            scope.launch {
+                                result = de.ayutv.data.net.ProxySpeedTest.run(container.http, settings.proxyConfig) { phase = it }
+                                phase = null
+                            }
+                        }
+                    }
                     if (settings.proxyMode != de.ayutv.data.net.ProxyMode.OFF) item {
                         SettingRow(
                             "Videostreams über den Proxy",
