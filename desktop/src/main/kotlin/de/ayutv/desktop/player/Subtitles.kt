@@ -44,20 +44,24 @@ class Subtitles(private val http: OkHttpClient, private val dir: File) {
     /** Zugang zu OpenSubtitles: eigener Schlüssel, optional Konto (höheres Tageskontingent). */
     data class Account(val apiKey: String, val user: String = "", val password: String = "")
 
-    suspend fun find(key: String, title: String, url: String, language: String, account: Account, deeplKey: String, progress: (String) -> Unit = {}): Found =
+    /** [variant] > 0: die nächstbeste Datei (wenn die erste nicht zum Film passt, Menü „Andere Untertitel-Datei laden“). */
+    suspend fun find(key: String, title: String, url: String, language: String, account: Account, deeplKey: String, variant: Int = 0, progress: (String) -> Unit = {}): Found =
         withContext(Dispatchers.IO) {
             dir.mkdirs()
-            val cached = File(dir, "${safe(key)}.$language.srt")
+            val cached = File(dir, "${safe(key)}.$language${if (variant > 0) ".$variant" else ""}.srt")
             if (cached.isFile && cached.length() > 0) return@withContext Found(cached, "gespeichert")
             if (account.apiKey.isBlank()) throw IOException("Kein OpenSubtitles-Schlüssel. Bitte unter Einstellungen eintragen oder die Sicherung vom Fire TV übernehmen.")
 
             progress("Suche Untertitel bei OpenSubtitles …")
-            candidates(account.apiKey, key, title, url, language).firstOrNull()?.let { best ->
+            val found = candidates(account.apiKey, key, title, url, language)
+            if (variant > 0 && found.isNotEmpty() && found.getOrNull(variant) == null) throw IOException("Keine weitere Untertitel-Datei in ${language.uppercase()} gefunden.")
+            found.getOrNull(variant)?.let { best ->
                 cached.writeText(download(account, best.fileId))
                 return@withContext Found(cached, "OpenSubtitles")
             }
             if (deeplKey.isBlank() || language == "en") throw IOException("Keine Untertitel in ${language.uppercase()} gefunden.")
-            val english = candidates(account.apiKey, key, title, url, "en").firstOrNull() ?: throw IOException("Keine Untertitel gefunden.")
+            val english = candidates(account.apiKey, key, title, url, "en").getOrNull(variant)
+                ?: throw IOException(if (variant > 0) "Keine weitere Untertitel-Datei gefunden." else "Keine Untertitel gefunden.")
             progress("Übersetze englische Untertitel mit DeepL …")
             val cues = Srt.parse(download(account, english.fileId))
             val translated = translate(deeplKey, cues.map { it.text }, language)

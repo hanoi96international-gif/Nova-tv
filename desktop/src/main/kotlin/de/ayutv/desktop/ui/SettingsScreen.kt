@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.ayutv.data.net.ProxyCheck
 import de.ayutv.desktop.data.Network
 import de.ayutv.desktop.data.Playlist
@@ -174,6 +175,36 @@ fun SettingsScreen(app: AppState) {
             }
             Toggle("Im Bild schalten ↑/↓ um (aus: ↑/↓ öffnen die Senderliste)", user.zapWithUpDown) {
                 app.store.updateUser { u -> u.copy(zapWithUpDown = !u.zapWithUpDown) }
+            }
+            if (de.ayutv.desktop.player.DisplayRate.supported) {
+                Toggle("Bildwiederholrate anpassen (50 Hz für deutsches TV, 24 Hz für Filme – wie auf dem Fire TV)", user.matchFrameRate) {
+                    app.updateSettings { u -> u.copy(matchFrameRate = !u.matchFrameRate) }
+                }
+                Label(
+                    "Der Bildschirm läuft sonst meist mit 60 Hz, das ruckelt bei Schwenks. Beim Umschalten ist das Bild 1–2 s schwarz (nur wenn sich die Rate ändert); " +
+                        "die Rate jedes Senders und Films wird gemerkt. Nach dem Player kommt die alte Rate zurück. Bildschirm jetzt: ${de.ayutv.desktop.player.DisplayRate.current()} Hz.",
+                    Type.small, maxLines = 3,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Chips("Bildformat", de.ayutv.desktop.data.PictureFit.entries, user.pictureFit) { v -> app.updateSettings { it.copy(pictureFit = v) } }
+        }
+
+        item { Section("Ton") }
+        item {
+            Chips("Klang", de.ayutv.desktop.data.AudioMode.entries, user.audioMode) { v -> app.updateSettings { it.copy(audioMode = v) } }
+            Label("Nachtmodus: laute Stellen leiser, leise lauter. Dialoge verstärken: Sprache lauter als Musik und Effekte. Auch im Bild über ☰.", Type.small, maxLines = 2)
+            Spacer(Modifier.height(4.dp))
+            Toggle("Lautstärke angleichen (laute Werbung und leise Sender kommen auf ähnliche Lautstärke)", user.normalizeVolume) {
+                app.updateSettings { u -> u.copy(normalizeVolume = !u.normalizeVolume) }
+            }
+            Spacer(Modifier.height(6.dp))
+            Label("Ton-Versatz (Lippensynchron, z. B. für eine Soundbar): ${delayLabel(user.audioDelayMs)}", Type.body)
+            Row(Modifier.padding(vertical = 4.dp)) {
+                listOf(-250L to "−0,25 s", -50L to "−0,05 s", 50L to "+0,05 s", 250L to "+0,25 s", 0L to "Zurücksetzen").forEach { (delta, label) ->
+                    TextButton(label, { app.updateSettings { it.copy(audioDelayMs = if (delta == 0L) 0 else (it.audioDelayMs + delta).coerceIn(-5_000, 5_000)) } })
+                    Spacer(Modifier.width(6.dp))
+                }
             }
         }
 
@@ -349,6 +380,13 @@ fun SettingsScreen(app: AppState) {
                 Field("DeepL-Schlüssel", user.deeplKey, { v -> app.store.updateUser { it.copy(deeplKey = v.trim()) } }, secret = true)
                 Field("Untertitel-Sprache (z. B. de)", user.subtitleLanguage, { v -> app.store.updateUser { it.copy(subtitleLanguage = v.trim().lowercase().take(5)) } })
             }
+            Spacer(Modifier.height(10.dp))
+            Label("Aussehen der Untertitel (auch im Bild über ☰)", Type.body)
+            SubtitlePreview(user)
+            Chips("Größe", de.ayutv.desktop.data.SubtitleSize.entries, user.subtitleSize) { v -> app.updateSettings { it.copy(subtitleSize = v) } }
+            Chips("Schriftfarbe", de.ayutv.desktop.data.SubtitleColor.entries, user.subtitleColor) { v -> app.updateSettings { it.copy(subtitleColor = v) } }
+            Chips("Hintergrund", de.ayutv.desktop.data.SubtitleBackground.entries, user.subtitleBackground) { v -> app.updateSettings { it.copy(subtitleBackground = v) } }
+            Chips("Position", de.ayutv.desktop.data.SubtitlePosition.entries, user.subtitlePosition) { v -> app.updateSettings { it.copy(subtitlePosition = v) } }
         }
 
         item { Section("Handy als Fernbedienung") }
@@ -388,6 +426,55 @@ fun SettingsScreen(app: AppState) {
     if (countries) CountryDialog(app, onDismiss = { countries = false })
     if (importing) ImportDialog(app, onDismiss = { importing = false })
     dialog?.invoke()
+}
+
+/** Auswahl aus festen Werten als Reihe (gewählter Wert hervorgehoben). */
+@Composable
+private fun <T : de.ayutv.desktop.data.Choice> Chips(title: String, options: List<T>, current: T, onPick: (T) -> Unit) {
+    Label(title, Type.body, Modifier.padding(top = 6.dp))
+    Row(Modifier.padding(vertical = 4.dp)) {
+        options.forEach { option ->
+            Selectable({ onPick(option) }, selected = option == current) { Label(option.label) }
+            Spacer(Modifier.width(6.dp))
+        }
+    }
+}
+
+/** Beispielzeile im eingestellten Aussehen der Untertitel. */
+@Composable
+private fun SubtitlePreview(user: de.ayutv.desktop.data.UserData) {
+    val color = androidx.compose.ui.graphics.Color(0xFF000000 or user.subtitleColor.rgb.toLong())
+    val shadow = when (user.subtitleBackground) {
+        de.ayutv.desktop.data.SubtitleBackground.OUTLINE -> androidx.compose.ui.graphics.Shadow(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.geometry.Offset(1.5f, 1.5f), 3f)
+        de.ayutv.desktop.data.SubtitleBackground.SHADOW -> androidx.compose.ui.graphics.Shadow(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.geometry.Offset(4f, 4f), 6f)
+        de.ayutv.desktop.data.SubtitleBackground.BOX -> null
+    }
+    val bottom = when (user.subtitlePosition) {
+        de.ayutv.desktop.data.SubtitlePosition.LOW -> 6.dp
+        de.ayutv.desktop.data.SubtitlePosition.NORMAL -> 16.dp
+        de.ayutv.desktop.data.SubtitlePosition.HIGH -> 40.dp
+    }
+    androidx.compose.foundation.layout.Box(
+        Modifier.width(520.dp).height(130.dp).padding(vertical = 4.dp)
+            .background(
+                androidx.compose.ui.graphics.Brush.linearGradient(listOf(androidx.compose.ui.graphics.Color(0xFF2B4B6F), androidx.compose.ui.graphics.Color(0xFF6B8E5A), androidx.compose.ui.graphics.Color(0xFFC9B37E))),
+                androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+            ),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        val style = androidx.compose.ui.text.TextStyle(
+            color = color, fontSize = (20 * user.subtitleSize.percent / 100).sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium, shadow = shadow,
+        )
+        androidx.compose.foundation.layout.Box(
+            Modifier.padding(bottom = bottom)
+                .background(
+                    if (user.subtitleBackground == de.ayutv.desktop.data.SubtitleBackground.BOX) androidx.compose.ui.graphics.Color(0xAA000000) else androidx.compose.ui.graphics.Color.Transparent,
+                    androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+                )
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+        ) { Label("So sehen die Untertitel aus.", style) }
+    }
 }
 
 @Composable
@@ -621,17 +708,17 @@ private fun ImportDialog(app: AppState, onDismiss: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Label(
                 "Auf dem Fire TV: Einstellungen → „Einrichtung per Handy“ öffnen und die angezeigte Adresse hier eintragen. " +
-                    "Mit Sicherungs-Passwort werden auch die Playlist-Passwörter übernommen.",
+                    "Passwörter von Playlists und Proxy kommen dabei immer mit (verschlüsselt übertragen).",
                 Type.small, maxLines = 4,
             )
             Field("Adresse vom Fire TV (z. B. http://192.168.178.40:8095/123456)", address, { address = it })
-            Field("Sicherungs-Passwort", password, { password = it }, secret = true)
+            Field("Passwort (nur für „Aus Datei“, wenn die Datei eines hat)", password, { password = it }, secret = true)
             Spacer(Modifier.height(12.dp))
             Row {
                 TextButton(if (busy) "Lädt …" else "Vom Fire TV laden", {
                     if (busy || address.isBlank()) return@TextButton
                     busy = true
-                    app.scope.launch { done(runCatching { app.backup.fromFireTv(app.sync.http, address, password) }) }
+                    app.scope.launch { done(runCatching { app.backup.fromFireTv(app.sync.http, address, "") }) }
                 }, primary = true)
                 Spacer(Modifier.width(8.dp))
                 TextButton("Aus Datei …", {

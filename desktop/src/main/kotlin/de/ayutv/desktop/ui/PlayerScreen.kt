@@ -31,6 +31,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -45,6 +46,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -90,7 +92,11 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     var tech by remember { mutableStateOf(false) }
     var lastInput by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var menu by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
-    var subtitleDelay by remember(playback) { mutableLongStateOf(0L) }
+    // Menü rechts wie auf dem Fire TV (☰), darin die Sprachauswahl; unten „Untertitel-Zeit einstellen“.
+    var panel by remember { mutableStateOf(Panel.NONE) }
+    var syncPanel by remember { mutableStateOf(false) }
+    var syncIndex by remember { mutableStateOf(0) }
+    var syncConfirmed by remember { mutableStateOf<String?>(null) }
     // Seit wann eine Spul-/Pfeiltaste gehalten wird (für schnelleres Spulen und „nur beim ersten Drücken“).
     var holdKey by remember { mutableStateOf<RemoteButton?>(null) }
     var holdSince by remember { mutableLongStateOf(0L) }
@@ -108,9 +114,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     }
 
     fun shiftSubtitles(deltaMs: Long) {
-        subtitleDelay += deltaMs
-        player.subtitleDelay(subtitleDelay)
-        app.toast("Untertitel ${if (subtitleDelay >= 0) "+" else ""}${subtitleDelay / 1000.0} s")
+        app.setSubtitleDelay(app.subtitleDelayMs + deltaMs)
+        syncConfirmed = null
+        app.toast("Untertitel ${shiftLabel(app.subtitleDelayMs)}")
     }
 
     val nextEpisode = (playback as? Playback.Vod)?.let { vod ->
@@ -157,74 +163,45 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
         app.toast(if (store.toggleFavorite(channel.key)) "★ ${channel.name} zu Favoriten hinzugefügt" else "${channel.name} aus Favoriten entfernt")
     }
 
-    /** Schlaf-Timer: feste Zeit oder Ende der Sendung bzw. des Films; im TV-Modus auch „danach PC schlafen legen“. */
-    fun openSleepMenu() {
-        val now = System.currentTimeMillis()
-        val end = if (live != null) guide[live.channel.key]?.let { nowOf(it) }?.stop?.takeIf { it > now }
-        else (player.durationMs - player.positionMs).takeIf { player.durationMs > 0 && it > 0 }?.let { now + it }
-        val pc = user.tvMode && de.ayutv.desktop.TvMode.isWindows
-        val items = buildList {
-            if (app.sleepAt > 0) add(MenuItem("Aus (jetzt bis ${clockText(app.sleepAt)})") { app.setSleepTimer(0) })
-            listOf(15, 30, 45, 60, 90, 120).forEach { m -> add(MenuItem("In $m Minuten") { app.setSleepTimer(now + m * 60_000L) }) }
-            if (end != null) add(MenuItem((if (live != null) "Am Ende der Sendung" else "Am Ende des Films / der Folge") + " (${clockText(end)})") { app.setSleepTimer(end) })
-            if (pc) {
-                add(MenuItem("In 60 Minuten, danach PC schlafen legen") { app.setSleepTimer(now + 60 * 60_000L, pc = true) })
-                if (end != null) add(MenuItem("Am Ende (${clockText(end)}), danach PC schlafen legen") { app.setSleepTimer(end, pc = true) })
-            }
-        }
-        menu = { MenuDialog(app, "Schlaf-Timer", items, onDismiss = { menu = null; refocus() }) }
-    }
-
-    /** ☰-Menü: Tonspuren, Untertitel, Untertitel laden/verschieben, bei Live TV Favorit und Stream-Info. */
+    /** ☰-Menü rechts (wie auf dem Fire TV): Untertitel, Ton, Klang, Bild, Schlaf-Timer, bei Live TV Favorit und Aufnahme. */
     fun openMenu() {
-        val items = buildList {
-            if (live != null) {
-                val fav = live.channel.key in user.favorites
-                add(MenuItem(if (fav) "★ Aus Favoriten entfernen" else "☆ Zu Favoriten") { toggleFavorite(live.channel) })
-                guide[live.channel.key]?.let { nowOf(it) }?.let { current ->
-                    add(MenuItem("⏺ „${current.title}“ aufnehmen") { app.record(live.channel, current) })
-                    if (app.store.archiveUrl(live.channel, current.start, current.stop) != null) add(MenuItem("⏮ Sendung von Anfang") { app.playArchive(live.channel, current) })
-                }
-            }
-            player.audioTracks.forEach { (id, name) -> add(MenuItem("🔊 Ton: $name") { player.selectAudio(id) }) }
-            player.subtitleTracks.forEach { (id, name) -> add(MenuItem("💬 Untertitel: $name") { player.selectSubtitle(id) }) }
-            if (playback is Playback.Vod) {
-                val language = user.subtitleLanguage.ifBlank { "de" }.uppercase()
-                add(MenuItem("💬 Untertitel ($language) aus dem Internet laden") { app.loadSubtitles(playback) })
-                add(MenuItem("💬 Untertitel 0,25 s früher") { shiftSubtitles(-250) })
-                add(MenuItem("💬 Untertitel 0,25 s später") { shiftSubtitles(250) })
-                if (nextEpisode != null) add(MenuItem("⏭ Nächste Folge") { playNext() })
-            }
-            add(MenuItem(if (tech) "Stream-Info ausblenden" else "Stream-Info zeigen") { tech = !tech; show() })
-            if (player.gpuVideo) {
-                val next = HDR_MODES[(HDR_MODES.indexOfFirst { it.first == user.hdrMode } + 1).mod(HDR_MODES.size)]
-                add(MenuItem("HDR-Anpassung: ${hdrLabel(user.hdrMode)} → ${next.second}") {
-                    store.updateUser { it.copy(hdrMode = next.first) }
-                    app.applyBuffer()
-                    app.toast("HDR-Anpassung: ${next.second}")
-                })
-            }
-            if (live != null) add(MenuItem("◫ Multiview (bis zu 4 Sender gleichzeitig)") { app.openMultiview() })
-            val nextDirect = DIRECT_MODES[(DIRECT_MODES.indexOfFirst { it.first == user.directMode } + 1).mod(DIRECT_MODES.size)]
-            add(MenuItem("Direktausgabe: ${directLabel(user.directMode)} → ${nextDirect.second}") {
-                store.updateUser { it.copy(directMode = nextDirect.first) }
-                app.applyBuffer()
-                app.restartPlayback()
-            })
-            add(MenuItem("😴 Schlaf-Timer: " + (if (app.sleepAt > 0) "bis ${clockText(app.sleepAt)}" else "aus") + " …") { openSleepMenu() })
-            add(MenuItem(if (window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) "⤢ Vollbild beenden" else "⤢ Vollbild") { toggleFullscreen() })
-        }
-        menu = {
-            MenuDialog(app, if (live != null) live.channel.name else "Ton und Untertitel", items, onDismiss = { menu = null; refocus() })
-        }
+        lastInput = System.currentTimeMillis()
+        panel = Panel.MENU
     }
 
+    fun closePanel() {
+        panel = Panel.NONE
+        refocus()
+    }
+
+    /** Einblendung, die gerade (bzw. als nächste) dran ist. */
+    fun currentCueIndex(): Int {
+        val cues = app.subtitleCues
+        if (cues.isEmpty()) return 0
+        val fileTime = player.positionMs - app.subtitleDelayMs
+        return cues.indexOfFirst { it.first >= fileTime - 1_500 }.let { if (it < 0) cues.lastIndex else it }
+    }
+
+    fun openSync() {
+        syncIndex = currentCueIndex()
+        syncConfirmed = null
+        syncPanel = true
+        closePanel()
+    }
+
+    BackHandler(app, enabled = menu == null && (panel != Panel.NONE || syncPanel)) {
+        when {
+            panel == Panel.LANGUAGES -> panel = Panel.MENU
+            panel == Panel.MENU -> closePanel()
+            else -> { syncPanel = false; refocus() }
+        }
+    }
     BackHandler(app, enabled = menu == null && layer == Layer.CHANNELS) { layer = Layer.NONE; refocus() }
     BackHandler(app, enabled = menu == null && layer != Layer.CHANNELS && tech) { tech = false }
     LaunchedEffect(Unit) { refocus() }
-    LaunchedEffect(menu, layer) { if (menu == null && layer != Layer.CHANNELS) refocus() }
+    LaunchedEffect(menu, layer, panel) { if (menu == null && layer != Layer.CHANNELS && panel == Panel.NONE) refocus() }
     // Direktausgabe (HDR-Bildschirm): Menü, Senderliste und Stream-Info liegen im Hauptfenster, das Vollbild so lange weg.
-    LaunchedEffect(menu, layer, tech, quick) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech || quick != null) }
+    LaunchedEffect(menu, layer, tech, quick, panel, syncPanel) { player.coverDirect(menu != null || layer == Layer.CHANNELS || tech || quick != null || panel != Panel.NONE || syncPanel) }
     DisposableEffect(Unit) { onDispose { player.coverDirect(true) } }
     // Info nach 5 Sekunden ohne Eingabe ausblenden (nicht bei Pause, Fehler oder offener Stream-Info).
     LaunchedEffect(lastInput, layer, player.playing, tech) {
@@ -270,7 +247,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 if (e.type == KeyEventType.KeyUp) {
                     if (button != null && button == holdKey) holdKey = null
                     // ◀ kurz (beim Loslassen): zum letzten Sender; gehalten hat es die Schnellwahl geöffnet.
-                    if (button == RemoteButton.LEFT && live != null && layer != Layer.CHANNELS && menu == null && quick == null) {
+                    if (button == RemoteButton.LEFT && live != null && layer != Layer.CHANNELS && menu == null && quick == null && panel == Panel.NONE && !syncPanel) {
                         if (!quickOpened && !app.backZap()) show(Layer.CHANNELS)
                         quickOpened = false
                         return@onKeyEvent true
@@ -279,8 +256,32 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     return@onKeyEvent false
                 }
                 if (e.type != KeyEventType.KeyDown) return@onKeyEvent false
+                // Untertitel-Zeit einstellen: eigene Tasten (wie auf dem Fire TV).
+                if (syncPanel && menu == null && panel == Panel.NONE) {
+                    lastInput = System.currentTimeMillis()
+                    val cues = app.subtitleCues
+                    when (button) {
+                        RemoteButton.LEFT -> { syncIndex = (syncIndex - 1).coerceAtLeast(0); syncConfirmed = null }
+                        RemoteButton.RIGHT -> { syncIndex = (syncIndex + 1).coerceAtMost((cues.size - 1).coerceAtLeast(0)); syncConfirmed = null }
+                        RemoteButton.UP -> shiftSubtitles(-500)
+                        RemoteButton.DOWN -> shiftSubtitles(500)
+                        RemoteButton.OK -> cues.getOrNull(syncIndex)?.let { (start, _) ->
+                            app.setSubtitleDelay(player.positionMs - start)
+                            syncConfirmed = "✓ Untertitel ${shiftLabel(app.subtitleDelayMs)} – passt es? Sonst die nächste Zeile abwarten und noch einmal OK."
+                        }
+                        RemoteButton.PLAY_PAUSE, RemoteButton.PLAY, RemoteButton.PAUSE -> player.togglePause()
+                        RemoteButton.MENU, RemoteButton.CAPTIONS -> openMenu()
+                        else -> return@onKeyEvent false
+                    }
+                    return@onKeyEvent true
+                }
+                // Menü rechts offen: ☰ schließt es, sonst navigiert dort der Fokus.
+                if (panel != Panel.NONE && menu == null && (button == RemoteButton.MENU || button == RemoteButton.CAPTIONS || e.key == Key.Tab)) {
+                    closePanel()
+                    return@onKeyEvent true
+                }
                 // Senderliste offen: dort navigiert der Fokus (die Liste fängt OK selbst ab).
-                if (layer == Layer.CHANNELS || menu != null || quick != null) return@onKeyEvent false
+                if (layer == Layer.CHANNELS || menu != null || quick != null || panel != Panel.NONE) return@onKeyEvent false
                 val first = button != holdKey
                 if (first) {
                     holdKey = button
@@ -298,7 +299,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         Key.M -> player.toggleMute()
                         Key.Plus, Key.NumPadAdd, Key.Equals -> { player.changeVolume(5); show() }
                         Key.Minus, Key.NumPadSubtract -> { player.changeVolume(-5); show() }
-                        Key.T, Key.U -> openMenu()
+                        Key.T, Key.U, Key.C, Key.Tab -> openMenu()
                         Key.L -> (playback as? Playback.Vod)?.let { app.loadSubtitles(it) }
                         Key.G -> shiftSubtitles(-250)
                         Key.H -> shiftSubtitles(250)
@@ -364,8 +365,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 true
             }
             .onPointerEvent(PointerEventType.Move) { if (layer == Layer.NONE) show() else { lastInput = System.currentTimeMillis() } }
+            .onPointerEvent(PointerEventType.Press) { e -> if (e.buttons.isSecondaryPressed && panel == Panel.NONE) openMenu() }
             .onPointerEvent(PointerEventType.Scroll) { e ->
-                if (layer == Layer.CHANNELS) return@onPointerEvent
+                if (layer == Layer.CHANNELS || panel != Panel.NONE) return@onPointerEvent
                 val dy = e.changes.firstOrNull()?.scrollDelta?.y ?: 0f
                 if (dy != 0f) player.changeVolume(if (dy < 0) 5 else -5)
                 show()
@@ -375,6 +377,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     onDoubleTap = { toggleFullscreen() },
                     onTap = {
                         when {
+                            panel != Panel.NONE -> closePanel()
                             layer == Layer.CHANNELS -> layer = Layer.NONE
                             playback is Playback.Vod && layer == Layer.INFO -> player.togglePause()
                             layer == Layer.INFO -> layer = Layer.NONE
@@ -388,7 +391,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     ) {
         val hasFrame = player.hasFrame
         if (hasFrame) {
-            VideoView(player, Modifier.fillMaxSize())
+            VideoView(player, Modifier.fillMaxSize(), user.pictureFit)
         } else if (live != null && !player.hasVideo) {
             Box(Modifier.align(Alignment.Center)) { Logo(live.channel.logo, 160) }
         }
@@ -457,7 +460,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
             }
             Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
                 if (live != null) { TextButton("☰ Senderliste", { show(Layer.CHANNELS) }); Spacer(Modifier.width(8.dp)) }
-                TextButton("🔊 Ton / 💬 Untertitel", { openMenu() })
+                TextButton("☰ Ton / Untertitel / Bild", { openMenu() })
                 Spacer(Modifier.width(8.dp))
                 TextButton("⤢", { toggleFullscreen() })
                 Spacer(Modifier.width(8.dp))
@@ -513,9 +516,41 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 lastInput = System.currentTimeMillis()
             }
         }
+        if (syncPanel && panel == Panel.NONE) {
+            SubtitleSyncBar(app, syncIndex, syncConfirmed, Modifier.align(Alignment.BottomCenter))
+        }
+        app.subtitleBusy?.let { busy ->
+            Notice(busy, Modifier.align(if (panel != Panel.NONE) Alignment.TopStart else Alignment.TopCenter).padding(28.dp))
+        }
+        if (panel == Panel.MENU) {
+            PlayerMenuPanel(
+                app, playback,
+                MenuActions(
+                    nextEpisode = if (nextEpisode != null) ({ playNext() }) else null,
+                    tech = tech,
+                    toggleTech = { tech = !tech; show() },
+                    fullscreen = window.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen,
+                    toggleFullscreen = toggleFullscreen,
+                    openSync = { openSync() },
+                    openLanguages = { panel = Panel.LANGUAGES },
+                    openDelay = { menu = { AudioDelayDialog(app, onDismiss = { menu = null }) } },
+                    close = { closePanel() },
+                ),
+                Modifier.align(Alignment.CenterEnd),
+            )
+        }
+        if (panel == Panel.LANGUAGES && playback is Playback.Vod) {
+            SubtitleLanguagePanel(app, Modifier.align(Alignment.CenterEnd)) { code ->
+                closePanel()
+                app.loadSubtitles(playback, code)
+            }
+        }
         menu?.invoke()
     }
 }
+
+/** Menü rechts im Bild: zu, Hauptmenü, Sprachauswahl für Untertitel. */
+private enum class Panel { NONE, MENU, LANGUAGES }
 
 @Composable
 private fun Notice(text: String, modifier: Modifier = Modifier) {
@@ -754,15 +789,20 @@ fun nowOf(list: List<Programme>, at: Long = System.currentTimeMillis()): Program
  * wird erst beim Zeichnen gelesen. Schneller Weg: YUV-Ebenen + Shader; sonst das RGB-Bild wie früher.
  */
 @Composable
-fun VideoView(player: de.ayutv.desktop.player.VideoPlayer, modifier: Modifier = Modifier) {
+fun VideoView(player: de.ayutv.desktop.player.VideoPlayer, modifier: Modifier = Modifier, fit: de.ayutv.desktop.data.PictureFit = de.ayutv.desktop.data.PictureFit.FIT) {
     if (player.gpuVideo) {
         androidx.compose.foundation.Canvas(modifier) {
             player.frameTick // Neuzeichnen bei jedem Bild
             val frame = player.currentFrame() ?: return@Canvas
-            drawIntoCanvas { canvas -> frame.draw(canvas.nativeCanvas, size.width, size.height) }
+            drawIntoCanvas { canvas -> frame.draw(canvas.nativeCanvas, size.width, size.height, fit.ordinal) }
         }
     } else {
         val frame = player.frame ?: return
-        Image(frame, null, modifier, contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+        val scale = when (fit) {
+            de.ayutv.desktop.data.PictureFit.FIT -> ContentScale.Fit
+            de.ayutv.desktop.data.PictureFit.ZOOM -> ContentScale.Crop
+            de.ayutv.desktop.data.PictureFit.STRETCH -> ContentScale.FillBounds
+        }
+        Image(frame, null, modifier.clipToBounds(), contentScale = scale, filterQuality = FilterQuality.Low)
     }
 }
