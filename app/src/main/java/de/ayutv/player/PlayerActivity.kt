@@ -1284,6 +1284,7 @@ class PlayerActivity : ComponentActivity() {
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
         pipChoices = null
+        menuPage = null
     }
 
     private fun onDigit(digit: Int) {
@@ -2958,7 +2959,23 @@ class PlayerActivity : ComponentActivity() {
         if (!enabled) stopLiveTranslation()
     }
 
-    fun openTracks() = showOverlay(Overlay.TRACKS)
+    /** Player-Menü öffnen: Übersicht, oder gleich eine Unterseite (Untertitel-Taste → Untertitel). */
+    fun openTracks(page: MenuPage? = null) {
+        showOverlay(Overlay.TRACKS)
+        menuReturn = null
+        menuPage = page
+    }
+
+    /** Unterseite des Player-Menüs (null = Übersicht). */
+    var menuPage by mutableStateOf<MenuPage?>(null); private set
+    /** Von hier kam man zurück zur Übersicht: Dort steht der Fokus dann wieder auf dieser Zeile. */
+    var menuReturn: MenuPage? = null; private set
+
+    fun openMenuPage(page: MenuPage?) {
+        if (page == null) menuReturn = menuPage
+        menuPage = page
+        overlayToken++
+    }
 
     fun clearSubtitleStatus(shown: String) {
         if (subtitleStatus == shown) subtitleStatus = null
@@ -3997,6 +4014,8 @@ class PlayerActivity : ComponentActivity() {
                     languagePicker -> closeLanguagePicker()
                     epgPicker -> closeEpgPicker()
                     pipChoices != null -> closePipPicker()
+                    // Im Player-Menü geht Zurück erst von der Unterseite zur Übersicht.
+                    overlay == Overlay.TRACKS && menuPage != null -> openMenuPage(null)
                     // Senderliste mit kleinem Bild: noch einmal Zurück verlässt den Player.
                     overlay == Overlay.CHANNELS && miniVideo -> finish()
                     overlay != Overlay.NONE -> closeOverlay()
@@ -4111,7 +4130,8 @@ class PlayerActivity : ComponentActivity() {
                 if (overlay == Overlay.CONTROLS || !p.playWhenReady) p.playWhenReady = !p.playWhenReady
                 showOverlay(Overlay.CONTROLS)
             }
-            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_CAPTIONS -> openTracks()
+            KeyEvent.KEYCODE_MENU -> openTracks()
+            KeyEvent.KEYCODE_CAPTIONS -> openTracks(MenuPage.SUBTITLES)
             KeyEvent.KEYCODE_MEDIA_PLAY -> p.playWhenReady = true
             KeyEvent.KEYCODE_MEDIA_PAUSE -> p.playWhenReady = false
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-(if (step > 0) step else 10_000L))

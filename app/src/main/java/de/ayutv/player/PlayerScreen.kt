@@ -9,6 +9,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -361,8 +366,9 @@ fun PlayerScreen(activity: PlayerActivity) {
 
         AnimatedVisibility(
             visible = activity.overlay == Overlay.TRACKS,
-            enter = slideInHorizontally { it } + fadeIn(),
-            exit = slideOutHorizontally { it } + fadeOut(),
+            // Gleichmäßig statt federnd: wirkt ruhiger und ist auf dem Stick in gut 0,2 s da.
+            enter = slideInHorizontally(tween(210)) { it / 2 } + fadeIn(tween(170)),
+            exit = slideOutHorizontally(tween(160)) { it / 2 } + fadeOut(tween(140)),
             modifier = Modifier.align(Alignment.CenterEnd),
         ) {
             TracksOverlay(activity)
@@ -791,6 +797,23 @@ private fun ChannelListOverlay(activity: PlayerActivity) {
 }
 
 /** Spurmenü: Audiospur, Untertitel (inkl. Laden und Übersetzen in jede Sprache) und bei Live der Favorit. */
+private val MENU_WIDTH = 450.dp
+/** Fast deckend, links etwas durchscheinend: Das Bild bleibt zu ahnen, der Text ist gut lesbar. */
+private val menuBackground = Brush.horizontalGradient(listOf(Color(0xE0080A12), Color(0xF5080A12)))
+
+/** Unterseiten des Player-Menüs. */
+enum class MenuPage(val title: String, val icon: String) {
+    SUBTITLES("Untertitel", "💬"),
+    AUDIO("Tonspur", "🔊"),
+    SOUND("Klang", "🎚"),
+    PICTURE("Bild", "🖼"),
+    SLEEP("Schlaf-Timer", "🌙"),
+}
+
+/**
+ * Player-Menü in zwei Stufen: Übersicht mit dem, was gerade eingestellt ist („Untertitel · Deutsch ›“), dahinter je
+ * eine Unterseite. Zurück geht von der Unterseite zur Übersicht, von dort schließt es das Menü.
+ */
 @Composable
 private fun TracksOverlay(activity: PlayerActivity) {
     if (activity.languagePicker) {
@@ -805,161 +828,255 @@ private fun TracksOverlay(activity: PlayerActivity) {
         PipPicker(activity, choices)
         return
     }
+    val reduced = de.ayutv.ui.UiPerformance.reduced
+    Column(
+        Modifier.fillMaxHeight().widthIn(max = MENU_WIDTH).fillMaxWidth().background(menuBackground)
+            .padding(top = 24.dp),
+    ) {
+        AnimatedContent(
+            targetState = activity.menuPage,
+            transitionSpec = {
+                val forward = targetState != null
+                if (reduced) {
+                    fadeIn(tween(110)) togetherWith ExitTransition.None
+                } else {
+                    (slideInHorizontally(tween(170)) { if (forward) it / 5 else -it / 5 } + fadeIn(tween(170))) togetherWith
+                        (slideOutHorizontally(tween(130)) { if (forward) -it / 5 else it / 5 } + fadeOut(tween(110)))
+                }
+            },
+            label = "menu",
+        ) { page ->
+            if (page == null) MenuOverview(activity) else MenuSubPage(activity, page)
+        }
+    }
+}
+
+@Composable
+private fun MenuTitle(text: String, back: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth().padding(start = 28.dp, end = 20.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (back != null) {
+            Text("‹", color = AyuColors.Accent, fontSize = 26.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = back).padding(end = 10.dp))
+        }
+        Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Fokus beim Öffnen einer Seite setzen (die Zeilen sind erst nach dem ersten Bild da). */
+@Composable
+private fun FocusOnOpen(requester: FocusRequester) {
+    LaunchedEffect(requester) {
+        repeat(8) {
+            if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
+            delay(16)
+        }
+    }
+}
+
+@Composable
+private fun MenuOverview(activity: PlayerActivity) {
     val tracks = activity.tracks
-    // Ton: auch Spuren zeigen, die das Gerät nicht abspielen kann, damit klar ist, warum es still bleibt.
     val audio = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_AUDIO, includeUnsupported = true) }
     val text = remember(tracks) { trackOptions(tracks, C.TRACK_TYPE_TEXT) }
-    val firstItem = remember { FocusRequester() }
-    val preferred = activity.preferredSubtitleLanguage
+    val rows = remember { MenuPage.entries.associateWith { FocusRequester() } }
     val liveTarget = activity.liveTranslateTarget
     val external = activity.externalLanguage
-
-    LazyColumn(
-        modifier = Modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 28.dp, horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        if (activity.isLive) {
-            item {
-                OptionRow(
-                    if (activity.isFavorite) "★ Aus Favoriten entfernen" else "☆ Zu Favoriten hinzufügen",
-                    selected = false,
-                    modifier = Modifier.focusRequester(firstItem),
-                ) { activity.toggleFavorite() }
-            }
-            item {
-                OptionRow("⏺ Diese Sendung aufnehmen", selected = false) { activity.recordCurrent() }
-            }
-            item {
-                OptionRow("📺 Programm falsch? TV-Guide zuordnen …", selected = false) { activity.openEpgPicker() }
-            }
-            if (activity.pipPlayer == null) item {
-                OptionRow("⧉ Zweites Spiel als kleines Bild (Konferenz) …", selected = false) { activity.openPipPicker() }
-            } else {
-                item { OptionRow("⇄ Bilder tauschen (auch mit ⏩)", selected = false) { activity.swapPip() } }
+    val subtitleValue = when {
+        liveTarget != null -> "${Languages.label(liveTarget)} · übersetzt"
+        external != null -> "${Languages.label(external)} · geladen"
+        activity.textDisabled || text.none { it.selected } -> "Aus"
+        else -> text.first { it.selected }.label
+    }
+    val audioValue = audio.firstOrNull { it.selected }?.label ?: if (audio.isEmpty()) "keine" else "–"
+    val soundValue = activity.audioMode.label + if (activity.loudnessLevel) " · angeglichen" else ""
+    val sleepValue = if (activity.sleepAt > 0) {
+        "endet " + java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(activity.sleepAt))
+    } else "Aus"
+    val values = mapOf(
+        MenuPage.SUBTITLES to subtitleValue,
+        MenuPage.AUDIO to audioValue,
+        MenuPage.SOUND to soundValue,
+        MenuPage.PICTURE to activity.aspect.label,
+        MenuPage.SLEEP to sleepValue,
+    )
+    Column {
+        MenuTitle(if (activity.isLive) "Optionen" else "Wiedergabe")
+        LazyColumn(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            // Serien: jederzeit zur nächsten Folge (wer das im Abspann tut, bringt DnA-TV bei, wo der Abspann beginnt).
+            activity.nextEpisode?.let { next ->
                 item {
-                    OptionRow(if (activity.pipSplit) "◱ Zweiten Sender als kleines Bild" else "◫ Nebeneinander (Multiview, gleich groß)", selected = false) { activity.togglePipSplit() }
-                }
-                item { OptionRow("⧉ Anderes kleines Bild …", selected = false) { activity.openPipPicker() } }
-                item { OptionRow("✕ Kleines Bild schließen", selected = false) { activity.closePip() } }
-            }
-        }
-        if (activity.vlcAvailable) item {
-            OptionRow("▶ In VLC öffnen (wenn dieser Stream hier hakt)", selected = false) { activity.openInVlc() }
-        }
-        // Serien: jederzeit zur nächsten Folge (wer das im Abspann tut, bringt DnA-TV bei, wo der Abspann beginnt).
-        activity.nextEpisode?.let { next ->
-            item {
-                OptionRow("⏭ Nächste Folge: S${next.episode.season} E${next.episode.episode}", selected = false) { activity.playNextEpisode() }
-            }
-        }
-        item { MenuHeader("Untertitel") }
-        item {
-            OptionRow(
-                "Aus",
-                !activity.ownSubtitles && (activity.textDisabled || text.none { it.selected }),
-                if (!activity.isLive) Modifier.focusRequester(firstItem) else Modifier,
-            ) { activity.setTextEnabled(false) }
-        }
-        text.forEach { option ->
-            item {
-                OptionRow(option.label, option.selected && !activity.textDisabled && !activity.ownSubtitles) {
-                    activity.selectTrack(option.group, option.index)
+                    ActionRow("⏭", "Nächste Folge: S${next.episode.season} E${next.episode.episode}") { activity.playNextEpisode() }
                 }
             }
-        }
-        activity.loadedLanguages.forEach { language ->
-            item {
-                OptionRow("${Languages.label(language)} (geladen)", external == language) { activity.showLoaded(language) }
-            }
-        }
-        // Immer die Wahl: Datei von OpenSubtitles oder die Spur des Films übersetzen (je Film bzw. Serie gemerkt).
-        activity.sourceChoiceLanguage?.let { language ->
-            val label = Languages.label(language)
-            item { MenuHeader("$label: Quelle") }
-            item {
-                val fit = activity.matchPercent?.takeIf { external == language }?.let { " · passt $it %" }
-                    ?: activity.autoSwitched?.takeIf { liveTarget == language }?.let { " · passte nur $it %" }
-                    ?: ""
-                OptionRow("OpenSubtitles$fit", external == language) { activity.chooseSubtitleSource(language, translate = false) }
-            }
-            item {
-                OptionRow("Übersetzung der Film-Spur (${activity.translatorName})", liveTarget == language) {
-                    activity.chooseSubtitleSource(language, translate = true)
+            MenuPage.entries.forEach { page ->
+                item {
+                    PageRow(page, values.getValue(page), Modifier.focusRequester(rows.getValue(page))) { activity.openMenuPage(page) }
                 }
             }
-        }
-        if (external != null) {
-            item { MenuHeader("Untertitel-Zeit") }
-            item { OptionRow("Untertitel-Zeit einstellen … (${activity.subtitleShiftLabel})", selected = false) { activity.openSyncPanel() } }
-            item {
-                val fit = activity.matchPercent?.let { " (diese passt $it %)" }.orEmpty()
-                OptionRow("Andere Untertitel-Datei laden$fit", selected = false) { activity.reportWrongSubtitles() }
-            }
-            item { MenuHint(syncHint(activity)) }
-            activity.speechSyncInfo?.let { info -> item { MenuHint("Ausrichtung: $info") } }
-            activity.fileTranslationInfo?.let { info -> item { MenuHint(info) } }
-        }
-        if (!activity.isLive) {
-            if (preferred !in activity.loadedLanguages) {
-                item { OptionRow("${Languages.label(preferred)} laden", selected = false) { activity.loadSubtitles(preferred) } }
-            }
-            item { OptionRow("Andere Sprache laden / übersetzen …", selected = false) { activity.openLanguagePicker() } }
-        }
-        if (activity.translationAvailable && external == null && text.any { it.selected } && !activity.textDisabled) {
-            if (liveTarget == null) {
-                item { OptionRow("Gewählte Spur live übersetzen: ${Languages.label(preferred)}", false) { activity.startLiveTranslation(preferred) } }
-            } else {
-                item { OptionRow("Live-Übersetzung (${Languages.label(liveTarget)}) beenden", true) { activity.stopLiveTranslation() } }
-            }
-        }
-        activity.lastOnlineProblem?.let { problem -> item { MenuHint("Internet-Untertitel: $problem") } }
-        if (!activity.isLive && !activity.onlineSubtitlesAvailable && !activity.translationAvailable) {
-            item { MenuHint("Für Filme ganz ohne Untertitel: OpenSubtitles verbinden (Einstellungen → Einrichtung per Handy)") }
-        }
-        item { MenuHeader("Ton") }
-        if (audio.isEmpty()) item { MenuHint("Dieser Stream hat keine Tonspur") }
-        audio.forEach { option ->
-            item {
-                OptionRow(option.label, option.selected) {
-                    if (option.supported) activity.selectTrack(option.group, option.index)
-                    else activity.explainUnsupportedAudio(option.group.getTrackFormat(option.index))
+            if (activity.isLive) {
+                item { MenuHeader("Sender") }
+                item {
+                    ActionRow(if (activity.isFavorite) "★" else "☆", if (activity.isFavorite) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen") {
+                        activity.toggleFavorite()
+                    }
                 }
+                item { ActionRow("⏺", "Diese Sendung aufnehmen") { activity.recordCurrent() } }
+                if (activity.pipPlayer == null) item {
+                    ActionRow("⧉", "Zweites Spiel als kleines Bild (Konferenz) …") { activity.openPipPicker() }
+                } else {
+                    item { ActionRow("⇄", "Bilder tauschen (auch mit ⏩)") { activity.swapPip() } }
+                    item {
+                        ActionRow(if (activity.pipSplit) "◱" else "◫", if (activity.pipSplit) "Zweiten Sender als kleines Bild" else "Nebeneinander (Multiview, gleich groß)") {
+                            activity.togglePipSplit()
+                        }
+                    }
+                    item { ActionRow("⧉", "Anderes kleines Bild …") { activity.openPipPicker() } }
+                    item { ActionRow("✕", "Kleines Bild schließen") { activity.closePip() } }
+                }
+                item { ActionRow("📺", "Programm falsch? TV-Guide zuordnen …") { activity.openEpgPicker() } }
             }
-        }
-        if (audio.isNotEmpty() && audio.none { it.supported }) {
-            item { MenuHint("Keine dieser Tonspuren kann das Gerät wiedergeben. Abhilfe: AV-Receiver/Soundbar per HDMI oder einen anderen Stream wählen.") }
-        }
-        item { MenuHeader("Klang") }
-        AudioMode.entries.forEach { mode ->
-            item { OptionRow(mode.label, activity.audioMode == mode) { activity.chooseAudioMode(mode) } }
-        }
-        item { OptionRow("Lautstärke angleichen (alle Sender)", activity.loudnessLevel) { activity.toggleLoudness() } }
-        item { MenuHint("Wirkt, wenn der Ton im Gerät dekodiert wird – nicht bei Dolby/DTS, das an Soundbar oder Receiver geht (Einstellungen → Tonausgabe: „Immer im Gerät dekodieren“).") }
-        item { MenuHeader("Bild") }
-        AspectMode.entries.forEach { mode ->
-            item { OptionRow(mode.label, activity.aspect == mode) { activity.chooseAspect(mode) } }
-        }
-        item { MenuHeader("Schlaf-Timer") }
-        if (activity.sleepAt > 0) {
-            item { MenuHint("Endet um ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(activity.sleepAt))}") }
-            item { OptionRow("Aus", selected = false) { activity.setSleepTimer(0) } }
-        }
-        listOf(15, 30, 45, 60, 90, 120).forEach { minutes ->
-            item { OptionRow("In $minutes Minuten", selected = false) { activity.setSleepTimer(minutes) } }
-        }
-        item {
-            OptionRow(if (activity.isLive) "Am Ende der Sendung" else "Am Ende des Films / der Folge", selected = false) {
-                activity.setSleepTimer(PlayerActivity.SLEEP_END)
+            if (activity.vlcAvailable) item {
+                ActionRow("▶", "In VLC öffnen (wenn dieser Stream hier hakt)") { activity.openInVlc() }
             }
         }
     }
+    // Zurück von einer Unterseite: Fokus wieder auf deren Zeile, sonst auf „Untertitel“.
+    FocusOnOpen(rows.getValue(activity.menuReturn ?: MenuPage.SUBTITLES))
+}
 
-    LaunchedEffect(Unit) {
-        repeat(5) {
-            if (runCatching { firstItem.requestFocus() }.isSuccess) return@LaunchedEffect
-            delay(16)
+@Composable
+private fun MenuSubPage(activity: PlayerActivity, page: MenuPage) {
+    val first = remember { FocusRequester() }
+    Column {
+        MenuTitle(page.title) { activity.openMenuPage(null) }
+        LazyColumn(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            when (page) {
+                MenuPage.SUBTITLES -> subtitleItems(activity, Modifier.focusRequester(first))
+                MenuPage.AUDIO -> audioItems(activity, Modifier.focusRequester(first))
+                MenuPage.SOUND -> {
+                    AudioMode.entries.forEachIndexed { i, mode ->
+                        item { OptionRow(mode.label, activity.audioMode == mode, if (i == 0) Modifier.focusRequester(first) else Modifier) { activity.chooseAudioMode(mode) } }
+                    }
+                    item { MenuHeader("Lautstärke") }
+                    item { OptionRow("Lautstärke angleichen (alle Sender)", activity.loudnessLevel, check = true) { activity.toggleLoudness() } }
+                    item { MenuHint("Wirkt, wenn der Ton im Gerät dekodiert wird – nicht bei Dolby/DTS, das an Soundbar oder Receiver geht (Einstellungen → Tonausgabe: „Immer im Gerät dekodieren“).") }
+                }
+                MenuPage.PICTURE -> AspectMode.entries.forEachIndexed { i, mode ->
+                    item { OptionRow(mode.label, activity.aspect == mode, if (i == 0) Modifier.focusRequester(first) else Modifier) { activity.chooseAspect(mode) } }
+                }
+                MenuPage.SLEEP -> {
+                    item {
+                        OptionRow("Aus", activity.sleepAt <= 0, Modifier.focusRequester(first)) { activity.setSleepTimer(0) }
+                    }
+                    if (activity.sleepAt > 0) {
+                        item { MenuHint("Endet um ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(activity.sleepAt))}") }
+                    }
+                    listOf(15, 30, 45, 60, 90, 120).forEach { minutes ->
+                        item { OptionRow("In $minutes Minuten", selected = false) { activity.setSleepTimer(minutes) } }
+                    }
+                    item {
+                        OptionRow(if (activity.isLive) "Am Ende der Sendung" else "Am Ende des Films / der Folge", selected = false) {
+                            activity.setSleepTimer(PlayerActivity.SLEEP_END)
+                        }
+                    }
+                }
+            }
         }
+    }
+    FocusOnOpen(first)
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.subtitleItems(activity: PlayerActivity, first: Modifier) {
+    val tracks = activity.tracks
+    val text = trackOptions(tracks, C.TRACK_TYPE_TEXT)
+    val preferred = activity.preferredSubtitleLanguage
+    val liveTarget = activity.liveTranslateTarget
+    val external = activity.externalLanguage
+    item {
+        OptionRow("Aus", !activity.ownSubtitles && (activity.textDisabled || text.none { it.selected }), first) { activity.setTextEnabled(false) }
+    }
+    text.forEach { option ->
+        item {
+            OptionRow(option.label, option.selected && !activity.textDisabled && !activity.ownSubtitles) {
+                activity.selectTrack(option.group, option.index)
+            }
+        }
+    }
+    activity.loadedLanguages.forEach { language ->
+        item {
+            OptionRow("${Languages.label(language)} (geladen)", external == language) { activity.showLoaded(language) }
+        }
+    }
+    // Immer die Wahl: Datei von OpenSubtitles oder die Spur des Films übersetzen (je Film bzw. Serie gemerkt).
+    activity.sourceChoiceLanguage?.let { language ->
+        val label = Languages.label(language)
+        item { MenuHeader("$label: Quelle") }
+        item {
+            val fit = activity.matchPercent?.takeIf { external == language }?.let { " · passt $it %" }
+                ?: activity.autoSwitched?.takeIf { liveTarget == language }?.let { " · passte nur $it %" }
+                ?: ""
+            OptionRow("OpenSubtitles$fit", external == language) { activity.chooseSubtitleSource(language, translate = false) }
+        }
+        item {
+            OptionRow("Übersetzung der Film-Spur (${activity.translatorName})", liveTarget == language) {
+                activity.chooseSubtitleSource(language, translate = true)
+            }
+        }
+    }
+    if (external != null) {
+        item { MenuHeader("Untertitel-Zeit") }
+        item { ActionRow("⏱", "Untertitel-Zeit einstellen … (${activity.subtitleShiftLabel})") { activity.openSyncPanel() } }
+        item {
+            val fit = activity.matchPercent?.let { " (diese passt $it %)" }.orEmpty()
+            ActionRow("↻", "Andere Untertitel-Datei laden$fit") { activity.reportWrongSubtitles() }
+        }
+        item { MenuHint(syncHint(activity)) }
+        activity.speechSyncInfo?.let { info -> item { MenuHint("Ausrichtung: $info") } }
+        activity.fileTranslationInfo?.let { info -> item { MenuHint(info) } }
+    }
+    if (!activity.isLive) {
+        item { MenuHeader("Weitere Sprachen") }
+        if (preferred !in activity.loadedLanguages) {
+            item { ActionRow("⬇", "${Languages.label(preferred)} laden") { activity.loadSubtitles(preferred) } }
+        }
+        item { ActionRow("🌐", "Andere Sprache laden / übersetzen …") { activity.openLanguagePicker() } }
+    }
+    if (activity.translationAvailable && external == null && text.any { it.selected } && !activity.textDisabled) {
+        if (liveTarget == null) {
+            item { OptionRow("Gewählte Spur live übersetzen: ${Languages.label(preferred)}", false) { activity.startLiveTranslation(preferred) } }
+        } else {
+            item { OptionRow("Live-Übersetzung (${Languages.label(liveTarget)}) beenden", true) { activity.stopLiveTranslation() } }
+        }
+    }
+    activity.lastOnlineProblem?.let { problem -> item { MenuHint("Internet-Untertitel: $problem") } }
+    if (!activity.isLive && !activity.onlineSubtitlesAvailable && !activity.translationAvailable) {
+        item { MenuHint("Für Filme ganz ohne Untertitel: OpenSubtitles verbinden (Einstellungen → Einrichtung per Handy)") }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.audioItems(activity: PlayerActivity, first: Modifier) {
+    // Ton: auch Spuren zeigen, die das Gerät nicht abspielen kann, damit klar ist, warum es still bleibt.
+    val audio = trackOptions(activity.tracks, C.TRACK_TYPE_AUDIO, includeUnsupported = true)
+    if (audio.isEmpty()) {
+        // Ohne Zeile mit Fokus hinge die Fernbedienung: ein Eintrag, der zurück zur Übersicht führt.
+        item { ActionRow("‹", "Dieser Stream hat keine Tonspur", first) { activity.openMenuPage(null) } }
+    }
+    audio.forEachIndexed { i, option ->
+        item {
+            OptionRow(option.label, option.selected, if (i == 0) first else Modifier) {
+                if (option.supported) activity.selectTrack(option.group, option.index)
+                else activity.explainUnsupportedAudio(option.group.getTrackFormat(option.index))
+            }
+        }
+    }
+    if (audio.isNotEmpty() && audio.none { it.supported }) {
+        item { MenuHint("Keine dieser Tonspuren kann das Gerät wiedergeben. Abhilfe: AV-Receiver/Soundbar per HDMI oder einen anderen Stream wählen.") }
     }
 }
 
@@ -969,7 +1086,7 @@ private fun LanguagePicker(activity: PlayerActivity) {
     val firstItem = remember { FocusRequester() }
     val embeddedSelected = !activity.textDisabled && trackOptions(activity.tracks, C.TRACK_TYPE_TEXT).any { it.selected }
     LazyColumn(
-        modifier = Modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
+        modifier = Modifier.fillMaxHeight().widthIn(max = MENU_WIDTH).fillMaxWidth().background(menuBackground),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 28.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -1014,7 +1131,7 @@ private fun EpgPicker(activity: PlayerActivity) {
         activity.epgChoices.asSequence().filter { f.isEmpty() || f in it.name.lowercase() || f in it.id.lowercase() }.take(300).toList()
     }
     LazyColumn(
-        modifier = Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.94f)),
+        modifier = Modifier.fillMaxHeight().widthIn(max = MENU_WIDTH).fillMaxWidth().background(menuBackground),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -1053,7 +1170,7 @@ private fun EpgPicker(activity: PlayerActivity) {
 private fun PipPicker(activity: PlayerActivity, choices: List<Pair<de.ayutv.data.db.ChannelEntity, String>>) {
     val firstItem = remember { FocusRequester() }
     LazyColumn(
-        modifier = Modifier.fillMaxHeight().width(460.dp).background(Color.Black.copy(alpha = 0.94f)),
+        modifier = Modifier.fillMaxHeight().widthIn(max = MENU_WIDTH).fillMaxWidth().background(menuBackground),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 24.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -1260,23 +1377,88 @@ private fun OptionRow(
     selected: Boolean,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
+    /** Kästchen (an/aus) statt Auswahlpunkt (eins von mehreren). */
+    check: Boolean = false,
     onClick: () -> Unit,
+) {
+    MenuSurface(onClick, modifier, onLongClick) {
+        MenuIndicator(selected, check)
+        Spacer(Modifier.width(14.dp))
+        Text(
+            label,
+            color = Color.White,
+            fontSize = 16.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Zeile im Player-Menü: Fokus als Akzentfläche, ohne Vergrößern (ruhig auch auf schwachen Sticks). */
+@Composable
+private fun MenuSurface(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
 ) {
     Surface(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = modifier.fillMaxWidth(),
-        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(10.dp)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
             focusedContainerColor = AyuColors.AccentSoft,
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
-        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (selected) "●" else "○", color = if (selected) AyuColors.Accent else AyuColors.TextSecondary, fontSize = 14.sp)
-            Spacer(Modifier.width(12.dp))
-            Text(label, color = Color.White, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically, content = content)
+    }
+}
+
+/** Auswahlpunkt (rund) bzw. Kästchen mit Haken, gezeichnet statt Schriftzeichen: überall gleich groß und scharf. */
+@Composable
+private fun MenuIndicator(selected: Boolean, check: Boolean) {
+    val shape = if (check) RoundedCornerShape(4.dp) else CircleShape
+    Box(
+        Modifier.size(18.dp).clip(shape)
+            .background(if (selected) AyuColors.Accent else Color.Transparent)
+            .border(2.dp, if (selected) AyuColors.Accent else AyuColors.TextSecondary, shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) {
+            if (check) Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            else Box(Modifier.size(7.dp).clip(CircleShape).background(Color.White))
         }
+    }
+}
+
+/** Zeile der Übersicht: Symbol, Name, aktueller Wert, Pfeil zur Unterseite. */
+@Composable
+private fun PageRow(page: MenuPage, value: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    MenuSurface(onClick, modifier) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+            Text(page.icon, fontSize = 17.sp)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(page.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(value, color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Text("›", color = AyuColors.TextSecondary, fontSize = 24.sp)
+    }
+}
+
+/** Einmalige Aktion (Favorit, Aufnahme, Datei laden …): Symbol statt Auswahlpunkt. */
+@Composable
+private fun ActionRow(icon: String, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    MenuSurface(onClick, modifier) {
+        Box(Modifier.width(36.dp), contentAlignment = Alignment.Center) {
+            Text(icon, color = AyuColors.Accent, fontSize = 17.sp)
+        }
+        Spacer(Modifier.width(14.dp))
+        Text(label, color = Color.White, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }

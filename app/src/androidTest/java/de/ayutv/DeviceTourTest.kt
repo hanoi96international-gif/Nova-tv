@@ -629,7 +629,18 @@ class DeviceTourTest {
                 log("vod ${movie.name}: ready=$ready text_tracks=${textGroups.size} subtitles_off_by_default=${scenario.read { it.textDisabled }}")
                 key(KeyEvent.KEYCODE_MENU); Thread.sleep(1_200)
                 shot("20_vod_menu")
+                // Zweistufiges Menü: OK auf „Untertitel“ öffnet die Unterseite, Zurück führt zur Übersicht, nochmal schließt.
+                key(KeyEvent.KEYCODE_DPAD_CENTER); Thread.sleep(900)
+                val menuPage = scenario.read { it.menuPage }
+                shot("20b_vod_menu_subtitles")
+                key(KeyEvent.KEYCODE_BACK); Thread.sleep(600)
+                val overview = scenario.read { it.menuPage == null && it.overlay == de.ayutv.player.Overlay.TRACKS }
+                shot("20c_vod_menu_back")
                 key(KeyEvent.KEYCODE_BACK); Thread.sleep(500)
+                val closed = scenario.read { it.overlay != de.ayutv.player.Overlay.TRACKS }
+                log("menu_pages: page=$menuPage overview=$overview closed=$closed")
+                assertTrue("Player-Menü: page=$menuPage overview=$overview closed=$closed",
+                    menuPage == de.ayutv.player.MenuPage.SUBTITLES && overview && closed)
                 textGroups.firstOrNull()?.let { group -> scenario.onActivity { it.selectTrack(group, 0) } }
                 Thread.sleep(4_000)
                 log("vod subtitle_enabled=${!scenario.read { it.textDisabled }} dropped=${scenario.read { it.stats.droppedFrames }}")
@@ -738,7 +749,7 @@ class DeviceTourTest {
                     val ms = System.currentTimeMillis() - started
                     Thread.sleep(20_000)
                     val (language, percent, live) = scenario.read { Triple(it.externalLanguage, it.matchPercent, it.liveTranslateTarget) }
-                    scenario.onActivity { it.openTracks() }
+                    scenario.onActivity { it.openTracks(de.ayutv.player.MenuPage.SUBTITLES) }
                     Thread.sleep(800)
                     shot("25_subtitle_source")
                     key(KeyEvent.KEYCODE_BACK)
