@@ -28,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -148,6 +150,26 @@ fun ProgrammeImage(url: String?, modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * Leuchten um eine gewählte Karte: drei weiche Ringe in der Akzentfarbe (nur Linien, kein Schatten – auch auf dem
+ * Stick flüssig). Die Karte wächst beim Fokus um 10 % (Standard der Fernseh-Karten), die Ringe liegen außerhalb.
+ */
+fun Modifier.focusGlow(focused: Boolean): Modifier = drawBehind {
+    if (!focused) return@drawBehind
+    val ex = size.width * 0.05f
+    val ey = size.height * 0.05f
+    for (i in 1..3) {
+        val spread = i * 3.dp.toPx()
+        drawRoundRect(
+            AyuColors.Accent.copy(alpha = 0.18f / i),
+            topLeft = androidx.compose.ui.geometry.Offset(-ex - spread, -ey - spread),
+            size = androidx.compose.ui.geometry.Size(size.width + 2 * (ex + spread), size.height + 2 * (ey + spread)),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx() + spread),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx()),
+        )
+    }
+}
+
 /** Sender-Kachel für horizontale Reihen (Startseite, Empfehlungen). */
 @Composable
 fun ChannelCard(
@@ -156,10 +178,13 @@ fun ChannelCard(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
     Card(
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = Modifier.width(220.dp),
+        interactionSource = interaction,
+        modifier = Modifier.width(220.dp).focusGlow(focused),
         colors = CardDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.SurfaceRaised),
         border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, AyuColors.Accent))),
     ) {
@@ -200,13 +225,18 @@ fun PosterCard(
     subtitle: String? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
+    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
     Column(modifier.width(150.dp)) {
         Card(
             onClick = onClick,
             onLongClick = onLongClick,
-            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f),
+            interactionSource = interaction,
+            // Leuchten um das gewählte Poster: drei weiche Ringe in der Akzentfarbe (nur Linien, kein Schatten –
+            // auch auf dem Stick flüssig).
+            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).focusGlow(focused),
             colors = CardDefaults.colors(containerColor = AyuColors.Surface),
-            border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, AyuColors.Accent))),
+            border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.dp, AyuColors.Accent))),
         ) {
             Box(Modifier.fillMaxSize()) {
                 if (image.isNullOrBlank()) {
@@ -223,6 +253,14 @@ fun PosterCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
+                    // Titel im Bild auf dunklem Verlauf (wie in Streaming-Apps), gut lesbar auf jedem Poster.
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                            .padding(start = 8.dp, end = 8.dp, top = 26.dp, bottom = if (progress != null) 14.dp else 8.dp),
+                    ) {
+                        Text(title, style = MaterialTheme.typography.labelLarge, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
                 }
                 if (progress != null) {
                     ProgressLine(progress, Modifier.align(Alignment.BottomCenter).padding(6.dp))
@@ -230,7 +268,7 @@ fun PosterCard(
             }
         }
         Spacer(Modifier.height(6.dp))
-        Text(title, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (image.isNullOrBlank()) Text(title, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (subtitle != null) {
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = AyuColors.TextSecondary, maxLines = 1)
         }
