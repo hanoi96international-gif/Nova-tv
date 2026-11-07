@@ -157,6 +157,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
 
     /** Spielplan und Stände (OpenLigaDB). */
     val liveScores = de.ayutv.data.sport.LiveScores(sync.http)
+    /** Vereinswappen für die Anzeigetafel (gemerkt in crests.tsv). */
+    val crests = de.ayutv.data.sport.Crests(sync.http, java.io.File(store.dir, "crests.tsv"))
 
     init {
         if (store.user.value.phoneRemote) setPhoneRemote(true)

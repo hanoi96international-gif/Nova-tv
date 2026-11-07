@@ -114,7 +114,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String
         }
     }
     items(events, key = { "$title|${it.channel.key}|${it.programme.start}" }) { e ->
-        MatchRow(e, assigned[e], now, onClick = {
+        MatchRow(app, e, assigned[e], now, onClick = {
             val best = de.ayutv.desktop.data.SportEvents.bestFor(e.channel, app.store.channels())
             app.play(Playback.Live(best, listOf(best) + e.alsoOn))
         }, onMenu = { onMenu(e) })
@@ -136,7 +136,7 @@ private fun competitionOf(p: de.ayutv.desktop.data.Programme, match: LiveScores.
  * darüber Wettbewerb und Sender, rechts das Senderlogo. Ohne Paarung (Tennis, Formel 1 …) die Überschrift.
  */
 @androidx.compose.runtime.Composable
-private fun MatchRow(e: SportEvent, match: LiveScores.Match?, now: Long, onClick: () -> Unit, onMenu: () -> Unit) {
+private fun MatchRow(app: AppState, e: SportEvent, match: LiveScores.Match?, now: Long, onClick: () -> Unit, onMenu: () -> Unit) {
     val p = e.programme
     val running = p.start <= now
     val pairing = e.pairing ?: match?.pairing
@@ -158,11 +158,11 @@ private fun MatchRow(e: SportEvent, match: LiveScores.Match?, now: Long, onClick
         androidx.compose.foundation.layout.Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
             val also = if (e.alsoOn.isEmpty()) "" else "  ·  auch auf ${e.alsoOn.size} weiteren"
             if (sides.size == 2) {
-                Label((competitionOf(p, match) + "  ·  " + e.channel.name + also).uppercase(), Type.small.copy(color = Palette.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                Label((competitionOf(p, match) + "  ·  " + e.channel.name + also).uppercase(), Type.small.copy(color = Palette.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 2)
                 androidx.compose.foundation.layout.Row(Modifier.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Label(sides[0], Type.heading.copy(textAlign = androidx.compose.ui.text.style.TextAlign.End), Modifier.weight(1f))
+                    Label(sides[0], Type.heading.copy(textAlign = androidx.compose.ui.text.style.TextAlign.End), Modifier.weight(1f), maxLines = 2)
                     androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-                    Crest(match?.icon1)
+                    Crest(app, match?.icon1, sides[0])
                     androidx.compose.foundation.layout.Box(Modifier.width(96.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
                         val shown = match?.takeIf { it.live(now) || it.finished }
                         Label(
@@ -173,9 +173,9 @@ private fun MatchRow(e: SportEvent, match: LiveScores.Match?, now: Long, onClick
                             ),
                         )
                     }
-                    Crest(match?.icon2)
+                    Crest(app, match?.icon2, sides[1])
                     androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
-                    Label(sides[1], Type.heading, Modifier.weight(1f))
+                    Label(sides[1], Type.heading, Modifier.weight(1f), maxLines = 2)
                 }
                 match?.takeIf { it.goalCount > 0 && it.live(now) }?.lastGoal?.let { Label("⚽ zuletzt: $it", Type.small) }
             } else {
@@ -191,11 +191,14 @@ private fun MatchRow(e: SportEvent, match: LiveScores.Match?, now: Long, onClick
     }
 }
 
-/** Vereinswappen (OpenLigaDB); ohne Bild bleibt der Platz leer. */
+/** Vereinswappen: aus dem Spielplan, sonst gemerkt oder (einmal je Verein) nachgeschlagen; ohne Bild bleibt der Platz leer. */
 @androidx.compose.runtime.Composable
-private fun Crest(url: String?) {
-    androidx.compose.foundation.layout.Box(Modifier.size(38.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
-        rememberImage(url)?.let { androidx.compose.foundation.Image(it, null, Modifier.size(38.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
+private fun Crest(app: AppState, fromSchedule: String?, team: String) {
+    val url by androidx.compose.runtime.produceState(fromSchedule ?: app.crests.cached(team), fromSchedule, team) {
+        if (value == null) value = runCatching { app.crests.of(team) }.getOrNull()
+    }
+    androidx.compose.foundation.layout.Box(Modifier.size(44.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        rememberImage(url)?.let { androidx.compose.foundation.Image(it, null, Modifier.size(44.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
     }
 }
 

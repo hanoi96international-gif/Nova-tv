@@ -252,6 +252,11 @@ class DeviceTourTest {
             val remindedChannels = runBlocking { reminders.mapNotNull { container.content.channel(it.channelKey) } }
             log("sport_reminder_channels=${remindedChannels.map { "${it.name}/${it.epgId}" }}")
             assertTrue("Keine Erinnerung für den Verein", remindedChannels.any { it.epgId == "hd.test" })
+            // Wappen für die Anzeigetafel aus dem Netz (OpenLigaDB, sonst TheSportsDB): vorab holen, damit das
+            // Bildschirmfoto der Sport-Übersicht sie zeigt. Ohne Netz im Testgerät nur protokollieren.
+            val crests = runBlocking { listOf("Borussia Dortmund", "Eintracht Frankfurt", "Arsenal").associateWith { container.crests.of(it) } }
+            log("sport_crests: $crests")
+            log("sport_headline: ${de.ayutv.data.parse.ProgrammeText.display("Fußball: Bundesliga", "Borussia Dortmund – Eintracht Frankfurt, 7. Spieltag", null, "Fußball", now, now + 7_200_000)}")
         }
 
         // 2. Oberfläche per Fernbedienung durchgehen
