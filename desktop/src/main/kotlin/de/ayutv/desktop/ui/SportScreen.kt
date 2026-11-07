@@ -207,18 +207,9 @@ private fun Crest(app: AppState, fromSchedule: String?, team: String) {
  */
 private fun assign(scores: LiveScores, matches: List<LiveScores.Match>, events: List<SportEvent>): Map<SportEvent, LiveScores.Match?> {
     if (matches.isEmpty()) return emptyMap()
-    val direct = events.map { e ->
-        val p = e.programme
-        scores.find(matches, e.pairing, p.start, p.title)
-            ?: if (e.pairing == null) scores.byVenue(matches, p.title, p.subtitle, p.description, p.start, p.stop) else null
-    }
-    val open = events.indices.filter { direct[it] == null && events[it].pairing == null }
-    val found = scores.byElimination(
-        matches,
-        open.map { i -> events[i].programme.let { LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
-        direct.filterNotNull().toSet(),
-    )
-    val result = direct.toMutableList()
-    for ((k, m) in found) result[open[k]] = m
+    val shows = events.map { e -> e.programme.let { LiveScores.Show(it.title, it.subtitle, it.description, it.start, it.stop, e.pairing) } }
+    val result = scores.assign(matches, shows)
+    // Auch für Senderliste, TV-Guide und Vorschau: dort steht dann ebenfalls die Partie statt „Live: BL“.
+    de.ayutv.data.sport.MatchHints.learn(shows)
     return events.indices.associate { events[it] to result[it] }
 }

@@ -168,6 +168,16 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         scope.launch {
             while (true) {
                 runCatching { de.ayutv.data.sport.MatchHints.update(liveScores.current()) }
+                // Alle laufenden Sport-Sendungen gemeinsam zuordnen (per Ausschluss über alle Sender): Auch ohne Besuch im
+                // Sport-Bereich steht bei „Live: BL“ die Partie.
+                runCatching {
+                    val events = withContext(Dispatchers.Default) {
+                        de.ayutv.desktop.data.SportEvents.of(store.listedChannels(), store.guide.value, store.user.value.favorites.toSet(), hours = 3)
+                    }
+                    de.ayutv.data.sport.MatchHints.learn(events.map { e ->
+                        e.programme.let { de.ayutv.data.sport.LiveScores.Show(it.title, it.subtitle, it.description, it.start, it.stop, e.pairing) }
+                    })
+                }
                 delay(if (de.ayutv.data.sport.MatchHints.matches.isEmpty()) 60_000L else 10 * 60_000L)
             }
         }

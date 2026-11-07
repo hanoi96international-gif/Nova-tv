@@ -1,5 +1,6 @@
 package de.ayutv
 
+import de.ayutv.data.parse.pairing
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
@@ -47,6 +48,14 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             while (true) {
                 if (visible && runCatching { container.settings.current().liveScores }.getOrDefault(false)) {
                     runCatching { de.ayutv.data.sport.MatchHints.update(container.liveScores.current()) }
+                    // Alle laufenden Sport-Sendungen gemeinsam zuordnen (per Ausschluss über alle Sender), damit auch ohne
+                    // Besuch im Sport-Bereich bei „Live: BL“ die Partie steht.
+                    runCatching {
+                        val shows = container.content.sportEvents(hours = 3).map { e ->
+                            e.programme.let { de.ayutv.data.sport.LiveScores.Show(it.title, it.subtitle, it.description, it.start, it.stop, it.pairing()) }
+                        }
+                        de.ayutv.data.sport.MatchHints.learn(shows)
+                    }
                 }
                 kotlinx.coroutines.delay(if (de.ayutv.data.sport.MatchHints.matches.isEmpty()) 60_000L else 10 * 60_000L)
             }

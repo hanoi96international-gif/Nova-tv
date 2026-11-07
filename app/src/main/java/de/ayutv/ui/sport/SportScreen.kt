@@ -144,19 +144,10 @@ fun SportScreen() {
     LaunchedEffect(events, scores) {
         val list = events.orEmpty()
         info = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val direct = list.map { e ->
-                val p = e.programme
-                container.liveScores.find(scores, p.pairing(), p.start, p.title)
-                    ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
-            }
-            val openIndex = list.indices.filter { direct[it] == null && list[it].programme.pairing() == null }
-            val found = container.liveScores.byElimination(
-                scores,
-                openIndex.map { i -> list[i].programme.let { de.ayutv.data.sport.LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
-                direct.filterNotNull().toSet(),
-            )
-            val result = direct.toMutableList()
-            for ((k, match) in found) result[openIndex[k]] = match
+            val shows = list.map { e -> e.programme.let { de.ayutv.data.sport.LiveScores.Show(it.title, it.subtitle, it.description, it.start, it.stop, it.pairing()) } }
+            val result = container.liveScores.assign(scores, shows)
+            // Auch für Senderliste, TV-Guide und Vorschau: dort steht dann ebenfalls die Partie statt „Live: BL“.
+            de.ayutv.data.sport.MatchHints.learn(shows)
             // Dasselbe Spiel nur einmal: „Live: BL“ auf dem einen Sender und „Mainz – Bayern“ auf dem anderen (anderer
             // Anbieter, leicht andere Anfangszeit) werden zu einem Eintrag mit beiden Sendern.
             val merged = ProgrammeText.mergeSameMatch(

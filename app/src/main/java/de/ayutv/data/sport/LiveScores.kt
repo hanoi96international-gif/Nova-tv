@@ -107,7 +107,9 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         val scored = matches
             .filter { it.kickoff in (start - 15 * MINUTE) until stop && (league == null || it.league == league) }
             .map { m ->
-                val venue = listOfNotNull(m.city, m.stadium).flatMap { Teams.textWords(it) }.filter { it.length >= 4 && it !in VENUE_WORDS }.toSet()
+                // Spielort laut OpenLigaDB (fehlt oft), dazu Stadion und Stadt des Heimvereins aus der eigenen Liste.
+                val venue = listOfNotNull(m.city, m.stadium).flatMap { Teams.textWords(it) }.filter { it.length >= 4 && it !in VENUE_WORDS }.toSet() +
+                    Venues.of(m.team1)
                 // Stadion oder Stadt zählen doppelt (so nennt Sky Einzelspiele), Vereinsnamen einfach.
                 val score = 2 * venue.count { it in text } + Teams.keywords(m.team1).count { it in text } + Teams.keywords(m.team2).count { it in text }
                 m to score
@@ -141,6 +143,26 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
             out[index] = only
         }
         return out
+    }
+
+    /** Eine Sport-Sendung für [assign]. */
+    data class Show(val title: String, val subtitle: String?, val description: String?, val start: Long, val stop: Long, val pairing: String?)
+
+    /**
+     * Das Spiel zu jeder Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung, sonst per
+     * Ausschluss (das einzige übrige Spiel der Liga zu dieser Zeit, wenn die anderen schon anderen Sendern gehören).
+     */
+    fun assign(matches: List<Match>, shows: List<Show>): List<Match?> {
+        if (matches.isEmpty()) return shows.map { null }
+        val direct = shows.map { s ->
+            find(matches, s.pairing, s.start, s.title)
+                ?: if (s.pairing == null) byVenue(matches, s.title, s.subtitle, s.description, s.start, s.stop) else null
+        }
+        val open = shows.indices.filter { direct[it] == null && shows[it].pairing == null }
+        val found = byElimination(matches, open.map { i -> shows[i].let { Open(it.title, it.subtitle, it.start, it.stop) } }, direct.filterNotNull().toSet())
+        val result = direct.toMutableList()
+        for ((k, m) in found) result[open[k]] = m
+        return result
     }
 
     /** Das Spiel zur TV-Paarung, falls es eins gibt (Anstoß höchstens 3 Stunden neben der Sendung). */
