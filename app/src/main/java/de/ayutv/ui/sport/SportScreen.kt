@@ -382,7 +382,6 @@ private fun EventRow(
                         e.channel.name + if (e.alsoOn.isNotEmpty()) "  ·  auch auf: " + e.alsoOn.joinToString(", ") { it.name } else "",
                         color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
-                    if (e.alsoOn.isNotEmpty()) Text("OK halten: anderen Sender wählen oder Verein folgen", color = AyuColors.Accent, fontSize = 12.sp)
                 } else {
                     Text(
                         e.channel.name + if (e.otherChannels > 0) "  ·  auch auf ${e.otherChannels} weiteren" else "",

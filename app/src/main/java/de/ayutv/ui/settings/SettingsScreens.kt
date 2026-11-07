@@ -1271,6 +1271,7 @@ private fun PlaylistRow(
             delay(30)
         }
     }
+    var more by remember(playlist.id) { mutableStateOf(false) }
     fun saveName() {
         val trimmed = newName.trim()
         if (trimmed.isNotEmpty() && trimmed != playlist.name) onRename(trimmed)
@@ -1326,14 +1327,19 @@ private fun PlaylistRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Übersichtlich: Was man oft braucht, steht da; Umbenennen und Löschen erst unter „Mehr“.
             OutlinedButton(onClick = onGroups) { Text("Gruppen") }
-            OutlinedButton(onClick = { newName = playlist.name; renaming = !renaming }) { Text(if (renaming) "Abbrechen" else "Umbenennen") }
-            if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
             OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
-            OutlinedButton(
-                onClick = onDelete,
-                colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
-            ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
+            if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
+            val expanded = more || renaming || confirmingDelete
+            if (expanded) {
+                OutlinedButton(onClick = { newName = playlist.name; renaming = !renaming }) { Text(if (renaming) "Abbrechen" else "Umbenennen") }
+                OutlinedButton(
+                    onClick = onDelete,
+                    colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
+                ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
+            }
+            if (!renaming && !confirmingDelete) OutlinedButton(onClick = { more = !more }) { Text(if (more) "Weniger" else "Mehr …") }
         }
         if (renaming) {
             Row(Modifier.fillMaxWidth().padding(start = 134.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {

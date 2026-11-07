@@ -234,37 +234,41 @@ fun PosterCard(
             border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.dp, AyuColors.Accent))),
         ) {
             Box(Modifier.fillMaxSize()) {
-                if (image.isNullOrBlank()) {
+                // Ohne Poster (oder wenn es nicht lädt): ruhiger Verlauf mit dem Anfangsbuchstaben, darüber das Bild.
+                Box(
+                    Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(AyuColors.SurfaceRaised, AyuColors.Surface))),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
-                        title,
-                        modifier = Modifier.align(Alignment.Center).padding(10.dp),
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 4,
+                        title.trim().firstOrNull { it.isLetterOrDigit() }?.uppercase() ?: "▶",
+                        fontSize = 56.sp,
+                        color = AyuColors.TextSecondary.copy(alpha = 0.45f),
+                        modifier = Modifier.padding(bottom = 30.dp),
                     )
-                } else {
+                }
+                if (!image.isNullOrBlank()) {
                     AsyncImage(
                         model = image,
                         contentDescription = title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
                     )
-                    // Titel im Bild auf dunklem Verlauf (wie in Streaming-Apps), gut lesbar auf jedem Poster.
-                    Box(
-                        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
-                            .padding(start = 8.dp, end = 8.dp, top = 26.dp, bottom = if (progress != null) 14.dp else 8.dp),
-                    ) {
-                        Text(title, style = MaterialTheme.typography.labelLarge, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
+                }
+                // Titel im Bild auf dunklem Verlauf (wie in Streaming-Apps), gut lesbar auf jedem Poster; nur einmal.
+                Box(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                        .padding(start = 8.dp, end = 8.dp, top = 26.dp, bottom = if (progress != null) 14.dp else 8.dp),
+                ) {
+                    Text(title, style = MaterialTheme.typography.labelLarge, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
                 if (progress != null) {
                     ProgressLine(progress, Modifier.align(Alignment.BottomCenter).padding(6.dp))
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
-        if (image.isNullOrBlank()) Text(title, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (subtitle != null) {
+            Spacer(Modifier.height(6.dp))
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = AyuColors.TextSecondary, maxLines = 1)
         }
     }
