@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.ayutv.desktop.data.Channel
 import de.ayutv.desktop.data.GroupRef
 import de.ayutv.desktop.data.Programme
@@ -143,7 +144,7 @@ private fun GuideRow(app: AppState, channel: Channel, list: List<Channel>, progr
     val end = start + WINDOW
     val visible = programmes.filter { it.stop > start && it.start < end }
     val now = System.currentTimeMillis()
-    Row(Modifier.fillMaxWidth().height(52.dp).padding(vertical = 2.dp)) {
+    Row(Modifier.fillMaxWidth().height(66.dp).padding(vertical = 2.dp)) {
         Selectable({ app.play(Playback.Live(channel, list)) }, Modifier.width(nameWidth).fillMaxHeight()) {
             Logo(channel.logo, 28)
             Spacer(Modifier.width(8.dp))
@@ -170,8 +171,9 @@ private fun GuideRow(app: AppState, channel: Channel, list: List<Channel>, progr
                     }
                     Column {
                         val archived = p.stop <= now && channel.catchupDays > 0 && app.store.archiveUrl(channel, p.start, p.stop, now) != null
-                        Label((if (archived) "⏪ " else "") + p.display(), Type.body)
-                        Label("${clock(p.start)} – ${clock(p.stop)}", Type.small)
+                        // Zwei Zeilen: lange Titel und Partien bleiben lesbar.
+                        Label((if (archived) "⏪ " else "") + p.display(), Type.body.copy(fontSize = 14.sp, lineHeight = 16.sp), maxLines = 2)
+                        Label("${clock(p.start)} – ${clock(p.stop)}", Type.small.copy(lineHeight = 15.sp))
                     }
                 }
             }

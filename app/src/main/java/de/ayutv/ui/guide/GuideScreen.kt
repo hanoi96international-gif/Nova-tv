@@ -510,15 +510,17 @@ private fun GuideCell(
         }
         Box(Modifier.fillMaxSize().padding(start = if (genre != de.ayutv.data.parse.ProgrammeGenre.OTHER) 12.dp else 8.dp, end = 8.dp), contentAlignment = Alignment.CenterStart) {
             Column {
+                // Zwei Zeilen: lange Titel und Partien („Borussia Dortmund – Eintracht Frankfurt“) bleiben lesbar.
                 Text(
                     title,
                     fontSize = 13.sp,
-                    maxLines = 1,
+                    lineHeight = 15.sp,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = if (live || focused) AyuColors.TextPrimary else AyuColors.TextSecondary,
                 )
                 if (time != null && width > 90.dp) {
-                    Text(time, fontSize = 13.sp, color = AyuColors.TextSecondary, maxLines = 1)
+                    Text(time, fontSize = 13.sp, lineHeight = 15.sp, color = AyuColors.TextSecondary, maxLines = 1)
                 }
             }
         }
