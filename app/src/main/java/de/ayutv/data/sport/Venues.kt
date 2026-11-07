@@ -19,7 +19,7 @@ object Venues {
         club("bayern", "allianz allianzarena munchen"),
         club("dortmund", "signal iduna westfalenstadion dortmund"),
         club("leverkusen", "bayarena leverkusen"),
-        club("leipzig", "leipzig"),
+        club("leipzig", "bull redbullarena leipzig"),
         club("frankfurt", "waldstadion frankfurt"),
         club("stuttgart", "mhp mhparena stuttgart cannstatt"),
         club("freiburg", "europapark freiburg"),

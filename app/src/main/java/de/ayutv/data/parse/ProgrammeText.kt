@@ -135,8 +135,11 @@ object ProgrammeText {
         if (flags and REPEAT != 0) return false
         if (flags and LIVE != 0) return true
         val text = title + " " + subtitle.orEmpty()
-        if (NOT_LIVE.containsMatchIn(text) || NOT_LIVE.containsMatchIn(category.orEmpty())) return false
+        if (NOT_LIVE.containsMatchIn(text)) return false
         val conference = LIVE_FORMAT.containsMatchIn(text)
+        // DAZN ordnet alles als „Magazin“/„Fußballmagazin“ ein, auch die Konferenz und Live-Spiele: Bei Konferenz oder
+        // Paarung zählt die Kategorie deshalb nicht.
+        if (NOT_LIVE.containsMatchIn(category.orEmpty()) && !conference && pairing(title, subtitle) == null) return false
         if (!conference && NOT_LIVE_SOFT.containsMatchIn(text)) return false
         if (LIVE_WORD.containsMatchIn(text)) return true
         if ((sportChannel || isSport(title, subtitle, category)) && conference) return true

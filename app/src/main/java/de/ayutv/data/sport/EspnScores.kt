@@ -29,22 +29,24 @@ object EspnScores {
         "ita.1" to "soccer/ita.1",
         "fra.1" to "soccer/fra.1",
         "ger.dfb_pokal" to "soccer/ger.dfb_pokal",
+        "aut.1" to "soccer/aut.1",
     )
 
     /** Anzeigename der Liga für die Anzeigetafel. */
     val NAMES = mapOf(
         "nhl" to "NHL", "nba" to "NBA", "nfl" to "NFL", "uefa.champions" to "Champions League", "uefa.europa" to "Europa League",
         "uefa.europa.conf" to "Conference League", "eng.1" to "Premier League", "esp.1" to "LaLiga", "ita.1" to "Serie A",
-        "fra.1" to "Ligue 1", "ger.dfb_pokal" to "DFB-Pokal",
+        "fra.1" to "Ligue 1", "ger.dfb_pokal" to "DFB-Pokal", "aut.1" to "Admiral Bundesliga",
     )
 
-    /** Adresse für die Spiele von gestern bis morgen (UTC-Tage; US-Abendspiele liegen bei uns in der Nacht). */
-    fun url(league: String, now: Long, base: String = "https://site.api.espn.com"): String? {
-        val path = LEAGUES[league] ?: return null
-        val day = SimpleDateFormat("yyyyMMdd", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("UTC") }
-        val from = day.format(now - DAY)
-        val to = day.format(now + DAY)
-        return "$base/apis/site/v2/sports/$path/scoreboard?dates=$from-$to&limit=200"
+    /**
+     * Adressen für die Spiele von gestern, heute und morgen. ESPN zählt Tage nach US-Ostküstenzeit (ein NHL-Spiel um 1 Uhr
+     * nachts bei uns gehört zum Vortag) und kennt keine Zeiträume („dates=…-…“ ergibt Fehler 400): je Tag eine Abfrage.
+     */
+    fun urls(league: String, now: Long, base: String = "https://site.api.espn.com"): List<String> {
+        val path = LEAGUES[league] ?: return emptyList()
+        val day = SimpleDateFormat("yyyyMMdd", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("America/New_York") }
+        return listOf(now - DAY, now, now + DAY).map { "$base/apis/site/v2/sports/$path/scoreboard?dates=${day.format(it)}" }
     }
 
     private const val DAY = 86_400_000L
