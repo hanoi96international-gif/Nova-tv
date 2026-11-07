@@ -89,4 +89,16 @@ class RealEpgTest {
         assertEquals("aut.1", LiveScores.leagueOf("Live: Admiral BL: Sonntags-Konferenz"))
         assertEquals("bl2", LiveScores.leagueOf("Live: 2. BL"))
     }
+
+    @Test
+    fun daznReplayOfFridayGameIsRecognised() {
+        val scores = LiveScores(okhttp3.OkHttpClient())
+        val matches = LiveScores.parse(resource("openligadb-bl1-2026-11-07.json"), "bl1")
+        // DAZN 1, Samstag 12:05 UTC: das Freitagsspiel (19:30 UTC) noch einmal, ohne Kennzeichnung
+        assertTrue(scores.isReplay(matches, "Hamburger SV - Borussia M'gladbach", time("20261107120500 +0000")))
+        // Am Freitagabend selbst: live
+        assertEquals(false, scores.isReplay(matches, "Hamburger SV - Borussia M'gladbach", time("20261106192000 +0000")))
+        // Samstag 14:30: Dortmund spielt wirklich
+        assertEquals(false, scores.isReplay(matches, "Borussia Dortmund – SV 07 Elversberg", time("20261107141500 +0000")))
+    }
 }

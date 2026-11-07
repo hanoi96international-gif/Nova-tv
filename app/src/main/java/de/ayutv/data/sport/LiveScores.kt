@@ -199,6 +199,16 @@ class LiveScores(
         return result
     }
 
+    /**
+     * Wiederholung eines schon gespielten Spiels, die der TV-Guide nicht so kennzeichnet (DAZN zeigt „Hamburger SV -
+     * Borussia M'gladbach“ vom Freitagabend am Samstagmittag noch einmal, ohne Hinweis): Laut Spielplan wurde diese
+     * Paarung mehr als 3 Stunden vor Sendebeginn angepfiffen, und zur Sendezeit gibt es kein Spiel dieser Paarung.
+     */
+    fun isReplay(matches: List<Match>, pairing: String?, start: Long): Boolean {
+        if (pairing == null || matches.isEmpty() || find(matches, pairing, start) != null) return false
+        return matches.any { (start - it.kickoff) in (3 * HOUR)..(6 * 24 * HOUR) && it.matches(pairing) }
+    }
+
     /** Das Spiel zur TV-Paarung, falls es eins gibt (Anstoß höchstens 3 Stunden neben der Sendung). */
     fun find(matches: List<Match>, pairing: String?, start: Long, context: String = ""): Match? {
         if (pairing == null) return null
