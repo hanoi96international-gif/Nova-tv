@@ -127,8 +127,7 @@ private fun competitionOf(p: de.ayutv.desktop.data.Programme, match: LiveScores.
     "bl1" -> "Bundesliga"
     "bl2" -> "2. Bundesliga"
     "bl3" -> "3. Liga"
-    else -> p.title.replace(Regex("""(?i)^\s*(live\s*:?|fu(ß|ss)ball\s*:)\s*"""), "").replace(Regex("""(?i)^\s*(live\s*:?|fu(ß|ss)ball\s*:)\s*"""), "")
-        .substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
+    else -> de.ayutv.data.parse.ProgrammeText.competition(p.title).substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
 }
 
 /**

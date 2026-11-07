@@ -163,4 +163,39 @@ class ProgrammeTextTest {
         assertEquals(false, on("DAZN 1", "Doppelpack Europa - Highlights der Serie A und Ligue 1 2025/26: 18./17. Spieltag", "Sport"))
         assertEquals(false, on("Sky Sport Premier League", "PL: Highlights Samstag, 20. Spieltag"))
     }
+
+    /** Wie auf dem Foto vom Fernseher (November 2026): verschiedene Anbieter, verschiedene Titel für dasselbe Spiel. */
+    @Test
+    fun sportTitlesAreUniform() {
+        assertEquals("Bundesliga", ProgrammeText.eventTitle("Live: BL", null, "Aus der Red Bull Arena, Deutschland."))
+        assertEquals("1. FSV Mainz 05 – FC Bayern München", ProgrammeText.eventTitle("Live: BL", "1. FSV Mainz 05 - FC Bayern München", null))
+        assertEquals("RB Leipzig – VfL Wolfsburg", ProgrammeText.eventTitle("Live: BL", null, null, pairing = "RB Leipzig - VfL Wolfsburg"))
+        assertEquals("Lazio Rom – SSC Neapel", ProgrammeText.eventTitle("Serie A 25/26: Lazio Rom - SSC Neapel", null, null))
+        assertEquals("2. Bundesliga – Konferenz", ProgrammeText.eventTitle("Live: 2. BL – Konferenz", null, null))
+        assertEquals("Formel 1 - MSC Cruises Grand Prix von Sao Paulo – 3. Freies Training",
+            ProgrammeText.eventTitle("Formel 1 - MSC Cruises Grand Prix von Sao Paulo", "3. Freies Training", null))
+        assertEquals("Bundesliga", ProgrammeText.competition("Live: BL"))
+        assertEquals("Premier League", ProgrammeText.competition("PL: AFC Bournemouth - Tottenham Hotspur, 21. Spieltag"))
+        assertEquals("Serie A", ProgrammeText.competition("Serie A 25/26: Lazio Rom - SSC Neapel"))
+        assertEquals("Bundesliga", ProgrammeText.competition("Fußball: Bundesliga"))
+    }
+
+    @Test
+    fun sameMatchFromTwoGuidesOnce() {
+        assertEquals(true, ProgrammeText.samePairing("1. FSV Mainz 05 – FC Bayern München", "Mainz 05 - Bayern München"))
+        assertEquals(false, ProgrammeText.samePairing("1. FSV Mainz 05 – FC Bayern München", "Borussia Dortmund – SV 07 Elversberg"))
+        data class E(val start: Long, val pairing: String?, val channels: List<String>)
+        val hour = 3_600_000L
+        val merged = ProgrammeText.mergeSameMatch(
+            listOf(
+                E(0, "1. FSV Mainz 05 – FC Bayern München", listOf("Sky Sport Bundesliga UHD")),
+                E(15 * 60_000L, "Mainz 05 - Bayern München", listOf("Sky Go Bundesliga 1 4K")),   // anderer Anbieter, 15 min später
+                E(5 * 60_000L, null, listOf("Sky Sport Bundesliga 2")),                           // ohne Paarung: bleibt
+                E(5 * hour, "Mainz 05 - Bayern München", listOf("Sky Sport Bundesliga 1")),       // Wiederholung: entfällt
+            ),
+            { it.start }, { it.pairing },
+        ) { a, b -> a.copy(channels = a.channels + b.channels) }
+        assertEquals(2, merged.size)
+        assertEquals(listOf("Sky Sport Bundesliga UHD", "Sky Go Bundesliga 1 4K"), merged[0].channels)
+    }
 }

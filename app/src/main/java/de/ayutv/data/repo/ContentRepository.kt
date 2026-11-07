@@ -127,6 +127,15 @@ class ContentRepository(
     /** Ein Spiel auf dem besten Sender [channel]; [alsoOn]: dieselbe Übertragung auf anderen Sendern (je die beste Fassung). */
     data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val alsoOn: List<ChannelEntity> = emptyList()) {
         val otherChannels: Int get() = alsoOn.size
+
+        /** Dasselbe Spiel auf weiteren Sendern: deren Sender kommen zu „auch auf“ (nicht doppelt, nicht dieser selbst). */
+        fun mergedWith(other: SportEvent): SportEvent {
+            // Hauptsendung mit Paarung im Titel bevorzugen (dann steht der Name überall gleich).
+            val (main, extra) = if (de.ayutv.data.parse.ProgrammeText.pairing(programme.title, programme.subtitle, programme.description) == null &&
+                de.ayutv.data.parse.ProgrammeText.pairing(other.programme.title, other.programme.subtitle, other.programme.description) != null) other to this else this to other
+            val channels = (main.alsoOn + extra.channel + extra.alsoOn).distinctBy { it.key }.filter { it.key != main.channel.key }
+            return main.copy(alsoOn = channels)
+        }
     }
 
     /**
@@ -181,7 +190,10 @@ class ContentRepository(
                     SportEvent(p, c, others)
                 }
                 .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
-                .let { list -> ProgrammeText.withoutReplays(list, { it.programme.start }) { ProgrammeText.pairingKey(it.programme.title, it.programme.subtitle, it.programme.description) } }
+                .let { list ->
+                    // Dasselbe Spiel aus verschiedenen TV-Guides (leicht andere Anfangszeit) nur einmal, Wiederholungen nicht.
+                    ProgrammeText.mergeSameMatch(list, { it.programme.start }, { ProgrammeText.pairing(it.programme.title, it.programme.subtitle, it.programme.description) }) { a, b -> a.mergedWith(b) }
+                }
         }
     }
 

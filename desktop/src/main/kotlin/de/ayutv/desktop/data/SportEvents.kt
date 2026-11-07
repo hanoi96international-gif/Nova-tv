@@ -6,8 +6,15 @@ import de.ayutv.data.parse.ProgrammeText
 
 /** Sportsendung mit dem besten Sender und den anderen, auf denen sie auch läuft. */
 data class SportEvent(val programme: Programme, val channel: Channel, val alsoOn: List<Channel> = emptyList()) {
-    val headline: String get() = ProgrammeText.sportHeadline(programme.title, programme.subtitle, programme.description)
+    /** Überall gleich aufgebaut: die Paarung, sonst der Wettbewerb ausgeschrieben ohne „Live:“ (wie auf dem Fire TV). */
+    val headline: String get() = ProgrammeText.eventTitle(programme.title, programme.subtitle, programme.description)
     val pairing: String? get() = ProgrammeText.pairing(programme.title, programme.subtitle, programme.description)
+
+    /** Dasselbe Spiel auf weiteren Sendern: zusammenlegen, die Sendung mit Paarung im Titel vorn. */
+    fun mergedWith(other: SportEvent): SportEvent {
+        val (main, extra) = if (pairing == null && other.pairing != null) other to this else this to other
+        return main.copy(alsoOn = (main.alsoOn + extra.channel + extra.alsoOn).distinctBy { it.key }.filter { it.key != main.channel.key })
+    }
 }
 
 /** Sport aus dem TV-Guide, wie in der Fire-TV-App: gleiche Erkennung, gleiche Zusammenfassung über Sender. */
@@ -44,8 +51,8 @@ object SportEvents {
                 SportEvent(p, c, others)
             }
             .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
-            // Spätere Termine derselben Paarung sind Wiederholungen (DAZN kennzeichnet sie nicht).
-            .let { list -> ProgrammeText.withoutReplays(list, { it.programme.start }) { ProgrammeText.pairingKey(it.programme.title, it.programme.subtitle, it.programme.description) } }
+            // Dasselbe Spiel aus verschiedenen TV-Guides nur einmal; spätere Termine sind Wiederholungen.
+            .let { list -> ProgrammeText.mergeSameMatch(list, { it.programme.start }, { it.pairing }) { a, b -> a.mergedWith(b) } }
     }
 
     /** Beste Fassung dieses Senders für Sport (4K vor Full HD) unter [all], auch wenn die Liste sonst Full HD zeigt. */

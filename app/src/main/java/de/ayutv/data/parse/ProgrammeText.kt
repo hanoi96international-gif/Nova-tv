@@ -92,7 +92,7 @@ object ProgrammeText {
         if (sides.size != 2) return true
         return sides.none { side ->
             val words = side.split(' ').filter { it.isNotBlank() }
-            NOT_A_SIDE.containsMatchIn(side) || words.size > 6 ||
+            NOT_A_SIDE.containsMatchIn(side) || words.size > 6 || LIVE_FORMAT.containsMatchIn(side) || side.lowercase() in COMPETITIONS ||
                 words.count { w -> w.first().isLowerCase() && w.lowercase() !in PARTICLES } >= 2
         }
     }
@@ -150,23 +150,77 @@ object ProgrammeText {
                 (sportChannel || isSport(title, subtitle, category)) && descriptionPairing(description) != null)
 
     /**
-     * DAZN und andere zeigen ein Spiel nach der Live-Übertragung noch mehrmals, ohne es als Wiederholung zu kennzeichnen.
-     * Dieselbe Paarung mehr als zwei Stunden nach ihrem ersten Termin ist deshalb eine Wiederholung und entfällt.
-     * [items] nach Beginn sortiert; [pairingKey] null = keine Paarung (bleibt immer).
+     * Dasselbe Spiel nur einmal: Gleiche Paarung (Schreibweise egal, „FC Bayern München“ = „Bayern“) innerhalb von zwei
+     * Stunden wird zusammengelegt ([merge], z. B. weitere Sender), auch wenn die TV-Guides verschiedener Anbieter eine
+     * andere Anfangszeit nennen. Später ist es eine Wiederholung (DAZN kennzeichnet sie nicht) und entfällt.
+     * [items] nach Beginn sortiert; [pairing] null = ohne Paarung (bleibt für sich).
      */
-    fun <T> withoutReplays(items: List<T>, start: (T) -> Long, pairingKey: (T) -> String?): List<T> {
-        val first = HashMap<String, Long>()
-        return items.filter { item ->
-            val key = pairingKey(item) ?: return@filter true
+    fun <T> mergeSameMatch(items: List<T>, start: (T) -> Long, pairing: (T) -> String?, merge: (first: T, other: T) -> T): List<T> {
+        val out = ArrayList<T>()
+        val pairings = ArrayList<String?>()
+        for (item in items) {
+            val p = pairing(item)
+            if (p == null) { out += item; pairings += null; continue }
+            val same = out.indices.filter { j -> pairings[j]?.let { samePairing(it, p) } == true }
             val at = start(item)
-            at - first.getOrPut(key) { at } < REPLAY_AFTER_MS
+            val now = same.firstOrNull { j -> kotlin.math.abs(at - start(out[j])) < REPLAY_AFTER_MS }
+            when {
+                now != null -> out[now] = merge(out[now], item)
+                same.isNotEmpty() -> Unit // Wiederholung
+                else -> { out += item; pairings += p }
+            }
         }
+        return out
     }
     private const val REPLAY_AFTER_MS = 2 * 3_600_000L
 
-    /** Schlüssel der Paarung (Schreibweise egal) für [withoutReplays], null ohne Paarung. */
-    fun pairingKey(title: String, subtitle: String?, description: String?): String? =
-        sportKey(title, subtitle, description, "").takeIf { it.startsWith("p:") }
+    /** Dieselbe Paarung? Je Seite ein gemeinsames Vereinswort („Mainz 05“ = „1. FSV Mainz 05“). */
+    fun samePairing(a: String, b: String): Boolean {
+        val x = Teams.ofPairing(a)
+        val y = Teams.ofPairing(b)
+        if (x.size != 2 || y.size != 2) return simple(a) == simple(b)
+        fun same(p: String, q: String): Boolean {
+            val kp = Teams.keywords(p)
+            val kq = Teams.keywords(q)
+            return if (kp.isNotEmpty() && kq.isNotEmpty()) kp.any { it in kq } else simple(p) == simple(q)
+        }
+        return same(x[0], y[0]) && same(x[1], y[1])
+    }
+
+    /**
+     * Wettbewerb aus dem Titel, einheitlich ausgeschrieben: „Live: BL“ → „Bundesliga“, „PL: …“ → „Premier League“,
+     * „Serie A 25/26: Lazio – Neapel“ → „Serie A“. Ohne Doppelpunkt der Titel ohne „Live“.
+     */
+    fun competition(title: String): String {
+        val plain = title.replace(LIVE_PREFIX, "").trim()
+        val head = (if (": " in plain) plain.substringBefore(": ") else plain).replace(SEASON, "").trim()
+        return expand(head).ifEmpty { plain }
+    }
+
+    /**
+     * Einheitlicher Titel für die Sport-Übersicht: die Paarung („Mainz 05 – Bayern München“), sonst der Wettbewerb
+     * ausgeschrieben, ohne „Live:“ („Live: BL“ → „Bundesliga“, „Live: 2. BL – Konferenz“ → „2. Bundesliga – Konferenz“).
+     */
+    fun eventTitle(title: String, subtitle: String?, description: String?, pairing: String? = null): String {
+        (pairing ?: pairing(title, subtitle, description))?.let { p ->
+            val sides = Teams.ofPairing(p)
+            return if (sides.size == 2) "${sides[0]} – ${sides[1]}" else p
+        }
+        val plain = headline(title, subtitle).replace(LIVE_PREFIX, "").trim()
+        val head = plain.substringBefore(": ").substringBefore(" – ").substringBefore(" - ")
+        val rest = plain.removePrefix(head)
+        return (expand(head.replace(SEASON, "").trim()) + rest).trim().ifEmpty { plain }
+    }
+
+    private fun expand(head: String): String = COMPETITIONS[head.lowercase()] ?: head
+    private val LIVE_PREFIX = Regex("""(?i)^\s*(🔴\s*)?(live\s*:?|ᴸᶦᵛᵉ|ᴸᴵⱽᴱ)\s*|^\s*fu(ß|ss)ball\s*:\s*""")
+    private val SEASON = Regex("""\b(20)?\d{2}/\d{2}\b""")
+    private val COMPETITIONS = mapOf(
+        "bl" to "Bundesliga", "1. bl" to "Bundesliga", "buli" to "Bundesliga", "2. bl" to "2. Bundesliga", "2. buli" to "2. Bundesliga",
+        "3. bl" to "3. Liga", "pl" to "Premier League", "epl" to "Premier League", "cl" to "Champions League", "ucl" to "Champions League",
+        "uefa cl" to "Champions League", "el" to "Europa League", "uel" to "Europa League", "ecl" to "Conference League",
+        "uecl" to "Conference League", "dfb" to "DFB-Pokal", "efl" to "EFL Championship", "wm" to "Weltmeisterschaft", "em" to "Europameisterschaft",
+    )
 
     /** Sportsender nach Namen (Sky Sport, DAZN, Eurosport, Servus TV, MagentaSport …). */
     fun isSportChannel(name: String): Boolean = SPORT_CHANNEL.containsMatchIn(name)
