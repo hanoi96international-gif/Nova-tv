@@ -1,5 +1,8 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +37,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import de.ayutv.desktop.input.RemoteButton
 import de.ayutv.desktop.input.remote
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -151,17 +155,25 @@ fun Selectable(
     selected: Boolean = false,
     focusRequester: FocusRequester? = null,
     shape: RoundedCornerShape = RoundedCornerShape(8.dp),
+    /** Vergrößerung bei Fokus (Kacheln: 1.06; Listen: 1.0, damit nichts überlappt). */
+    focusScale: Float = 1f,
     content: @Composable RowScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val background = when {
-        focused -> Palette.accentSoft
-        selected -> Palette.raised
-        hovered -> Palette.surface
-        else -> Color.Transparent
-    }
+    // Fokus gleitet weich über (Farbe, Rahmen, Größe): nur Zeichnen auf der Grafikkarte, kein neues Layout.
+    val background by animateColorAsState(
+        when {
+            focused -> Palette.accentSoft
+            selected -> Palette.raised
+            hovered -> Palette.surface
+            else -> Palette.surface.copy(alpha = 0f)
+        },
+        tween(FOCUS_MS),
+    )
+    val ring by animateFloatAsState(if (focused) 1f else 0f, tween(FOCUS_MS))
+    val scale by animateFloatAsState(if (focused) focusScale else 1f, tween(FOCUS_MS + 40))
     val downAt = remember { longArrayOf(0L) }
     Row(
         modifier
@@ -192,8 +204,9 @@ fun Selectable(
             .onPointerEvent(PointerEventType.Press) { e ->
                 if (onMenu != null && e.buttons.isSecondaryPressed) onMenu()
             }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .background(background, shape)
-            .border(if (focused) 3.dp else 0.dp, if (focused) Palette.accent else Color.Transparent, shape)
+            .border(3.dp, Palette.accent.copy(alpha = ring), shape)
             .hoverable(interaction)
             .clickable(interaction, indication = null, onClick = onClick)
             .focusable(interactionSource = interaction)
@@ -203,6 +216,8 @@ fun Selectable(
 }
 
 private const val LONG_PRESS_MS = 600L
+/** Dauer der Fokus-Übergänge (kurz: fühlt sich direkt an, wirkt aber nicht hart). */
+const val FOCUS_MS = 140
 
 @Composable
 fun TextButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, focusRequester: FocusRequester? = null) =
@@ -306,7 +321,9 @@ fun Progress(fraction: Float, modifier: Modifier = Modifier, height: Int = 4) {
 /** Kopfzeile einer Seite: Titel, optional Hinweis rechts (z. B. Tastenhilfe). */
 @Composable
 fun ScreenHeader(title: String, hint: String? = null) {
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(5.dp).height(26.dp).background(Palette.accent, RoundedCornerShape(3.dp)))
+        Spacer(Modifier.width(12.dp))
         Label(title, Type.title, Modifier.weight(1f))
         if (hint != null) Label(hint, Type.small, maxLines = 2)
     }
@@ -329,7 +346,7 @@ fun Tile(
     focusRequester: FocusRequester? = null,
 ) {
     val width = if (wide) 240.dp else 150.dp
-    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
+    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp), focusScale = 1.05f) {
         Column(Modifier.fillMaxWidth()) {
             val picture = rememberImage(image)
             Box(

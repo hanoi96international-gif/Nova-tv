@@ -1,6 +1,7 @@
 package de.ayutv.desktop.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
 /** Eintrag in einem Auswahlmenü. */
@@ -34,15 +36,28 @@ data class MenuItem(val label: String, val action: () -> Unit)
 @Composable
 fun Overlay(app: AppState, onDismiss: () -> Unit, width: Int = 420, content: @Composable () -> Unit) {
     BackHandler(app) { onDismiss() }
+    // Weich einblenden: Hintergrund dunkelt ab, der Kasten wächst leicht heran (nur Grafikkarte, kein neues Layout).
+    val appear = remember { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { appear.animateTo(1f, androidx.compose.animation.core.tween(180)) }
     Box(
-        Modifier.fillMaxSize().background(Color(0xAA000000))
+        Modifier.fillMaxSize()
+            .graphicsLayer { alpha = appear.value }
+            .background(Color(0xB3000000))
             .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
         Box(
             Modifier.width(width.dp).heightIn(max = 620.dp)
+                .graphicsLayer {
+                    val s = 0.94f + 0.06f * appear.value
+                    scaleX = s
+                    scaleY = s
+                    translationY = (1f - appear.value) * 24f
+                }
                 .clickable(remember { MutableInteractionSource() }, indication = null) {}
-                .background(Palette.surface, RoundedCornerShape(14.dp)).padding(16.dp),
+                .background(Palette.surface, RoundedCornerShape(16.dp))
+                .border(1.dp, Palette.raised, RoundedCornerShape(16.dp))
+                .padding(18.dp),
         ) { content() }
     }
 }

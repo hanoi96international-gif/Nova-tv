@@ -1,5 +1,20 @@
 package de.ayutv.desktop
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.sp
+import de.ayutv.desktop.ui.Selectable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -190,8 +205,15 @@ fun App(app: AppState, window: WindowState) {
         } else {
             Row(Modifier.fillMaxSize()) {
                 Sidebar(app)
-                Box(Modifier.weight(1f).fillMaxHeight().padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 12.dp)) {
-                    when (app.screen) {
+                // Seitenwechsel: neue Seite blendet weich ein und rückt ein Stück herauf, die alte blendet schnell aus.
+                AnimatedContent(
+                    targetState = app.screen,
+                    modifier = Modifier.weight(1f).fillMaxHeight().padding(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 12.dp),
+                    transitionSpec = {
+                        (fadeIn(tween(220, delayMillis = 50)) + slideInVertically(tween(260)) { it / 36 }) togetherWith fadeOut(tween(90))
+                    },
+                ) { screen ->
+                    when (screen) {
                         Screen.HOME -> HomeScreen(app)
                         Screen.LIVE -> LiveScreen(app)
                         Screen.GUIDE -> GuideScreen(app)
@@ -208,10 +230,23 @@ fun App(app: AppState, window: WindowState) {
             if (app.choosingProfile) de.ayutv.desktop.ui.ProfileDialog(app, onDismiss = { app.choosingProfile = false })
         }
         app.dueReminder?.let { r -> de.ayutv.desktop.ui.ReminderDialog(app, r) }
+        // Hinweis unten: gleitet herein und wieder hinaus (der letzte Text bleibt dabei stehen).
         val line = app.message ?: status
-        if (line != null) {
-            Box(Modifier.align(Alignment.BottomCenter).padding(24.dp).background(Palette.raised, RoundedCornerShape(10.dp)).padding(horizontal = 18.dp, vertical = 10.dp)) {
-                Label(line, Type.body, maxLines = 3)
+        val lastLine = remember { arrayOf("") }.also { if (line != null) it[0] = line }
+        AnimatedVisibility(
+            visible = line != null,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp),
+            enter = fadeIn(tween(160)) + slideInVertically(tween(200)) { it / 2 },
+            exit = fadeOut(tween(160)) + slideOutVertically(tween(200)) { it / 2 },
+        ) {
+            Row(
+                Modifier.background(Palette.raised, RoundedCornerShape(12.dp)).border(1.dp, Palette.accent.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                    .padding(start = 10.dp, end = 18.dp, top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.width(4.dp).height(22.dp).background(Palette.accent, RoundedCornerShape(2.dp)))
+                Spacer(Modifier.width(12.dp))
+                Label(lastLine[0], Type.body, maxLines = 3)
             }
         }
     }
@@ -227,28 +262,31 @@ private fun Sidebar(app: AppState) {
             kotlinx.coroutines.delay(15_000)
         }
     }
-    Column(Modifier.width(210.dp).fillMaxHeight().background(Palette.surface).padding(10.dp)) {
-        Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.Bottom) {
-            Label("DnA-TV", Type.title, Modifier.weight(1f))
-            Label(clock(now), Type.small)
+    Column(
+        Modifier.width(224.dp).fillMaxHeight()
+            .background(Brush.verticalGradient(listOf(Palette.surface, Palette.surface.copy(alpha = 0.72f))))
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+    ) {
+        // Kopf: Name mit Akzentpunkt, darunter groß die Uhrzeit.
+        Row(Modifier.padding(start = 10.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Label("DnA", Type.title)
+            Box(Modifier.padding(horizontal = 3.dp).size(7.dp).background(Palette.accent, androidx.compose.foundation.shape.CircleShape))
+            Label("TV", Type.title.copy(color = Palette.accent))
         }
+        Label(clock(now), Type.heading.copy(color = Palette.secondary), Modifier.padding(start = 10.dp, top = 2.dp, bottom = 16.dp))
         val profiles by app.store.profiles.collectAsState()
         val profileId by app.store.profile.collectAsState()
         if (profiles.size > 1) {
-            ListRow("👤  ${profiles.firstOrNull { it.id == profileId }?.name ?: "Profil"}", onClick = { app.choosingProfile = true })
-            Spacer(Modifier.height(8.dp))
+            NavItem("👤", profiles.firstOrNull { it.id == profileId }?.name ?: "Profil", selected = false) { app.choosingProfile = true }
+            Spacer(Modifier.height(10.dp))
         }
         Screen.entries.forEach { screen ->
-            ListRow(
-                "${screen.icon}   ${screen.label}",
-                onClick = { app.screen = screen },
-                selected = app.screen == screen,
-            )
-            Spacer(Modifier.height(2.dp))
+            NavItem(screen.icon, screen.label, selected = app.screen == screen) { app.screen = screen }
+            Spacer(Modifier.height(3.dp))
         }
         Spacer(Modifier.weight(1f))
         if (app.updater.state is de.ayutv.desktop.update.Updater.State.Available) {
-            ListRow("⬆  Update verfügbar", onClick = { app.screen = Screen.SETTINGS })
+            NavItem("⬆", "Update verfügbar", selected = false) { app.screen = Screen.SETTINGS }
             Spacer(Modifier.height(6.dp))
         }
         val source = app.input.source
@@ -256,5 +294,18 @@ private fun Sidebar(app: AppState) {
             if (source != null) "🎮 ${source.label} verbunden" else "Fernbedienung, Tastatur oder Maus",
             Type.small, Modifier.padding(start = 12.dp, bottom = 6.dp), maxLines = 2,
         )
+    }
+}
+
+/** Eintrag der Navigation: Symbol in eigener Spalte, gewählte Seite mit Akzent-Leiste links (gleitet weich ein). */
+@Composable
+private fun NavItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit) {
+    val bar by animateDpAsState(if (selected) 22.dp else 0.dp, tween(200))
+    Selectable(onClick, Modifier.fillMaxWidth(), selected = selected, shape = RoundedCornerShape(10.dp)) { focused ->
+        Box(Modifier.width(4.dp).height(bar).background(Palette.accent, RoundedCornerShape(2.dp)))
+        Spacer(Modifier.width(8.dp))
+        Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) { Label(icon, Type.heading) }
+        Spacer(Modifier.width(10.dp))
+        Label(label, if (selected || focused) Type.heading else Type.body.copy(fontSize = 16.sp))
     }
 }

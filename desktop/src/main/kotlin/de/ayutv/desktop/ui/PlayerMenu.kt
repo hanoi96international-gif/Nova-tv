@@ -40,6 +40,8 @@ import java.util.Locale
 
 private val MenuSecondary = Color(0xFF9AA7B4)
 private val MenuGood = Color(0xFF7FD69B)
+/** Hintergrund der Menüs rechts: zum Bild hin leicht durchscheinend. */
+private val PanelBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xD9000000), Color(0xF2000000)))
 
 /** Verschiebung als Text: „+1,5 s“. */
 fun shiftLabel(ms: Long): String = "%+.1f s".format(Locale.GERMAN, ms / 1000.0)
@@ -96,7 +98,7 @@ fun PlayerMenuPanel(app: AppState, playback: Playback, actions: MenuActions, mod
     val shown = app.shownSubtitle
 
     LazyColumn(
-        modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
+        modifier.fillMaxHeight().width(420.dp).background(PanelBrush, RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp)),
         contentPadding = PaddingValues(vertical = 28.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -214,7 +216,7 @@ fun PlayerMenuPanel(app: AppState, playback: Playback, actions: MenuActions, mod
 fun SubtitleLanguagePanel(app: AppState, modifier: Modifier = Modifier, onPick: (String) -> Unit) {
     val first = remember { FocusRequester() }
     LazyColumn(
-        modifier.fillMaxHeight().width(420.dp).background(Color.Black.copy(alpha = 0.92f)),
+        modifier.fillMaxHeight().width(420.dp).background(PanelBrush, RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp)),
         contentPadding = PaddingValues(vertical = 28.dp, horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
