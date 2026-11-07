@@ -122,7 +122,7 @@ fun MoviesScreen() {
         )
         // Kategorie öffnen und schließen: Der Inhalt gleitet an seinen neuen Platz.
         Column(Modifier.weight(1f).fillMaxHeight().appear(drill.isOpen, if (drill.isOpen) 56.dp else (-24).dp)) {
-        if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty())
+        if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty(), onBack = { drill.close() })
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
             state = gridState,
@@ -183,7 +183,7 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
         )
         // Kategorie öffnen und schließen: Der Inhalt gleitet an seinen neuen Platz.
         Column(Modifier.weight(1f).fillMaxHeight().appear(drill.isOpen, if (drill.isOpen) 56.dp else (-24).dp)) {
-        if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty())
+        if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty(), onBack = { drill.close() })
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
             modifier = Modifier.weight(1f).fillMaxWidth().drillContent(drill).focusRestorer(),
