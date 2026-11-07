@@ -78,6 +78,9 @@ data class Programme(
     val flags: Int = 0,
 )
 
+/** Titel für TV-Guide, Senderliste und Vorschau; bei Sport mit der Partie vorn (wie auf dem Fire TV). */
+fun Programme.display(): String = de.ayutv.data.parse.ProgrammeText.display(title, subtitle, description, category, start, stop)
+
 /** Proxy: [mode] OFF/ALL/SELECTED, [type] HTTP/SOCKS5, [playlists] = Playlists bei SELECTED. */
 @Serializable
 data class ProxySettings(

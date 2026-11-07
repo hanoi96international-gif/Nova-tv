@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -76,7 +77,7 @@ fun SearchScreen(app: AppState) {
                 items(r.programmes, key = { "p" + it.first.key + it.second.start }) { (c, p) ->
                     val running = p.start <= System.currentTimeMillis()
                     ListRow(
-                        p.title, { app.play(Playback.Live(c, listOf(c))) },
+                        p.display(), { app.play(Playback.Live(c, listOf(c))) },
                         subtitle = "${c.name} · ${if (running) "läuft jetzt" else "${day(p)} ${clock(p.start)}"}",
                         leading = { Logo(c.logo) },
                     )

@@ -1,6 +1,11 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,12 +39,12 @@ fun SportScreen(app: AppState) {
     val guide by store.guide.collectAsState()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var matches by remember { mutableStateOf<List<LiveScores.Match>>(emptyList()) }
-    val scores = remember { LiveScores(app.sync.http) }
+    val scores = app.liveScores
 
     LaunchedEffect(Unit) {
         while (true) {
             now = System.currentTimeMillis()
-            runCatching { matches = scores.current(now) }
+            runCatching { matches = scores.current(now).also { de.ayutv.data.sport.MatchHints.update(it) } }
             delay(60_000)
         }
     }
@@ -83,7 +88,7 @@ fun SportScreen(app: AppState) {
             val later = list.filter { it.programme.start > now }
             val (todayList, tomorrow) = later.partition { Instant.ofEpochMilli(it.programme.start).atZone(zone).toLocalDate() == today }
             Column(Modifier.fillMaxSize()) {
-                Label("Sport", Type.title, Modifier.padding(bottom = 8.dp))
+                ScreenHeader("Sport", "OK einschalten · ☰ / Rechtsklick: erinnern, Verein folgen, anderer Sender")
                 LazyColumn(Modifier.fillMaxSize()) {
                     section("Jetzt live", running, app, assigned, now, ::eventMenu)
                     section("Heute", todayList, app, assigned, now, ::eventMenu)
@@ -97,29 +102,100 @@ fun SportScreen(app: AppState) {
 
 private fun androidx.compose.foundation.lazy.LazyListScope.section(title: String, events: List<SportEvent>, app: AppState, assigned: Map<SportEvent, LiveScores.Match?>, now: Long, onMenu: (SportEvent) -> Unit) {
     if (events.isEmpty()) return
-    item(key = "h$title") { Label(title, Type.heading, Modifier.padding(top = 14.dp, bottom = 4.dp)) }
+    item(key = "h$title") {
+        androidx.compose.foundation.layout.Row(Modifier.padding(top = 18.dp, bottom = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.width(4.dp).height(18.dp).background(if (title == "Jetzt live") Palette.live else Palette.accent, androidx.compose.foundation.shape.RoundedCornerShape(2.dp)),
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+            Label(title, Type.heading)
+            androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+            Label("${events.size}", Type.small)
+        }
+    }
     items(events, key = { "$title|${it.channel.key}|${it.programme.start}" }) { e ->
-        val p = e.programme
-        val match = assigned[e]
-        val score = match?.let { m ->
-            when {
-                m.live(now) -> "  ${m.score} (${m.minute(now)})"
-                m.finished -> "  ${m.score} Ende"
-                else -> ""
+        MatchRow(e, assigned[e], now, onClick = {
+            val best = de.ayutv.desktop.data.SportEvents.bestFor(e.channel, app.store.channels())
+            app.play(Playback.Live(best, listOf(best) + e.alsoOn))
+        }, onMenu = { onMenu(e) })
+        androidx.compose.foundation.layout.Spacer(Modifier.height(6.dp))
+    }
+}
+
+/** Wettbewerb für die Anzeigetafel: Liga laut Spielplan, sonst der Titel ohne „Live:“ und Sportart davor. */
+private fun competitionOf(p: de.ayutv.desktop.data.Programme, match: LiveScores.Match?): String = when (match?.league) {
+    "bl1" -> "Bundesliga"
+    "bl2" -> "2. Bundesliga"
+    "bl3" -> "3. Liga"
+    else -> p.title.replace(Regex("""(?i)^\s*(live\s*:?|fu(ß|ss)ball\s*:)\s*"""), "").replace(Regex("""(?i)^\s*(live\s*:?|fu(ß|ss)ball\s*:)\s*"""), "")
+        .substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
+}
+
+/**
+ * Ein Spiel als Anzeigetafel: links Zeit bzw. LIVE, in der Mitte Verein – Wappen – Stand/Anstoß – Wappen – Verein,
+ * darüber Wettbewerb und Sender, rechts das Senderlogo. Ohne Paarung (Tennis, Formel 1 …) die Überschrift.
+ */
+@androidx.compose.runtime.Composable
+private fun MatchRow(e: SportEvent, match: LiveScores.Match?, now: Long, onClick: () -> Unit, onMenu: () -> Unit) {
+    val p = e.programme
+    val running = p.start <= now
+    val pairing = e.pairing ?: match?.pairing
+    val sides = if (match != null) listOf(match.team1, match.team2) else pairing?.let { de.ayutv.data.parse.Teams.ofPairing(it) }.orEmpty()
+    val liveScore = match?.takeIf { it.live(now) }
+    Selectable(onClick, Modifier.fillMaxWidth().background(Palette.surface.copy(alpha = 0.85f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp)), onMenu = onMenu, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
+        androidx.compose.foundation.layout.Column(Modifier.width(96.dp)) {
+            if (running) {
+                Label(
+                    "● LIVE", Type.small.copy(color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                    Modifier.background(Palette.live, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+                liveScore?.minute(now)?.let { Label(it, Type.small.copy(color = Palette.live)) }
+            } else {
+                Label(clock(p.start), Type.heading)
             }
-        }.orEmpty()
-        val also = if (e.alsoOn.isEmpty()) "" else " · auch auf ${e.alsoOn.take(3).joinToString { it.name }}${if (e.alsoOn.size > 3) " …" else ""}"
-        ListRow(
-            // „Live: 2. BL“ ohne Paarung im TV-Guide: das Spiel aus dem Spielplan dazuschreiben.
-            title = (if (p.start <= now) "🔴 " else "") + (if (e.pairing == null && match != null) "${match.pairing} (${e.headline})" else e.headline) + score,
-            subtitle = "${clock(p.start)} – ${clock(p.stop)} · ${e.channel.name}$also",
-            onClick = {
-                val best = de.ayutv.desktop.data.SportEvents.bestFor(e.channel, app.store.channels())
-                app.play(Playback.Live(best, listOf(best) + e.alsoOn))
-            },
-            onMenu = { onMenu(e) },
-            leading = { Logo(e.channel.logo) },
-        )
+            Label("bis ${clock(p.stop)}", Type.small)
+        }
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+            val also = if (e.alsoOn.isEmpty()) "" else "  ·  auch auf ${e.alsoOn.size} weiteren"
+            if (sides.size == 2) {
+                Label((competitionOf(p, match) + "  ·  " + e.channel.name + also).uppercase(), Type.small.copy(color = Palette.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+                androidx.compose.foundation.layout.Row(Modifier.padding(vertical = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Label(sides[0], Type.heading.copy(textAlign = androidx.compose.ui.text.style.TextAlign.End), Modifier.weight(1f))
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+                    Crest(match?.icon1)
+                    androidx.compose.foundation.layout.Box(Modifier.width(96.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                        val shown = match?.takeIf { it.live(now) || it.finished }
+                        Label(
+                            shown?.score ?: clock(p.start),
+                            Type.title.copy(
+                                color = if (liveScore != null) Palette.live else Palette.text,
+                                fontSize = if (shown != null) androidx.compose.ui.unit.TextUnit(28f, androidx.compose.ui.unit.TextUnitType.Sp) else androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp),
+                            ),
+                        )
+                    }
+                    Crest(match?.icon2)
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+                    Label(sides[1], Type.heading, Modifier.weight(1f))
+                }
+                match?.takeIf { it.goalCount > 0 && it.live(now) }?.lastGoal?.let { Label("⚽ zuletzt: $it", Type.small) }
+            } else {
+                Label(e.channel.name + also, Type.small.copy(color = Palette.accent))
+                Label(e.headline, Type.heading, maxLines = 2)
+            }
+            if (running) {
+                androidx.compose.foundation.layout.Spacer(Modifier.height(4.dp))
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth(0.5f)) { Progress(((now - p.start).toFloat() / (p.stop - p.start).coerceAtLeast(1)).coerceIn(0f, 1f), height = 3) }
+            }
+        }
+        androidx.compose.foundation.layout.Box(Modifier.width(72.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { Logo(e.channel.logo, 44) }
+    }
+}
+
+/** Vereinswappen (OpenLigaDB); ohne Bild bleibt der Platz leer. */
+@androidx.compose.runtime.Composable
+private fun Crest(url: String?) {
+    androidx.compose.foundation.layout.Box(Modifier.size(38.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+        rememberImage(url)?.let { androidx.compose.foundation.Image(it, null, Modifier.size(38.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit) }
     }
 }
 

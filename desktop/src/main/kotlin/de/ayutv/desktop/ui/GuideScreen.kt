@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
@@ -169,7 +170,7 @@ private fun GuideRow(app: AppState, channel: Channel, list: List<Channel>, progr
                     }
                     Column {
                         val archived = p.stop <= now && channel.catchupDays > 0 && app.store.archiveUrl(channel, p.start, p.stop, now) != null
-                        Label((if (archived) "⏪ " else "") + p.title, Type.body)
+                        Label((if (archived) "⏪ " else "") + p.display(), Type.body)
                         Label("${clock(p.start)} – ${clock(p.stop)}", Type.small)
                     }
                 }
@@ -182,7 +183,7 @@ private fun GuideRow(app: AppState, channel: Channel, list: List<Channel>, progr
 private fun ProgrammeDialog(app: AppState, channel: Channel, list: List<Channel>, p: Programme, onDismiss: () -> Unit) {
     Overlay(app, onDismiss, width = 560) {
         Column {
-            Label(p.title, Type.heading, maxLines = 2)
+            Label(p.display(), Type.heading, maxLines = 2)
             p.subtitle?.let { Label(it, Type.body, maxLines = 2) }
             Label("${channel.name} · ${DAY_LABEL.format(Instant.ofEpochMilli(p.start))} ${clock(p.start)} – ${clock(p.stop)}", Type.small)
             p.category?.let { Label(it, Type.small) }

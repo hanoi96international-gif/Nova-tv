@@ -16,6 +16,23 @@ object ProgrammeText {
     private val SPORT_CHANNEL = Regex("""(?i)sport|dazn|servus|magenta|eleven|laola|bein|espn|\bran\b|motorvision|arena|bundesliga|\bliga\b|premier league|champions league|fu(ß|ss)ball|football""")
     private val NOISE = Regex("""\s*\(Senderinfo\)\.?\s*$""")
 
+    /**
+     * Spiel aus dem Spielplan für Sport-Sendungen, deren TV-Guide keine Paarung nennt („Live: 2. Bundesliga“). Von der
+     * App gesetzt ([de.ayutv.data.sport.MatchHints]); ohne Spielplan: null.
+     */
+    @Volatile var scheduleHint: ((title: String, subtitle: String?, description: String?, start: Long, stop: Long) -> String?)? = null
+
+    /**
+     * Titel für TV-Guide, Senderliste und Vorschau: wie [headline], bei Sport kommt die Partie nach vorn – aus dem
+     * Untertitel, dem Anfang der Beschreibung oder dem Spielplan („Hannover 96 – Schalke 04 (Live: 2. Bundesliga)“).
+     */
+    fun display(title: String, subtitle: String?, description: String?, category: String?, start: Long, stop: Long): String {
+        val base = headline(title, subtitle)
+        if (pairing(title, subtitle) != null || !isSport(title, subtitle, category)) return base
+        val match = descriptionPairing(description) ?: runCatching { scheduleHint?.invoke(title, subtitle, description, start, stop) }.getOrNull() ?: return base
+        return "$match ($base)"
+    }
+
     fun headline(title: String, subtitle: String?): String {
         val main = title.trim()
         val sub = subtitle?.trim().orEmpty()

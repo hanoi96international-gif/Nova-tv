@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -154,9 +155,20 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
     /** Zurück-Aktionen, die neueste zuerst (Dialog, Unterseite, Player). */
     private val backStack = mutableStateListOf<() -> Boolean>()
 
+    /** Spielplan und Stände (OpenLigaDB). */
+    val liveScores = de.ayutv.data.sport.LiveScores(sync.http)
+
     init {
         if (store.user.value.phoneRemote) setPhoneRemote(true)
         applyBuffer()
+        // Spielplan für die Partie im TV-Guide und in der Vorschau, wenn der TV-Guide nur „Live: 2. BL“ nennt.
+        de.ayutv.data.sport.MatchHints.install(liveScores)
+        scope.launch {
+            while (true) {
+                runCatching { de.ayutv.data.sport.MatchHints.update(liveScores.current()) }
+                delay(if (de.ayutv.data.sport.MatchHints.matches.isEmpty()) 60_000L else 10 * 60_000L)
+            }
+        }
         // Updates: kurz nach dem Start bei GitHub nachsehen, danach alle 6 Stunden.
         scope.launch {
             delay(20_000)
@@ -487,7 +499,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             player.expectUhd = de.ayutv.data.parse.ChannelQuality.height(playback.channel.key, playback.channel.name) >= de.ayutv.desktop.player.VideoPlayer.UHD_HEIGHT
             player.play(playback.channel.url, Sync.USER_AGENT, 0, *Network.vlcOptions(playback.channel.url).toTypedArray())
             // Direktausgabe: Die Infoleiste liegt im verdeckten Hauptfenster, deshalb den Namen ins Bild schreiben.
-            player.osd(playback.channel.name + (store.guide.value[playback.channel.key]?.let { nowOf(it) }?.let { "  ·  ${it.title}" } ?: ""))
+            player.osd(playback.channel.name + (store.guide.value[playback.channel.key]?.let { nowOf(it) }?.let { "  ·  ${it.display()}" } ?: ""))
         }
         is Playback.Vod -> player.play(playback.url, Sync.USER_AGENT, atMs ?: playback.startMs, *Network.vlcOptions(playback.url).toTypedArray())
     }
