@@ -405,7 +405,7 @@ private fun competitionOf(p: de.ayutv.data.db.ProgrammeEntity, match: de.ayutv.d
     "bl1" -> "Bundesliga"
     "bl2" -> "2. Bundesliga"
     "bl3" -> "3. Liga"
-    else -> ProgrammeText.competition(p.title).substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
+    else -> match?.league?.let { de.ayutv.data.sport.EspnScores.NAMES[it] } ?: ProgrammeText.competition(p.title).substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
 }
 
 /** Wappen: aus dem Spielplan, sonst gemerkt oder (einmal je Verein) nachgeschlagen. */

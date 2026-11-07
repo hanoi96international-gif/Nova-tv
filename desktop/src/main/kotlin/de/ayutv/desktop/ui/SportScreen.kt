@@ -127,7 +127,7 @@ private fun competitionOf(p: de.ayutv.desktop.data.Programme, match: LiveScores.
     "bl1" -> "Bundesliga"
     "bl2" -> "2. Bundesliga"
     "bl3" -> "3. Liga"
-    else -> de.ayutv.data.parse.ProgrammeText.competition(p.title).substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
+    else -> match?.league?.let { de.ayutv.data.sport.EspnScores.NAMES[it] } ?: de.ayutv.data.parse.ProgrammeText.competition(p.title).substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
 }
 
 /**

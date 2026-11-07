@@ -68,6 +68,7 @@ sourceSets {
             "de/ayutv/data/sport/MatchHints.kt",
             "de/ayutv/data/sport/Crests.kt",
             "de/ayutv/data/sport/Venues.kt",
+            "de/ayutv/data/sport/EspnScores.kt",
             "de/ayutv/data/net/AppProxy.kt",
             "de/ayutv/data/net/ProxyCheck.kt",
             "de/ayutv/data/net/SecureNet.kt",
