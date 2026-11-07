@@ -213,6 +213,23 @@ data class UserData(
     val guideSyncedAt: Long = 0,
     /** TV-Guide um Stunden verschieben (Anbieter mit falscher Zeitzone), −12 … +12. */
     val epgShiftHours: Int = 0,
+    /** Bildwiederholrate des Bildschirms an Sender und Film anpassen (50 Hz, 24 Hz …). */
+    val matchFrameRate: Boolean = false,
+    /** Gemessene Bildrate je Sender/Film: Beim nächsten Mal schaltet der Bildschirm schon beim Laden um. */
+    val frameRates: Map<String, Double> = emptyMap(),
+    /** Wie das Bild ins Fenster passt (Original, füllen, strecken). */
+    val pictureFit: PictureFit = PictureFit.FIT,
+    /** Klang wie auf dem Fire TV: normal, Nachtmodus, Dialoge verstärken. */
+    val audioMode: AudioMode = AudioMode.NORMAL,
+    /** Laute Werbung und leise Sender auf ähnliche Lautstärke bringen. */
+    val normalizeVolume: Boolean = false,
+    /** Ton später (+) oder früher (−), z. B. für eine Soundbar mit Verzögerung. */
+    val audioDelayMs: Long = 0,
+    /** Aussehen der Untertitel. */
+    val subtitleSize: SubtitleSize = SubtitleSize.NORMAL,
+    val subtitleColor: SubtitleColor = SubtitleColor.WHITE,
+    val subtitleBackground: SubtitleBackground = SubtitleBackground.OUTLINE,
+    val subtitlePosition: SubtitlePosition = SubtitlePosition.NORMAL,
 )
 
 /** Nummer eines Senders: eigene Nummer, sonst die der Playlist, sonst die Position in der Liste ([fallback]). */

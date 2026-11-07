@@ -91,6 +91,13 @@ object SelfTest {
                     }.onFailure { lines += "direct: FEHLER $it" }
                 }
                 player.release()
+                // Klang und Untertitel-Aussehen: VLC muss jede dieser Optionen kennen (sonst startet es mit ihnen nicht).
+                for (options in de.ayutv.desktop.player.PlayerOptions.VARIANTS) {
+                    val probe = VideoPlayer(options)
+                    lines += "options ${options.joinToString(" ")}: " + (probe.optionsProblem ?: if (probe.available) "OK" else "fehlt")
+                    ok = ok && probe.optionsProblem == null && probe.available
+                    probe.release()
+                }
                 image.delete()
             }
         } catch (t: Throwable) {

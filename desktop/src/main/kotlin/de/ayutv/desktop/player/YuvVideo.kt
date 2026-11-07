@@ -283,17 +283,17 @@ class YuvFrame(
     val matrix: YuvVideo.Matrix = YuvVideo.matrixFor(height, transfer)
 
     /** Bild eingepasst (mit schwarzen Rändern) in [dstWidth] × [dstHeight] zeichnen. */
-    fun draw(canvas: Canvas, dstWidth: Float, dstHeight: Float) {
+    /** [fit]: 0 = ganzes Bild (Ränder), 1 = Bild füllen (Ränder abschneiden), 2 = strecken. */
+    fun draw(canvas: Canvas, dstWidth: Float, dstHeight: Float, fit: Int = 0) {
         val effect = YuvVideo.effect ?: return
         if (dstWidth <= 0f || dstHeight <= 0f) return
-        val shownWidth: Float
-        val shownHeight: Float
-        if (dstWidth / dstHeight > aspect) {
-            shownHeight = dstHeight
-            shownWidth = dstHeight * aspect
-        } else {
-            shownWidth = dstWidth
-            shownHeight = dstWidth / aspect
+        val wider = dstWidth / dstHeight > aspect
+        val (shownWidth, shownHeight) = when {
+            fit == 2 -> dstWidth to dstHeight
+            fit == 1 && wider -> dstWidth to dstWidth / aspect
+            fit == 1 -> dstHeight * aspect to dstHeight
+            wider -> dstHeight * aspect to dstHeight
+            else -> dstWidth to dstWidth / aspect
         }
         val left = (dstWidth - shownWidth) / 2f
         val top = (dstHeight - shownHeight) / 2f
@@ -318,7 +318,7 @@ class YuvFrame(
         val shader = builder.makeShader(local)
         Paint().use { paint ->
             paint.shader = shader
-            canvas.drawRect(Rect.makeXYWH(left, top, shownWidth, shownHeight), paint)
+            canvas.drawRect(Rect.makeXYWH(maxOf(left, 0f), maxOf(top, 0f), minOf(shownWidth, dstWidth), minOf(shownHeight, dstHeight)), paint)
         }
         shader.close()
         builder.close()

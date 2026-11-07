@@ -28,7 +28,7 @@ import javax.swing.SwingUtilities
  * an die Oberfläche übergeben ([frame]); so liegen Senderinfo, Untertitel und Steuerleiste über dem Video.
  * VLC spielt praktisch jedes Format (TS, HLS, MKV, HEVC, Dolby, DTS) und kümmert sich um Pufferung und Neuverbinden.
  */
-class VideoPlayer {
+class VideoPlayer(initialOptions: List<String> = emptyList()) {
     /** Letztes Bild (null = noch keins). */
     var frame by mutableStateOf<ImageBitmap?>(null); private set
     var playing by mutableStateOf(false); private set
@@ -40,15 +40,31 @@ class VideoPlayer {
     /** Untertitel- und Tonspuren (Kennung, Name). */
     var audioTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
     var subtitleTracks by mutableStateOf<List<Pair<Int, String>>>(emptyList()); private set
+    /** Gewählte Spuren (−1 = keine). */
+    var audioTrack by mutableStateOf(-1); private set
+    var subtitleTrack by mutableStateOf(-1); private set
 
-    private val factory: MediaPlayerFactory? = runCatching { MediaPlayerFactory(*VLC_OPTIONS) }
-        .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
+    /** Zusätzliche VLC-Einstellungen (Klang, Aussehen der Untertitel), mit denen VLC gerade läuft. */
+    private var builtOptions: List<String> = initialOptions
+    /** Nicht null: VLC kannte eine Einstellung nicht und läuft mit der Grundeinstellung. */
+    var optionsProblem by mutableStateOf<String?>(null); private set
+
+    private var factory: MediaPlayerFactory? = createFactory(initialOptions)
+
+    private fun createFactory(extra: List<String>): MediaPlayerFactory? =
+        runCatching { MediaPlayerFactory(*(VLC_OPTIONS + extra.toTypedArray())) }
+            .onSuccess { optionsProblem = null }
+            .recoverCatching { first ->
+                if (extra.isEmpty()) throw first
+                MediaPlayerFactory(*VLC_OPTIONS).also { optionsProblem = "VLC kennt eine Einstellung nicht (${first.message}); Grundeinstellung aktiv." }
+            }
+            .onFailure { error = "VLC fehlt: ${it.message}" }.getOrNull()
     // Vor den Playern anlegen: [prepare] braucht sie schon beim Anlegen von [normal].
     private val format = Format()
     private val render = Render()
 
     /** Normaler Player: VLC gibt den Ton selbst aus (auch Raumklang/Durchreichen). */
-    private val normal: EmbeddedMediaPlayer? = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also(::prepare)
+    private var normal: EmbeddedMediaPlayer? = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also(::prepare)
     /** Player mit abgegriffenem Ton ([AudioTap]), für das Ausrichten der Untertitel; erst bei Bedarf angelegt. */
     private var tapped: EmbeddedMediaPlayer? = null
     /** Der gerade benutzte der beiden. */
@@ -163,6 +179,8 @@ class VideoPlayer {
                 if (muted) mediaPlayer.audio().setMute(true)
                 // Lautstärke gilt je Player: beim Wechsel mitnehmen.
                 if (mediaPlayer.audio().volume() != volume) mediaPlayer.audio().setVolume(volume)
+                // Ton-Versatz und Klangregelung gelten je Wiedergabe: neu setzen.
+                applyRuntime(mediaPlayer)
             }
             override fun paused(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) { playing = false; paused = true } }
             override fun stopped(mediaPlayer: MediaPlayer) = ui { if (mine(mediaPlayer)) playing = false }
@@ -303,8 +321,72 @@ class VideoPlayer {
             runCatching { player?.audio()?.setMute(value) }
         }
 
-    fun selectAudio(id: Int) = player?.audio()?.setTrack(id)
-    fun selectSubtitle(id: Int) = player?.subpictures()?.setTrack(id)
+    fun selectAudio(id: Int) {
+        player?.audio()?.setTrack(id)
+        audioTrack = id
+    }
+
+    fun selectSubtitle(id: Int) {
+        player?.subpictures()?.setTrack(id)
+        subtitleTrack = id
+    }
+
+    /**
+     * VLC-Einstellungen für Klang und Untertitel-Aussehen ändern. VLC übernimmt sie nur beim Start: Der Player wird
+     * neu angelegt (nur wenn sich etwas ändert); läuft gerade etwas, startet der Aufrufer es danach neu.
+     */
+    fun reconfigure(extra: List<String>): Boolean {
+        if (extra == builtOptions) return false
+        clearFrames()
+        runCatching { normal?.controls()?.stop() }
+        runCatching { tapped?.controls()?.stop() }
+        runCatching { directPlayer?.controls()?.stop() }
+        directWindow?.hide()
+        tap.close()
+        runCatching { normal?.release() }
+        runCatching { tapped?.release() }
+        runCatching { directPlayer?.release() }
+        runCatching { factory?.release() }
+        tapped = null
+        directPlayer = null
+        equalizer = null
+        builtOptions = extra
+        factory = createFactory(extra)
+        normal = factory?.mediaPlayers()?.newEmbeddedMediaPlayer()?.also(::prepare)
+        player = normal
+        playing = false
+        return true
+    }
+
+    /** Ton-Versatz in ms (positiv = Ton später); gilt sofort. */
+    var audioDelayMs = 0L
+        set(value) {
+            field = value
+            runCatching { player?.audio()?.setDelay(value * 1000) }
+        }
+
+    /** Klangregelung (dB je Band, 10 Bänder 60 Hz … 16 kHz); null = aus. Gilt sofort. */
+    var equalizerBands: List<Float>? = null
+        set(value) {
+            field = value
+            equalizer = null
+            applyRuntime(player)
+        }
+    private var equalizer: uk.co.caprica.vlcj.player.base.Equalizer? = null
+
+    private fun applyRuntime(p: MediaPlayer?) {
+        p ?: return
+        runCatching { p.audio().setDelay(audioDelayMs * 1000) }
+        val bands = equalizerBands
+        if (bands == null) {
+            runCatching { p.audio().setEqualizer(null) }
+            return
+        }
+        val eq = equalizer ?: runCatching {
+            factory?.equalizer()?.newEqualizer()?.apply { bands.forEachIndexed { i, db -> if (i < bandCount()) setAmp(i, db) } }
+        }.getOrNull()?.also { equalizer = it }
+        runCatching { p.audio().setEqualizer(eq) }
+    }
 
     /** Externe Untertitel-Datei (SRT) einblenden. */
     fun addSubtitleFile(file: File) = player?.subpictures()?.setSubTitleFile(file)
@@ -343,9 +425,11 @@ class VideoPlayer {
 
     private fun readTracks() {
         val p = player ?: return
-        audioTracks = p.audio().trackDescriptions().map { it.id() to it.description() }
+        audioTracks = p.audio().trackDescriptions().filter { it.id() >= 0 }.map { it.id() to it.description() }
         hasVideo = runCatching { p.video().trackCount() > 0 }.getOrDefault(true)
-        subtitleTracks = p.subpictures().trackDescriptions().map { it.id() to it.description() }
+        subtitleTracks = p.subpictures().trackDescriptions().filter { it.id() >= 0 }.map { it.id() to it.description() }
+        audioTrack = runCatching { p.audio().track() }.getOrDefault(-1)
+        subtitleTrack = runCatching { p.subpictures().track() }.getOrDefault(-1)
     }
 
     // ---------------------------------------------------------------- Bilder

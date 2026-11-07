@@ -69,7 +69,10 @@ sealed interface Playback {
 
 /** Zustand der ganzen App (eine Instanz je Fenster). */
 class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val input: RemoteInput = RemoteInput()) {
-    val player = VideoPlayer()
+    val player = VideoPlayer(de.ayutv.desktop.player.PlayerOptions.vlc(store.user.value)).also { p ->
+        p.audioDelayMs = store.user.value.audioDelayMs
+        p.equalizerBands = de.ayutv.desktop.player.PlayerOptions.equalizer(store.user.value)
+    }
     val backup = BackupImport(store)
     val subtitles = Subtitles(sync.http, java.io.File(store.dir, "subtitles"))
     val remote = PhoneRemote(
@@ -235,6 +238,32 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         player.directMode = store.user.value.directMode
     }
 
+    /**
+     * Einstellung ändern und sofort übernehmen: Ton-Versatz und Klangregelung gleich; braucht VLC für Klang oder
+     * Untertitel-Aussehen einen Neustart, läuft das Video an derselben Stelle weiter (wie auf dem Fire TV).
+     */
+    fun updateSettings(transform: (de.ayutv.desktop.data.UserData) -> de.ayutv.desktop.data.UserData) {
+        store.updateUser(transform)
+        val user = store.user.value
+        player.audioDelayMs = user.audioDelayMs
+        player.equalizerBands = de.ayutv.desktop.player.PlayerOptions.equalizer(user)
+        if (!user.matchFrameRate) scope.launch(Dispatchers.IO) { de.ayutv.desktop.player.DisplayRate.restore() }
+        val current = playing
+        val position = player.positionMs
+        if (player.reconfigure(de.ayutv.desktop.player.PlayerOptions.vlc(user)) && current != null) {
+            start(current, atMs = (current as? Playback.Vod)?.let { position })
+            watch(current)
+            // Geladene Untertitel-Datei wieder einblenden (VLC hat neu angefangen).
+            val shown = shownSubtitle
+            val file = shown?.let { loadedSubtitles[it] }
+            if (file != null) scope.launch {
+                delay(1_500)
+                if (playing === current) showFile(shown, file)
+            }
+        }
+        player.optionsProblem?.let { toast(it) }
+    }
+
     fun toast(text: String) {
         message = text
         messageJob?.cancel()
@@ -312,9 +341,50 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         (playing as? Playback.Live)?.let { previous ->
             player.streamInfo()?.let { info -> if (info.height > 0) de.ayutv.data.parse.ChannelQuality.recordPlayback(previous.channel.key, info.height, info.startupMs) ; de.ayutv.data.parse.ChannelQuality.recordBitrate(previous.channel.key, info.inputKbps) }
         }
+        if (playing?.let(::keyOf) != keyOf(playback)) {
+            loadedSubtitles.clear()
+            shownSubtitle = null
+            subtitleCues = emptyList()
+            subtitleDelayMs = 0
+            subtitleVariant = 0
+        }
         playing = playback
         start(playback)
         watch(playback)
+        matchFrameRate(keyOf(playback))
+    }
+
+    private fun keyOf(p: Playback) = when (p) {
+        is Playback.Live -> p.channel.key
+        is Playback.Vod -> p.key
+    }
+
+    private var rateJob: Job? = null
+
+    /**
+     * Bildwiederholrate des Bildschirms an das Video anpassen (Einstellung, wie auf dem Fire TV): bekannte Rate vom
+     * letzten Mal gleich beim Laden, sonst sobald VLC sie kennt; je Sender bzw. Film gemerkt.
+     */
+    private fun matchFrameRate(key: String) {
+        rateJob?.cancel()
+        val user = store.user.value
+        if (!user.matchFrameRate || !de.ayutv.desktop.player.DisplayRate.supported) return
+        rateJob = scope.launch {
+            user.frameRates[key]?.let { known ->
+                withContext(Dispatchers.IO) { de.ayutv.desktop.player.DisplayRate.match(known) }?.let { toast("Bildschirm auf $it Hz") }
+            }
+            repeat(30) {
+                delay(500)
+                val fps = player.streamInfo()?.fps ?: 0.0
+                if (fps <= 0) return@repeat
+                withContext(Dispatchers.IO) { de.ayutv.desktop.player.DisplayRate.match(fps) }?.let { toast("Bildschirm auf $it Hz") }
+                if (store.user.value.frameRates[key] != fps) store.updateUser { u ->
+                    val rates = u.frameRates - key + (key to fps)
+                    u.copy(frameRates = if (rates.size > 3_000) rates.entries.drop(rates.size - 3_000).associate { it.key to it.value } else rates)
+                }
+                return@launch
+            }
+        }
     }
 
     // ---------------------------------------------------------------- Multiview und Vorschau
@@ -695,6 +765,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         playerStatus = null
         player.stop()
         playing = null
+        rateJob?.cancel()
+        scope.launch(Dispatchers.IO) { de.ayutv.desktop.player.DisplayRate.restore() }
     }
 
     /** Taste Home: wie auf dem Fire TV zur Startseite (Wiedergabe und offene Dialoge schließen). */
@@ -735,38 +807,99 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
      * Wie auf dem Fire TV werden die Sprechpausen des Films mit den Einblendungen verglichen; nach rund 1,5 Minuten
      * Gespräch sitzt der Versatz (auch bei anderer Bildrate). Die Ausrichtung wird je Film gemerkt.
      */
-    fun loadSubtitles(vod: Playback.Vod) = scope.launch {
+    fun loadSubtitles(vod: Playback.Vod, language: String = store.user.value.subtitleLanguage.ifBlank { "de" }, variant: Int = 0) = scope.launch {
         val user = store.user.value
+        subtitleBusy = "Untertitel ${de.ayutv.desktop.data.languageName(language)} werden gesucht …"
         runCatching {
             subtitles.find(
-                vod.key, vod.title, vod.url, user.subtitleLanguage.ifBlank { "de" },
+                vod.key, vod.title, vod.url, language,
                 de.ayutv.desktop.player.Subtitles.Account(user.openSubtitlesKey, user.openSubtitlesUser, user.openSubtitlesPassword),
-                user.deeplKey,
-            ) { toast(it) }
+                user.deeplKey, variant,
+            ) { subtitleBusy = it }
         }.onSuccess { found ->
+            subtitleBusy = null
             if ((playing as? Playback.Vod)?.key != vod.key) return@onSuccess
+            subtitleVariant = variant
             val text = withContext(Dispatchers.IO) { found.file.readText() }
             val cues = SubtitleFiles.cues(text)
-            val known = user.subtitleTimings[vod.key]?.let { SubtitleTiming(it.ratio, it.offsetMs) }
+            val known = user.subtitleTimings[vod.key]?.takeIf { variant == 0 }?.let { SubtitleTiming(it.ratio, it.offsetMs) }
             if (known != null) {
-                showSubtitles(vod, found.file, text, known)
+                showSubtitles(vod, language, found.file, text, known)
                 toast("Untertitel eingeblendet (${found.source}), wie beim letzten Mal ausgerichtet.")
                 subtitleSync = "Ausgerichtet (gemerkt)"
                 return@onSuccess
             }
-            player.addSubtitleFile(found.file)
+            showFile(language, found.file, text)
             toast("Untertitel eingeblendet (${found.source}). Sie richten sich gleich am Ton aus.")
-            align(vod, found.file, text, cues)
-        }.onFailure { toast(it.message ?: "Keine Untertitel") }
+            align(vod, language, found.file, text, cues)
+        }.onFailure {
+            subtitleBusy = null
+            toast(it.message ?: "Keine Untertitel")
+        }
     }
 
-    private suspend fun showSubtitles(vod: Playback.Vod, file: java.io.File, text: String, timing: SubtitleTiming) {
+    /** Untertitel-Suche läuft (Text für die Anzeige im Player). */
+    var subtitleBusy by mutableStateOf<String?>(null); private set
+    /** Geladene Untertitel-Dateien des laufenden Films (Sprache → Datei, wie eingeblendet). */
+    val loadedSubtitles = androidx.compose.runtime.mutableStateMapOf<String, java.io.File>()
+    /** Sprache der gerade eingeblendeten Datei (null = keine Datei, sondern Spur des Films oder aus). */
+    var shownSubtitle by mutableStateOf<String?>(null); private set
+    private var subtitleVariant = 0
+    /** Einblendungen der gezeigten Datei (Beginn in ms, Text) für „Untertitel-Zeit einstellen“. */
+    var subtitleCues by mutableStateOf<List<Pair<Long, String>>>(emptyList()); private set
+    /** Von Hand eingestellte Verschiebung der Untertitel (ms, positiv = später). */
+    var subtitleDelayMs by mutableStateOf(0L); private set
+
+    fun setSubtitleDelay(ms: Long) {
+        subtitleDelayMs = ms.coerceIn(-600_000, 600_000)
+        player.subtitleDelay(subtitleDelayMs)
+    }
+
+    private suspend fun showFile(language: String, file: java.io.File, text: String? = null) {
+        val content = text ?: withContext(Dispatchers.IO) { file.readText() }
+        player.addSubtitleFile(file)
+        player.subtitleDelay(subtitleDelayMs)
+        loadedSubtitles[language] = file
+        shownSubtitle = language
+        subtitleCues = withContext(Dispatchers.Default) {
+            de.ayutv.data.parse.Srt.parse(content).mapNotNull { c ->
+                SubtitleFiles.parseMs(c.start)?.let { it to c.text.replace(Regex("<[^>]+>"), "").replace('\n', ' ') }
+            }
+        }
+    }
+
+    /** Schon geladene Sprache wieder einblenden. */
+    fun showLoaded(language: String) = scope.launch {
+        val file = loadedSubtitles[language] ?: return@launch
+        showFile(language, file)
+    }
+
+    /** Untertitel aus (auch eine geladene Datei). */
+    fun subtitlesOff() {
+        player.selectSubtitle(-1)
+        shownSubtitle = null
+    }
+
+    /** Spur des Films wählen (statt einer geladenen Datei). */
+    fun selectSubtitleTrack(id: Int) {
+        player.selectSubtitle(id)
+        shownSubtitle = null
+    }
+
+    /** Die geladene Datei passt nicht: nächstbeste Datei derselben Sprache. */
+    fun otherSubtitleFile(vod: Playback.Vod) {
+        val language = shownSubtitle ?: return
+        loadSubtitles(vod, language, subtitleVariant + 1)
+    }
+
+    private suspend fun showSubtitles(vod: Playback.Vod, language: String, file: java.io.File, text: String, timing: SubtitleTiming) {
         val aligned = java.io.File(file.parentFile, file.nameWithoutExtension + ".sync.srt")
-        withContext(Dispatchers.IO) { aligned.writeText(SubtitleFiles.shifted(text, timing)) }
-        if ((playing as? Playback.Vod)?.key == vod.key) player.addSubtitleFile(aligned)
+        val shifted = SubtitleFiles.shifted(text, timing)
+        withContext(Dispatchers.IO) { aligned.writeText(shifted) }
+        if ((playing as? Playback.Vod)?.key == vod.key) showFile(language, aligned, shifted)
     }
 
-    private fun align(vod: Playback.Vod, file: java.io.File, text: String, cues: List<Pair<Long, Long>>) {
+    private fun align(vod: Playback.Vod, language: String, file: java.io.File, text: String, cues: List<Pair<Long, Long>>) {
         alignJob?.cancel()
         alignJob = scope.launch {
             if (cues.size < 20) {
@@ -779,7 +912,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 val position = player.positionMs
                 player.play(vod.url, Sync.USER_AGENT, position, *Network.vlcOptions(vod.url).toTypedArray())
                 delay(1_500)
-                player.addSubtitleFile(file)
+                showFile(language, file, text)
             }
             var applied: SubtitleTiming? = null
             var lastHeard = -1
@@ -805,7 +938,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
                 // Nur neu einblenden, wenn sich an der aktuellen Stelle wirklich etwas ändert.
                 val now = applied
                 if (now != null && kotlin.math.abs(timing.toVideo(position) - now.toVideo(position)) < 250) continue
-                showSubtitles(vod, file, text, timing)
+                showSubtitles(vod, language, file, text, timing)
                 applied = timing
                 store.updateUser { it.copy(subtitleTimings = it.subtitleTimings + (vod.key to TimingMark(timing.ratio, timing.offsetMs))) }
                 val shift = "%+.1f s".format(java.util.Locale.GERMAN, timing.offsetMs / 1000.0) + if (timing.ratio != 1.0) ", Bildrate angepasst" else ""
@@ -864,6 +997,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
 
     fun close() {
         savePosition()
+        de.ayutv.desktop.player.DisplayRate.restore()
         watchdog?.cancel()
         remote.stop()
         input.stop()

@@ -30,8 +30,15 @@ class BackupImport(private val store: Store) {
                 if (missingPasswords > 0) ". Bei $missingPasswords Playlist(s) fehlt das Passwort (Sicherung ohne Passwort): bitte in den Einstellungen eintragen." else "."
     }
 
-    /** Vom Fire TV laden: [setupUrl] wie dort angezeigt („http://192.168.x.y:8095/123456“), [password] für die Sicherung. */
-    suspend fun fromFireTv(http: OkHttpClient, setupUrl: String, password: String): Result = withContext(Dispatchers.IO) {
+    /**
+     * Vom Fire TV laden: [setupUrl] wie dort angezeigt („http://192.168.x.y:8095/123456“), [given] = Passwort (optional). Ohne Passwort wählt die App selbst eines für die Übertragung: Nur verschlüsselt enthält die
+     * Sicherung Playlist- und Proxy-Passwörter und die Schlüssel – so kommen sie immer mit.
+     */
+    suspend fun fromFireTv(http: OkHttpClient, setupUrl: String, given: String): Result = withContext(Dispatchers.IO) {
+        val password = given.ifEmpty {
+            val bytes = ByteArray(18).also { java.security.SecureRandom().nextBytes(it) }
+            java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        }
         val base = setupUrl.trim().trimEnd('/').let { if ("://" in it) it else "http://$it" }
         val request = Request.Builder().url("$base/backup").post(FormBody.Builder().add("backup_password", password).build()).build()
         val text = http.newCall(request).execute().use { response ->
