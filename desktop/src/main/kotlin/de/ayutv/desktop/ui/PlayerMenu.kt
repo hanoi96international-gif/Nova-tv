@@ -300,7 +300,7 @@ private fun SubPage(app: AppState, playback: Playback, actions: MenuActions, sec
                     item {
                         MenuHint(
                             app.subtitleSync?.let { "Ausrichtung: $it" + if (app.subtitleDelayMs != 0L) ", von Hand nachgestellt: ${shiftLabel(app.subtitleDelayMs)}." else "." }
-                                ?: "Verschiebung: ${shiftLabel(app.subtitleDelayMs)}. DnA-TV richtet die Zeiten nach rund 1,5 Minuten Gespräch automatisch am Ton aus.",
+                                ?: "Verschiebung: ${shiftLabel(app.subtitleDelayMs)}. DnA-TV richtet die Zeiten nach rund einer Minute Gespräch automatisch am Ton aus.",
                         )
                     }
                 }

@@ -1347,19 +1347,32 @@ class PlayerActivity : ComponentActivity() {
     // ---------------------------------------------------------------- Serien
 
     /**
-     * Folgen, deren Ton an Soundbar oder Receiver geht: ihn nebenbei selbst dekodieren (nur die ersten Minuten, fürs
-     * Intro). Wird er im Gerät dekodiert, hört die App ohnehin mit.
+     * Geladene Untertitel, die noch am Ton ausgerichtet werden: den Ton nebenbei selbst dekodieren, so wie der Player
+     * ihn lädt (20–50 s vor dem Bild). So steht der Versatz früher fest, und auch Ton, der als Dolby/DTS an Soundbar
+     * oder Receiver geht, lässt sich auswerten, ohne den Raumklang abzuschalten.
      */
     private fun updateAudioAhead() {
         val format = player?.audioFormat
-        // Nur noch für den Gerätetest: Die Auswertung diente dem Intro-Erkennen, das entfallen ist (spart Rechenzeit).
-        val wanted = forcedAhead && format != null
-        audioAhead.untilMs = 9 * 60_000L
+        val forSubtitles = vod != null && externalLanguage != null && !externalExact && !syncedByReference
+        val wanted = (forcedAhead || forSubtitles) && format != null
+        audioAhead.untilMs = Long.MAX_VALUE
         if (wanted != audioAhead.active) {
             audioAhead.active = wanted
-            Log.i(TAG, if (wanted) "Ton geht an Soundbar/Receiver: werte ihn nebenbei aus (${format?.sampleMimeType})" else "Ton-Auswertung nebenbei aus")
+            Log.i(TAG, if (wanted) "Ton-Auswertung nebenbei an (${format?.sampleMimeType})" else "Ton-Auswertung nebenbei aus")
         }
     }
+
+    /** Sprachsignal für die Ausrichtung: gehörter Ton, wo nichts gehört wurde der nebenbei dekodierte. */
+    private fun speechSignal(fromMs: Long, toMs: Long): FloatArray {
+        val heard = heardSpeech.signal(fromMs, toMs)
+        if (aheadSpeech.seconds() == 0) return heard
+        val ahead = aheadSpeech.signal(fromMs, toMs)
+        for (i in heard.indices) if (heard[i].isNaN() && i < ahead.size) heard[i] = ahead[i]
+        return heard
+    }
+
+    /** Sekunden Ton, die für die Ausrichtung bereitstehen (gehört oder nebenbei dekodiert). */
+    private fun speechSeconds(): Int = maxOf(heardSpeech.seconds(), aheadSpeech.seconds())
 
     private var forcedAhead = false
 
@@ -2606,20 +2619,24 @@ class PlayerActivity : ComponentActivity() {
             var lastHeard = -1
             var playedMs = 0L
             while (isActive && externalLanguage != null) {
-                delay(SPEECH_CHECK_MS)
+                // Bis zum ersten Treffer alle 5 s prüfen (so früh wie möglich), danach alle 20 s nachprüfen.
+                val step = if (subtitleAutoSynced) SPEECH_CHECK_MS else SPEECH_FIRST_CHECK_MS
+                delay(step)
+                updateAudioAhead()
                 val p = player ?: continue
                 if (!p.isPlaying) continue
-                playedMs += SPEECH_CHECK_MS
+                playedMs += step
                 if (syncedByReference) {
                     speechSyncInfo = "An den eingebetteten Untertiteln des Films ausgerichtet"
                     continue
                 }
-                val heard = heardSpeech.seconds()
+                val heard = speechSeconds()
                 if (heard < 5) {
                     // Ton geht an Soundbar/Receiver: Nur umstellen, wenn die Untertitel nicht schon passen
                     // (Datei-Hash oder gespeicherte Ausrichtung) – sonst bliebe der Raumklang ohne Not weg.
                     val needed = !subtitleAutoSynced && !externalExact
-                    if (playedMs >= 2 * SPEECH_CHECK_MS && needed && textTracks().isEmpty() && !forcePcmActive && !pcmForSpeechTried) {
+                    // Erst wenn auch die Auswertung nebenbei nichts liefert (Tonformat ohne Decoder im Gerät).
+                    if (playedMs >= SPEECH_PCM_FALLBACK_MS && needed && textTracks().isEmpty() && !forcePcmActive && !pcmForSpeechTried) {
                         pcmForSpeechTried = true
                         Log.i(SUBTITLE_TAG, "Ton wird durchgereicht, dekodiere im Gerät für die Ausrichtung am Ton")
                         subtitleStatus = "Ton wird im Gerät dekodiert, damit sich die Untertitel am Gespräch ausrichten …"
@@ -2627,7 +2644,7 @@ class PlayerActivity : ComponentActivity() {
                     }
                     speechSyncInfo = when {
                         externalExact -> "Untertitel passen zur Datei (keine Ausrichtung nötig)"
-                        playedMs < 2 * SPEECH_CHECK_MS -> "Ausrichtung am Ton startet …"
+                        playedMs < SPEECH_PCM_FALLBACK_MS -> "Ausrichtung am Ton startet …"
                         else -> "Kein Ton zum Mithören (Ton geht direkt an Soundbar/Receiver)"
                     }
                     continue
@@ -2646,7 +2663,8 @@ class PlayerActivity : ComponentActivity() {
                 val afterSeek = seekFrom >= 0 && position - seekFrom >= SEEK_RECHECK_MS
                 if (seekFrom >= 0 && !afterSeek && manualSync) continue
                 val (fit, window) = withContext(Dispatchers.Default) {
-                    val signal = heardSpeech.signal(if (afterSeek) seekFrom else position - SPEECH_WINDOW_MS, position + 5_000)
+                    // Bis 60 s voraus: Dort liegt der schon geladene, nebenbei dekodierte Ton.
+                    val signal = speechSignal(if (afterSeek) seekFrom else position - SPEECH_WINDOW_MS, position + SPEECH_AHEAD_MS)
                     SpeechSync.estimate(signal, cues) to signal.count { !it.isNaN() } / 10
                 }
                 if (externalLanguage == null || syncedByReference) continue
@@ -2703,7 +2721,7 @@ class PlayerActivity : ComponentActivity() {
             .onFailure { describeOnlineProblem(it) }.getOrNull() ?: return false
         val cues = withContext(Dispatchers.IO) { parseCues(alternative.file) }
         val fit = withContext(Dispatchers.Default) {
-            SpeechSync.estimate(heardSpeech.signal(position - SPEECH_WINDOW_MS, position + 5_000), cues.map { it.start to it.end })
+            SpeechSync.estimate(speechSignal(position - SPEECH_WINDOW_MS, position + SPEECH_AHEAD_MS), cues.map { it.start to it.end })
         }
         if (fit == null || externalLanguage != language || subtitleAutoSynced) {
             Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt auch nicht besser")
@@ -4269,6 +4287,10 @@ class PlayerActivity : ComponentActivity() {
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
         private const val COMPARE_REFERENCES = 40
         private const val SPEECH_CHECK_MS = 20_000L
+        private const val SPEECH_FIRST_CHECK_MS = 5_000L
+        /** So lange auf Ton aus der Auswertung nebenbei warten, bevor der Ton im Gerät dekodiert wird (Soundbar). */
+        private const val SPEECH_PCM_FALLBACK_MS = 45_000L
+        private const val SPEECH_AHEAD_MS = 60_000L
 
         private fun clock(ms: Long): String {
             val s = (ms / 1000).coerceAtLeast(0)

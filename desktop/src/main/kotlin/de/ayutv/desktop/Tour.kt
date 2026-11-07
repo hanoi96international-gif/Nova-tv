@@ -45,7 +45,7 @@ object Tour {
         fill(store)
         val input = RemoteInput()
         application {
-            val window = rememberWindowState(size = DpSize(1280.dp, 760.dp), placement = WindowPlacement.Floating)
+            val window = rememberWindowState(size = DpSize(1000.dp, 700.dp), placement = WindowPlacement.Floating)
             val scope = rememberCoroutineScope()
             val app = remember { AppState(store, Sync(store), scope, input) }
             Window(onCloseRequest = { exitApplication() }, state = window, title = "DnA-TV") {

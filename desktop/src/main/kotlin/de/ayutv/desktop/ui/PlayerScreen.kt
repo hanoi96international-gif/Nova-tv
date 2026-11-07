@@ -465,7 +465,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         )
                     }
                 }
-                Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                // Knöpfe oben rechts nur ohne offenes Menü (sie lägen sonst halb verdeckt unter dem Menü).
+                if (panel == Panel.NONE) Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
                     if (live != null) { TextButton("☰ Senderliste", { show(Layer.CHANNELS) }); Spacer(Modifier.width(8.dp)) }
                     TextButton("☰ Ton / Untertitel / Bild", { openMenu() })
                     Spacer(Modifier.width(8.dp))
