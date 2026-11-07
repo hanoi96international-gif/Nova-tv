@@ -253,7 +253,7 @@ fun LiveScreen() {
             }
             // Gruppe öffnen und schließen: Die Senderliste gleitet an ihren neuen Platz.
             Column(Modifier.weight(1f).fillMaxHeight().appear(drill.isOpen, if (drill.isOpen) 56.dp else (-24).dp)) {
-            if (drill.isOpen) de.ayutv.ui.components.DrillTitle(entries.firstOrNull { it.id == selectedGroup }?.label ?: "Sender")
+            if (drill.isOpen) de.ayutv.ui.components.DrillTitle(entries.firstOrNull { it.id == selectedGroup }?.label ?: "Sender", onBack = { drill.close() })
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth()

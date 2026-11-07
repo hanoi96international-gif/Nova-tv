@@ -2,6 +2,7 @@ package de.ayutv.ui.components
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,6 +19,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.text.font.FontWeight
@@ -105,7 +107,7 @@ fun Modifier.drillContent(state: DrillDown, backEnabled: Boolean = true): Modifi
 
 /** Überschrift über dem geöffneten Inhalt: welche Gruppe gerade offen ist, und wie es zurückgeht. */
 @Composable
-fun DrillTitle(title: String, modifier: Modifier = Modifier) {
+fun DrillTitle(title: String, modifier: Modifier = Modifier, onBack: (() -> Unit)? = null) {
     Text(
         "‹  $title",
         color = AyuColors.Accent,
@@ -113,6 +115,14 @@ fun DrillTitle(title: String, modifier: Modifier = Modifier) {
         fontSize = 17.sp,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier.padding(start = 20.dp, top = 18.dp, end = 20.dp),
+        modifier = modifier.padding(start = 20.dp, top = 18.dp, end = 20.dp).tapToGoBack(onBack),
     )
 }
+
+/**
+ * Antippen (Handy, Touch) führt zurück – für Überschriften mit „‹“. Nicht fokussierbar: Mit der Fernbedienung bleibt
+ * es bei der Zurück-Taste bzw. ◀, der Fokus springt nicht auf die Überschrift.
+ */
+fun Modifier.tapToGoBack(onBack: (() -> Unit)?): Modifier =
+    if (onBack == null) this
+    else this.pointerInput(onBack) { detectTapGestures { onBack() } }

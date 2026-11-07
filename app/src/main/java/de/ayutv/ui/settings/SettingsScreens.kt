@@ -1,5 +1,6 @@
 package de.ayutv.ui.settings
 
+import de.ayutv.ui.components.tapToGoBack
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -227,7 +228,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         ) {
             item(key = "title-${page.name}") {
                 Column(Modifier.padding(bottom = 8.dp)) {
-                    Text(if (drill.isOpen) "‹  ${page.title}" else page.title, style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        if (drill.isOpen) "‹  ${page.title}" else page.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        // Handy: Antippen von „‹ Wiedergabe“ führt zurück zur Übersicht.
+                        modifier = Modifier.tapToGoBack(if (drill.isOpen) ({ drill.close() }) else null),
+                    )
                     Text(page.description, color = AyuColors.TextSecondary, fontSize = 14.sp)
                     SyncBanner(sync, Modifier.padding(top = 4.dp))
                 }
