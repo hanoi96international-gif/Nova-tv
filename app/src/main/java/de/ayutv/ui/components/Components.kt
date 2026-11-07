@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -178,13 +177,11 @@ fun ChannelCard(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
 ) {
-    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
+    var focused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
         onLongClick = onLongClick,
-        interactionSource = interaction,
-        modifier = Modifier.width(220.dp).focusGlow(focused),
+        modifier = Modifier.width(220.dp).onFocusChanged { focused = it.hasFocus }.focusGlow(focused),
         colors = CardDefaults.colors(containerColor = AyuColors.Surface, focusedContainerColor = AyuColors.SurfaceRaised),
         border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(2.dp, AyuColors.Accent))),
     ) {
@@ -225,16 +222,14 @@ fun PosterCard(
     subtitle: String? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
-    val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
+    var focused by remember { mutableStateOf(false) }
     Column(modifier.width(150.dp)) {
         Card(
             onClick = onClick,
             onLongClick = onLongClick,
-            interactionSource = interaction,
             // Leuchten um das gewählte Poster: drei weiche Ringe in der Akzentfarbe (nur Linien, kein Schatten –
             // auch auf dem Stick flüssig).
-            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).focusGlow(focused),
+            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).onFocusChanged { focused = it.hasFocus }.focusGlow(focused),
             colors = CardDefaults.colors(containerColor = AyuColors.Surface),
             border = CardDefaults.border(focusedBorder = Border(androidx.compose.foundation.BorderStroke(3.dp, AyuColors.Accent))),
         ) {
