@@ -19,7 +19,8 @@ class CrestsTest {
         assertEquals("https://example.org/bvb.png", Crests.match("Borussia Dortmund", teams))
         assertEquals("https://example.org/s04.png", Crests.match("Schalke 04", teams))
         assertEquals("https://example.org/h96.png", Crests.match("Hannover 96", teams))
-        assertNull(Crests.match("Hannover 96 II", teams))
+        // Zweite Mannschaft: dasselbe Wappen wie der Verein.
+        assertEquals("https://example.org/h96.png", Crests.match("Hannover 96 II", teams))
         assertNull(Crests.match("Arsenal", teams))
     }
 
