@@ -1,5 +1,12 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -425,46 +432,54 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
             TechPanel(info, Modifier.align(Alignment.TopStart).padding(24.dp))
         }
 
-        if (layer == Layer.INFO || problem != null) {
-            Box(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
-                    .padding(start = 40.dp, end = 40.dp, top = 64.dp, bottom = 28.dp),
-            ) {
-                when (playback) {
-                    is Playback.Live -> {
-                        val shown = app.zapTarget ?: playback.channel
-                        // Kennzeichen (4K, HDR, 50 fps, Dolby) alle 2 s aus der Stream-Info, solange die Leiste offen ist.
-                        val badges by androidx.compose.runtime.produceState(emptyList<String>(), shown.key) {
-                            while (true) {
-                                value = player.streamInfo()?.let { i ->
-                                    val hdr = when (player.transfer) {
-                                        de.ayutv.desktop.player.YuvVideo.Transfer.PQ -> "HDR10"
-                                        de.ayutv.desktop.player.YuvVideo.Transfer.HLG -> "HLG"
-                                        else -> ""
-                                    }
-                                    de.ayutv.data.parse.StreamBadges.video(i.height, i.fps.toFloat(), hdr) +
-                                        listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(i.audioCodec, i.audioChannels))
-                                }.orEmpty()
-                                kotlinx.coroutines.delay(2_000)
+        // Leisten blenden weich ein und aus (wie auf dem Fire TV).
+        AnimatedVisibility(
+            visible = layer == Layer.INFO || problem != null,
+            modifier = Modifier.fillMaxSize(),
+            enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 14 },
+            exit = fadeOut(tween(220)),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                Box(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                        .padding(start = 40.dp, end = 40.dp, top = 64.dp, bottom = 28.dp),
+                ) {
+                    when (playback) {
+                        is Playback.Live -> {
+                            val shown = app.zapTarget ?: playback.channel
+                            // Kennzeichen (4K, HDR, 50 fps, Dolby) alle 2 s aus der Stream-Info, solange die Leiste offen ist.
+                            val badges by androidx.compose.runtime.produceState(emptyList<String>(), shown.key) {
+                                while (true) {
+                                    value = player.streamInfo()?.let { i ->
+                                        val hdr = when (player.transfer) {
+                                            de.ayutv.desktop.player.YuvVideo.Transfer.PQ -> "HDR10"
+                                            de.ayutv.desktop.player.YuvVideo.Transfer.HLG -> "HLG"
+                                            else -> ""
+                                        }
+                                        de.ayutv.data.parse.StreamBadges.video(i.height, i.fps.toFloat(), hdr) +
+                                            listOfNotNull(de.ayutv.data.parse.StreamBadges.audio(i.audioCodec, i.audioChannels))
+                                    }.orEmpty()
+                                    kotlinx.coroutines.delay(2_000)
+                                }
                             }
+                            LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs, badges, user.channelNumbers[shown.key])
                         }
-                        LiveBar(playback, shown, guide[shown.key].orEmpty(), player.volume, shown.key in user.favorites, player.paused, app.liveDelayMs, badges, user.channelNumbers[shown.key])
+                        is Playback.Vod -> VodBar(
+                            playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
+                            onNext = ::playNext, onSeek = { player.seekTo(it) }, onPause = { player.togglePause() },
+                            onBack10 = { seek(-10_000) }, onForward30 = { seek(30_000) },
+                        )
                     }
-                    is Playback.Vod -> VodBar(
-                        playback, player.positionMs, player.durationMs, player.playing, player.volume, nextEpisode != null, app.subtitleSync,
-                        onNext = ::playNext, onSeek = { player.seekTo(it) }, onPause = { player.togglePause() },
-                        onBack10 = { seek(-10_000) }, onForward30 = { seek(30_000) },
-                    )
                 }
-            }
-            Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
-                if (live != null) { TextButton("☰ Senderliste", { show(Layer.CHANNELS) }); Spacer(Modifier.width(8.dp)) }
-                TextButton("☰ Ton / Untertitel / Bild", { openMenu() })
-                Spacer(Modifier.width(8.dp))
-                TextButton("⤢", { toggleFullscreen() })
-                Spacer(Modifier.width(8.dp))
-                TextButton("✕", { app.stopPlayback() })
+                Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                    if (live != null) { TextButton("☰ Senderliste", { show(Layer.CHANNELS) }); Spacer(Modifier.width(8.dp)) }
+                    TextButton("☰ Ton / Untertitel / Bild", { openMenu() })
+                    Spacer(Modifier.width(8.dp))
+                    TextButton("⤢", { toggleFullscreen() })
+                    Spacer(Modifier.width(8.dp))
+                    TextButton("✕", { app.stopPlayback() })
+                }
             }
         }
         if (introVisible) {
@@ -509,8 +524,13 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
             }
         }
 
-        if (layer == Layer.CHANNELS && live != null) {
-            ChannelPanel(app, live, Modifier.align(Alignment.CenterStart).fillMaxHeight().width(460.dp)) { picked, list ->
+        AnimatedVisibility(
+            visible = layer == Layer.CHANNELS && live != null,
+            modifier = Modifier.align(Alignment.CenterStart).fillMaxHeight(),
+            enter = slideInHorizontally(tween(220)) { -it } + fadeIn(tween(160)),
+            exit = slideOutHorizontally(tween(180)) { -it } + fadeOut(tween(140)),
+        ) {
+            if (live != null) ChannelPanel(app, live, Modifier.fillMaxHeight().width(460.dp)) { picked, list ->
                 if (picked.key != live.channel.key) app.play(Playback.Live(picked, list))
                 layer = Layer.INFO
                 lastInput = System.currentTimeMillis()
@@ -522,7 +542,12 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
         app.subtitleBusy?.let { busy ->
             Notice(busy, Modifier.align(if (panel != Panel.NONE) Alignment.TopStart else Alignment.TopCenter).padding(28.dp))
         }
-        if (panel == Panel.MENU) {
+        AnimatedVisibility(
+            visible = panel == Panel.MENU,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            enter = slideInHorizontally(tween(220)) { it } + fadeIn(tween(160)),
+            exit = slideOutHorizontally(tween(180)) { it } + fadeOut(tween(140)),
+        ) {
             PlayerMenuPanel(
                 app, playback,
                 MenuActions(
@@ -536,11 +561,15 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     openDelay = { menu = { AudioDelayDialog(app, onDismiss = { menu = null }) } },
                     close = { closePanel() },
                 ),
-                Modifier.align(Alignment.CenterEnd),
             )
         }
-        if (panel == Panel.LANGUAGES && playback is Playback.Vod) {
-            SubtitleLanguagePanel(app, Modifier.align(Alignment.CenterEnd)) { code ->
+        AnimatedVisibility(
+            visible = panel == Panel.LANGUAGES && playback is Playback.Vod,
+            modifier = Modifier.align(Alignment.CenterEnd),
+            enter = slideInHorizontally(tween(220)) { it } + fadeIn(tween(160)),
+            exit = slideOutHorizontally(tween(180)) { it } + fadeOut(tween(140)),
+        ) {
+            if (playback is Playback.Vod) SubtitleLanguagePanel(app) { code ->
                 closePanel()
                 app.loadSubtitles(playback, code)
             }

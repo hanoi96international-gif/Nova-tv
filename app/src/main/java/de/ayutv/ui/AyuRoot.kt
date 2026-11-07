@@ -165,9 +165,13 @@ fun AyuRoot() {
                         androidx.compose.animation.AnimatedContent(
                             targetState = section,
                             transitionSpec = {
-                                // Schwaches Gerät: sofort umschalten (eine Überblendung zeichnet zwei ganze Bildschirme).
+                                // Schwaches Gerät: keine Überblendung (die zeichnet zwei ganze Bildschirme halbdurchsichtig),
+                                // aber der neue Bereich gleitet kurz herein. Verschieben kostet den Grafikchip fast nichts:
+                                // Die fertig gezeichnete Ebene wird nur versetzt, der alte Bereich ist sofort weg.
                                 if (UiPerformance.reduced) {
-                                    androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+                                    androidx.compose.animation.slideInHorizontally(
+                                        androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                    ) { it / 28 } togetherWith androidx.compose.animation.ExitTransition.None
                                 } else {
                                     (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)) +
                                         androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 24 }) togetherWith
@@ -259,13 +263,14 @@ private fun SideNav(sections: List<Section>, selected: Section, settled: Section
     var expanded by remember { mutableStateOf(false) }
     val width by animateDpAsState(
         if (expanded) NAV_EXPANDED else NAV_COLLAPSED,
-        animationSpec = if (UiPerformance.reduced) androidx.compose.animation.core.snap()
+        // Schwaches Gerät: kurz und ohne Federn (die Leiste liegt über dem Inhalt, nur sie selbst wird neu angeordnet).
+        animationSpec = if (UiPerformance.reduced) androidx.compose.animation.core.tween(130, easing = androidx.compose.animation.core.FastOutSlowInEasing)
         else androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 700f),
         label = "nav",
     )
     val dim by androidx.compose.animation.core.animateFloatAsState(
         if (expanded) 0.6f else 0f,
-        if (UiPerformance.reduced) androidx.compose.animation.core.snap() else androidx.compose.animation.core.tween(220),
+        if (UiPerformance.reduced) androidx.compose.animation.core.tween(130) else androidx.compose.animation.core.tween(220),
         label = "dim",
     )
     var enterTick by remember { mutableIntStateOf(0) }

@@ -1,5 +1,8 @@
 package de.ayutv.desktop.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,6 +38,14 @@ import androidx.compose.ui.focus.onFocusChanged
 import de.ayutv.desktop.input.RemoteButton
 import de.ayutv.desktop.input.remote
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
@@ -151,17 +163,25 @@ fun Selectable(
     selected: Boolean = false,
     focusRequester: FocusRequester? = null,
     shape: RoundedCornerShape = RoundedCornerShape(8.dp),
+    /** Vergrößerung bei Fokus (Kacheln: 1.06; Listen: 1.0, damit nichts überlappt). */
+    focusScale: Float = 1f,
     content: @Composable RowScope.(focused: Boolean) -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val background = when {
-        focused -> Palette.accentSoft
-        selected -> Palette.raised
-        hovered -> Palette.surface
-        else -> Color.Transparent
-    }
+    // Fokus gleitet weich über (Farbe, Rahmen, Größe): nur Zeichnen auf der Grafikkarte, kein neues Layout.
+    val background by animateColorAsState(
+        when {
+            focused -> Palette.accentSoft
+            selected -> Palette.raised
+            hovered -> Palette.surface
+            else -> Palette.surface.copy(alpha = 0f)
+        },
+        tween(FOCUS_MS),
+    )
+    val ring by animateFloatAsState(if (focused) 1f else 0f, tween(FOCUS_MS))
+    val scale by animateFloatAsState(if (focused) focusScale else 1f, tween(FOCUS_MS + 40))
     val downAt = remember { longArrayOf(0L) }
     Row(
         modifier
@@ -192,8 +212,25 @@ fun Selectable(
             .onPointerEvent(PointerEventType.Press) { e ->
                 if (onMenu != null && e.buttons.isSecondaryPressed) onMenu()
             }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .drawBehind {
+                // Leuchten um die Auswahl: drei weiche Ringe in der Akzentfarbe (nur Linien, kein Weichzeichner).
+                if (ring > 0.01f) {
+                    val radius = 12.dp.toPx()
+                    for (i in 1..3) {
+                        val spread = i * 3.dp.toPx()
+                        drawRoundRect(
+                            Palette.accent.copy(alpha = 0.16f * ring / i),
+                            topLeft = Offset(-spread, -spread),
+                            size = Size(size.width + 2 * spread, size.height + 2 * spread),
+                            cornerRadius = CornerRadius(radius + spread),
+                            style = Stroke(width = 3.dp.toPx()),
+                        )
+                    }
+                }
+            }
             .background(background, shape)
-            .border(if (focused) 3.dp else 0.dp, if (focused) Palette.accent else Color.Transparent, shape)
+            .border(3.dp, Palette.accent.copy(alpha = ring), shape)
             .hoverable(interaction)
             .clickable(interaction, indication = null, onClick = onClick)
             .focusable(interactionSource = interaction)
@@ -203,6 +240,8 @@ fun Selectable(
 }
 
 private const val LONG_PRESS_MS = 600L
+/** Dauer der Fokus-Übergänge (kurz: fühlt sich direkt an, wirkt aber nicht hart). */
+const val FOCUS_MS = 140
 
 @Composable
 fun TextButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, primary: Boolean = false, focusRequester: FocusRequester? = null) =
@@ -306,7 +345,9 @@ fun Progress(fraction: Float, modifier: Modifier = Modifier, height: Int = 4) {
 /** Kopfzeile einer Seite: Titel, optional Hinweis rechts (z. B. Tastenhilfe). */
 @Composable
 fun ScreenHeader(title: String, hint: String? = null) {
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(5.dp).height(26.dp).background(Palette.accent, RoundedCornerShape(3.dp)))
+        Spacer(Modifier.width(12.dp))
         Label(title, Type.title, Modifier.weight(1f))
         if (hint != null) Label(hint, Type.small, maxLines = 2)
     }
@@ -328,30 +369,39 @@ fun Tile(
     onMenu: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
 ) {
-    val width = if (wide) 240.dp else 150.dp
-    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp)) {
+    val width = if (wide) 240.dp else 156.dp
+    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(14.dp), focusScale = 1.06f) { focused ->
         Column(Modifier.fillMaxWidth()) {
             val picture = rememberImage(image)
+            val height = if (wide) 120.dp else 226.dp
             Box(
-                Modifier.fillMaxWidth().height(if (wide) 110.dp else 210.dp).background(Palette.raised, RoundedCornerShape(8.dp)),
+                Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(10.dp))
+                    .background(Brush.linearGradient(listOf(Palette.raised, Palette.surface))),
                 contentAlignment = Alignment.Center,
             ) {
                 if (picture != null) {
                     androidx.compose.foundation.Image(
                         picture, null,
-                        Modifier.fillMaxWidth().height(if (wide) 110.dp else 210.dp).padding(if (wide) 18.dp else 0.dp),
+                        Modifier.fillMaxSize().padding(if (wide) 20.dp else 0.dp),
                         contentScale = if (wide) androidx.compose.ui.layout.ContentScale.Fit else androidx.compose.ui.layout.ContentScale.Crop,
                     )
                 } else {
-                    Label(title.take(18), Type.heading, Modifier.padding(8.dp), maxLines = 2)
+                    Label(title.take(18), Type.heading, Modifier.padding(10.dp), maxLines = 3)
+                }
+                if (!wide) {
+                    // Poster: Titel im Bild auf dunklem Verlauf (wie in Streaming-Apps).
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                            .padding(start = 10.dp, end = 10.dp, top = 28.dp, bottom = if (progress != null) 12.dp else 8.dp),
+                    ) { Label(title, Type.body.copy(color = Color.White, fontWeight = FontWeight.SemiBold), maxLines = 2) }
+                }
+                if (progress != null) {
+                    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp)) { Progress(progress, height = 3) }
                 }
             }
-            if (progress != null) {
-                Spacer(Modifier.height(4.dp))
-                Progress(progress)
-            }
-            Spacer(Modifier.height(6.dp))
-            Label(title, Type.body)
+            Spacer(Modifier.height(7.dp))
+            if (wide) Label(title, if (focused) Type.heading.copy(fontSize = 15.sp) else Type.body)
             if (!subtitle.isNullOrEmpty()) Label(subtitle, Type.small)
         }
     }

@@ -35,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -213,9 +214,14 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
             Text("DnA-TV ${BuildConfig.VERSION_NAME}", color = AyuColors.TextSecondary, fontSize = 13.sp, modifier = Modifier.padding(start = 10.dp))
         }
         // Jeder Bereich mit eigenem Listenzustand: beginnt oben statt an der Scrollposition des vorigen.
-        key(page) { LazyColumn(
+        key(page) {
+        // Neuer Bereich gleitet kurz von rechts herein (nur Verschieben der Ebene: auch auf dem Stick flüssig).
+        val appear = remember { androidx.compose.animation.core.Animatable(1f) }
+        LaunchedEffect(Unit) { appear.animateTo(0f, androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+        LazyColumn(
             // Am Listenende nicht in die linke Spalte (würde den Bereich wechseln) oder die Seitenleiste springen.
-            modifier = Modifier.weight(1f).fillMaxHeight().drillContent(drill).keepVerticalFocus(),
+            modifier = Modifier.weight(1f).fillMaxHeight().drillContent(drill).keepVerticalFocus()
+                .graphicsLayer { translationX = appear.value * 40.dp.toPx() },
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {

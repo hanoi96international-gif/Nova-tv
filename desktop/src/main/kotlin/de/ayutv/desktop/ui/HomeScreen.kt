@@ -19,6 +19,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import de.ayutv.data.parse.Episodes
@@ -152,7 +154,16 @@ fun HomeScreen(app: AppState) {
         spot?.let { item -> item { Spotlight(item, guide[(item as? HomeItem.Live)?.channel?.key]?.let { nowOf(it) }, first, store) { open(item) } } }
         if (rows.isEmpty()) item { Label("Noch nichts geschaut. Unter „Live TV“ einen Sender wählen.", Type.body) }
         itemsIndexed(rows, key = { _, r -> r.title }) { rowIndex, row ->
-            Label(row.title, Type.heading, Modifier.padding(top = if (rowIndex == 0) 0.dp else 18.dp, bottom = 8.dp))
+            androidx.compose.foundation.layout.Row(
+                Modifier.padding(top = if (rowIndex == 0) 0.dp else 20.dp, bottom = 10.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                androidx.compose.foundation.layout.Box(Modifier.width(4.dp).height(18.dp).background(Palette.accent, androidx.compose.foundation.shape.RoundedCornerShape(2.dp)))
+                Spacer(Modifier.width(10.dp))
+                Label(row.title, Type.heading.copy(fontSize = androidx.compose.ui.unit.TextUnit(19f, androidx.compose.ui.unit.TextUnitType.Sp)))
+                Spacer(Modifier.width(10.dp))
+                Label("${row.items.size}", Type.small)
+            }
             LazyRow {
                 itemsIndexed(row.items, key = { _, i -> i.key }) { index, item ->
                     when (item) {
@@ -225,31 +236,77 @@ private fun Spotlight(item: HomeItem, now: de.ayutv.desktop.data.Programme?, foc
         is HomeItem.Rec -> null
     }
     val poster = item is HomeItem.Film || item is HomeItem.Show
-    Selectable(onClick, Modifier.fillMaxWidth(0.7f).padding(bottom = 18.dp), focusRequester = focus, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)) {
-        androidx.compose.foundation.layout.Row(Modifier.height(170.dp)) {
-            androidx.compose.foundation.layout.Box(
-                Modifier.width(if (poster) 114.dp else 300.dp).fillMaxHeight().background(Palette.raised, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
-                contentAlignment = androidx.compose.ui.Alignment.Center,
-            ) {
-                rememberImage(image)?.let {
+    val live = item is HomeItem.Live
+    val picture = rememberImage(image)
+    // Kino-Banner: Bild groß rechts, zum Text hin in den Hintergrund verlaufend, Akzentlicht dahinter.
+    Selectable(
+        onClick, Modifier.fillMaxWidth().padding(bottom = 22.dp), focusRequester = focus,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp), focusScale = 1.01f,
+    ) {
+        androidx.compose.foundation.layout.Box(
+            Modifier.fillMaxWidth().height(250.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .drawWithCache {
+                    val base = androidx.compose.ui.graphics.Brush.linearGradient(listOf(Palette.raised, Palette.surface))
+                    val light = androidx.compose.ui.graphics.Brush.radialGradient(
+                        listOf(Palette.accent.copy(alpha = 0.35f), androidx.compose.ui.graphics.Color.Transparent),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.78f, size.height * 0.45f), radius = size.width * 0.45f,
+                    )
+                    onDrawBehind {
+                        drawRect(base)
+                        drawRect(light)
+                    }
+                },
+        ) {
+            if (picture != null) {
+                androidx.compose.foundation.layout.Box(
+                    Modifier.align(androidx.compose.ui.Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(if (poster) 0.62f else 0.42f),
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                ) {
                     androidx.compose.foundation.Image(
-                        it, null, if (poster) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(28.dp),
+                        picture, null,
+                        if (poster) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(36.dp),
                         contentScale = if (poster) androidx.compose.ui.layout.ContentScale.Crop else androidx.compose.ui.layout.ContentScale.Fit,
                     )
                 }
             }
-            Spacer(Modifier.width(22.dp))
-            androidx.compose.foundation.layout.Column(Modifier.fillMaxHeight(), verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center) {
-                Label(label, Type.small, color = Palette.accent)
-                Spacer(Modifier.height(4.dp))
-                Label(title, Type.title, maxLines = 2)
-                if (!sub.isNullOrBlank()) Label(sub, Type.body)
-                if (progress != null) {
-                    Spacer(Modifier.height(10.dp))
-                    androidx.compose.foundation.layout.Box(Modifier.width(320.dp)) { Progress(progress) }
+            // Verlauf über dem Bild: links deckend (Text gut lesbar), rechts frei.
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxSize().background(
+                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        0f to Palette.surface, 0.42f to Palette.surface.copy(alpha = 0.92f), 0.75f to Palette.surface.copy(alpha = 0.15f), 1f to androidx.compose.ui.graphics.Color.Transparent,
+                    ),
+                ),
+            )
+            androidx.compose.foundation.layout.Column(
+                Modifier.fillMaxHeight().fillMaxWidth(0.58f).padding(start = 30.dp, end = 12.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+            ) {
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    if (live) {
+                        Label(
+                            "● LIVE", Type.small.copy(color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                            Modifier.background(Palette.live, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                        Spacer(Modifier.width(10.dp))
+                    }
+                    Label(label, Type.small.copy(color = Palette.accent, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = androidx.compose.ui.unit.TextUnit(1.2f, androidx.compose.ui.unit.TextUnitType.Sp)))
                 }
-                Spacer(Modifier.height(10.dp))
-                Label("OK ▶ abspielen", Type.small)
+                Spacer(Modifier.height(8.dp))
+                Label(title, Type.display.copy(fontSize = androidx.compose.ui.unit.TextUnit(34f, androidx.compose.ui.unit.TextUnitType.Sp)), maxLines = 2)
+                if (!sub.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Label(sub, Type.body.copy(color = Palette.secondary))
+                }
+                if (progress != null) {
+                    Spacer(Modifier.height(14.dp))
+                    androidx.compose.foundation.layout.Box(Modifier.width(340.dp)) { Progress(progress, height = 5) }
+                }
+                Spacer(Modifier.height(16.dp))
+                Label(
+                    "▶  Abspielen", Type.heading.copy(color = androidx.compose.ui.graphics.Color.White),
+                    Modifier.background(Palette.accentSoft, androidx.compose.foundation.shape.RoundedCornerShape(24.dp)).padding(horizontal = 18.dp, vertical = 8.dp),
+                )
             }
         }
     }
