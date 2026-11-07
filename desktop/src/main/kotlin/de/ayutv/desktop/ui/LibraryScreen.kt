@@ -49,7 +49,8 @@ fun LibraryScreen(app: AppState, series: Boolean) {
     var category by remember(series) { mutableStateOf(RECENT) }
     var dialog by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
     if (series) app.openSeries?.let { s ->
-        EpisodesView(app, s) { app.openSeries = null }
+        // Serie öffnen: Die Folgen gleiten von rechts herein.
+        Box(Modifier.fillMaxSize().appear(s.key, 72.dp)) { EpisodesView(app, s) { app.openSeries = null } }
         return
     }
 
@@ -94,7 +95,7 @@ fun LibraryScreen(app: AppState, series: Boolean) {
             val list = remember(shows, category) {
                 if (category == RECENT) shows.sortedByDescending { it.added }.take(200) else shows.filter { it.category == category }
             }
-            PosterGrid(list.map { Poster(it.key, it.name, it.cover, it.rating) }) { key -> app.openSeries = list.first { it.key == key } }
+            PosterGrid(list.map { Poster(it.key, it.name, it.cover, it.rating) }, animateKey = category) { key -> app.openSeries = list.first { it.key == key } }
         } else {
             val list = remember(movies, category, user.positions) {
                 when (category) {
@@ -103,7 +104,7 @@ fun LibraryScreen(app: AppState, series: Boolean) {
                     else -> movies.filter { it.category == category }
                 }
             }
-            PosterGrid(list.map { m -> Poster(m.key, m.name, m.poster, m.rating, progress(user.positions[m.key], user.durations[m.key])) }) { key ->
+            PosterGrid(list.map { m -> Poster(m.key, m.name, m.poster, m.rating, progress(user.positions[m.key], user.durations[m.key])) }, animateKey = category) { key ->
                 playMovie(app, list.first { it.key == key })
             }
         }
@@ -122,9 +123,10 @@ private fun progress(position: Long?, duration: Long?): Float? =
 data class Poster(val key: String, val title: String, val image: String?, val rating: String? = null, val progress: Float? = null)
 
 @Composable
-fun PosterGrid(items: List<Poster>, onOpen: (String) -> Unit) {
+fun PosterGrid(items: List<Poster>, animateKey: Any? = null, onOpen: (String) -> Unit) {
     if (items.isEmpty()) return Empty("Hier ist nichts.")
-    LazyVerticalGrid(GridCells.Adaptive(160.dp), Modifier.fillMaxSize()) {
+    // Andere Kategorie: Die Poster gleiten kurz an ihren Platz.
+    LazyVerticalGrid(GridCells.Adaptive(160.dp), Modifier.fillMaxSize().appear(animateKey, 32.dp, 220)) {
         items(items, key = { it.key }) { p ->
             Selectable({ onOpen(p.key) }, Modifier.padding(4.dp)) {
                 Column(Modifier.fillMaxWidth()) {

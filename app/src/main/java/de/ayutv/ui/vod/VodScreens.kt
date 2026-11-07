@@ -1,5 +1,6 @@
 package de.ayutv.ui.vod
 
+import de.ayutv.ui.components.appear
 import de.ayutv.ui.components.isPortrait
 import de.ayutv.ui.components.isTouchDevice
 import android.content.Intent
@@ -100,7 +101,8 @@ fun MoviesScreen() {
     val gridState = rememberLazyGridState()
     openMovie?.let { movie ->
         BackHandler { openMovie = null }
-        MovieDetail(movie)
+        // Detailseite gleitet von rechts herein (Zurück: das Raster erscheint wieder, siehe unten).
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().appear(movie.key, 72.dp)) { MovieDetail(movie) }
         return
     }
 
@@ -109,6 +111,8 @@ fun MoviesScreen() {
             entries = remember(categories) { categories.map { CategoryEntry(it.name, it.name, it.count) } },
             selected = active,
             onSelect = { selected = it },
+            // Zurück aus der Kategorie: Die Spalte gleitet von links wieder herein.
+            modifier = Modifier.appear(drill.backTick, (-40).dp),
             onOpen = { drill.enter() },
             focusSelectedTick = drill.backTick,
             onLongClick = { name ->
@@ -116,7 +120,8 @@ fun MoviesScreen() {
                 if (selected == name) selected = null
             },
         )
-        Column(Modifier.weight(1f).fillMaxHeight()) {
+        // Kategorie öffnen und schließen: Der Inhalt gleitet an seinen neuen Platz.
+        Column(Modifier.weight(1f).fillMaxHeight().appear(drill.isOpen, if (drill.isOpen) 56.dp else (-24).dp)) {
         if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty())
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),
@@ -146,7 +151,7 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
     val drill = de.ayutv.ui.components.rememberDrillDown()
     if (openSeries != null) {
         BackHandler { onOpenSeries(null) }
-        SeriesDetail(openSeries)
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().appear(openSeries.key, 72.dp)) { SeriesDetail(openSeries) }
         return
     }
 
@@ -167,6 +172,8 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
             entries = remember(categories) { categories.map { CategoryEntry(it.name, it.name, it.count) } },
             selected = active,
             onSelect = { selected = it },
+            // Zurück aus der Kategorie: Die Spalte gleitet von links wieder herein.
+            modifier = Modifier.appear(drill.backTick, (-40).dp),
             onOpen = { drill.enter() },
             focusSelectedTick = drill.backTick,
             onLongClick = { name ->
@@ -174,7 +181,8 @@ fun SeriesScreen(openSeries: SeriesEntity?, onOpenSeries: (SeriesEntity?) -> Uni
                 if (selected == name) selected = null
             },
         )
-        Column(Modifier.weight(1f).fillMaxHeight()) {
+        // Kategorie öffnen und schließen: Der Inhalt gleitet an seinen neuen Platz.
+        Column(Modifier.weight(1f).fillMaxHeight().appear(drill.isOpen, if (drill.isOpen) 56.dp else (-24).dp)) {
         if (drill.isOpen) de.ayutv.ui.components.DrillTitle(active.orEmpty())
         LazyVerticalGrid(
             columns = GridCells.Adaptive(150.dp),

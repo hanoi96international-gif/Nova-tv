@@ -258,7 +258,7 @@ fun LiveScreen(app: AppState) {
                         withFrameNanos { }
                         runCatching { restore.requestFocus() }
                     }
-                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().onPreviewKeyEvent { e ->
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().appear(group, 32.dp, 220).onPreviewKeyEvent { e ->
                         val list = moving
                         if (list == null || e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                         when (e.key) {
