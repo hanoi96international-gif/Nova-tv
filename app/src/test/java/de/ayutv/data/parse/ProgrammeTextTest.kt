@@ -105,6 +105,10 @@ class ProgrammeTextTest {
         fun dazn(title: String, sub: String?, cat: String?, flags: Int = 0) = ProgrammeText.isSportEvent(title, sub, cat, flags, sportChannel = ProgrammeText.isSportChannel("DAZN 1 HD"))
         // DAZN/Sky: Konferenz ohne Paarung und ohne „Live“ im Titel ist trotzdem live.
         assertEquals(true, dazn("Die Konferenz", "Bundesliga, 12. Spieltag", null))
+        // So auf DAZN 1 (Foto): Saison und Spieltag im Titel.
+        assertEquals(true, ProgrammeText.isSportEvent("Bundesliga Konferenz 26/27 – 9. Spieltag", null, null, 0, sportChannel = ProgrammeText.isSportChannel("DE: DAZN 1 RAW (KABEL)")))
+        assertEquals(true, ProgrammeText.isLive("Bundesliga Konferenz 26/27 – 9. Spieltag", null, null, 0))
+        assertEquals("Bundesliga Konferenz – 9. Spieltag", ProgrammeText.eventTitle("Bundesliga Konferenz 26/27 – 9. Spieltag", null, null))
         assertEquals(true, dazn("Bundesliga", "Konferenz am Samstag", "Fußball"))
         assertEquals(true, dazn("UEFA Champions League – Die Konferenz", null, null))
         assertEquals(true, ProgrammeText.isSportEvent("2. Bundesliga Konferenz", null, "Fußball", 0))

@@ -3472,7 +3472,7 @@ class PlayerActivity : ComponentActivity() {
                 val teams = settings.followedTeams
                 val watching = playing?.let { nowPlayingMap[it.key] }?.pairing()
                 for (m in matches) {
-                    if (!m.live(now) && !m.finished) continue
+                    if (!m.football || (!m.live(now) && !m.finished)) continue
                     val team = teams.firstOrNull { de.ayutv.data.parse.Teams.plays(it, m.pairing) } ?: continue
                     val before = known.put(m.id, m.goals1 to m.goals2) ?: continue
                     if (before == (m.goals1 to m.goals2) || m.goals1 + m.goals2 <= before.first + before.second) continue
