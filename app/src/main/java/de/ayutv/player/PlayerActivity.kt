@@ -57,11 +57,9 @@ import de.ayutv.data.Languages
 import de.ayutv.data.record.Recording
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
-import de.ayutv.data.IntroStore
 import de.ayutv.hideSystemBars
 import de.ayutv.ui.components.FitToScreen
 import de.ayutv.ui.components.hasTouchscreen
-import de.ayutv.data.parse.IntroSkip
 import de.ayutv.data.repo.ContentRepository
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.HistoryEntity
@@ -267,26 +265,15 @@ class PlayerActivity : ComponentActivity() {
     /** Sendezeit (im Zwischenspeicher) am Anfang des laufenden zeitversetzten Abschnitts. */
     private var timeshiftStartMs = 0L
     private var timeshiftErrors = 0
-    /** Serien: Intro und Rückblick überspringen, nächste Folge ab dem Abspann ([EpisodeExtras]). */
+    /** Serien: nächste Folge in der letzten Minute ([EpisodeExtras]). */
     private val episodes = EpisodeExtras(object : EpisodeExtras.Host {
         override val player get() = this@PlayerActivity.player
         override val vod get() = this@PlayerActivity.vod
         override val positionMs get() = this@PlayerActivity.positionMs
         override val durationMs get() = this@PlayerActivity.durationMs
-        override val everReady get() = this@PlayerActivity.everReady
         override val scope get() = lifecycleScope
         override val container get() = this@PlayerActivity.container
         override val autoNextEpisode get() = settings.autoNextEpisode
-        override fun levels(fromMs: Long, toMs: Long) = introLevels(fromMs, toMs)
-        override fun lastSubtitleEnd(): Long? = externalCues.lastOrNull()?.let { last ->
-            (elasticTiming?.toVideo(last.end) ?: subtitleTiming.toVideo(last.end)) + subtitleDelayMs
-        }
-        override fun seekExact(to: Long) {
-            val p = this@PlayerActivity.player ?: return
-            seekExact(p, to)
-            this@PlayerActivity.positionMs = to
-        }
-        override fun showStatus(text: String) { subtitleStatus = text }
         override fun closeOverlay() = this@PlayerActivity.closeOverlay()
         override fun startEpisode(next: ContentRepository.NextEpisode) {
             saveProgress()
@@ -307,8 +294,6 @@ class PlayerActivity : ComponentActivity() {
     val nextEpisode get() = episodes.nextEpisode
     val nextCardVisible get() = episodes.nextCardVisible
     val nextCountdown get() = episodes.nextCountdown
-    val introVisible get() = episodes.introVisible
-    val introLabel get() = episodes.introLabel
     fun playNextEpisode() = episodes.playNext()
     private var liveSourceLanguage: String? = null
     /** Übersetzung eingebetteter Untertitel mit Vorlauf: Quellspur, Ergebnisse je Einblendung (Startzeit). */
@@ -1361,24 +1346,15 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Serien
 
-    /** Gehörte Lautstärke und, wo nichts gehört wurde (Ton an der Soundbar), die selbst dekodierte. */
-    private fun introLevels(fromMs: Long, toMs: Long): FloatArray {
-        val heard = heardSpeech.levels(fromMs, toMs)
-        if (aheadSpeech.seconds() == 0) return heard
-        val ahead = aheadSpeech.levels(fromMs, toMs)
-        return FloatArray(maxOf(heard.size, ahead.size)) { i ->
-            heard.getOrNull(i)?.takeUnless { it.isNaN() } ?: ahead.getOrNull(i) ?: Float.NaN
-        }
-    }
-
     /**
      * Folgen, deren Ton an Soundbar oder Receiver geht: ihn nebenbei selbst dekodieren (nur die ersten Minuten, fürs
      * Intro). Wird er im Gerät dekodiert, hört die App ohnehin mit.
      */
     private fun updateAudioAhead() {
         val format = player?.audioFormat
-        val wanted = forcedAhead || vod?.kind == HistoryKind.EPISODE && format != null && passesThrough(format)
-        audioAhead.untilMs = EpisodeExtras.OPENING_MS + EpisodeExtras.INTRO_SEARCH_AHEAD_MS
+        // Nur noch für den Gerätetest: Die Auswertung diente dem Intro-Erkennen, das entfallen ist (spart Rechenzeit).
+        val wanted = forcedAhead && format != null
+        audioAhead.untilMs = 9 * 60_000L
         if (wanted != audioAhead.active) {
             audioAhead.active = wanted
             Log.i(TAG, if (wanted) "Ton geht an Soundbar/Receiver: werte ihn nebenbei aus (${format?.sampleMimeType})" else "Ton-Auswertung nebenbei aus")
@@ -3018,8 +2994,6 @@ class PlayerActivity : ComponentActivity() {
         val base = if (pendingSeekMs != C.TIME_UNSET) pendingSeekMs else p.currentPosition
         pendingSeekMs = (base + deltaMs).coerceIn(0, max)
         positionMs = pendingSeekMs
-        // Kurz nach „Intro überspringen“: Spulen korrigiert, wo das Intro endet.
-        episodes.onManualSeek(pendingSeekMs)
         showOverlay(Overlay.CONTROLS)
         seekJob?.cancel()
         seekJob = lifecycleScope.launch {
@@ -4115,13 +4089,11 @@ class PlayerActivity : ComponentActivity() {
             if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) playNextEpisode() else episodes.cancelCountdown()
             return true
         }
+        // Letzte Minute mit Countdown: Jede andere Taste hält ihn an (die Taste wirkt trotzdem, z. B. Spulen).
+        if (nextCountdown >= 0 && code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) episodes.cancelCountdown()
         if (overlay != Overlay.CONTROLS && (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER)) {
             if (nextCardVisible) {
                 playNextEpisode()
-                return true
-            }
-            if (introVisible) {
-                episodes.skipIntro()
                 return true
             }
         }
@@ -4166,8 +4138,6 @@ class PlayerActivity : ComponentActivity() {
             delay(1_000)
             runCatching { de.ayutv.data.FireTvHome.update(applicationContext, container) }
         }
-        vod?.let(episodes::learnOpening)
-        if (isFinishing) player?.let { episodes.learnCredits(it.currentPosition) }
         saveAheadTranslations()
         recordWatch()
         container.scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.saveIfChanged(container.qualityFile) }

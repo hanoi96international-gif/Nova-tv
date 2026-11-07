@@ -930,29 +930,20 @@ class DeviceTourTest {
                 Thread.sleep(2_000)
                 log("episode ${episode.title}: ready=$ready message=${scenario.read { it.message }}")
                 shot("30_episode")
-                // Intro überspringen: in den ersten Minuten springt OK um 80 s weiter
+                // Nächste Folge: in der letzten Minute Hinweis mit Countdown, eine andere Taste hält ihn an.
                 Thread.sleep(5_000) // Steuerleiste blendet sich aus
-                scenario.onActivity { it.player?.seekTo(30_000) }
-                val introShown = waitFor(5_000) { scenario.read { it.introVisible } }
-                shot("31_episode_intro")
-                // Zustand beim Drücken, damit ein Fehlschlag erklärbar ist.
-                val beforeKey = scenario.read { "state=${it.player?.playbackState} overlay=${it.overlay} intro=${it.introVisible} pos=${it.player?.currentPosition}" }
-                key(KeyEvent.KEYCODE_DPAD_CENTER)
-                val skipped = waitFor(5_000) { scenario.read { (it.player?.currentPosition ?: 0) > 100_000 } }
-                // Nächste Folge: am Ende Hinweis mit Countdown, eine andere Taste hält ihn an
                 val next = waitFor(15_000) { scenario.read { it.nextEpisode } != null }
-                scenario.onActivity { act -> act.player?.let { p -> p.seekTo((p.duration - 4_000).coerceAtLeast(0)) } }
-                val countdown = waitFor(15_000) { scenario.read { it.nextCountdown } > 0 }
+                scenario.onActivity { act -> act.player?.let { p -> p.seekTo((p.duration - 45_000).coerceAtLeast(p.duration / 2)) } }
+                val countdown = waitFor(15_000) { scenario.read { it.nextCardVisible && it.nextCountdown in 1..60 } }
+                val seconds = scenario.read { it.nextCountdown }
                 shot("32_episode_next")
-                key(KeyEvent.KEYCODE_DPAD_LEFT)
-                val stopped = waitFor(3_000) { scenario.read { it.nextCountdown } < 0 }
+                key(KeyEvent.KEYCODE_DPAD_UP)
+                val stopped = waitFor(3_000) { scenario.read { it.nextCountdown < 0 && it.nextCardVisible } }
                 log(
-                    "episode_extras: intro_shown=$introShown skipped=$skipped ($beforeKey, nach OK pos=${scenario.read { it.player?.currentPosition }}) " +
-                        "next=${scenario.read { it.nextEpisode?.episode?.title }} " +
-                        "countdown=$countdown countdown_stopped=$stopped"
+                    "episode_extras: next=${scenario.read { it.nextEpisode?.episode?.title }} " +
+                        "countdown=$countdown seconds=$seconds countdown_stopped=$stopped"
                 )
-                assertTrue("Serienextras: intro=$introShown skipped=$skipped next=$next countdown=$countdown stopped=$stopped",
-                    introShown && skipped && next && countdown && stopped)
+                assertTrue("Serienextras: next=$next countdown=$countdown ($seconds s) stopped=$stopped", next && countdown && stopped)
             }
             // Ton an der Soundbar (hier erzwungen): Die App dekodiert ihn nebenbei selbst und wertet ihn vorausschauend aus.
             launchPlayer(PlayerActivity.vodIntent(app, request)).use { scenario ->

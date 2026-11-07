@@ -286,12 +286,11 @@ fun PlayerScreen(activity: PlayerActivity) {
                 activity.nextCardVisible -> activity.nextEpisode?.let { next ->
                     EpisodeCard(
                         title = "Nächste Folge: S${next.episode.season} E${next.episode.episode}  ${next.episode.title}",
-                        hint = if (activity.nextCountdown >= 0) "Startet in ${activity.nextCountdown} s  ·  OK jetzt  ·  andere Taste: warten"
-                            else "OK: jetzt starten",
+                        hint = if (activity.nextCountdown >= 0) "Startet in ${activity.nextCountdown} s  ·  OK: jetzt  ·  andere Taste: anhalten"
+                            else if (touch) "Tippen: jetzt starten" else "OK: jetzt starten",
                         modifier = Modifier.align(Alignment.BottomEnd).then(press),
                     )
                 }
-                activity.introVisible -> EpisodeCard(activity.introLabel, if (touch) "Tippen" else "OK drücken", Modifier.align(Alignment.BottomEnd).then(press))
             }
         }
 

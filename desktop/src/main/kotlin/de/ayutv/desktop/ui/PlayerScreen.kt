@@ -62,10 +62,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
-import de.ayutv.data.parse.IntroSkip
 import de.ayutv.desktop.data.Channel
 import de.ayutv.desktop.data.numberOf
-import de.ayutv.desktop.data.IntroMark
 import de.ayutv.desktop.data.Programme
 import de.ayutv.desktop.input.RemoteButton
 import de.ayutv.desktop.input.digit
@@ -142,31 +140,16 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
         app.play(vod.copy(key = Episodes.key(series.key, episode.id), title = Episodes.title(series.name, episode), url = url, startMs = 0, episodeId = episode.id))
     }
 
-    // Intro überspringen (Serien): Knopf am Anfang, gelernte Stelle je Serie; Spulen kurz danach korrigiert sie.
-    val series = (playback as? Playback.Vod)?.series
-    val learned = series?.let { s -> user.intros[s.key]?.let { IntroSkip.Intro(it.startMs, it.lengthMs) } }
-    var skippedFrom by remember(playback) { mutableLongStateOf(-1L) }
-    var skippedAt by remember(playback) { mutableLongStateOf(0L) }
-    val introVisible = series != null && skippedFrom < 0 && IntroSkip.visible(player.positionMs, learned)
-
-    fun skipIntro() {
-        val from = player.positionMs
-        skippedFrom = from
-        skippedAt = System.currentTimeMillis()
-        player.seekTo(IntroSkip.target(from, learned))
-    }
+    // Nächste Folge (Serien): in der letzten Minute ein Hinweis mit Countdown, am Ende startet sie von selbst.
+    // OK startet sofort, eine andere Taste hält den Countdown an (dann endet die Folge ohne Weiterschalten).
+    var nextCancelled by remember(playback) { mutableStateOf(false) }
+    val remainingMs = player.durationMs - player.positionMs
+    val nextCardVisible = nextEpisode != null && player.durationMs > 0 && remainingMs in 0..NEXT_BEFORE_END_MS && player.positionMs >= player.durationMs / 2
+    val nextCountdown = if (nextCardVisible && !nextCancelled && player.playing) ((remainingMs + 999) / 1000).toInt() else -1
 
     fun seek(delta: Long) {
         player.seekBy(delta)
         show()
-        val s = series ?: return
-        if (skippedFrom >= 0 && System.currentTimeMillis() - skippedAt < IntroSkip.LEARN_WINDOW_MS) {
-            skippedAt = System.currentTimeMillis()
-            val target = (player.positionMs + delta).coerceAtLeast(0)
-            IntroSkip.learn(skippedFrom, target)?.let { intro ->
-                store.updateUser { it.copy(intros = it.intros + (s.key to IntroMark(intro.startMs, intro.lengthMs))) }
-            }
-        }
     }
 
     fun toggleFavorite(channel: Channel) {
@@ -233,7 +216,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     LaunchedEffect((playback as? Playback.Live)?.channel?.key) { if (layer != Layer.CHANNELS) show() }
     // Stand von Filmen regelmäßig merken; am Ende einer Folge die nächste.
     LaunchedEffect(playback) {
-        player.onFinished = { if (nextEpisode != null) playNext() else app.stopPlayback() }
+        player.onFinished = { if (nextEpisode != null && !nextCancelled) playNext() else app.stopPlayback() }
         while (playback is Playback.Vod) {
             delay(15_000)
             app.savePosition()
@@ -320,7 +303,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         Key.G -> shiftSubtitles(-250)
                         Key.H -> shiftSubtitles(250)
                         Key.N -> playNext()
-                        Key.I -> if (introVisible) skipIntro() else { if (layer == Layer.INFO) tech = !tech; show() }
+                        Key.I -> { if (layer == Layer.INFO) tech = !tech; show() }
                         else -> return@onKeyEvent false
                     }
                     return@onKeyEvent true
@@ -359,9 +342,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     return@onKeyEvent true
                 }
                 // Filme und Serien.
-                if (first && (button == RemoteButton.OK)) {
-                    if (introVisible) { skipIntro(); return@onKeyEvent true }
-                }
+                if (first && button == RemoteButton.OK && nextCardVisible && layer != Layer.INFO) { playNext(); return@onKeyEvent true }
+                if (first && nextCountdown >= 0 && button != RemoteButton.OK) nextCancelled = true
                 when (button) {
                     RemoteButton.OK, RemoteButton.PLAY_PAUSE -> {
                         if (first) {
@@ -493,9 +475,18 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 }
             }
         }
-        if (introVisible) {
-            Box(Modifier.align(Alignment.BottomEnd).padding(end = 40.dp, bottom = if (layer == Layer.INFO) 170.dp else 48.dp)) {
-                TextButton("⏭ Intro überspringen (OK)", { skipIntro() }, primary = true)
+        if (nextCardVisible) nextEpisode?.let { (episode, _) ->
+            Column(
+                Modifier.align(Alignment.BottomEnd).padding(end = 40.dp, bottom = if (layer == Layer.INFO) 170.dp else 48.dp)
+                    .appear(Unit, 32.dp, 260),
+                horizontalAlignment = Alignment.End,
+            ) {
+                TextButton("⏭ Nächste Folge: S${episode.season} E${episode.episode}", { playNext() }, primary = true)
+                Spacer(Modifier.height(6.dp))
+                Label(
+                    if (nextCountdown >= 0) "Startet in $nextCountdown s  ·  OK: jetzt  ·  andere Taste: anhalten" else "OK: jetzt starten",
+                    Type.small.copy(color = Color.White),
+                )
             }
         }
         quick?.let { list ->
@@ -848,3 +839,6 @@ fun VideoView(player: de.ayutv.desktop.player.VideoPlayer, modifier: Modifier = 
         Image(frame, null, modifier.clipToBounds(), contentScale = scale, filterQuality = FilterQuality.Low)
     }
 }
+
+/** So lange vor dem Ende einer Folge erscheint „Nächste Folge“ mit Countdown. */
+private const val NEXT_BEFORE_END_MS = 60_000L

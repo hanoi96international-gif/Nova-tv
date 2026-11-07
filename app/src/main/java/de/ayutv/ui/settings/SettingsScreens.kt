@@ -710,7 +710,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Serien: nächste Folge automatisch",
                             onOff(settings.autoNextEpisode),
-                            "Am Ende einer Folge startet die nächste nach 10 Sekunden (OK sofort, Zurück bleibt stehen).",
+                            "In der letzten Minute erscheint „Nächste Folge“ mit Countdown, am Ende startet sie von selbst (OK sofort, andere Taste hält an).",
                         ) { update { it.copy(autoNextEpisode = !it.autoNextEpisode) } }
                     }
                     if (touch) item {
