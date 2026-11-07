@@ -168,6 +168,16 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
         scope.launch {
             while (true) {
                 runCatching { de.ayutv.data.sport.MatchHints.update(liveScores.current()) }
+                // Alle laufenden Sport-Sendungen gemeinsam zuordnen (per Ausschluss über alle Sender): Auch ohne Besuch im
+                // Sport-Bereich steht bei „Live: BL“ die Partie.
+                runCatching {
+                    val events = withContext(Dispatchers.Default) {
+                        de.ayutv.desktop.data.SportEvents.of(store.listedChannels(), store.guide.value, store.user.value.favorites.toSet(), hours = 3)
+                    }
+                    de.ayutv.data.sport.MatchHints.learn(events.map { e ->
+                        e.programme.let { de.ayutv.data.sport.LiveScores.Show(it.title, it.subtitle, it.description, it.start, it.stop, e.pairing) }
+                    })
+                }
                 delay(if (de.ayutv.data.sport.MatchHints.matches.isEmpty()) 60_000L else 10 * 60_000L)
             }
         }
@@ -818,7 +828,7 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
 
     /**
      * Untertitel in der eingestellten Sprache suchen (OpenSubtitles, sonst DeepL), einblenden und am Ton ausrichten:
-     * Wie auf dem Fire TV werden die Sprechpausen des Films mit den Einblendungen verglichen; nach rund 1,5 Minuten
+     * Wie auf dem Fire TV werden die Sprechpausen des Films mit den Einblendungen verglichen; nach rund einer Minute
      * Gespräch sitzt der Versatz (auch bei anderer Bildrate). Die Ausrichtung wird je Film gemerkt.
      */
     fun loadSubtitles(vod: Playback.Vod, language: String = store.user.value.subtitleLanguage.ifBlank { "de" }, variant: Int = 0) = scope.launch {
@@ -931,7 +941,8 @@ class AppState(val store: Store, val sync: Sync, val scope: CoroutineScope, val 
             var applied: SubtitleTiming? = null
             var lastHeard = -1
             while (true) {
-                delay(10_000)
+                // Bis zum ersten Treffer alle 5 s prüfen, danach alle 10 s nach.
+                delay(if (applied == null) 5_000 else 10_000)
                 if (!player.playing) continue
                 val heard = player.speech.seconds()
                 if (heard < SpeechSync.MIN_SECONDS) {

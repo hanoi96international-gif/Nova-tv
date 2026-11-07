@@ -82,6 +82,8 @@ private object SportCache {
 
 /** Spiel laut Spielplan und Sportart je Sendung, abseits der Oberfläche berechnet. */
 private class SportInfo(
+    /** Sendungen, dasselbe Spiel nur einmal (auch wenn erst der Spielplan zeigt, dass „Live: BL“ dieses Spiel ist). */
+    val list: List<SportEvent>? = null,
     val matches: Map<SportEvent, de.ayutv.data.sport.LiveScores.Match?> = emptyMap(),
     val kinds: Map<SportEvent, de.ayutv.data.parse.SportKinds.Kind> = emptyMap(),
 )
@@ -142,24 +144,23 @@ fun SportScreen() {
     LaunchedEffect(events, scores) {
         val list = events.orEmpty()
         info = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            val direct = list.map { e ->
-                val p = e.programme
-                container.liveScores.find(scores, p.pairing(), p.start, p.title)
-                    ?: if (p.pairing() == null) container.liveScores.byVenue(scores, p.title, p.subtitle, p.description, p.start, p.stop) else null
-            }
-            val openIndex = list.indices.filter { direct[it] == null && list[it].programme.pairing() == null }
-            val found = container.liveScores.byElimination(
-                scores,
-                openIndex.map { i -> list[i].programme.let { de.ayutv.data.sport.LiveScores.Open(it.title, it.subtitle, it.start, it.stop) } },
-                direct.filterNotNull().toSet(),
-            )
-            val result = direct.toMutableList()
-            for ((k, match) in found) result[openIndex[k]] = match
+            val shows = list.map { e -> e.programme.let { de.ayutv.data.sport.LiveScores.Show(it.title, it.subtitle, it.description, it.start, it.stop, it.pairing()) } }
+            val result = container.liveScores.assign(scores, shows)
+            // Auch für Senderliste, TV-Guide und Vorschau: dort steht dann ebenfalls die Partie statt „Live: BL“.
+            de.ayutv.data.sport.MatchHints.learn(shows)
+            // Dasselbe Spiel nur einmal: „Live: BL“ auf dem einen Sender und „Mainz – Bayern“ auf dem anderen (anderer
+            // Anbieter, leicht andere Anfangszeit) werden zu einem Eintrag mit beiden Sendern.
+            val merged = ProgrammeText.mergeSameMatch(
+                list.indices.map { list[it] to result[it] },
+                { it.first.programme.start },
+                { (e, match) -> e.programme.pairing() ?: match?.pairing },
+            ) { a, b -> a.first.mergedWith(b.first) to (a.second ?: b.second) }
             SportInfo(
-                matches = list.indices.associate { list[it] to result[it] },
-                kinds = list.indices.associate { i ->
-                    val p = list[i].programme
-                    list[i] to de.ayutv.data.parse.SportKinds.kind(p.title, p.subtitle, p.category, p.description, list[i].channel.name, result[i] != null)
+                list = merged.map { it.first },
+                matches = merged.associate { it.first to it.second },
+                kinds = merged.associate { (e, match) ->
+                    val p = e.programme
+                    e to de.ayutv.data.parse.SportKinds.kind(p.title, p.subtitle, p.category, p.description, e.channel.name, match != null)
                 },
             )
         }
@@ -199,7 +200,7 @@ fun SportScreen() {
             .map { it.key }
     }
     val filters: List<SportFilter> = listOf<SportFilter>(SportFilter.All) + kindsPresent.map { SportFilter.Of(it) } + SportFilter.Teams
-    val shown = events.orEmpty().filter { e ->
+    val shown = (info.list ?: events.orEmpty()).filter { e ->
         val p = e.programme
         when (val f = filter) {
             SportFilter.All -> true
@@ -287,9 +288,13 @@ fun SportScreen() {
 private const val DAY = 24 * 3_600_000L
 private const val SPORT_REFRESH_MS = 5 * 60_000L
 
-/** Überschrift einer Sport-Sendung; fehlt die Paarung im EPG, kommt sie aus dem Spielplan nach vorn („A – B (Live: 2. BL)“). */
+/**
+ * Überschrift einer Sport-Sendung, überall gleich aufgebaut: die Paarung („Mainz 05 – Bayern München“, aus dem EPG oder
+ * dem Spielplan), sonst der Wettbewerb ausgeschrieben ohne „Live:“ („Live: BL“ → „Bundesliga“). Der Wettbewerb steht bei
+ * Spielen in der Zeile darüber.
+ */
 private fun headlineOf(p: de.ayutv.data.db.ProgrammeEntity, pairing: String?): String =
-    if (p.pairing() == null && pairing != null) "$pairing (${ProgrammeText.headline(p.title, p.subtitle)})" else p.sportHeadline()
+    ProgrammeText.eventTitle(p.title, p.subtitle, p.description, pairing)
 
 /**
  * Eine Zeile pro Spiel. Markiert (Fokus) klappt sie auf: ganzer Titel, Beschreibung und alle Sender,
@@ -382,7 +387,6 @@ private fun EventRow(
                         e.channel.name + if (e.alsoOn.isNotEmpty()) "  ·  auch auf: " + e.alsoOn.joinToString(", ") { it.name } else "",
                         color = AyuColors.TextSecondary, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     )
-                    if (e.alsoOn.isNotEmpty()) Text("OK halten: anderen Sender wählen oder Verein folgen", color = AyuColors.Accent, fontSize = 12.sp)
                 } else {
                     Text(
                         e.channel.name + if (e.otherChannels > 0) "  ·  auch auf ${e.otherChannels} weiteren" else "",
@@ -401,8 +405,7 @@ private fun competitionOf(p: de.ayutv.data.db.ProgrammeEntity, match: de.ayutv.d
     "bl1" -> "Bundesliga"
     "bl2" -> "2. Bundesliga"
     "bl3" -> "3. Liga"
-    else -> p.title.replace(Regex("""(?i)^\s*(live\s*:?|🔴|fu(ß|ss)ball\s*:)\s*"""), "").replace(Regex("""(?i)^\s*(live\s*:?|fu(ß|ss)ball\s*:)\s*"""), "")
-        .substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
+    else -> match?.league?.let { de.ayutv.data.sport.EspnScores.NAMES[it] } ?: ProgrammeText.competition(p.title).substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
 }
 
 /** Wappen: aus dem Spielplan, sonst gemerkt oder (einmal je Verein) nachgeschlagen. */

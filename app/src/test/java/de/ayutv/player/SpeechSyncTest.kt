@@ -85,6 +85,33 @@ class SpeechSyncTest {
     }
 
     @Test
+    fun findsOffsetAfterTwoMinutes() {
+        // Schnell: zwei Minuten Ton reichen (früher waren es mehrere Minuten, bis der Treffer eindeutig war).
+        val found = listOf(1, 4, 7, 10, 13).count { minute ->
+            val fit = SpeechSync.estimate(listen(film, fromMinute = minute, minutes = 2).signal(), shifted(film.cues, 1.0, -45_000))
+            fit != null && abs(fit.timing.offsetMs + 45_000) <= 300
+        }
+        assertTrue("nur $found von 5 Stellen nach 2 Minuten ausgerichtet", found >= 4)
+    }
+
+    @Test
+    fun loudNoisesDoNotWin() {
+        // Laute Geräusche (Türen, Schüsse, Autos) ohne Untertitel dürfen den Takt nicht verschieben.
+        val noisy = film.pcm.copyOf()
+        val random = Random(9)
+        var e = 3 * rate
+        while (e < noisy.size) {
+            val length = random.nextInt(100, 1_500) * rate / 1000
+            for (k in 0 until length) if (e + k < noisy.size) noisy[e + k] += 0.6f * (random.nextFloat() - 0.5f) * 2
+            e += random.nextInt(3, 12) * rate
+        }
+        val heard = listen(Film(noisy, film.cues), fromMinute = 2, minutes = 5)
+        val fit = SpeechSync.estimate(heard.signal(), shifted(film.cues, 1.0, 12_000))
+        assertNotNull("keine Ausrichtung trotz Geräuschen", fit)
+        assertTrue("Versatz ${fit!!.timing.offsetMs}", abs(fit.timing.offsetMs - 12_000) <= 300)
+    }
+
+    @Test
     fun findsFrameRateAndOffset() {
         val heard = listen(film, fromMinute = 0, minutes = 10)
         val fit = SpeechSync.estimate(heard.signal(), shifted(film.cues, 25.0 / 23.976, -20_000))

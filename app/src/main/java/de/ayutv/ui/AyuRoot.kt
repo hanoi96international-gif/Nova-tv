@@ -168,14 +168,19 @@ fun AyuRoot() {
                                 // Schwaches Gerät: keine Überblendung (die zeichnet zwei ganze Bildschirme halbdurchsichtig),
                                 // aber der neue Bereich gleitet kurz herein. Verschieben kostet den Grafikchip fast nichts:
                                 // Die fertig gezeichnete Ebene wird nur versetzt, der alte Bereich ist sofort weg.
+                                // Richtung wie in der Seitenleiste: ein Bereich weiter unten kommt von unten, weiter oben von oben.
+                                val down = targetState.ordinal >= initialState.ordinal
+                                val ease = de.ayutv.ui.components.EaseOutSoft
                                 if (UiPerformance.reduced) {
-                                    androidx.compose.animation.slideInHorizontally(
-                                        androidx.compose.animation.core.tween(170, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-                                    ) { it / 28 } togetherWith androidx.compose.animation.ExitTransition.None
+                                    androidx.compose.animation.slideInVertically(
+                                        androidx.compose.animation.core.tween(220, easing = ease),
+                                    ) { if (down) it / 9 else -it / 9 } togetherWith androidx.compose.animation.ExitTransition.None
                                 } else {
-                                    (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 60)) +
-                                        androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 24 }) togetherWith
-                                        androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))
+                                    (androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(240, delayMillis = 50, easing = ease)) +
+                                        androidx.compose.animation.slideInVertically(androidx.compose.animation.core.tween(300, easing = ease)) { if (down) it / 10 else -it / 10 } +
+                                        androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(300, easing = ease), initialScale = 0.97f)) togetherWith
+                                        (androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) +
+                                            androidx.compose.animation.slideOutVertically(androidx.compose.animation.core.tween(180)) { if (down) -it / 24 else it / 24 })
                                 }
                             },
                             label = "section",

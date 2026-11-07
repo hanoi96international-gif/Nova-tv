@@ -127,6 +127,15 @@ class ContentRepository(
     /** Ein Spiel auf dem besten Sender [channel]; [alsoOn]: dieselbe Übertragung auf anderen Sendern (je die beste Fassung). */
     data class SportEvent(val programme: ProgrammeEntity, val channel: ChannelEntity, val alsoOn: List<ChannelEntity> = emptyList()) {
         val otherChannels: Int get() = alsoOn.size
+
+        /** Dasselbe Spiel auf weiteren Sendern: deren Sender kommen zu „auch auf“ (nicht doppelt, nicht dieser selbst). */
+        fun mergedWith(other: SportEvent): SportEvent {
+            // Hauptsendung mit Paarung im Titel bevorzugen (dann steht der Name überall gleich).
+            val (main, extra) = if (de.ayutv.data.parse.ProgrammeText.pairing(programme.title, programme.subtitle, programme.description) == null &&
+                de.ayutv.data.parse.ProgrammeText.pairing(other.programme.title, other.programme.subtitle, other.programme.description) != null) other to this else this to other
+            val channels = (main.alsoOn + extra.channel + extra.alsoOn).distinctBy { it.key }.filter { it.key != main.channel.key }
+            return main.copy(alsoOn = channels)
+        }
     }
 
     /**
@@ -141,7 +150,15 @@ class ContentRepository(
         // Was jetzt läuft, vollständig (höchstens eine Sendung je Sender); danach die kommenden bis zur Grenze.
         // Vorher war eine gemeinsame Grenze von 4000 bei großen Senderlisten schnell erreicht.
         val airing = db.programmes().sportBetween(now, now + 1, 50_000)
-        val upcoming = db.programmes().sportBetween(now, now + hours * HOUR, 15_000)
+        // Die kommenden in Abschnitten von 6 Stunden, je mit eigener Grenze: Bei großen Senderlisten war eine gemeinsame
+        // Grenze (15.000) schon nach wenigen Stunden erreicht, spätere Spiele fehlten dann ganz.
+        // Zusammen höchstens etwa 48.000 (Speicher auf dem Stick), je Abschnitt 2.000 bis 8.000.
+        val chunks = (hours + 5) / 6
+        val perChunk = (48_000 / chunks.coerceAtLeast(1)).coerceIn(2_000, 8_000)
+        val upcoming = (0 until hours step 6).flatMap { h ->
+            val from = now + h * HOUR
+            db.programmes().sportBetween(from, minOf(now + hours * HOUR, from + 6 * HOUR), perChunk).filter { it.start >= from || h == 0 }
+        }
         val programmes = (airing + upcoming).distinctBy { it.id }
         if (programmes.isEmpty()) return emptyList()
         // Alle Fassungen je EPG-Kennung (HD, 4K, SD teilen sich oft eine): daraus die beste wählen.
@@ -173,6 +190,10 @@ class ContentRepository(
                     SportEvent(p, c, others)
                 }
                 .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
+                .let { list ->
+                    // Dasselbe Spiel aus verschiedenen TV-Guides (leicht andere Anfangszeit) nur einmal, Wiederholungen nicht.
+                    ProgrammeText.mergeSameMatch(list, { it.programme.start }, { ProgrammeText.pairing(it.programme.title, it.programme.subtitle, it.programme.description) }) { a, b -> a.mergedWith(b) }
+                }
         }
     }
 

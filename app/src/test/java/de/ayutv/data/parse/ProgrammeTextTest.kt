@@ -105,6 +105,10 @@ class ProgrammeTextTest {
         fun dazn(title: String, sub: String?, cat: String?, flags: Int = 0) = ProgrammeText.isSportEvent(title, sub, cat, flags, sportChannel = ProgrammeText.isSportChannel("DAZN 1 HD"))
         // DAZN/Sky: Konferenz ohne Paarung und ohne „Live“ im Titel ist trotzdem live.
         assertEquals(true, dazn("Die Konferenz", "Bundesliga, 12. Spieltag", null))
+        // So auf DAZN 1 (Foto): Saison und Spieltag im Titel.
+        assertEquals(true, ProgrammeText.isSportEvent("Bundesliga Konferenz 26/27 – 9. Spieltag", null, null, 0, sportChannel = ProgrammeText.isSportChannel("DE: DAZN 1 RAW (KABEL)")))
+        assertEquals(true, ProgrammeText.isLive("Bundesliga Konferenz 26/27 – 9. Spieltag", null, null, 0))
+        assertEquals("Bundesliga Konferenz – 9. Spieltag", ProgrammeText.eventTitle("Bundesliga Konferenz 26/27 – 9. Spieltag", null, null))
         assertEquals(true, dazn("Bundesliga", "Konferenz am Samstag", "Fußball"))
         assertEquals(true, dazn("UEFA Champions League – Die Konferenz", null, null))
         assertEquals(true, ProgrammeText.isSportEvent("2. Bundesliga Konferenz", null, "Fußball", 0))
@@ -133,5 +137,69 @@ class ProgrammeTextTest {
             ProgrammeText.sportGroupKey("Hannover 96 – Dynamo Dresden", null, null, "x", "skysportbundesliga2"),
             ProgrammeText.sportGroupKey("Hannover 96 – Dynamo Dresden", null, null, "y", "skysporttopevent"),
         )
+    }
+
+    /** Titel aus dem echten EPG von DAZN und Sky (Januar 2026). */
+    @Test
+    fun realSportGuideTitles() {
+        fun on(channel: String, title: String, category: String? = "Fußball") =
+            ProgrammeText.isSportEvent(title, null, category, 0, sportChannel = ProgrammeText.isSportChannel(channel))
+        // Einzelspiele, wie DAZN und Sky sie nennen
+        assertEquals(true, on("DAZN 1", "Serie A 25/26: Lazio Rom - SSC Neapel"))
+        assertEquals(true, on("DAZN 2", "Bundesliga: 1. FC Heidenheim - FC Bayern München", "Bundesliga"))
+        assertEquals(true, on("Sky Sport 3", "PL: AFC Bournemouth - Tottenham Hotspur, 21. Spieltag"))  // „Hotspur“ ist kein „pur“
+        assertEquals(true, on("Sky Sport Premier League", "PL: West Ham United - Nottingham Forest, 21. Spieltag"))
+        assertEquals(true, on("Sportdigital Fussball 2", "A-League (10. Spieltag): Melbourne City - Perth Glory", null))
+        // Konferenzen, auch mit „alle Spiele“ im Titel
+        assertEquals(true, on("Sky Sport Premier League", "PL: Sonntags-Konferenz, 20. Spieltag"))
+        assertEquals(true, on("DAZN 1", "UEFA Champions League 25/26: Die Konferenz - alle Spiele, alle Tore"))
+        assertEquals(true, on("DAZN 1", "UEFA Champions League: Konferenz", "Fußball"))
+        // Kein Live-Spiel: Rückblicke, Kurzfassungen, Dokus, Vereinssender, Serien mit Bindestrich
+        assertEquals(false, on("Sky Sport Bundesliga", "2. BL: Hannover 96 - Hinrunde 25-26"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: 90in30: MCI - CHE, 20. Spieltag"))
+        assertEquals(false, on("Sky Sport Bundesliga", "BL: Mythos Borussia - Eine Legende wird 125, ep. 1"))
+        assertEquals(false, on("Sky Sport Bundesliga", "BL: Klassiker der Woche: SGE - BVB (17/18)"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: Classic Match: FC Fulham - FC Chelsea"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: Fergie - Rise of a Dynasty"))
+        assertEquals(false, on("Sportdigital Fußball", "LFC TV - FA Cup"))
+        assertEquals(false, on("Sport 1 plus", "Hausmeister Krause - Ordnung muss sein", null))
+        assertEquals(false, on("DAZN 2", "NFL Domestic: NFL ENDZN - Woche 18", null))
+        assertEquals(false, on("DAZN 1", "Doppelpack Europa - Highlights der Serie A und Ligue 1 2025/26: 18./17. Spieltag", "Sport"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: Highlights Samstag, 20. Spieltag"))
+    }
+
+    /** Wie auf dem Foto vom Fernseher (November 2026): verschiedene Anbieter, verschiedene Titel für dasselbe Spiel. */
+    @Test
+    fun sportTitlesAreUniform() {
+        assertEquals("Bundesliga", ProgrammeText.eventTitle("Live: BL", null, "Aus der Red Bull Arena, Deutschland."))
+        assertEquals("1. FSV Mainz 05 – FC Bayern München", ProgrammeText.eventTitle("Live: BL", "1. FSV Mainz 05 - FC Bayern München", null))
+        assertEquals("RB Leipzig – VfL Wolfsburg", ProgrammeText.eventTitle("Live: BL", null, null, pairing = "RB Leipzig - VfL Wolfsburg"))
+        assertEquals("Lazio Rom – SSC Neapel", ProgrammeText.eventTitle("Serie A 25/26: Lazio Rom - SSC Neapel", null, null))
+        assertEquals("2. Bundesliga – Konferenz", ProgrammeText.eventTitle("Live: 2. BL – Konferenz", null, null))
+        assertEquals("Formel 1 - MSC Cruises Grand Prix von Sao Paulo – 3. Freies Training",
+            ProgrammeText.eventTitle("Formel 1 - MSC Cruises Grand Prix von Sao Paulo", "3. Freies Training", null))
+        assertEquals("Bundesliga", ProgrammeText.competition("Live: BL"))
+        assertEquals("Premier League", ProgrammeText.competition("PL: AFC Bournemouth - Tottenham Hotspur, 21. Spieltag"))
+        assertEquals("Serie A", ProgrammeText.competition("Serie A 25/26: Lazio Rom - SSC Neapel"))
+        assertEquals("Bundesliga", ProgrammeText.competition("Fußball: Bundesliga"))
+    }
+
+    @Test
+    fun sameMatchFromTwoGuidesOnce() {
+        assertEquals(true, ProgrammeText.samePairing("1. FSV Mainz 05 – FC Bayern München", "Mainz 05 - Bayern München"))
+        assertEquals(false, ProgrammeText.samePairing("1. FSV Mainz 05 – FC Bayern München", "Borussia Dortmund – SV 07 Elversberg"))
+        data class E(val start: Long, val pairing: String?, val channels: List<String>)
+        val hour = 3_600_000L
+        val merged = ProgrammeText.mergeSameMatch(
+            listOf(
+                E(0, "1. FSV Mainz 05 – FC Bayern München", listOf("Sky Sport Bundesliga UHD")),
+                E(15 * 60_000L, "Mainz 05 - Bayern München", listOf("Sky Go Bundesliga 1 4K")),   // anderer Anbieter, 15 min später
+                E(5 * 60_000L, null, listOf("Sky Sport Bundesliga 2")),                           // ohne Paarung: bleibt
+                E(5 * hour, "Mainz 05 - Bayern München", listOf("Sky Sport Bundesliga 1")),       // Wiederholung: entfällt
+            ),
+            { it.start }, { it.pairing },
+        ) { a, b -> a.copy(channels = a.channels + b.channels) }
+        assertEquals(2, merged.size)
+        assertEquals(listOf("Sky Sport Bundesliga UHD", "Sky Go Bundesliga 1 4K"), merged[0].channels)
     }
 }

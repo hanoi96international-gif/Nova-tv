@@ -24,7 +24,11 @@ import java.util.TimeZone
  * Spielstände der Bundesliga, 2. und 3. Liga von OpenLigaDB (frei, ohne Konto). Für die Sport-Übersicht
  * (Stand und Spielminute bei laufenden Spielen) und für Tor-Hinweise im Bild. Ohne Netz oder bei Fehlern: nichts.
  */
-class LiveScores(private val http: OkHttpClient, private val base: String = "https://api.openligadb.de") {
+class LiveScores(
+    private val http: OkHttpClient,
+    private val base: String = "https://api.openligadb.de",
+    private val espnBase: String = "https://site.api.espn.com",
+) {
     data class Match(
         val id: Long,
         val league: String,
@@ -46,15 +50,21 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         /** Vereinswappen (Bild-Adresse laut OpenLigaDB), falls angegeben. */
         val icon1: String? = null,
         val icon2: String? = null,
+        /** Nur ESPN: „pre“, „in“, „post“ und der Stand der Uhr („2nd 12:34“, „Q3 5:10“). */
+        val state: String? = null,
+        val statusText: String? = null,
     ) {
         val score: String get() = "$goals1:$goals2"
         fun started(now: Long) = now >= kickoff
-        fun live(now: Long) = !finished && now >= kickoff && now < kickoff + MAX_DURATION_MS
+        fun live(now: Long) = if (state != null) state == "in" else !finished && now >= kickoff && now < kickoff + MAX_DURATION_MS
+        /** Fußball (Tor-Hinweise mit ⚽ nur dafür). */
+        val football: Boolean get() = league.startsWith("bl") || EspnScores.LEAGUES[league]?.startsWith("soccer/") == true
         val pairing: String get() = "$team1 – $team2"
 
         /** Ungefähre Spielminute aus der Anstoßzeit (15 min Pause); „HZ“ in der Pause. */
         fun minute(now: Long): String? {
             if (!live(now)) return null
+            if (!football) return statusText
             val elapsed = ((now - kickoff) / 60_000).toInt()
             return when {
                 elapsed <= 45 -> "${elapsed.coerceAtLeast(1)}'"
@@ -78,7 +88,7 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
 
     /** Aktuelle Spieltage aller Ligen, höchstens einmal pro Minute neu geladen. */
     suspend fun current(now: Long = System.currentTimeMillis()): List<Match> = lock.withLock {
-        if (now - cachedAt < CACHE_MS) return@withLock cached
+        if (now - cachedAt < CACHE_MS) return@withLock cached + foreign
         val fresh = withContext(Dispatchers.IO) {
             LEAGUES.flatMap { league ->
                 runCatching {
@@ -91,8 +101,25 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         // Fehlschlag (kein Netz): die alten Stände behalten, aber nicht sofort wieder fragen.
         if (fresh.isNotEmpty() || cached.isEmpty()) cached = fresh
         cachedAt = now
-        cached
+        // NHL, NBA, NFL, Europapokal, Premier League … (ESPN): seltener, alle 5 Minuten.
+        if (now - foreignAt >= FOREIGN_CACHE_MS) {
+            val more = withContext(Dispatchers.IO) {
+                EspnScores.LEAGUES.keys.flatMap { league ->
+                    runCatching {
+                        val url = EspnScores.url(league, now, espnBase) ?: return@runCatching emptyList()
+                        http.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                            if (!response.isSuccessful) emptyList() else EspnScores.parse(response.body.string(), league)
+                        }
+                    }.getOrDefault(emptyList())
+                }
+            }
+            if (more.isNotEmpty() || foreign.isEmpty()) foreign = more
+            foreignAt = now
+        }
+        cached + foreign
     }
+    @Volatile private var foreign: List<Match> = emptyList()
+    @Volatile private var foreignAt = 0L
 
     /**
      * Sendung ohne Paarung („Live: 2. BL“, in der Beschreibung „Aus der Schüco-Arena in Bielefeld.“): das Spiel, das in
@@ -107,7 +134,9 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         val scored = matches
             .filter { it.kickoff in (start - 15 * MINUTE) until stop && (league == null || it.league == league) }
             .map { m ->
-                val venue = listOfNotNull(m.city, m.stadium).flatMap { Teams.textWords(it) }.filter { it.length >= 4 && it !in VENUE_WORDS }.toSet()
+                // Spielort laut OpenLigaDB (fehlt oft), dazu Stadion und Stadt des Heimvereins aus der eigenen Liste.
+                val venue = listOfNotNull(m.city, m.stadium).flatMap { Teams.textWords(it) }.filter { it.length >= 4 && it !in VENUE_WORDS }.toSet() +
+                    Venues.of(m.team1)
                 // Stadion oder Stadt zählen doppelt (so nennt Sky Einzelspiele), Vereinsnamen einfach.
                 val score = 2 * venue.count { it in text } + Teams.keywords(m.team1).count { it in text } + Teams.keywords(m.team2).count { it in text }
                 m to score
@@ -143,6 +172,26 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         return out
     }
 
+    /** Eine Sport-Sendung für [assign]. */
+    data class Show(val title: String, val subtitle: String?, val description: String?, val start: Long, val stop: Long, val pairing: String?)
+
+    /**
+     * Das Spiel zu jeder Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung, sonst per
+     * Ausschluss (das einzige übrige Spiel der Liga zu dieser Zeit, wenn die anderen schon anderen Sendern gehören).
+     */
+    fun assign(matches: List<Match>, shows: List<Show>): List<Match?> {
+        if (matches.isEmpty()) return shows.map { null }
+        val direct = shows.map { s ->
+            find(matches, s.pairing, s.start, s.title)
+                ?: if (s.pairing == null) byVenue(matches, s.title, s.subtitle, s.description, s.start, s.stop) else null
+        }
+        val open = shows.indices.filter { direct[it] == null && shows[it].pairing == null }
+        val found = byElimination(matches, open.map { i -> shows[i].let { Open(it.title, it.subtitle, it.start, it.stop) } }, direct.filterNotNull().toSet())
+        val result = direct.toMutableList()
+        for ((k, m) in found) result[open[k]] = m
+        return result
+    }
+
     /** Das Spiel zur TV-Paarung, falls es eins gibt (Anstoß höchstens 3 Stunden neben der Sendung). */
     fun find(matches: List<Match>, pairing: String?, start: Long, context: String = ""): Match? {
         if (pairing == null) return null
@@ -156,14 +205,27 @@ class LiveScores(private val http: OkHttpClient, private val base: String = "htt
         private val VENUE_WORDS = setOf("arena", "stadion", "stadium", "park", "sportpark", "sportplatz", "kampfbahn")
         private val MULTI = Regex("""(?i)konferenz|multiview|alle spiele|highlights|zusammenfassung""")
 
-        /** Welche Liga die Sendung nennt (bl1, bl2, bl3), sonst null. */
+        /** Welche Liga die Sendung nennt (bl1, bl2, bl3, nhl, nba, nfl, eng.1 …), sonst null. */
         fun leagueOf(text: String): String? = when {
+            Regex("""\bNHL\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "nhl"
+            Regex("""\bNBA\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "nba"
+            Regex("""\bNFL\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "nfl"
+            Regex("""(?i)women|frauen""").containsMatchIn(text) -> null
+            Regex("""(?i)champions league|\bucl\b""").containsMatchIn(text) -> "uefa.champions"
+            Regex("""(?i)conference league|\buecl\b""").containsMatchIn(text) -> "uefa.europa.conf"
+            Regex("""(?i)europa league|\buel\b""").containsMatchIn(text) -> "uefa.europa"
+            Regex("""(?i)premier league|\bepl\b|^\s*(live\s*:?\s*)?pl\b""").containsMatchIn(text) -> "eng.1"
+            Regex("""(?i)\bla ?liga\b|primera divisi""").containsMatchIn(text) -> "esp.1"
+            Regex("""(?i)\bserie a\b""").containsMatchIn(text) -> "ita.1"
+            Regex("""(?i)\bligue 1\b""").containsMatchIn(text) -> "fra.1"
+            Regex("""(?i)dfb-?pokal""").containsMatchIn(text) -> "ger.dfb_pokal"
             Regex("""(?i)\b3\.\s*liga\b""").containsMatchIn(text) -> "bl3"
             Regex("""(?i)\b2\.\s*(bl|bundesliga)\b""").containsMatchIn(text) -> "bl2"
             Regex("""(?i)\b(bl|bundesliga)\b""").containsMatchIn(text) -> "bl1"
             else -> null
         }
         private const val CACHE_MS = 60_000L
+        private const val FOREIGN_CACHE_MS = 5 * 60_000L
         private const val HOUR = 3_600_000L
         private const val MAX_DURATION_MS = 150 * 60_000L
         private val JSON = Json { ignoreUnknownKeys = true; isLenient = true }

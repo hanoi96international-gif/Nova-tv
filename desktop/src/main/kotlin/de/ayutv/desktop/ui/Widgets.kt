@@ -412,3 +412,27 @@ object TextTarget {
     class Entry(val set: (String) -> Unit, val submit: () -> Unit)
     var current: Entry? = null
 }
+
+/** Schnell los, weich aus (wie die Bewegungen auf dem Fire TV). */
+val EaseOutSoft = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+
+/**
+ * Sanftes Erscheinen einer Ebene (Detailseite, andere Kategorie, Player), jedes Mal wenn sich [key] ändert: Sie
+ * gleitet um [distance] herein (positiv = von rechts), blendet auf und wächst von [scaleFrom] auf volle Größe.
+ * Liest den Fortschritt nur beim Zeichnen: kein Neuaufbau je Bild.
+ */
+@Composable
+fun Modifier.appear(key: Any?, distance: androidx.compose.ui.unit.Dp = 40.dp, durationMs: Int = 240, scaleFrom: Float = 0.975f): Modifier {
+    val progress = remember(key) { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(key) { progress.animateTo(1f, tween(durationMs, easing = EaseOutSoft)) }
+    return graphicsLayer {
+        val rest = 1f - progress.value
+        if (rest > 0f) {
+            translationX = rest * distance.toPx()
+            alpha = 1f - rest * 0.85f
+            val scale = 1f - rest * (1f - scaleFrom)
+            scaleX = scale
+            scaleY = scale
+        }
+    }
+}

@@ -1,5 +1,6 @@
 package de.ayutv.ui.live
 
+import de.ayutv.ui.components.appear
 import de.ayutv.ui.components.isPortrait
 import de.ayutv.ui.components.keepVerticalFocus
 import androidx.compose.runtime.produceState
@@ -197,6 +198,8 @@ fun LiveScreen() {
             entries,
             selectedGroup,
             onSelect = { selectedGroup = it },
+            // Zurück aus der Gruppe: Die Spalte gleitet von links wieder herein.
+            modifier = Modifier.appear(drill.backTick, (-40).dp),
             onOpen = { drill.enter() },
             focusSelectedTick = drill.backTick,
             onLongClick = { name ->
@@ -248,8 +251,9 @@ fun LiveScreen() {
                 selecting = false
                 picked = emptyList()
             }
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-            if (drill.isOpen) de.ayutv.ui.components.DrillTitle(entries.firstOrNull { it.id == selectedGroup }?.label ?: "Sender")
+            // Gruppe öffnen und schließen: Die Senderliste gleitet an ihren neuen Platz.
+            Column(Modifier.weight(1f).fillMaxHeight().appear(drill.isOpen, if (drill.isOpen) 56.dp else (-24).dp)) {
+            if (drill.isOpen) de.ayutv.ui.components.DrillTitle(entries.firstOrNull { it.id == selectedGroup }?.label ?: "Sender", onBack = { drill.close() })
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).fillMaxWidth()

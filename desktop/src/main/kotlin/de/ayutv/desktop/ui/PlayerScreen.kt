@@ -62,10 +62,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import de.ayutv.data.parse.Episodes
-import de.ayutv.data.parse.IntroSkip
 import de.ayutv.desktop.data.Channel
 import de.ayutv.desktop.data.numberOf
-import de.ayutv.desktop.data.IntroMark
 import de.ayutv.desktop.data.Programme
 import de.ayutv.desktop.input.RemoteButton
 import de.ayutv.desktop.input.digit
@@ -102,6 +100,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     var menu by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
     // Menü rechts wie auf dem Fire TV (☰), darin die Sprachauswahl; unten „Untertitel-Zeit einstellen“.
     var panel by remember { mutableStateOf(Panel.NONE) }
+    /** Offene Unterseite des Menüs (null = Übersicht). */
+    var menuPage by remember { mutableStateOf<MenuSection?>(null) }
     var syncPanel by remember { mutableStateOf(false) }
     var syncIndex by remember { mutableStateOf(0) }
     var syncConfirmed by remember { mutableStateOf<String?>(null) }
@@ -140,31 +140,16 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
         app.play(vod.copy(key = Episodes.key(series.key, episode.id), title = Episodes.title(series.name, episode), url = url, startMs = 0, episodeId = episode.id))
     }
 
-    // Intro überspringen (Serien): Knopf am Anfang, gelernte Stelle je Serie; Spulen kurz danach korrigiert sie.
-    val series = (playback as? Playback.Vod)?.series
-    val learned = series?.let { s -> user.intros[s.key]?.let { IntroSkip.Intro(it.startMs, it.lengthMs) } }
-    var skippedFrom by remember(playback) { mutableLongStateOf(-1L) }
-    var skippedAt by remember(playback) { mutableLongStateOf(0L) }
-    val introVisible = series != null && skippedFrom < 0 && IntroSkip.visible(player.positionMs, learned)
-
-    fun skipIntro() {
-        val from = player.positionMs
-        skippedFrom = from
-        skippedAt = System.currentTimeMillis()
-        player.seekTo(IntroSkip.target(from, learned))
-    }
+    // Nächste Folge (Serien): in der letzten Minute ein Hinweis mit Countdown, am Ende startet sie von selbst.
+    // OK startet sofort, eine andere Taste hält den Countdown an (dann endet die Folge ohne Weiterschalten).
+    var nextCancelled by remember(playback) { mutableStateOf(false) }
+    val remainingMs = player.durationMs - player.positionMs
+    val nextCardVisible = nextEpisode != null && player.durationMs > 0 && remainingMs in 0..NEXT_BEFORE_END_MS && player.positionMs >= player.durationMs / 2
+    val nextCountdown = if (nextCardVisible && !nextCancelled && player.playing) ((remainingMs + 999) / 1000).toInt() else -1
 
     fun seek(delta: Long) {
         player.seekBy(delta)
         show()
-        val s = series ?: return
-        if (skippedFrom >= 0 && System.currentTimeMillis() - skippedAt < IntroSkip.LEARN_WINDOW_MS) {
-            skippedAt = System.currentTimeMillis()
-            val target = (player.positionMs + delta).coerceAtLeast(0)
-            IntroSkip.learn(skippedFrom, target)?.let { intro ->
-                store.updateUser { it.copy(intros = it.intros + (s.key to IntroMark(intro.startMs, intro.lengthMs))) }
-            }
-        }
     }
 
     fun toggleFavorite(channel: Channel) {
@@ -172,8 +157,9 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     }
 
     /** ☰-Menü rechts (wie auf dem Fire TV): Untertitel, Ton, Klang, Bild, Schlaf-Timer, bei Live TV Favorit und Aufnahme. */
-    fun openMenu() {
+    fun openMenu(page: MenuSection? = null) {
         lastInput = System.currentTimeMillis()
+        menuPage = page
         panel = Panel.MENU
     }
 
@@ -200,6 +186,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     BackHandler(app, enabled = menu == null && (panel != Panel.NONE || syncPanel)) {
         when {
             panel == Panel.LANGUAGES -> panel = Panel.MENU
+            // Im Menü geht Zurück erst von der Unterseite zur Übersicht.
+            panel == Panel.MENU && menuPage != null -> menuPage = null
             panel == Panel.MENU -> closePanel()
             else -> { syncPanel = false; refocus() }
         }
@@ -228,7 +216,7 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
     LaunchedEffect((playback as? Playback.Live)?.channel?.key) { if (layer != Layer.CHANNELS) show() }
     // Stand von Filmen regelmäßig merken; am Ende einer Folge die nächste.
     LaunchedEffect(playback) {
-        player.onFinished = { if (nextEpisode != null) playNext() else app.stopPlayback() }
+        player.onFinished = { if (nextEpisode != null && !nextCancelled) playNext() else app.stopPlayback() }
         while (playback is Playback.Vod) {
             delay(15_000)
             app.savePosition()
@@ -278,7 +266,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                             syncConfirmed = "✓ Untertitel ${shiftLabel(app.subtitleDelayMs)} – passt es? Sonst die nächste Zeile abwarten und noch einmal OK."
                         }
                         RemoteButton.PLAY_PAUSE, RemoteButton.PLAY, RemoteButton.PAUSE -> player.togglePause()
-                        RemoteButton.MENU, RemoteButton.CAPTIONS -> openMenu()
+                        RemoteButton.MENU -> openMenu()
+                        RemoteButton.CAPTIONS -> openMenu(MenuSection.SUBTITLES)
                         else -> return@onKeyEvent false
                     }
                     return@onKeyEvent true
@@ -307,12 +296,14 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         Key.M -> player.toggleMute()
                         Key.Plus, Key.NumPadAdd, Key.Equals -> { player.changeVolume(5); show() }
                         Key.Minus, Key.NumPadSubtract -> { player.changeVolume(-5); show() }
-                        Key.T, Key.U, Key.C, Key.Tab -> openMenu()
+                        Key.Tab -> openMenu()
+                        Key.T -> openMenu(MenuSection.AUDIO)
+                        Key.U, Key.C -> openMenu(MenuSection.SUBTITLES)
                         Key.L -> (playback as? Playback.Vod)?.let { app.loadSubtitles(it) }
                         Key.G -> shiftSubtitles(-250)
                         Key.H -> shiftSubtitles(250)
                         Key.N -> playNext()
-                        Key.I -> if (introVisible) skipIntro() else { if (layer == Layer.INFO) tech = !tech; show() }
+                        Key.I -> { if (layer == Layer.INFO) tech = !tech; show() }
                         else -> return@onKeyEvent false
                     }
                     return@onKeyEvent true
@@ -333,7 +324,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         }
                         RemoteButton.RIGHT, RemoteButton.INFO -> if (first) { if (layer == Layer.INFO) tech = !tech; show() }
                         RemoteButton.LAST_CHANNEL, RemoteButton.BLUE -> if (first) app.backZap()
-                        RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
+                        RemoteButton.MENU -> if (first) openMenu()
+                        RemoteButton.CAPTIONS -> if (first) openMenu(MenuSection.SUBTITLES)
                         RemoteButton.RED -> if (first) { toggleFavorite(live.channel); show() }
                         // Wie auf dem Fire TV: ⏯ hält an (zeitversetzt weiter), ⏩ zurück zu Live, ⏪ Sendung von Anfang (Archiv).
                         RemoteButton.PLAY_PAUSE -> { if (first) app.toggleLivePause(); show() }
@@ -350,9 +342,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     return@onKeyEvent true
                 }
                 // Filme und Serien.
-                if (first && (button == RemoteButton.OK)) {
-                    if (introVisible) { skipIntro(); return@onKeyEvent true }
-                }
+                if (first && button == RemoteButton.OK && nextCardVisible && layer != Layer.INFO) { playNext(); return@onKeyEvent true }
+                if (first && nextCountdown >= 0 && button != RemoteButton.OK) nextCancelled = true
                 when (button) {
                     RemoteButton.OK, RemoteButton.PLAY_PAUSE -> {
                         if (first) {
@@ -366,7 +357,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     RemoteButton.LEFT, RemoteButton.REWIND -> seek(seekStep(button, forward = false, shift = e.isShiftPressed))
                     RemoteButton.RIGHT, RemoteButton.FAST_FORWARD -> seek(seekStep(button, forward = true, shift = e.isShiftPressed))
                     RemoteButton.UP, RemoteButton.DOWN, RemoteButton.INFO -> if (first) { if (layer == Layer.INFO) tech = !tech; show() }
-                    RemoteButton.MENU, RemoteButton.CAPTIONS -> if (first) openMenu()
+                    RemoteButton.MENU -> if (first) openMenu()
+                    RemoteButton.CAPTIONS -> if (first) openMenu(MenuSection.SUBTITLES)
                     RemoteButton.NEXT, RemoteButton.CHANNEL_UP -> if (first) { if ((playback as? Playback.Vod)?.archive != null) app.backToLive() else playNext() }
                     else -> return@onKeyEvent false
                 }
@@ -473,7 +465,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                         )
                     }
                 }
-                Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
+                // Knöpfe oben rechts nur ohne offenes Menü (sie lägen sonst halb verdeckt unter dem Menü).
+                if (panel == Panel.NONE) Row(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
                     if (live != null) { TextButton("☰ Senderliste", { show(Layer.CHANNELS) }); Spacer(Modifier.width(8.dp)) }
                     TextButton("☰ Ton / Untertitel / Bild", { openMenu() })
                     Spacer(Modifier.width(8.dp))
@@ -483,9 +476,18 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                 }
             }
         }
-        if (introVisible) {
-            Box(Modifier.align(Alignment.BottomEnd).padding(end = 40.dp, bottom = if (layer == Layer.INFO) 170.dp else 48.dp)) {
-                TextButton("⏭ Intro überspringen (OK)", { skipIntro() }, primary = true)
+        if (nextCardVisible) nextEpisode?.let { (episode, _) ->
+            Column(
+                Modifier.align(Alignment.BottomEnd).padding(end = 40.dp, bottom = if (layer == Layer.INFO) 170.dp else 48.dp)
+                    .appear(Unit, 32.dp, 260),
+                horizontalAlignment = Alignment.End,
+            ) {
+                TextButton("⏭ Nächste Folge: S${episode.season} E${episode.episode}", { playNext() }, primary = true)
+                Spacer(Modifier.height(6.dp))
+                Label(
+                    if (nextCountdown >= 0) "Startet in $nextCountdown s  ·  OK: jetzt  ·  andere Taste: anhalten" else "OK: jetzt starten",
+                    Type.small.copy(color = Color.White),
+                )
             }
         }
         quick?.let { list ->
@@ -562,6 +564,8 @@ fun PlayerScreen(app: AppState, playback: Playback, window: WindowState, toggleF
                     openDelay = { menu = { AudioDelayDialog(app, onDismiss = { menu = null }) } },
                     close = { closePanel() },
                 ),
+                page = menuPage,
+                onPage = { menuPage = it; lastInput = System.currentTimeMillis() },
             )
         }
         AnimatedVisibility(
@@ -836,3 +840,6 @@ fun VideoView(player: de.ayutv.desktop.player.VideoPlayer, modifier: Modifier = 
         Image(frame, null, modifier.clipToBounds(), contentScale = scale, filterQuality = FilterQuality.Low)
     }
 }
+
+/** So lange vor dem Ende einer Folge erscheint „Nächste Folge“ mit Countdown. */
+private const val NEXT_BEFORE_END_MS = 60_000L

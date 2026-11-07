@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.unit.sp
 import de.ayutv.desktop.ui.Selectable
+import de.ayutv.desktop.ui.appear
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -89,6 +90,7 @@ import java.awt.event.WindowFocusListener
 fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
+    if (args.firstOrNull() == "--tour") return Tour.run(args.getOrNull(1))
     val store = Store(Store.defaultDir())
     Log.init(store.dir)
     // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
@@ -219,16 +221,25 @@ fun App(app: AppState, window: WindowState) {
         if (multiview != null) {
             de.ayutv.desktop.ui.MultiviewScreen(app, multiview)
         } else if (playing != null) {
-            PlayerScreen(app, playing, window, ::toggleFullscreen)
+            // Player öffnet: wächst aus der Mitte auf und blendet ein (nur beim Öffnen, nicht bei jedem Umschalten).
+            Box(Modifier.fillMaxSize().appear(Unit, 0.dp, 280, scaleFrom = 0.92f)) {
+                PlayerScreen(app, playing, window, ::toggleFullscreen)
+            }
         } else {
-            Row(Modifier.fillMaxSize()) {
+            // Zurück aus dem Player: Die Übersicht kommt aus dem Hintergrund nach vorn.
+            Row(Modifier.fillMaxSize().appear(Unit, 0.dp, 260, scaleFrom = 1.04f)) {
                 Sidebar(app)
                 // Seitenwechsel: neue Seite blendet weich ein und rückt ein Stück herauf, die alte blendet schnell aus.
                 AnimatedContent(
                     targetState = app.screen,
                     modifier = Modifier.weight(1f).fillMaxHeight().padding(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 12.dp),
                     transitionSpec = {
-                        (fadeIn(tween(220, delayMillis = 50)) + slideInVertically(tween(260)) { it / 36 }) togetherWith fadeOut(tween(90))
+                        // Richtung wie in der Seitenleiste: ein Bereich weiter unten kommt von unten, weiter oben von oben.
+                        val down = targetState.ordinal >= initialState.ordinal
+                        (fadeIn(tween(240, delayMillis = 50, easing = de.ayutv.desktop.ui.EaseOutSoft)) +
+                            slideInVertically(tween(300, easing = de.ayutv.desktop.ui.EaseOutSoft)) { if (down) it / 12 else -it / 12 } +
+                            androidx.compose.animation.scaleIn(tween(300, easing = de.ayutv.desktop.ui.EaseOutSoft), initialScale = 0.97f)) togetherWith
+                            (fadeOut(tween(110)) + slideOutVertically(tween(180)) { if (down) -it / 28 else it / 28 })
                     },
                 ) { screen ->
                     when (screen) {

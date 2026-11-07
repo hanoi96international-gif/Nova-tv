@@ -442,7 +442,7 @@ private fun <T : de.ayutv.desktop.data.Choice> Chips(title: String, options: Lis
 
 /** Beispielzeile im eingestellten Aussehen der Untertitel. */
 @Composable
-private fun SubtitlePreview(user: de.ayutv.desktop.data.UserData) {
+internal fun SubtitlePreview(user: de.ayutv.desktop.data.UserData, modifier: Modifier = Modifier.width(520.dp)) {
     val color = androidx.compose.ui.graphics.Color(0xFF000000 or user.subtitleColor.rgb.toLong())
     val shadow = when (user.subtitleBackground) {
         de.ayutv.desktop.data.SubtitleBackground.OUTLINE -> androidx.compose.ui.graphics.Shadow(androidx.compose.ui.graphics.Color.Black, androidx.compose.ui.geometry.Offset(1.5f, 1.5f), 3f)
@@ -455,7 +455,7 @@ private fun SubtitlePreview(user: de.ayutv.desktop.data.UserData) {
         de.ayutv.desktop.data.SubtitlePosition.HIGH -> 40.dp
     }
     androidx.compose.foundation.layout.Box(
-        Modifier.width(520.dp).height(130.dp).padding(vertical = 4.dp)
+        modifier.height(130.dp).padding(vertical = 4.dp)
             .background(
                 androidx.compose.ui.graphics.Brush.linearGradient(listOf(androidx.compose.ui.graphics.Color(0xFF2B4B6F), androidx.compose.ui.graphics.Color(0xFF6B8E5A), androidx.compose.ui.graphics.Color(0xFFC9B37E))),
                 androidx.compose.foundation.shape.RoundedCornerShape(10.dp),

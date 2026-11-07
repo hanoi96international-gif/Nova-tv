@@ -1,5 +1,6 @@
 package de.ayutv.ui.settings
 
+import de.ayutv.ui.components.tapToGoBack
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -227,7 +228,12 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
         ) {
             item(key = "title-${page.name}") {
                 Column(Modifier.padding(bottom = 8.dp)) {
-                    Text(if (drill.isOpen) "‹  ${page.title}" else page.title, style = MaterialTheme.typography.headlineMedium)
+                    Text(
+                        if (drill.isOpen) "‹  ${page.title}" else page.title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        // Handy: Antippen von „‹ Wiedergabe“ führt zurück zur Übersicht.
+                        modifier = Modifier.tapToGoBack(if (drill.isOpen) ({ drill.close() }) else null),
+                    )
                     Text(page.description, color = AyuColors.TextSecondary, fontSize = 14.sp)
                     SyncBanner(sync, Modifier.padding(top = 4.dp))
                 }
@@ -710,7 +716,7 @@ fun SettingsScreen(onAddPlaylist: () -> Unit, onManageGroups: (PlaylistEntity) -
                         SettingRow(
                             "Serien: nächste Folge automatisch",
                             onOff(settings.autoNextEpisode),
-                            "Am Ende einer Folge startet die nächste nach 10 Sekunden (OK sofort, Zurück bleibt stehen).",
+                            "In der letzten Minute erscheint „Nächste Folge“ mit Countdown, am Ende startet sie von selbst (OK sofort, andere Taste hält an).",
                         ) { update { it.copy(autoNextEpisode = !it.autoNextEpisode) } }
                     }
                     if (touch) item {
@@ -1271,6 +1277,7 @@ private fun PlaylistRow(
             delay(30)
         }
     }
+    var more by remember(playlist.id) { mutableStateOf(false) }
     fun saveName() {
         val trimmed = newName.trim()
         if (trimmed.isNotEmpty() && trimmed != playlist.name) onRename(trimmed)
@@ -1326,14 +1333,19 @@ private fun PlaylistRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Übersichtlich: Was man oft braucht, steht da; Umbenennen und Löschen erst unter „Mehr“.
             OutlinedButton(onClick = onGroups) { Text("Gruppen") }
-            OutlinedButton(onClick = { newName = playlist.name; renaming = !renaming }) { Text(if (renaming) "Abbrechen" else "Umbenennen") }
-            if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
             OutlinedButton(onClick = onRefresh) { Text("Aktualisieren") }
-            OutlinedButton(
-                onClick = onDelete,
-                colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
-            ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
+            if (missingGuide) OutlinedButton(onClick = onMapGuide) { Text("TV-Guide zuordnen") }
+            val expanded = more || renaming || confirmingDelete
+            if (expanded) {
+                OutlinedButton(onClick = { newName = playlist.name; renaming = !renaming }) { Text(if (renaming) "Abbrechen" else "Umbenennen") }
+                OutlinedButton(
+                    onClick = onDelete,
+                    colors = if (confirmingDelete) ButtonDefaults.colors(containerColor = AyuColors.Live) else ButtonDefaults.colors(),
+                ) { Text(if (confirmingDelete) "Wirklich löschen?" else "Löschen", maxLines = 1) }
+            }
+            if (!renaming && !confirmingDelete) OutlinedButton(onClick = { more = !more }) { Text(if (more) "Weniger" else "Mehr …") }
         }
         if (renaming) {
             Row(Modifier.fillMaxWidth().padding(start = 134.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {

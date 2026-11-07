@@ -57,11 +57,9 @@ import de.ayutv.data.Languages
 import de.ayutv.data.record.Recording
 import de.ayutv.data.LiveFormat
 import de.ayutv.data.parse.Episodes
-import de.ayutv.data.IntroStore
 import de.ayutv.hideSystemBars
 import de.ayutv.ui.components.FitToScreen
 import de.ayutv.ui.components.hasTouchscreen
-import de.ayutv.data.parse.IntroSkip
 import de.ayutv.data.repo.ContentRepository
 import de.ayutv.data.db.ChannelEntity
 import de.ayutv.data.db.HistoryEntity
@@ -267,26 +265,15 @@ class PlayerActivity : ComponentActivity() {
     /** Sendezeit (im Zwischenspeicher) am Anfang des laufenden zeitversetzten Abschnitts. */
     private var timeshiftStartMs = 0L
     private var timeshiftErrors = 0
-    /** Serien: Intro und Rückblick überspringen, nächste Folge ab dem Abspann ([EpisodeExtras]). */
+    /** Serien: nächste Folge in der letzten Minute ([EpisodeExtras]). */
     private val episodes = EpisodeExtras(object : EpisodeExtras.Host {
         override val player get() = this@PlayerActivity.player
         override val vod get() = this@PlayerActivity.vod
         override val positionMs get() = this@PlayerActivity.positionMs
         override val durationMs get() = this@PlayerActivity.durationMs
-        override val everReady get() = this@PlayerActivity.everReady
         override val scope get() = lifecycleScope
         override val container get() = this@PlayerActivity.container
         override val autoNextEpisode get() = settings.autoNextEpisode
-        override fun levels(fromMs: Long, toMs: Long) = introLevels(fromMs, toMs)
-        override fun lastSubtitleEnd(): Long? = externalCues.lastOrNull()?.let { last ->
-            (elasticTiming?.toVideo(last.end) ?: subtitleTiming.toVideo(last.end)) + subtitleDelayMs
-        }
-        override fun seekExact(to: Long) {
-            val p = this@PlayerActivity.player ?: return
-            seekExact(p, to)
-            this@PlayerActivity.positionMs = to
-        }
-        override fun showStatus(text: String) { subtitleStatus = text }
         override fun closeOverlay() = this@PlayerActivity.closeOverlay()
         override fun startEpisode(next: ContentRepository.NextEpisode) {
             saveProgress()
@@ -307,8 +294,6 @@ class PlayerActivity : ComponentActivity() {
     val nextEpisode get() = episodes.nextEpisode
     val nextCardVisible get() = episodes.nextCardVisible
     val nextCountdown get() = episodes.nextCountdown
-    val introVisible get() = episodes.introVisible
-    val introLabel get() = episodes.introLabel
     fun playNextEpisode() = episodes.playNext()
     private var liveSourceLanguage: String? = null
     /** Übersetzung eingebetteter Untertitel mit Vorlauf: Quellspur, Ergebnisse je Einblendung (Startzeit). */
@@ -1284,6 +1269,7 @@ class PlayerActivity : ComponentActivity() {
         // Beim nächsten Öffnen wieder das normale Menü, nicht die Unterauswahl von vorhin.
         epgPicker = false
         pipChoices = null
+        menuPage = null
     }
 
     private fun onDigit(digit: Int) {
@@ -1360,29 +1346,33 @@ class PlayerActivity : ComponentActivity() {
 
     // ---------------------------------------------------------------- Serien
 
-    /** Gehörte Lautstärke und, wo nichts gehört wurde (Ton an der Soundbar), die selbst dekodierte. */
-    private fun introLevels(fromMs: Long, toMs: Long): FloatArray {
-        val heard = heardSpeech.levels(fromMs, toMs)
-        if (aheadSpeech.seconds() == 0) return heard
-        val ahead = aheadSpeech.levels(fromMs, toMs)
-        return FloatArray(maxOf(heard.size, ahead.size)) { i ->
-            heard.getOrNull(i)?.takeUnless { it.isNaN() } ?: ahead.getOrNull(i) ?: Float.NaN
-        }
-    }
-
     /**
-     * Folgen, deren Ton an Soundbar oder Receiver geht: ihn nebenbei selbst dekodieren (nur die ersten Minuten, fürs
-     * Intro). Wird er im Gerät dekodiert, hört die App ohnehin mit.
+     * Geladene Untertitel, die noch am Ton ausgerichtet werden: den Ton nebenbei selbst dekodieren, so wie der Player
+     * ihn lädt (20–50 s vor dem Bild). So steht der Versatz früher fest, und auch Ton, der als Dolby/DTS an Soundbar
+     * oder Receiver geht, lässt sich auswerten, ohne den Raumklang abzuschalten.
      */
     private fun updateAudioAhead() {
         val format = player?.audioFormat
-        val wanted = forcedAhead || vod?.kind == HistoryKind.EPISODE && format != null && passesThrough(format)
-        audioAhead.untilMs = EpisodeExtras.OPENING_MS + EpisodeExtras.INTRO_SEARCH_AHEAD_MS
+        val forSubtitles = vod != null && externalLanguage != null && !externalExact && !syncedByReference
+        val wanted = (forcedAhead || forSubtitles) && format != null
+        audioAhead.untilMs = Long.MAX_VALUE
         if (wanted != audioAhead.active) {
             audioAhead.active = wanted
-            Log.i(TAG, if (wanted) "Ton geht an Soundbar/Receiver: werte ihn nebenbei aus (${format?.sampleMimeType})" else "Ton-Auswertung nebenbei aus")
+            Log.i(TAG, if (wanted) "Ton-Auswertung nebenbei an (${format?.sampleMimeType})" else "Ton-Auswertung nebenbei aus")
         }
     }
+
+    /** Sprachsignal für die Ausrichtung: gehörter Ton, wo nichts gehört wurde der nebenbei dekodierte. */
+    private fun speechSignal(fromMs: Long, toMs: Long): FloatArray {
+        val heard = heardSpeech.signal(fromMs, toMs)
+        if (aheadSpeech.seconds() == 0) return heard
+        val ahead = aheadSpeech.signal(fromMs, toMs)
+        for (i in heard.indices) if (heard[i].isNaN() && i < ahead.size) heard[i] = ahead[i]
+        return heard
+    }
+
+    /** Sekunden Ton, die für die Ausrichtung bereitstehen (gehört oder nebenbei dekodiert). */
+    private fun speechSeconds(): Int = maxOf(heardSpeech.seconds(), aheadSpeech.seconds())
 
     private var forcedAhead = false
 
@@ -2629,20 +2619,24 @@ class PlayerActivity : ComponentActivity() {
             var lastHeard = -1
             var playedMs = 0L
             while (isActive && externalLanguage != null) {
-                delay(SPEECH_CHECK_MS)
+                // Bis zum ersten Treffer alle 5 s prüfen (so früh wie möglich), danach alle 20 s nachprüfen.
+                val step = if (subtitleAutoSynced) SPEECH_CHECK_MS else SPEECH_FIRST_CHECK_MS
+                delay(step)
+                updateAudioAhead()
                 val p = player ?: continue
                 if (!p.isPlaying) continue
-                playedMs += SPEECH_CHECK_MS
+                playedMs += step
                 if (syncedByReference) {
                     speechSyncInfo = "An den eingebetteten Untertiteln des Films ausgerichtet"
                     continue
                 }
-                val heard = heardSpeech.seconds()
+                val heard = speechSeconds()
                 if (heard < 5) {
                     // Ton geht an Soundbar/Receiver: Nur umstellen, wenn die Untertitel nicht schon passen
                     // (Datei-Hash oder gespeicherte Ausrichtung) – sonst bliebe der Raumklang ohne Not weg.
                     val needed = !subtitleAutoSynced && !externalExact
-                    if (playedMs >= 2 * SPEECH_CHECK_MS && needed && textTracks().isEmpty() && !forcePcmActive && !pcmForSpeechTried) {
+                    // Erst wenn auch die Auswertung nebenbei nichts liefert (Tonformat ohne Decoder im Gerät).
+                    if (playedMs >= SPEECH_PCM_FALLBACK_MS && needed && textTracks().isEmpty() && !forcePcmActive && !pcmForSpeechTried) {
                         pcmForSpeechTried = true
                         Log.i(SUBTITLE_TAG, "Ton wird durchgereicht, dekodiere im Gerät für die Ausrichtung am Ton")
                         subtitleStatus = "Ton wird im Gerät dekodiert, damit sich die Untertitel am Gespräch ausrichten …"
@@ -2650,7 +2644,7 @@ class PlayerActivity : ComponentActivity() {
                     }
                     speechSyncInfo = when {
                         externalExact -> "Untertitel passen zur Datei (keine Ausrichtung nötig)"
-                        playedMs < 2 * SPEECH_CHECK_MS -> "Ausrichtung am Ton startet …"
+                        playedMs < SPEECH_PCM_FALLBACK_MS -> "Ausrichtung am Ton startet …"
                         else -> "Kein Ton zum Mithören (Ton geht direkt an Soundbar/Receiver)"
                     }
                     continue
@@ -2669,7 +2663,8 @@ class PlayerActivity : ComponentActivity() {
                 val afterSeek = seekFrom >= 0 && position - seekFrom >= SEEK_RECHECK_MS
                 if (seekFrom >= 0 && !afterSeek && manualSync) continue
                 val (fit, window) = withContext(Dispatchers.Default) {
-                    val signal = heardSpeech.signal(if (afterSeek) seekFrom else position - SPEECH_WINDOW_MS, position + 5_000)
+                    // Bis 60 s voraus: Dort liegt der schon geladene, nebenbei dekodierte Ton.
+                    val signal = speechSignal(if (afterSeek) seekFrom else position - SPEECH_WINDOW_MS, position + SPEECH_AHEAD_MS)
                     SpeechSync.estimate(signal, cues) to signal.count { !it.isNaN() } / 10
                 }
                 if (externalLanguage == null || syncedByReference) continue
@@ -2726,7 +2721,7 @@ class PlayerActivity : ComponentActivity() {
             .onFailure { describeOnlineProblem(it) }.getOrNull() ?: return false
         val cues = withContext(Dispatchers.IO) { parseCues(alternative.file) }
         val fit = withContext(Dispatchers.Default) {
-            SpeechSync.estimate(heardSpeech.signal(position - SPEECH_WINDOW_MS, position + 5_000), cues.map { it.start to it.end })
+            SpeechSync.estimate(speechSignal(position - SPEECH_WINDOW_MS, position + SPEECH_AHEAD_MS), cues.map { it.start to it.end })
         }
         if (fit == null || externalLanguage != language || subtitleAutoSynced) {
             Log.i(SUBTITLE_TAG, "Weitere Datei „${alternative.release}“ passt auch nicht besser")
@@ -2958,7 +2953,23 @@ class PlayerActivity : ComponentActivity() {
         if (!enabled) stopLiveTranslation()
     }
 
-    fun openTracks() = showOverlay(Overlay.TRACKS)
+    /** Player-Menü öffnen: Übersicht, oder gleich eine Unterseite (Untertitel-Taste → Untertitel). */
+    fun openTracks(page: MenuPage? = null) {
+        showOverlay(Overlay.TRACKS)
+        menuReturn = null
+        menuPage = page
+    }
+
+    /** Unterseite des Player-Menüs (null = Übersicht). */
+    var menuPage by mutableStateOf<MenuPage?>(null); private set
+    /** Von hier kam man zurück zur Übersicht: Dort steht der Fokus dann wieder auf dieser Zeile. */
+    var menuReturn: MenuPage? = null; private set
+
+    fun openMenuPage(page: MenuPage?) {
+        if (page == null) menuReturn = menuPage
+        menuPage = page
+        overlayToken++
+    }
 
     fun clearSubtitleStatus(shown: String) {
         if (subtitleStatus == shown) subtitleStatus = null
@@ -3001,8 +3012,6 @@ class PlayerActivity : ComponentActivity() {
         val base = if (pendingSeekMs != C.TIME_UNSET) pendingSeekMs else p.currentPosition
         pendingSeekMs = (base + deltaMs).coerceIn(0, max)
         positionMs = pendingSeekMs
-        // Kurz nach „Intro überspringen“: Spulen korrigiert, wo das Intro endet.
-        episodes.onManualSeek(pendingSeekMs)
         showOverlay(Overlay.CONTROLS)
         seekJob?.cancel()
         seekJob = lifecycleScope.launch {
@@ -3463,7 +3472,7 @@ class PlayerActivity : ComponentActivity() {
                 val teams = settings.followedTeams
                 val watching = playing?.let { nowPlayingMap[it.key] }?.pairing()
                 for (m in matches) {
-                    if (!m.live(now) && !m.finished) continue
+                    if (!m.football || (!m.live(now) && !m.finished)) continue
                     val team = teams.firstOrNull { de.ayutv.data.parse.Teams.plays(it, m.pairing) } ?: continue
                     val before = known.put(m.id, m.goals1 to m.goals2) ?: continue
                     if (before == (m.goals1 to m.goals2) || m.goals1 + m.goals2 <= before.first + before.second) continue
@@ -3997,6 +4006,8 @@ class PlayerActivity : ComponentActivity() {
                     languagePicker -> closeLanguagePicker()
                     epgPicker -> closeEpgPicker()
                     pipChoices != null -> closePipPicker()
+                    // Im Player-Menü geht Zurück erst von der Unterseite zur Übersicht.
+                    overlay == Overlay.TRACKS && menuPage != null -> openMenuPage(null)
                     // Senderliste mit kleinem Bild: noch einmal Zurück verlässt den Player.
                     overlay == Overlay.CHANNELS && miniVideo -> finish()
                     overlay != Overlay.NONE -> closeOverlay()
@@ -4096,13 +4107,11 @@ class PlayerActivity : ComponentActivity() {
             if (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER) playNextEpisode() else episodes.cancelCountdown()
             return true
         }
+        // Letzte Minute mit Countdown: Jede andere Taste hält ihn an (die Taste wirkt trotzdem, z. B. Spulen).
+        if (nextCountdown >= 0 && code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) episodes.cancelCountdown()
         if (overlay != Overlay.CONTROLS && (code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER)) {
             if (nextCardVisible) {
                 playNextEpisode()
-                return true
-            }
-            if (introVisible) {
-                episodes.skipIntro()
                 return true
             }
         }
@@ -4111,7 +4120,8 @@ class PlayerActivity : ComponentActivity() {
                 if (overlay == Overlay.CONTROLS || !p.playWhenReady) p.playWhenReady = !p.playWhenReady
                 showOverlay(Overlay.CONTROLS)
             }
-            KeyEvent.KEYCODE_MENU, KeyEvent.KEYCODE_CAPTIONS -> openTracks()
+            KeyEvent.KEYCODE_MENU -> openTracks()
+            KeyEvent.KEYCODE_CAPTIONS -> openTracks(MenuPage.SUBTITLES)
             KeyEvent.KEYCODE_MEDIA_PLAY -> p.playWhenReady = true
             KeyEvent.KEYCODE_MEDIA_PAUSE -> p.playWhenReady = false
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_MEDIA_REWIND -> seekBy(-(if (step > 0) step else 10_000L))
@@ -4146,8 +4156,6 @@ class PlayerActivity : ComponentActivity() {
             delay(1_000)
             runCatching { de.ayutv.data.FireTvHome.update(applicationContext, container) }
         }
-        vod?.let(episodes::learnOpening)
-        if (isFinishing) player?.let { episodes.learnCredits(it.currentPosition) }
         saveAheadTranslations()
         recordWatch()
         container.scope.launch(Dispatchers.IO) { de.ayutv.data.parse.ChannelQuality.saveIfChanged(container.qualityFile) }
@@ -4279,6 +4287,10 @@ class PlayerActivity : ComponentActivity() {
         /** So viele Einblendungen des Films, bevor weitere Dateien verglichen werden (Downloads sind begrenzt). */
         private const val COMPARE_REFERENCES = 40
         private const val SPEECH_CHECK_MS = 20_000L
+        private const val SPEECH_FIRST_CHECK_MS = 5_000L
+        /** So lange auf Ton aus der Auswertung nebenbei warten, bevor der Ton im Gerät dekodiert wird (Soundbar). */
+        private const val SPEECH_PCM_FALLBACK_MS = 45_000L
+        private const val SPEECH_AHEAD_MS = 60_000L
 
         private fun clock(ms: Long): String {
             val s = (ms / 1000).coerceAtLeast(0)

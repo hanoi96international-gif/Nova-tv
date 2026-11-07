@@ -181,7 +181,7 @@ object SpeechSync {
     private const val BIN_MS = 100L
     private const val COARSE = 5           // grob: 500-ms-Schritte
     private const val MAX_SHIFT_MS = 600_000L
-    const val MIN_SECONDS = 90             // mindestens 1,5 min gehörter Ton (danach wird laufend verfeinert)
+    const val MIN_SECONDS = 60             // mindestens 1 min gehörter Ton (danach wird laufend verfeinert)
     private val RATIOS = listOf(1.0, 25.0 / 23.976, 23.976 / 25.0, 24.0 / 23.976, 23.976 / 24.0, 25.0 / 24.0, 24.0 / 25.0)
 
     /** [signal] aus [SpeechActivity.signal], [cues] Start/Ende der geladenen Untertitel (Dateizeit, ms). */
@@ -192,6 +192,10 @@ object SpeechSync {
         val mean = heard.sumOf { signal[it].toDouble() } / heard.size
         val sd = sqrt(heard.sumOf { (signal[it] - mean) * (signal[it] - mean) } / heard.size).takeIf { it > 1e-6 } ?: return null
         val x = FloatArray(signal.size) { if (signal[it].isNaN()) 0f else ((signal[it] - mean) / sd).toFloat() }
+        // Nur noch „gesprochen“ (lauteste 40 %) oder „still“, mittelwertfrei: Laute Geräusche und Musikeinsätze
+        // überstimmen so nicht mehr ganze Sätze. Gemessen findet das den Versatz mit gut halb so viel Ton.
+        val threshold = heard.map { x[it] }.sorted()[heard.size * 6 / 10]
+        for (i in heard) x[i] = if (x[i] > threshold) 1f else -2f / 3f
 
         val sortedCues = cues.sortedBy { it.first }
         val first = heard.first().toLong() * BIN_MS
@@ -228,6 +232,13 @@ object SpeechSync {
             val e = min(subEnd, ((b * ratio) / BIN_MS).toInt())
             for (i in s until e) sub[i] = 1f
         }
+        // Für die Feinsuche: Untertitel stehen nach dem Satz meist noch ein Stück; ihr Ende verschiebt sonst den Treffer.
+        val fineSub = FloatArray(subEnd)
+        for ((a, b) in cues) {
+            val s = max(0, ((a * ratio) / BIN_MS).toInt())
+            val e = min(subEnd, max(s + 3, (((b - LINGER_MS) * ratio) / BIN_MS).toInt()))
+            for (i in s until e) fineSub[i] = 1f
+        }
         val maxShift = (MAX_SHIFT_MS / BIN_MS).toInt()
         // Grob: Summe über 500-ms-Blöcke
         val coarseX = block(x, from, to, COARSE)
@@ -258,7 +269,7 @@ object SpeechSync {
             for (i in heard) {
                 val j = i - shift
                 if (j < 0 || j >= sub.size) continue
-                s += x[i] * sub[j]
+                s += x[i] * fineSub[j]
             }
             if (s > bestScore) { bestScore = s; bestShift = shift }
         }
@@ -273,6 +284,7 @@ object SpeechSync {
     }
 
     private const val MIN_Z = 6.0
+    private const val LINGER_MS = 500L
     private const val CLEAR = 1.3
     private const val SAME_MS = 1_500L
     private const val TIE_Z = 1.0
