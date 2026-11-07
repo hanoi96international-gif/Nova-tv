@@ -150,8 +150,10 @@ fun SportScreen() {
             de.ayutv.data.sport.MatchHints.learn(shows)
             // Dasselbe Spiel nur einmal: „Live: BL“ auf dem einen Sender und „Mainz – Bayern“ auf dem anderen (anderer
             // Anbieter, leicht andere Anfangszeit) werden zu einem Eintrag mit beiden Sendern.
+            // Wiederholungen schon gespielter Spiele (laut Spielplan) entfallen, auch ohne Kennzeichnung im TV-Guide.
             val merged = ProgrammeText.mergeSameMatch(
-                list.indices.map { list[it] to result[it] },
+                list.indices.filterNot { result[it] == null && container.liveScores.isReplay(scores, shows[it].pairing, shows[it].start) }
+                    .map { list[it] to result[it] },
                 { it.first.programme.start },
                 { (e, match) -> e.programme.pairing() ?: match?.pairing },
             ) { a, b -> a.first.mergedWith(b.first) to (a.second ?: b.second) }

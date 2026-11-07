@@ -2,6 +2,8 @@ package de.ayutv.data.sport
 
 import de.ayutv.data.parse.Teams
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -103,14 +105,19 @@ class LiveScores(
         cachedAt = now
         // NHL, NBA, NFL, Europapokal, Premier League … (ESPN): seltener, alle 5 Minuten.
         if (now - foreignAt >= FOREIGN_CACHE_MS) {
+            // Alle Abfragen gleichzeitig (12 Ligen × 3 Tage): nacheinander hielte das die Sport-Übersicht Sekunden auf.
             val more = withContext(Dispatchers.IO) {
-                EspnScores.LEAGUES.keys.flatMap { league ->
-                    runCatching {
-                        val url = EspnScores.url(league, now, espnBase) ?: return@runCatching emptyList()
-                        http.newCall(Request.Builder().url(url).build()).execute().use { response ->
-                            if (!response.isSuccessful) emptyList() else EspnScores.parse(response.body.string(), league)
-                        }
-                    }.getOrDefault(emptyList())
+                kotlinx.coroutines.coroutineScope {
+                    EspnScores.LEAGUES.keys.flatMap { league -> EspnScores.urls(league, now, espnBase).map { league to it } }
+                        .map { (league, url) ->
+                            async {
+                                runCatching {
+                                    http.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                                        if (!response.isSuccessful) emptyList() else EspnScores.parse(response.body.string(), league)
+                                    }
+                                }.getOrDefault(emptyList())
+                            }
+                        }.awaitAll().flatten().distinctBy { it.id }
                 }
             }
             if (more.isNotEmpty() || foreign.isEmpty()) foreign = more
@@ -192,6 +199,16 @@ class LiveScores(
         return result
     }
 
+    /**
+     * Wiederholung eines schon gespielten Spiels, die der TV-Guide nicht so kennzeichnet (DAZN zeigt „Hamburger SV -
+     * Borussia M'gladbach“ vom Freitagabend am Samstagmittag noch einmal, ohne Hinweis): Laut Spielplan wurde diese
+     * Paarung mehr als 3 Stunden vor Sendebeginn angepfiffen, und zur Sendezeit gibt es kein Spiel dieser Paarung.
+     */
+    fun isReplay(matches: List<Match>, pairing: String?, start: Long): Boolean {
+        if (pairing == null || matches.isEmpty() || find(matches, pairing, start) != null) return false
+        return matches.any { (start - it.kickoff) in (3 * HOUR)..(6 * 24 * HOUR) && it.matches(pairing) }
+    }
+
     /** Das Spiel zur TV-Paarung, falls es eins gibt (Anstoß höchstens 3 Stunden neben der Sendung). */
     fun find(matches: List<Match>, pairing: String?, start: Long, context: String = ""): Match? {
         if (pairing == null) return null
@@ -202,7 +219,10 @@ class LiveScores(
         private val LEAGUES = listOf("bl1", "bl2", "bl3")
         private const val MINUTE = 60_000L
         /** Wörter, die in vielen Stadionnamen stehen: allein kein Hinweis auf den Ort. */
-        private val VENUE_WORDS = setOf("arena", "stadion", "stadium", "park", "sportpark", "sportplatz", "kampfbahn")
+        private val VENUE_WORDS = setOf(
+            "arena", "stadion", "stadium", "park", "sportpark", "sportplatz", "kampfbahn", "garden", "center", "centre", "field",
+            "dome", "ground", "road", "deutschland", "england", "spain", "italia", "france", "usa",
+        )
         private val MULTI = Regex("""(?i)konferenz|multiview|alle spiele|highlights|zusammenfassung""")
 
         /** Welche Liga die Sendung nennt (bl1, bl2, bl3, nhl, nba, nfl, eng.1 …), sonst null. */
@@ -211,6 +231,8 @@ class LiveScores(
             Regex("""\bNBA\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "nba"
             Regex("""\bNFL\b""", RegexOption.IGNORE_CASE).containsMatchIn(text) -> "nfl"
             Regex("""(?i)women|frauen""").containsMatchIn(text) -> null
+            // Sky Austria: „Live: Admiral BL“ ist die österreichische Bundesliga, nicht die deutsche.
+            Regex("""(?i)admiral|österreich|\baut\b""").containsMatchIn(text) -> "aut.1"
             Regex("""(?i)champions league|\bucl\b""").containsMatchIn(text) -> "uefa.champions"
             Regex("""(?i)conference league|\buecl\b""").containsMatchIn(text) -> "uefa.europa.conf"
             Regex("""(?i)europa league|\buel\b""").containsMatchIn(text) -> "uefa.europa"

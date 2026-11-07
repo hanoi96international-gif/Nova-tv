@@ -74,9 +74,12 @@ fun SportScreen(app: AppState) {
         if (items.isNotEmpty()) dialog = { MenuDialog(app, e.headline, items, onDismiss = { dialog = null }) }
     }
 
-    val list = events
     // Spiel zu jeder Sendung (Paarung, Stadion, sonst Ausschluss), einmal für die ganze Liste.
-    val assigned = androidx.compose.runtime.remember(list, matches) { assign(scores, matches, list.orEmpty()) }
+    val assigned = androidx.compose.runtime.remember(events, matches) { assign(scores, matches, events.orEmpty()) }
+    // Wiederholungen schon gespielter Spiele (laut Spielplan) entfallen, auch ohne Kennzeichnung im TV-Guide.
+    val list = androidx.compose.runtime.remember(events, assigned) {
+        events?.filterNot { assigned[it] == null && scores.isReplay(matches, it.pairing, it.programme.start) }
+    }
     when {
         guide.isEmpty() -> Empty("Noch kein TV-Guide. Unter „Einstellungen“ den TV-Guide laden.")
         list == null -> Empty("Sport wird gesucht …")

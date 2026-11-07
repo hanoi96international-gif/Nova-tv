@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -384,6 +385,7 @@ fun PlayerScreen(activity: PlayerActivity) {
     }
 
     // Overlays blenden sich nach kurzer Zeit aus. Jede Taste setzt den Timer zurück (overlayToken).
+    val touchMenu = isTouchDevice
     LaunchedEffect(activity.overlayToken, activity.overlay) {
         val timeout = when (activity.overlay) {
             Overlay.NONE -> return@LaunchedEffect
@@ -394,7 +396,8 @@ fun PlayerScreen(activity: PlayerActivity) {
             // bliebe die Leiste nach dem Start eines Films für immer stehen (und OK hielte ihn an).
             Overlay.CONTROLS -> if (activity.player?.playWhenReady == false) Long.MAX_VALUE else 4_000L
             // Beim Zuordnen des TV-Guides (Suchen, Blättern in langen Listen) nicht von selbst schließen.
-            Overlay.TRACKS -> if (activity.epgPicker || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
+            // Per Touch bleibt es offen, bis man ✕, daneben oder Zurück tippt (Tippen setzt den Timer nicht zurück).
+            Overlay.TRACKS -> if (touchMenu || activity.epgPicker || activity.pipChoices != null) Long.MAX_VALUE else 15_000L
             // Mit kleinem Bild (nach Zurück) bleibt die Liste, bis man wählt oder noch einmal Zurück drückt.
             Overlay.CHANNELS -> if (activity.miniVideo) Long.MAX_VALUE else 15_000L
         }
@@ -828,9 +831,18 @@ private fun TracksOverlay(activity: PlayerActivity) {
         return
     }
     val reduced = de.ayutv.ui.UiPerformance.reduced
+    val touch = isTouchDevice
+    // Handy: nach rechts wischen schließt das Menü (wie es hereingekommen ist).
+    val swipe = if (!touch) Modifier else Modifier.pointerInput(Unit) {
+        var dragged = 0f
+        androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+            onDragStart = { dragged = 0f },
+            onDragEnd = { if (dragged > 80.dp.toPx()) activity.closeOverlay() },
+        ) { _, amount -> dragged += amount }
+    }
     Column(
         Modifier.fillMaxHeight().widthIn(max = MENU_WIDTH).fillMaxWidth().background(menuBackground)
-            .padding(top = 24.dp),
+            .then(swipe).padding(top = 24.dp),
     ) {
         AnimatedContent(
             targetState = activity.menuPage,
@@ -851,19 +863,39 @@ private fun TracksOverlay(activity: PlayerActivity) {
 }
 
 @Composable
-private fun MenuTitle(text: String, back: (() -> Unit)? = null) {
-    Row(Modifier.fillMaxWidth().padding(start = 28.dp, end = 20.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (back != null) {
-            Text("‹", color = AyuColors.Accent, fontSize = 26.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(onClick = back).padding(end = 10.dp))
+private fun MenuTitle(text: String, close: (() -> Unit)? = null, back: (() -> Unit)? = null) {
+    val touch = isTouchDevice
+    Row(
+        Modifier.fillMaxWidth().padding(start = if (touch && back != null) 12.dp else 28.dp, end = if (touch) 8.dp else 20.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Handy: Pfeil und Titel zusammen als große Fläche (48 dp hoch) zum Zurücktippen.
+        val backTap = if (back != null) Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = back) else Modifier
+        Row(
+            Modifier.weight(1f).then(if (touch) backTap.heightIn(min = 48.dp).padding(horizontal = 8.dp) else Modifier),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (back != null) {
+                Text("‹", color = AyuColors.Accent, fontSize = if (touch) 30.sp else 26.sp, fontWeight = FontWeight.Bold,
+                    modifier = (if (touch) Modifier else backTap).padding(end = 10.dp))
+            }
+            Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(text, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Handy: ✕ schließt das Menü (auf dem Fernseher die Zurück-Taste).
+        if (touch && close != null) {
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).clickable(onClick = close),
+                contentAlignment = Alignment.Center,
+            ) { Text("✕", color = AyuColors.TextSecondary, fontSize = 20.sp) }
+        }
     }
 }
 
 /** Fokus beim Öffnen einer Seite setzen (die Zeilen sind erst nach dem ersten Bild da). */
 @Composable
 private fun FocusOnOpen(requester: FocusRequester) {
+    // Per Touch keine Markierung: Die hervorgehobene erste Zeile sähe aus wie die gewählte Einstellung.
+    if (isTouchDevice) return
     LaunchedEffect(requester) {
         repeat(8) {
             if (runCatching { requester.requestFocus() }.isSuccess) return@LaunchedEffect
@@ -899,7 +931,7 @@ private fun MenuOverview(activity: PlayerActivity) {
         MenuPage.SLEEP to sleepValue,
     )
     Column {
-        MenuTitle(if (activity.isLive) "Optionen" else "Wiedergabe")
+        MenuTitle(if (activity.isLive) "Optionen" else "Wiedergabe", close = { activity.closeOverlay() })
         LazyColumn(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -950,7 +982,7 @@ private fun MenuOverview(activity: PlayerActivity) {
 private fun MenuSubPage(activity: PlayerActivity, page: MenuPage) {
     val first = remember { FocusRequester() }
     Column {
-        MenuTitle(page.title) { activity.openMenuPage(null) }
+        MenuTitle(page.title, close = { activity.closeOverlay() }, back = { activity.openMenuPage(null) })
         LazyColumn(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
