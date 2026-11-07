@@ -124,6 +124,36 @@ jobs:
           Get-Content $out
           if (-not (Select-String -Path $out -Pattern "^result=OK" -Quiet)) { throw "Selbsttest fehlgeschlagen" }
 
+      # Foto-Rundgang: DnA-TV mit Beispieldaten, alle Bereiche und das Player-Menü fotografiert. Die Bilder landen
+      # im Branch ci-windows (zum Prüfen der Oberfläche); ein Fehler hier hält den Build nicht auf.
+      - name: Foto-Rundgang (Oberfläche)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $app = Get-ChildItem desktop/build/compose/binaries/main/app -Directory | Select-Object -First 1
+          $exe = Join-Path $app.FullName "DnA-TV.exe"
+          $out = Join-Path $env:RUNNER_TEMP "tour"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          $p = Start-Process $exe -ArgumentList "--tour", "`"$out`"" -PassThru
+          if (-not $p.WaitForExit(180000)) { $p.Kill(); Write-Host "Rundgang hängt" }
+          Remove-Item -Recurse -Force (Join-Path $out "data") -ErrorAction SilentlyContinue
+          Get-ChildItem $out | ForEach-Object { Write-Host $_.Name }
+          if (Test-Path (Join-Path $out "results.txt")) { Get-Content (Join-Path $out "results.txt") }
+
+      - name: Fotos veröffentlichen
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          cd "$RUNNER_TEMP/tour" 2>/dev/null || exit 0
+          echo "${{ github.sha }}" > COMMIT
+          git init -q -b ci-windows
+          git config user.name "DnA-TV CI"
+          git config user.email "ci@users.noreply.github.com"
+          git add -A
+          git commit -qm "Fotos für ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-windows
+
       # Signieren, sobald ein Code-Signing-Zertifikat hinterlegt ist (Repository → Settings → Secrets → Actions:
       # WINDOWS_SIGN_CERT = PFX-Datei als Base64, WINDOWS_SIGN_PASSWORD = Passwort). Dann warnt Windows nicht mehr vor
       # „Unbekannter Herausgeber“. Ohne Zertifikat bleibt alles unsigniert wie bisher.

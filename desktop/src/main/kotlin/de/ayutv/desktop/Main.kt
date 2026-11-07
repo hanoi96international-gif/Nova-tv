@@ -90,6 +90,7 @@ import java.awt.event.WindowFocusListener
 fun main(args: Array<String>) {
     VideoPlayer.useBundledVlc()
     if (args.firstOrNull() == "--selftest") return SelfTest.run(args.getOrNull(1))
+    if (args.firstOrNull() == "--tour") return Tour.run(args.getOrNull(1))
     val store = Store(Store.defaultDir())
     Log.init(store.dir)
     // Proxy vor der ersten Verbindung festlegen (sonst wartet jede Verbindung kurz auf die Einstellungen).
