@@ -2,7 +2,8 @@ package de.ayutv.data.parse
 
 import de.ayutv.data.db.ProgrammeEntity
 
-fun ProgrammeEntity.headline(): String = ProgrammeText.headline(title, subtitle)
+/** Titel für die Anzeige; bei Sport mit der Partie vorn (auch aus Beschreibung oder Spielplan). */
+fun ProgrammeEntity.headline(): String = ProgrammeText.display(title, subtitle, description, category, start, stop)
 fun ProgrammeEntity.isLive(): Boolean = ProgrammeText.isLive(title, subtitle, category, flags)
 fun ProgrammeEntity.isSportEvent(sportChannel: Boolean = false): Boolean =
     (sportChannel || ProgrammeText.isSport(title, subtitle, category)) && ProgrammeText.isLive(title, subtitle, category, flags, sportChannel, description)

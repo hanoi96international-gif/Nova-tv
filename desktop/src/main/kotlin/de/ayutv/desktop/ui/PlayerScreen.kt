@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -681,7 +682,7 @@ private fun ChannelPanel(app: AppState, live: Playback.Live, modifier: Modifier,
                     Column(Modifier.weight(1f)) {
                         Label((if (channel.key in user.favorites) "★ " else "") + channel.name, Type.body)
                         if (programme != null) {
-                            Label(programme.title, Type.small)
+                            Label(programme.display(), Type.small)
                             Spacer(Modifier.height(3.dp))
                             Progress(programme.fraction())
                         }
@@ -714,13 +715,13 @@ private fun LiveBar(live: Playback.Live, channel: Channel, programmes: List<Prog
                 if (current != null) {
                     val rest = de.ayutv.data.parse.StreamBadges.remaining(current.stop)?.let { "  ·  $it" }.orEmpty()
                     Label("${clock(current.start)} – ${clock(current.stop)}$rest", Type.small, color = Palette.secondary)
-                    Label(current.title, Type.heading)
+                    Label(current.display(), Type.heading)
                     Spacer(Modifier.height(6.dp))
                     Progress(current.fraction())
                 } else {
                     Label("Kein TV-Guide für diesen Sender", Type.small)
                 }
-                next?.let { Spacer(Modifier.height(4.dp)); Label("Danach  ${clock(it.start)}   ${it.title}", Type.body, color = Palette.secondary) }
+                next?.let { Spacer(Modifier.height(4.dp)); Label("Danach  ${clock(it.start)}   ${it.display()}", Type.body, color = Palette.secondary) }
             }
             Spacer(Modifier.width(18.dp))
             Column(horizontalAlignment = Alignment.End) {

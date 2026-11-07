@@ -22,6 +22,9 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
     lateinit var container: AppContainer
         private set
 
+    /** DnA-TV ist zu sehen (Spielplan nur dann auffrischen). */
+    @Volatile private var visible = false
+
     override fun onCreate() {
         super.onCreate()
         AppTime.fixZone()
@@ -37,6 +40,17 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
         }.apply { priority = Thread.MIN_PRIORITY }.start()
         container = AppContainer(this)
         de.ayutv.ui.UiPerformance.busy = { container.playlists.state.value is de.ayutv.data.repo.SyncState.Running }
+        // Spielplan (OpenLigaDB) für die Partie im TV-Guide und in der Vorschau, wenn der TV-Guide nur „Live: 2. BL“ nennt.
+        // Nur solange DnA-TV zu sehen ist, alle 10 Minuten (Einstellung „Spielstände“).
+        de.ayutv.data.sport.MatchHints.install(container.liveScores)
+        container.scope.launch {
+            while (true) {
+                if (visible && runCatching { container.settings.current().liveScores }.getOrDefault(false)) {
+                    runCatching { de.ayutv.data.sport.MatchHints.update(container.liveScores.current()) }
+                }
+                kotlinx.coroutines.delay(if (de.ayutv.data.sport.MatchHints.matches.isEmpty()) 60_000L else 10 * 60_000L)
+            }
+        }
         // Einstellung „Flüssige Bedienung“ (weniger Bewegung) laufend übernehmen.
         container.scope.launch { container.settings.settings.collect { de.ayutv.ui.UiPerformance.setSmooth(it.smoothUi) } }
         // Veraltete Playlists/EPG im Hintergrund auffrischen, ohne den Start zu blockieren.
@@ -48,6 +62,8 @@ class AyuApp : Application(), SingletonImageLoader.Factory {
             }
             // Handy als Fernbedienung: nur auf dem Fernseher. Der Hintergrund-Dienst hält sie auch dann am Laufen,
             // wenn DnA-TV nicht zu sehen ist (Übergabe vom Handy startet den Player von selbst).
+            if (event == Lifecycle.Event.ON_START) visible = true
+            if (event == Lifecycle.Event.ON_STOP) visible = false
             when (event) {
                 Lifecycle.Event.ON_START -> container.scope.launch {
                     if (!hasTouchscreen() && container.settings.current().phoneRemote) container.remote.start()

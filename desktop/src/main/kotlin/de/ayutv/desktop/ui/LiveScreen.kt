@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
@@ -277,7 +278,7 @@ fun LiveScreen(app: AppState) {
                             }
                             ListRow(
                                 title = "$mark${channel.name}",
-                                subtitle = programme?.let { "${clock(it.start)}  ${it.title}" },
+                                subtitle = programme?.let { "${clock(it.start)}  ${it.display()}" },
                                 trailing = if (group == GroupRef.All || group == GroupRef.Favorites || group is GroupRef.Custom) channel.group else null,
                                 selected = channel.key == focusedKey || (moving != null && channel.key in selected),
                                 focusRequester = when {
@@ -359,7 +360,7 @@ fun ChannelInfo(channel: Channel, programmes: List<Programme>) {
             Label("Kein TV-Guide für diesen Sender.", Type.small)
         } else {
             Label("JETZT  ${clock(current.start)} – ${clock(current.stop)}", Type.small, color = Palette.live)
-            Label(current.title, Type.heading, maxLines = 2)
+            Label(current.display(), Type.heading, maxLines = 2)
             current.subtitle?.let { Label(it, Type.body, maxLines = 2) }
             Spacer(Modifier.height(6.dp))
             Progress((now - current.start).toFloat() / (current.stop - current.start))
@@ -368,7 +369,7 @@ fun ChannelInfo(channel: Channel, programmes: List<Programme>) {
         if (next.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
             Label("DANACH", Type.small)
-            next.forEach { p -> Label("${clock(p.start)}  ${p.title}", Type.body) }
+            next.forEach { p -> Label("${clock(p.start)}  ${p.display()}", Type.body) }
         }
     }
 }

@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -125,7 +126,7 @@ fun MultiviewScreen(app: AppState, mv: Multiview) {
                         val index = row * 2 + col
                         TileView(
                             mv.tiles[index], focused = mv.focused == index, audio = mv.audio == index,
-                            now = mv.tiles[index].channel?.let { c -> guide[c.key]?.let { nowOf(it) }?.title },
+                            now = mv.tiles[index].channel?.let { c -> guide[c.key]?.let { nowOf(it) }?.display() },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             onClick = { if (mv.focused == index) ok(index) else mv.focused = index },
                         )

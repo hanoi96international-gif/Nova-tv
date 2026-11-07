@@ -62,6 +62,8 @@ class AppContainer(val context: Context) {
     val content = ContentRepository(db, http)
     /** Spielstände für Sport-Übersicht und Tor-Hinweise. */
     val liveScores = de.ayutv.data.sport.LiveScores(http)
+    /** Vereinswappen für die Anzeigetafel im Sport-Bereich (gemerkt in crests.tsv). */
+    val crests = de.ayutv.data.sport.Crests(http, java.io.File(context.filesDir, "crests.tsv"))
     // filesDir statt cacheDir: Fire OS leert den Cache bei wenig Speicher, Untertitel sollen bleiben.
     val subtitles = SubtitleRepository(http, context.filesDir).also { repo ->
         scope.launch(Dispatchers.IO) { repo.purgeLegacyCache() }

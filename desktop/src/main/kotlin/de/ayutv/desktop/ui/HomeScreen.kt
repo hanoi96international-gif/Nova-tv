@@ -1,5 +1,6 @@
 package de.ayutv.desktop.ui
 
+import de.ayutv.desktop.data.display
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -170,7 +171,7 @@ fun HomeScreen(app: AppState) {
                         is HomeItem.Live -> {
                             val now = guide[item.channel.key]?.let { nowOf(it) }
                             Tile(
-                                item.channel.name, now?.title ?: item.channel.group, item.channel.logo,
+                                item.channel.name, now?.display() ?: item.channel.group, item.channel.logo,
                                 onClick = { open(item) }, progress = now?.fraction(), onMenu = { menu(item) },
                                 focusRequester = if (spot == null && rowIndex == 0 && index == 0) first else null,
                             )
@@ -218,7 +219,7 @@ private fun greeting(now: Long): String = when (java.time.Instant.ofEpochMilli(n
 @Composable
 private fun Spotlight(item: HomeItem, now: de.ayutv.desktop.data.Programme?, focus: FocusRequester, store: de.ayutv.desktop.data.Store, onClick: () -> Unit) {
     val (label, title, sub) = when (item) {
-        is HomeItem.Live -> Triple("LIVE · ${item.channel.name}", now?.title ?: item.channel.name, now?.let { "${clock(it.start)} – ${clock(it.stop)}" } ?: item.channel.group)
+        is HomeItem.Live -> Triple("LIVE · ${item.channel.name}", now?.display() ?: item.channel.name, now?.let { "${clock(it.start)} – ${clock(it.stop)}" } ?: item.channel.group)
         is HomeItem.Film -> Triple("WEITER SCHAUEN · FILM", item.movie.name, item.movie.category)
         is HomeItem.Show -> Triple("WEITER SCHAUEN · SERIE", item.series.name, item.series.category)
         is HomeItem.Rec -> Triple("AUFNAHME", item.recording.title, item.recording.channelName)

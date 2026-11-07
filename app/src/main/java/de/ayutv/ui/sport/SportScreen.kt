@@ -131,6 +131,7 @@ fun SportScreen() {
     var scores by remember { mutableStateOf<List<de.ayutv.data.sport.LiveScores.Match>>(emptyList()) }
     LaunchedEffect(minute) {
         scores = runCatching { container.liveScores.current() }.getOrDefault(emptyList())
+        de.ayutv.data.sport.MatchHints.update(scores)
     }
     /**
      * Das Spiel zu jeder Sendung: über die Paarung, sonst über Stadion, Stadt oder Verein in der Beschreibung, sonst
@@ -247,7 +248,7 @@ fun SportScreen() {
                         }
                         items(list, key = { "${it.programme.id}-${it.channel.key}" }) { e ->
                             EventRow(
-                                e, now, scoreOf(e), headlineOf(e.programme, pairingOf(e)),
+                                e, now, scoreOf(e), matchOf(e), headlineOf(e.programme, pairingOf(e)),
                                 onClick = { watch(e.channel) },
                                 onLongClick = { choosing = e },
                             )
@@ -288,14 +289,22 @@ private const val SPORT_REFRESH_MS = 5 * 60_000L
 
 /** Überschrift einer Sport-Sendung; fehlt die Paarung im EPG, kommt sie aus dem Spielplan nach vorn („A – B (Live: 2. BL)“). */
 private fun headlineOf(p: de.ayutv.data.db.ProgrammeEntity, pairing: String?): String =
-    if (p.pairing() == null && pairing != null) "$pairing (${p.headline()})" else p.sportHeadline()
+    if (p.pairing() == null && pairing != null) "$pairing (${ProgrammeText.headline(p.title, p.subtitle)})" else p.sportHeadline()
 
 /**
  * Eine Zeile pro Spiel. Markiert (Fokus) klappt sie auf: ganzer Titel, Beschreibung und alle Sender,
  * auf denen es läuft. Laufende Spiele zeigen, wie weit sie sind.
  */
 @Composable
-private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveScores.Match?, headline: String, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun EventRow(
+    e: SportEvent,
+    now: Long,
+    score: de.ayutv.data.sport.LiveScores.Match?,
+    match: de.ayutv.data.sport.LiveScores.Match?,
+    headline: String,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     val p = e.programme
     val running = p.start <= now && p.stop > now
     var focused by remember { mutableStateOf(false) }
@@ -327,17 +336,35 @@ private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveSc
                     if (live) score!!.minute(now) ?: "" else "bis ${formatTime(p.stop)}",
                     color = AyuColors.TextSecondary, fontSize = 12.sp,
                 )
-                // Vereinswappen (OpenLigaDB), wenn der Spielplan das Spiel kennt.
-                if (score != null && (score.icon1 != null || score.icon2 != null)) {
-                    Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Crest(score.icon1, score.team1)
-                        Text(" : ", color = AyuColors.TextSecondary, fontSize = 12.sp)
-                        Crest(score.icon2, score.team2)
-                    }
-                }
             }
             Column(Modifier.weight(1f)) {
-                Text(headline, fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
+                // Fußball mit bekannter Partie: Anzeigetafel (Verein – Wappen – Stand/Anstoß – Wappen – Verein).
+                val sides = if (match != null) listOf(match.team1, match.team2) else Teams.ofPairing(headline.substringBefore(" (")).takeIf { it.size == 2 }.orEmpty()
+                if (sides.size == 2) {
+                    Text(
+                        (competitionOf(p, match) + "  ·  " + e.channel.name).uppercase(),
+                        color = AyuColors.Accent, fontSize = 11.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
+                    Row(Modifier.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(sides[0], modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, textAlign = androidx.compose.ui.text.style.TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 21.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Crest(rememberCrest(match?.icon1, sides[0]), sides[0], 40)
+                        Box(Modifier.width(92.dp), contentAlignment = Alignment.Center) {
+                            val shownScore = score?.takeIf { it.live(now) || it.finished }
+                            Text(
+                                shownScore?.score ?: formatTime(p.start),
+                                color = if (score?.live(now) == true) AyuColors.Live else AyuColors.TextPrimary,
+                                fontSize = if (shownScore != null) 24.sp else 18.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            )
+                        }
+                        Crest(rememberCrest(match?.icon2, sides[1]), sides[1], 40)
+                        Spacer(Modifier.width(10.dp))
+                        Text(sides[1], modifier = Modifier.weight(1f), fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 21.sp)
+                    }
+                } else {
+                    Text(headline, fontSize = 16.sp, maxLines = if (focused) 3 else 2, overflow = TextOverflow.Ellipsis)
+                }
                 if (running) {
                     val done = ((now - p.start).toFloat() / (p.stop - p.start).coerceAtLeast(1)).coerceIn(0f, 1f)
                     Box(Modifier.padding(vertical = 4.dp).fillMaxWidth(0.5f).height(3.dp).background(AyuColors.TextSecondary.copy(alpha = 0.3f), RoundedCornerShape(2.dp))) {
@@ -369,13 +396,32 @@ private fun EventRow(e: SportEvent, now: Long, score: de.ayutv.data.sport.LiveSc
     }
 }
 
+/** Wettbewerb für die Anzeigetafel: Liga laut Spielplan, sonst der Titel ohne „Live:“ und Sportart davor. */
+private fun competitionOf(p: de.ayutv.data.db.ProgrammeEntity, match: de.ayutv.data.sport.LiveScores.Match?): String = when (match?.league) {
+    "bl1" -> "Bundesliga"
+    "bl2" -> "2. Bundesliga"
+    "bl3" -> "3. Liga"
+    else -> p.title.replace(Regex("""(?i)^\s*(live\s*:?|🔴|fu(ß|ss)ball\s*:)\s*"""), "").replace(Regex("""(?i)^\s*(live\s*:?|fu(ß|ss)ball\s*:)\s*"""), "")
+        .substringBefore(" – ").substringBefore(" - ").trim().ifEmpty { "Sport" }
+}
+
+/** Wappen: aus dem Spielplan, sonst gemerkt oder (einmal je Verein) nachgeschlagen. */
+@Composable
+private fun rememberCrest(fromSchedule: String?, team: String): String? {
+    val container = LocalContainer.current
+    val crest by androidx.compose.runtime.produceState(fromSchedule ?: container.crests.cached(team), fromSchedule, team) {
+        if (value == null) value = runCatching { container.crests.of(team) }.getOrNull()
+    }
+    return crest
+}
+
 /** Vereinswappen, klein und ohne Rahmen; ohne Bild bleibt der Platz leer. */
 @Composable
-private fun Crest(url: String?, team: String) {
-    Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) {
+private fun Crest(url: String?, team: String, size: Int = 26) {
+    Box(Modifier.size(size.dp), contentAlignment = Alignment.Center) {
         if (url != null) {
             coil3.compose.AsyncImage(
-                model = url, contentDescription = team, modifier = Modifier.size(26.dp),
+                model = url, contentDescription = team, modifier = Modifier.size(size.dp),
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             )
         }
