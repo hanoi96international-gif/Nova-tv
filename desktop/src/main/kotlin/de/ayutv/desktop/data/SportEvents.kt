@@ -44,6 +44,8 @@ object SportEvents {
                 SportEvent(p, c, others)
             }
             .sortedWith(compareBy({ it.programme.start }, { it.channel.name }))
+            // Spätere Termine derselben Paarung sind Wiederholungen (DAZN kennzeichnet sie nicht).
+            .let { list -> ProgrammeText.withoutReplays(list, { it.programme.start }) { ProgrammeText.pairingKey(it.programme.title, it.programme.subtitle, it.programme.description) } }
     }
 
     /** Beste Fassung dieses Senders für Sport (4K vor Full HD) unter [all], auch wenn die Liste sonst Full HD zeigt. */

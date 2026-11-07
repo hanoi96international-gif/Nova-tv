@@ -134,4 +134,33 @@ class ProgrammeTextTest {
             ProgrammeText.sportGroupKey("Hannover 96 – Dynamo Dresden", null, null, "y", "skysporttopevent"),
         )
     }
+
+    /** Titel aus dem echten EPG von DAZN und Sky (Januar 2026). */
+    @Test
+    fun realSportGuideTitles() {
+        fun on(channel: String, title: String, category: String? = "Fußball") =
+            ProgrammeText.isSportEvent(title, null, category, 0, sportChannel = ProgrammeText.isSportChannel(channel))
+        // Einzelspiele, wie DAZN und Sky sie nennen
+        assertEquals(true, on("DAZN 1", "Serie A 25/26: Lazio Rom - SSC Neapel"))
+        assertEquals(true, on("DAZN 2", "Bundesliga: 1. FC Heidenheim - FC Bayern München", "Bundesliga"))
+        assertEquals(true, on("Sky Sport 3", "PL: AFC Bournemouth - Tottenham Hotspur, 21. Spieltag"))  // „Hotspur“ ist kein „pur“
+        assertEquals(true, on("Sky Sport Premier League", "PL: West Ham United - Nottingham Forest, 21. Spieltag"))
+        assertEquals(true, on("Sportdigital Fussball 2", "A-League (10. Spieltag): Melbourne City - Perth Glory", null))
+        // Konferenzen, auch mit „alle Spiele“ im Titel
+        assertEquals(true, on("Sky Sport Premier League", "PL: Sonntags-Konferenz, 20. Spieltag"))
+        assertEquals(true, on("DAZN 1", "UEFA Champions League 25/26: Die Konferenz - alle Spiele, alle Tore"))
+        assertEquals(true, on("DAZN 1", "UEFA Champions League: Konferenz", "Fußball"))
+        // Kein Live-Spiel: Rückblicke, Kurzfassungen, Dokus, Vereinssender, Serien mit Bindestrich
+        assertEquals(false, on("Sky Sport Bundesliga", "2. BL: Hannover 96 - Hinrunde 25-26"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: 90in30: MCI - CHE, 20. Spieltag"))
+        assertEquals(false, on("Sky Sport Bundesliga", "BL: Mythos Borussia - Eine Legende wird 125, ep. 1"))
+        assertEquals(false, on("Sky Sport Bundesliga", "BL: Klassiker der Woche: SGE - BVB (17/18)"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: Classic Match: FC Fulham - FC Chelsea"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: Fergie - Rise of a Dynasty"))
+        assertEquals(false, on("Sportdigital Fußball", "LFC TV - FA Cup"))
+        assertEquals(false, on("Sport 1 plus", "Hausmeister Krause - Ordnung muss sein", null))
+        assertEquals(false, on("DAZN 2", "NFL Domestic: NFL ENDZN - Woche 18", null))
+        assertEquals(false, on("DAZN 1", "Doppelpack Europa - Highlights der Serie A und Ligue 1 2025/26: 18./17. Spieltag", "Sport"))
+        assertEquals(false, on("Sky Sport Premier League", "PL: Highlights Samstag, 20. Spieltag"))
+    }
 }
