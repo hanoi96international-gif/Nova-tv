@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,6 +38,13 @@ import androidx.compose.ui.focus.onFocusChanged
 import de.ayutv.desktop.input.RemoteButton
 import de.ayutv.desktop.input.remote
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.SolidColor
@@ -205,6 +213,22 @@ fun Selectable(
                 if (onMenu != null && e.buttons.isSecondaryPressed) onMenu()
             }
             .graphicsLayer { scaleX = scale; scaleY = scale }
+            .drawBehind {
+                // Leuchten um die Auswahl: drei weiche Ringe in der Akzentfarbe (nur Linien, kein Weichzeichner).
+                if (ring > 0.01f) {
+                    val radius = 12.dp.toPx()
+                    for (i in 1..3) {
+                        val spread = i * 3.dp.toPx()
+                        drawRoundRect(
+                            Palette.accent.copy(alpha = 0.16f * ring / i),
+                            topLeft = Offset(-spread, -spread),
+                            size = Size(size.width + 2 * spread, size.height + 2 * spread),
+                            cornerRadius = CornerRadius(radius + spread),
+                            style = Stroke(width = 3.dp.toPx()),
+                        )
+                    }
+                }
+            }
             .background(background, shape)
             .border(3.dp, Palette.accent.copy(alpha = ring), shape)
             .hoverable(interaction)
@@ -345,30 +369,39 @@ fun Tile(
     onMenu: (() -> Unit)? = null,
     focusRequester: FocusRequester? = null,
 ) {
-    val width = if (wide) 240.dp else 150.dp
-    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(12.dp), focusScale = 1.05f) {
+    val width = if (wide) 240.dp else 156.dp
+    Selectable(onClick, modifier.width(width), onMenu = onMenu, focusRequester = focusRequester, shape = RoundedCornerShape(14.dp), focusScale = 1.06f) { focused ->
         Column(Modifier.fillMaxWidth()) {
             val picture = rememberImage(image)
+            val height = if (wide) 120.dp else 226.dp
             Box(
-                Modifier.fillMaxWidth().height(if (wide) 110.dp else 210.dp).background(Palette.raised, RoundedCornerShape(8.dp)),
+                Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(10.dp))
+                    .background(Brush.linearGradient(listOf(Palette.raised, Palette.surface))),
                 contentAlignment = Alignment.Center,
             ) {
                 if (picture != null) {
                     androidx.compose.foundation.Image(
                         picture, null,
-                        Modifier.fillMaxWidth().height(if (wide) 110.dp else 210.dp).padding(if (wide) 18.dp else 0.dp),
+                        Modifier.fillMaxSize().padding(if (wide) 20.dp else 0.dp),
                         contentScale = if (wide) androidx.compose.ui.layout.ContentScale.Fit else androidx.compose.ui.layout.ContentScale.Crop,
                     )
                 } else {
-                    Label(title.take(18), Type.heading, Modifier.padding(8.dp), maxLines = 2)
+                    Label(title.take(18), Type.heading, Modifier.padding(10.dp), maxLines = 3)
+                }
+                if (!wide) {
+                    // Poster: Titel im Bild auf dunklem Verlauf (wie in Streaming-Apps).
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6000000))))
+                            .padding(start = 10.dp, end = 10.dp, top = 28.dp, bottom = if (progress != null) 12.dp else 8.dp),
+                    ) { Label(title, Type.body.copy(color = Color.White, fontWeight = FontWeight.SemiBold), maxLines = 2) }
+                }
+                if (progress != null) {
+                    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp)) { Progress(progress, height = 3) }
                 }
             }
-            if (progress != null) {
-                Spacer(Modifier.height(4.dp))
-                Progress(progress)
-            }
-            Spacer(Modifier.height(6.dp))
-            Label(title, Type.body)
+            Spacer(Modifier.height(7.dp))
+            if (wide) Label(title, if (focused) Type.heading.copy(fontSize = 15.sp) else Type.body)
             if (!subtitle.isNullOrEmpty()) Label(subtitle, Type.small)
         }
     }

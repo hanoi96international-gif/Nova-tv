@@ -13,6 +13,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.unit.sp
 import de.ayutv.desktop.ui.Selectable
 import androidx.compose.foundation.background
@@ -169,6 +172,21 @@ fun App(app: AppState, window: WindowState) {
 
     Box(
         Modifier.fillMaxSize().background(Palette.backdrop)
+            // Umgebungslicht: zwei weiche Lichtflecken in der Akzentfarbe (einmal je Größe/Farbe berechnet).
+            .drawWithCache {
+                val top = Brush.radialGradient(
+                    listOf(Palette.accent.copy(alpha = 0.13f), Color.Transparent),
+                    center = Offset(size.width * 0.82f, size.height * 0.05f), radius = size.width * 0.55f,
+                )
+                val bottom = Brush.radialGradient(
+                    listOf(Palette.accentSoft.copy(alpha = 0.18f), Color.Transparent),
+                    center = Offset(size.width * 0.12f, size.height * 1.05f), radius = size.width * 0.5f,
+                )
+                onDrawBehind {
+                    drawRect(top)
+                    drawRect(bottom)
+                }
+            }
             .focusRequester(root)
             .onFocusChanged { rootFocused = it.isFocused; rootHasFocus = it.hasFocus }
             .focusable()
@@ -264,7 +282,7 @@ private fun Sidebar(app: AppState) {
     }
     Column(
         Modifier.width(224.dp).fillMaxHeight()
-            .background(Brush.verticalGradient(listOf(Palette.surface, Palette.surface.copy(alpha = 0.72f))))
+            .background(Brush.verticalGradient(listOf(Palette.surface.copy(alpha = 0.92f), Palette.surface.copy(alpha = 0.62f))))
             .padding(horizontal = 12.dp, vertical = 14.dp),
     ) {
         // Kopf: Name mit Akzentpunkt, darunter groß die Uhrzeit.
